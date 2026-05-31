@@ -1,4 +1,6 @@
 import { useTimeStore } from '@/stores/timeStore';
+import { weekOfMonth } from '@/systems/calendar';
+import { DAY_LABEL } from '@/types/schedule';
 import type { Season } from '@/types/game';
 
 const SEASON_LABEL: Record<Season, string> = {
@@ -8,7 +10,10 @@ const SEASON_LABEL: Record<Season, string> = {
   winter: '겨울',
 };
 
+// 표기: "1년차 봄 1주차 월요일"
 export function useGameDateLabel(): string {
   const time = useTimeStore((s) => s.current);
-  return `${time.year}년차 ${SEASON_LABEL[time.season]} ${time.week}주차`;
+  const w = weekOfMonth(time);
+  const day = DAY_LABEL[time.day] ?? '';
+  return `${time.year}년차 ${SEASON_LABEL[time.season]} ${w}주차 ${day}요일`;
 }

@@ -11,6 +11,7 @@ import {
   useEncounterStore,
   useInboxStore,
   useMasterStore,
+  useScheduleStore,
   useSectStore,
   useTimeStore,
 } from '@/stores';
@@ -22,6 +23,7 @@ export function endRun(): void {
   useSectStore.getState().reset();
   useInboxStore.getState().reset();
   useEncounterStore.getState().reset();
+  useScheduleStore.getState().reset();
   // 비급 원본은 보존, 연구 진행도·영약만 리셋
   useCodexStore.getState().resetForNewRun();
 }
@@ -33,6 +35,7 @@ export function endSlot(): void {
   useSectStore.getState().reset();
   useInboxStore.getState().reset();
   useEncounterStore.getState().reset();
+  useScheduleStore.getState().reset();
   // 슬롯 전체 초기화 — 비급까지 비움
   useCodexStore.getState().resetAll();
 }

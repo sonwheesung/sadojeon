@@ -14,9 +14,9 @@ export const ENLIGHTENMENT_LABEL: Record<EnlightenmentKind, string> = {
 export type EnlightenmentTrigger =
   | 'combat_crisis' // 실전 위기 — 죽음 문턱
   | 'nature' // 자연 — 자연 현상·풍경
-  | 'loss' // 상실 — 인연·사형제·사부의 죽음
+  | 'loss' // 상실 — 인연·동문·사부의 죽음
   | 'master_word' // 사부 한마디 — 면담·훈시
-  | 'senior_teaching' // 사형 가르침 — 사형제의 시연·말
+  | 'senior_teaching' // 동문 가르침 — 동문의 시연·말
   | 'other_art' // 다른 무공 자극 — 다른 갈래·다른 출처 무공 접함
   | 'meditation'; // 명상·폐관 — 의도적 수행
 
@@ -25,7 +25,7 @@ export const ENLIGHTENMENT_TRIGGER_LABEL: Record<EnlightenmentTrigger, string> =
   nature: '자연',
   loss: '상실',
   master_word: '사부 한마디',
-  senior_teaching: '사형 가르침',
+  senior_teaching: '동문 가르침',
   other_art: '다른 무공 자극',
   meditation: '명상·폐관',
 };

@@ -4,28 +4,16 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import {
+  INVENTORY_CATEGORIES,
+  INVENTORY_CATEGORY_LABEL,
+} from '@/data/labels';
+import { useItemStore } from '@/stores/itemStore';
 import { colors, spacing, typography } from '@/theme';
 
-// ─── Placeholder data ──────────────────────────────────────────────────────
+// "내 물건"은 회차별 물품(itemStore, DB 동기화)에서. 도감은 별도 시스템(placeholder).
 
 type Tab = 'mine' | 'codex';
-
-interface OwnedRow {
-  key: string;
-  label: string;
-  count: number;
-}
-
-const OWNED: OwnedRow[] = [
-  { key: 'martial-book', label: '무공 비급', count: 12 },
-  { key: 'weapon', label: '무구', count: 23 },
-  { key: 'top', label: '상의', count: 18 },
-  { key: 'bottom', label: '하의', count: 15 },
-  { key: 'talisman', label: '호신부', count: 9 },
-  { key: 'potion', label: '단약', count: 27 },
-  { key: 'pouch', label: '호신낭', count: 14 },
-  { key: 'misc', label: '기타', count: 31 },
-];
 
 interface CodexRow {
   key: string;
@@ -128,23 +116,29 @@ function TabButton({
 // ─── My goods ──────────────────────────────────────────────────────────────
 
 function OwnedList() {
+  const items = useItemStore((s) => s.items);
   return (
     <View style={styles.list}>
-      {OWNED.map((row, idx) => (
-        <Pressable
-          key={row.key}
-          style={[styles.row, idx === OWNED.length - 1 && styles.rowLast]}
-          onPress={() => router.push(`/inventory/${row.key}` as Href)}
-          accessibilityRole="button"
-          accessibilityLabel={`${row.label} 상세`}
-        >
-          <View style={styles.rowIcon} />
-          <Text style={styles.rowLabel} numberOfLines={1}>
-            {row.label}
-          </Text>
-          <Text style={styles.rowCount}>{row.count}개</Text>
-        </Pressable>
-      ))}
+      {INVENTORY_CATEGORIES.map((cat, idx) => {
+        const count = items
+          .filter((i) => i.category === cat)
+          .reduce((sum, i) => sum + i.count, 0);
+        return (
+          <Pressable
+            key={cat}
+            style={[styles.row, idx === INVENTORY_CATEGORIES.length - 1 && styles.rowLast]}
+            onPress={() => router.push(`/inventory/${cat}` as Href)}
+            accessibilityRole="button"
+            accessibilityLabel={`${INVENTORY_CATEGORY_LABEL[cat]} 상세`}
+          >
+            <View style={styles.rowIcon} />
+            <Text style={styles.rowLabel} numberOfLines={1}>
+              {INVENTORY_CATEGORY_LABEL[cat]}
+            </Text>
+            <Text style={styles.rowCount}>{count}개</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

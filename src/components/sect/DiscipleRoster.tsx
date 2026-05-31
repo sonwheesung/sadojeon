@@ -1,30 +1,56 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { SectionLabel } from '@/components/common/SectionLabel';
-import { colors, spacing, typography } from '@/theme';
+import { findMartialArt } from '@/data/martialArts';
+import { useDiscipleStore } from '@/stores/discipleStore';
+import { usePendingStore } from '@/stores/pendingStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { useTimeStore } from '@/stores/timeStore';
+import { BADGE_LABEL } from '@/systems/dailyLogSystem';
+import { OVERRIDE_LABEL } from '@/systems/overrideSystem';
+import { staminaSceneLabel } from '@/systems/staminaSystem';
+import type { Disciple, DiscipleBadge, DiscipleStatus } from '@/types';
+import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
+import { REALM_LABEL } from '@/types/realm';
+import { colors, radius, spacing, typography } from '@/theme';
 
 export const DISCIPLE_CARD_WIDTH = 96;
 
-// Placeholder data. Replace with discipleStore lookups when wiring up.
-interface DisciplePlaceholder {
-  id: string;
-  name: string;
-  year: number;
-  skill: string;
-  state: string;
-  trust: string;
+const STATUS_LABEL: Record<DiscipleStatus, string> = {
+  training: '수련중',
+  resting: '휴식',
+  injured: '치료중',
+  meditating: '폐관중',
+  questing: '파견중',
+  graduated: '졸업',
+  departed: '하산',
+};
+
+function trustLabel(value: number): string {
+  // 0~100 → 0~5 단계
+  const level = Math.min(5, Math.max(0, Math.round(value / 20)));
+  return `신뢰 ${level}/5`;
 }
 
-const DISCIPLES: DisciplePlaceholder[] = [
-  { id: 'dukgo-yeon', name: '독고연', year: 2, skill: '대검술 3/5', state: '수련중', trust: '신뢰 3/5' },
-  { id: 'i-cheongha', name: '이청하', year: 1, skill: '검법 2/5', state: '면담대기', trust: '신뢰 2/5' },
-  { id: 'gang-soyul', name: '강소율', year: 3, skill: '장법 4/5', state: '수련중', trust: '신뢰 3/5' },
-];
-const CAPACITY = 8;
+function mainArtLabel(d: Disciple): string {
+  const main = d.mainMartialArtId
+    ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
+    : d.martialArts[0];
+  if (!main) return '입문 전';
+  const art = findMartialArt(main.artId);
+  const name = art?.name ?? main.artId;
+  const stage = MARTIAL_STAGE_LABEL[main.stage];
+  return `${name} ${stage} ${Math.floor(main.progress)}`;
+}
 
 export function DiscipleRoster() {
-  const hasOpenSlot = DISCIPLES.length < CAPACITY;
+  const order = useDiscipleStore((s) => s.order);
+  const disciples = useDiscipleStore((s) => s.disciples);
+  const currentYear = useTimeStore((s) => s.current.year);
+  const totalDay = useTimeStore((s) => s.totalDay);
+  const overrides = useScheduleStore((s) => s.overrides);
+  const dailyBadges = usePendingStore((s) => s.dailyBadges);
 
   return (
     <View style={styles.section}>
@@ -44,55 +70,128 @@ export function DiscipleRoster() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cards}
       >
-        {DISCIPLES.map((d) => (
-          <DiscipleCard key={d.id} {...d} />
-        ))}
-        {hasOpenSlot && <EmptyCard />}
+        {order.map((id) => {
+          const d = disciples[id];
+          if (!d) return null;
+          const ov = overrides[id];
+          const remaining =
+            ov && totalDay < ov.startedAtDay + ov.durationDays
+              ? ov.startedAtDay + ov.durationDays - totalDay
+              : 0;
+          const onLeave = !!ov && remaining > 0 && ov.command !== 'default';
+          const statusLine = onLeave
+            ? `${OVERRIDE_LABEL[ov!.command]} (${remaining}일)`
+            : STATUS_LABEL[d.status];
+          return (
+            <DiscipleCard
+              key={id}
+              d={d}
+              currentYear={currentYear}
+              statusLine={statusLine}
+              onLeave={onLeave}
+              leaveLabel={onLeave ? OVERRIDE_LABEL[ov!.command] : ''}
+              badges={dailyBadges[id] ?? []}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );
 }
 
-function DiscipleCard({ id, name, year, skill, state, trust }: DisciplePlaceholder) {
+function DiscipleCard({
+  d,
+  currentYear,
+  statusLine,
+  onLeave,
+  leaveLabel,
+  badges,
+}: {
+  d: Disciple;
+  currentYear: number;
+  statusLine: string;
+  onLeave: boolean;
+  leaveLabel: string;
+  badges: DiscipleBadge[];
+}) {
+  const yearsIn = Math.max(1, currentYear - d.entryYear + 1);
   return (
     <Pressable
-      style={styles.card}
+      style={[styles.card, onLeave && styles.cardOnLeave]}
       accessibilityRole="button"
-      accessibilityLabel={`${name} 상세`}
-      onPress={() => router.push(`/disciple/${id}`)}
+      accessibilityLabel={`${d.name} 상세${onLeave ? ` — ${leaveLabel} 중` : ''}`}
+      onPress={() => router.push(`/disciple/${d.id}`)}
     >
-      <View style={styles.portrait} />
+      <View style={styles.portraitWrap}>
+        <View style={[styles.portrait, onLeave && styles.portraitDim]} />
+        {onLeave && (
+          <View style={styles.leaveOverlay} pointerEvents="none">
+            <Text style={styles.leaveLabel}>{leaveLabel}</Text>
+          </View>
+        )}
+        {badges.length > 0 && (
+          <View style={styles.badgeOverlay} pointerEvents="none">
+            {badges.map((b) => (
+              <View key={b} style={[styles.badge, badgeStyle(b)]}>
+                <Text style={[styles.badgeText, badgeTextStyle(b)]}>{BADGE_LABEL[b]}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
       <Text style={styles.cardName} numberOfLines={1}>
-        {name}
+        {d.name}
       </Text>
       <Text style={styles.cardSub} numberOfLines={1}>
-        입문 {year}년차
+        입문 {yearsIn}년차
+      </Text>
+      <Text style={styles.cardRealm} numberOfLines={1}>
+        {REALM_LABEL[d.realm]}
       </Text>
       <Text style={styles.cardLine} numberOfLines={1}>
-        {skill}
+        {mainArtLabel(d)}
       </Text>
       <Text style={styles.cardSub} numberOfLines={1}>
-        {state}
+        {statusLine}
       </Text>
       <Text style={styles.cardLine} numberOfLines={1}>
-        {trust}
+        {trustLabel(d.trustToMaster)}
+      </Text>
+      <Text style={styles.cardSub} numberOfLines={1}>
+        {staminaSceneLabel(d.stamina, d.maxStamina)}
       </Text>
     </Pressable>
   );
 }
 
-function EmptyCard() {
-  return (
-    <Pressable
-      onPress={() => router.push('/village' as Href)}
-      accessibilityRole="button"
-      accessibilityLabel="마을 방문하여 새 제자 영입"
-      style={[styles.card, styles.cardEmpty]}
-    >
-      <Text style={styles.emptyLabel}>+ 영입</Text>
-    </Pressable>
-  );
+function badgeStyle(b: DiscipleBadge) {
+  switch (b) {
+    case 'promoted':
+    case 'good_progress':
+      return styles.badgeGold;
+    case 'collapsed':
+    case 'low_stamina':
+      return styles.badgeRed;
+    case 'plateau':
+    default:
+      return styles.badgeGray;
+  }
 }
+
+function badgeTextStyle(b: DiscipleBadge) {
+  switch (b) {
+    case 'promoted':
+    case 'good_progress':
+      return styles.badgeTextGold;
+    case 'collapsed':
+    case 'low_stamina':
+      return styles.badgeTextRed;
+    case 'plateau':
+    default:
+      return styles.badgeTextGray;
+  }
+}
+
 
 const styles = StyleSheet.create({
   section: {
@@ -137,15 +236,85 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 140,
   },
-  portrait: {
+  // 폐관·의뢰·치료 중 — 비활성 느낌 (흐릿 + 배경 톤).
+  cardOnLeave: {
+    opacity: 0.55,
+    backgroundColor: colors.paperDark,
+  },
+  portraitWrap: {
     width: '70%',
     aspectRatio: 1,
+    marginBottom: 2,
+    position: 'relative',
+  },
+  portrait: {
+    width: '100%',
+    height: '100%',
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
     borderRadius: 4,
-    marginBottom: 2,
   },
+  portraitDim: {
+    backgroundColor: colors.paperDark,
+  },
+  leaveOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leaveLabel: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.seal,
+    borderRadius: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+  badgeOverlay: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    flexDirection: 'column',
+    gap: 2,
+    alignItems: 'flex-end',
+  },
+  badge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    minWidth: 18,
+    alignItems: 'center',
+  },
+  badgeGold: {
+    backgroundColor: colors.gold,
+    borderColor: colors.brown,
+  },
+  badgeRed: {
+    backgroundColor: colors.seal,
+    borderColor: colors.sealDark,
+  },
+  badgeGray: {
+    backgroundColor: colors.paperDark,
+    borderColor: colors.inkSoft,
+  },
+  badgeText: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xs,
+    lineHeight: typography.sizes.xs * 1.1,
+  },
+  badgeTextGold: { color: colors.paper },
+  badgeTextRed: { color: colors.paper },
+  badgeTextGray: { color: colors.ink },
   cardName: {
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.sm,
@@ -161,9 +330,17 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.ink,
   },
+  cardRealm: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.sm,
+    color: colors.brown,
+    letterSpacing: typography.letterSpacing.wide,
+  },
   emptyLabel: {
     fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
     color: colors.inkSoft,
+    textAlign: 'center',
+    lineHeight: typography.sizes.xs * 1.4,
   },
 });

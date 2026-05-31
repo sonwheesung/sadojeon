@@ -1,10 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { useInboxStore } from '@/stores/inboxStore';
-import { colors, spacing, typography } from '@/theme';
+import {
+  isRespondable,
+  resolveInboxItem,
+  responseOptionsFor,
+  type InboxResponseOption,
+} from '@/systems/inboxResolve';
+import { colors, radius, spacing, typography } from '@/theme';
 import type { InboxItem, InboxKind } from '@/types';
 
 // ─── Kind 메타 매핑 ────────────────────────────────────────────────────────
@@ -51,21 +58,6 @@ const SENDER_LABEL_BY_KIND: Record<InboxKind, string> = {
   system: '시스템',
 };
 
-const REPLY_LABELS_BY_KIND: Record<InboxKind, string[]> = {
-  event: ['엄벌', '폐관', '훈계', '묵인', '타협'],
-  one_liner: ['격려', '경계', '호기심', '침묵', '깊은 한마디'],
-  letter: ['격려', '만류', '지원', '직접', '무응답'],
-  complaint: ['설득', '인정', '대화', '훈계', '무시'],
-  meeting_request: ['수락', '미루기', '주제 변경', '거절', '무응답'],
-  visit: ['환대', '면담', '대기', '돌려보냄', '무응답'],
-  recommendation: ['수락', '검토', '연기', '거절', '무응답'],
-  diplomacy: ['수락', '조건부', '재협상', '거절', '무응답'],
-  quest_offer: ['수락', '검토', '재의뢰', '거절', '무응답'],
-  rumor: ['주목', '조사', '경계', '비밀', '무시'],
-  report: ['확인', '발의', '재요청', '보관', '폐기'],
-  system: ['확인', '보관'],
-};
-
 function getSenderName(item: InboxItem): string {
   switch (item.kind) {
     case 'letter':
@@ -96,6 +88,10 @@ const PRIORITY_LABEL: Record<InboxItem['priority'], string> = {
 export default function InboxDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useInboxStore((s) => s.items.find((it) => it.id === id));
+  const markRead = useInboxStore((s) => s.markRead);
+
+  const [selected, setSelected] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!item) {
     return (
@@ -109,6 +105,27 @@ export default function InboxDetailScreen() {
       </SafetyZone>
     );
   }
+
+  const respondable = isRespondable(item);
+  const options = respondable ? responseOptionsFor(item) : [];
+
+  const onRespond = async () => {
+    if (busy) return;
+    if (!respondable) {
+      // 읽기 전용 항목 — 확인만.
+      markRead(item.id);
+      router.back();
+      return;
+    }
+    if (!selected) return;
+    setBusy(true);
+    try {
+      await resolveInboxItem(item, selected);
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('[inbox] 응답 처리 실패', e);
+    }
+    router.back();
+  };
 
   return (
     <SafetyZone variant="modal" background={colors.background}>
@@ -129,9 +146,15 @@ export default function InboxDetailScreen() {
             <RelatedDisciplePanel item={item} />
             <ImpactPanel />
           </View>
-          <RepliesSection kind={item.kind} />
+          {respondable ? (
+            <RepliesSection options={options} selected={selected} onSelect={setSelected} />
+          ) : null}
         </ScrollView>
-        <Footer />
+        <Footer
+          label={respondable ? (busy ? '처리 중…' : '응답하기') : '확인'}
+          disabled={busy || (respondable && !selected)}
+          onPress={onRespond}
+        />
       </PaperCard>
     </SafetyZone>
   );
@@ -320,59 +343,84 @@ function ImpactPanel() {
 
 // ─── Replies ──────────────────────────────────────────────────────────────
 
-function RepliesSection({ kind }: { kind: InboxKind }) {
-  const labels = REPLY_LABELS_BY_KIND[kind];
+function RepliesSection({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: InboxResponseOption[];
+  selected: string | null;
+  onSelect: (key: string) => void;
+}) {
   return (
     <View style={styles.repliesSection}>
       <Text style={styles.repliesHeader}>응답 선택</Text>
-      {labels.map((label) => (
-        <ReplyRow key={label} label={label} />
+      {options.map((opt) => (
+        <ReplyRow
+          key={opt.key}
+          option={opt}
+          active={selected === opt.key}
+          onPress={() => onSelect(opt.key)}
+        />
       ))}
     </View>
   );
 }
 
-function ReplyRow({ label }: { label: string }) {
+function ReplyRow({
+  option,
+  active,
+  onPress,
+}: {
+  option: InboxResponseOption;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Pressable style={styles.reply} accessibilityRole="button" accessibilityLabel={label}>
-      <Text style={styles.replyLabel}>{label}</Text>
-      <View style={styles.replyBody}>
-        <Text style={styles.replyText} numberOfLines={1}>
-          응답 내용 자리
-        </Text>
-        <Text style={styles.replyEffect} numberOfLines={1}>
-          영향 자리
-        </Text>
+    <Pressable
+      style={[styles.reply, active && styles.replyActive]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={option.label}
+    >
+      <View style={[styles.replyRadio, active && styles.replyRadioActive]}>
+        {active ? <View style={styles.replyRadioDot} /> : null}
       </View>
-      <View style={styles.replySeal} />
+      <Text style={[styles.replyText, active && styles.replyTextActive]}>{option.label}</Text>
     </Pressable>
   );
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────
 
-function Footer() {
+function Footer({
+  label,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}) {
   return (
     <View style={styles.footer}>
-      <FooterButton label="편집" />
-      <FooterButton label="보관" />
-      <FooterButton label="삭제" />
-      <FooterButton label="공유 안 함" flex />
+      <Pressable
+        style={({ pressed }) => [
+          styles.respondBtn,
+          disabled && styles.respondBtnDisabled,
+          pressed && !disabled && styles.pressed,
+        ]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Text style={[styles.respondLabel, disabled && styles.respondLabelDisabled]}>
+          {label} ▶
+        </Text>
+      </Pressable>
     </View>
-  );
-}
-
-function FooterButton({ label, flex }: { label: string; flex?: boolean }) {
-  return (
-    <Pressable
-      style={[styles.footerButton, flex ? styles.footerButtonFlex : null]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <Text style={styles.footerLabel} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -631,55 +679,71 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
     borderRadius: 4,
+    backgroundColor: colors.paperLight,
   },
-  replyLabel: {
-    width: 56,
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.seal,
-    letterSpacing: typography.letterSpacing.wide,
-  },
-  replyBody: { flex: 1, gap: 2 },
-  replyText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
-  },
-  replyEffect: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
-  },
-  replySeal: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
+  replyActive: {
     borderStyle: 'solid',
     borderColor: colors.seal,
-    borderRadius: 2,
+    backgroundColor: colors.paperBright,
+  },
+  replyRadio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  replyRadioActive: {
+    borderColor: colors.seal,
+  },
+  replyRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.seal,
+  },
+  replyText: {
+    flex: 1,
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.sm,
+    color: colors.ink,
+    lineHeight: typography.sizes.sm * 1.4,
+  },
+  replyTextActive: {
+    fontFamily: typography.serifMedium,
+    color: colors.ink,
   },
 
   // Footer
   footer: {
-    flexDirection: 'row',
-    gap: spacing.xs,
     paddingTop: spacing.sm,
   },
-  footerButton: {
-    minWidth: 56,
-    height: 36,
+  respondBtn: {
+    height: 48,
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: colors.seal,
+    backgroundColor: colors.paperBright,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  respondBtnDisabled: {
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.paperLight,
   },
-  footerButtonFlex: { flex: 1 },
-  footerLabel: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
+  respondLabel: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.md,
+    color: colors.seal,
+    letterSpacing: typography.letterSpacing.wide,
   },
+  respondLabelDisabled: {
+    color: colors.inkSoft,
+  },
+  pressed: { opacity: 0.85 },
 });

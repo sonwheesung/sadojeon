@@ -38,7 +38,21 @@
             "backgroundColor": "#1A1612"
           }
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.0",
+            "newArchEnabled": true
+          },
+          "android": {
+            "minSdkVersion": 28,
+            "newArchEnabled": true
+          }
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -46,6 +60,13 @@
     },
     "locales": {
       "ko": {}
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "08f9ecbe-9a3d-4c94-a415-1529db03a82c"
+      }
+    },
+    "owner": "shs00925"
   }
 }

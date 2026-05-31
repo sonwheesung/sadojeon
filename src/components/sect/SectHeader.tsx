@@ -1,7 +1,10 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useGameDateLabel } from '@/hooks/useGameDateLabel';
+import { useAuthStore } from '@/stores/authStore';
+import { useSectStore } from '@/stores/sectStore';
 import { colors, spacing, typography } from '@/theme';
 
 export const SECT_HEADER_HEIGHT = 44;
@@ -10,12 +13,27 @@ export const SECT_HEADER_ICON_SIZE = 22;
 
 const ICON_SETTINGS = require('../../../assets/images/icons/header-settings.png');
 
-// Placeholder sect identity until sectStore is wired up.
-const SECT_NAME_KR = '무명산';
-const SECT_NAME_CN = '無名山';
+const FALLBACK_NAME_KR = '무명산';
+const FALLBACK_NAME_CN = '無名山';
 
 export function SectHeader() {
   const dateLabel = useGameDateLabel();
+  const sect = useSectStore((s) => s.sect);
+  const nameKr = sect?.name ?? FALLBACK_NAME_KR;
+  const nameCn = sect?.hanjaName ?? FALLBACK_NAME_CN;
+  const confirm = useConfirm();
+  const signOut = useAuthStore((s) => s.signOut);
+
+  // 임시: 설정 버튼 = 로그아웃 (추후 설정 메뉴로 확장).
+  const onSettings = async () => {
+    const ok = await confirm({
+      title: '로그아웃',
+      message: '로그아웃하시겠습니까? 다음에 아이디·비밀번호로 다시 로그인해야 합니다.',
+      confirmLabel: '로그아웃',
+      tone: 'danger',
+    });
+    if (ok) signOut();
+  };
 
   return (
     <View style={styles.row}>
@@ -25,6 +43,7 @@ export function SectHeader() {
           accessibilityLabel="설정"
           hitSlop={8}
           style={styles.iconButton}
+          onPress={onSettings}
         >
           <Image
             source={ICON_SETTINGS}
@@ -34,11 +53,11 @@ export function SectHeader() {
             transition={0}
           />
         </Pressable>
-        <SectTitle kr={SECT_NAME_KR} cn={SECT_NAME_CN} />
+        <SectTitle kr={nameKr} cn={nameCn} />
       </View>
       <View style={styles.group}>
         <DateLabel value={dateLabel} />
-        <Slot size={SECT_HEADER_ICON_SLOT} label="인박스" />
+        <Slot size={SECT_HEADER_ICON_SLOT} label="서신함" />
       </View>
     </View>
   );

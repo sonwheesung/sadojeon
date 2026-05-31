@@ -1,15 +1,61 @@
-import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import { DailyChoiceModal } from '@/components/dialogue/DailyChoiceModal';
+import { DailySettlementModal } from '@/components/dialogue/DailySettlementModal';
+import { MilestoneModal } from '@/components/dialogue/MilestoneModal';
+import { MonthlyReportModal } from '@/components/dialogue/MonthlyReportModal';
+import { MonthlyScheduleModal } from '@/components/dialogue/MonthlyScheduleModal';
+import { StartSelectModal } from '@/components/dialogue/StartSelectModal';
+import { DailyLogPanel } from '@/components/sect/DailyLogPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
+import { LlmToggleCard } from '@/components/sect/LlmToggleCard';
 import { SectHeader } from '@/components/sect/SectHeader';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
 import { SectStatus } from '@/components/sect/SectStatus';
+import { useBackConfirm } from '@/hooks/useBackConfirm';
+import { useGameStore, useMasterStore } from '@/stores';
+import { resetIfFirstRun } from '@/systems/devReset';
+import { saveCurrentRunSilently } from '@/systems/runSync';
+import { advanceTurn } from '@/systems/timeSystem';
 import { colors, spacing } from '@/theme';
 
 export default function SectScreen() {
+  // 사용자가 "처음부터 진행" 명시 요청 — 일회성 자동 reset (sentinel 키).
+  // 다음 진입부터는 reset X. 다시 초기화 원하면 devReset.ts 의 SENTINEL 값 변경.
+  useEffect(() => {
+    resetIfFirstRun();
+  }, []);
+
+  // master 가 비어 있으면 회차 첫 진입 → 시작 선택 모달.
+  // 사용자가 풀에서 2~4명 선택 + 시작 → seedNewRun 호출 → master 채워짐 → 자동 숨김.
+  const isFresh = useMasterStore((s) => s.master == null);
+
+  // 진행 → 일일 세부 선택 모달 → 확정 시 advanceTurn.
+  const [choiceOpen, setChoiceOpen] = useState(false);
+
+  // 사부 사망 → phase='ended' 전환 시 회차 종결 화면으로 자동 진입.
+  const phase = useGameStore((s) => s.phase);
+  useEffect(() => {
+    if (phase === 'ended') {
+      router.replace('/run-end');
+    }
+  }, [phase]);
+
+  // 뒤로가기 → 사문 선택 화면으로 이동 확인.
+  useBackConfirm(
+    {
+      title: '사문 선택으로 이동',
+      message: '지금 사문에서 나가 사문 선택 화면으로 이동할까요?',
+      confirmLabel: '이동',
+      tone: 'danger',
+    },
+    () => router.replace('/slot-select'),
+  );
+
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
@@ -19,17 +65,26 @@ export default function SectScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Image
-            source={require('../../assets/images/backgrounds/sect-main-banner.png')}
-            style={styles.hero}
-            contentFit="cover"
-            transition={0}
-          />
+          <LlmToggleCard />
+          <DailyLogPanel />
           <DiscipleRoster />
           <SectStatus />
         </ScrollView>
-        <SectProgressBar />
+        <SectProgressBar onProgress={() => setChoiceOpen(true)} />
       </PaperCard>
+      <DailyChoiceModal
+        visible={choiceOpen}
+        onCancel={() => setChoiceOpen(false)}
+        onConfirm={() => {
+          setChoiceOpen(false);
+          advanceTurn();
+        }}
+      />
+      <StartSelectModal visible={isFresh} onComplete={() => saveCurrentRunSilently()} />
+      <MonthlyReportModal />
+      <MonthlyScheduleModal />
+      <DailySettlementModal />
+      <MilestoneModal />
     </SafetyZone>
   );
 }
@@ -40,9 +95,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.sm,
-  },
-  hero: {
-    width: '100%',
-    aspectRatio: 1672 / 941,
   },
 });

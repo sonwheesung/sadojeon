@@ -2,6 +2,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
@@ -38,6 +39,7 @@ export default function VillageScreen() {
   const current = useEncounterStore((s) => s.current);
   const setCurrent = useEncounterStore((s) => s.setCurrent);
   const reset = useEncounterStore((s) => s.reset);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!current) setCurrent(INITIAL_ENCOUNTER);
@@ -45,11 +47,24 @@ export default function VillageScreen() {
 
   const encounter = current ?? INITIAL_ENCOUNTER;
 
-  const onLeave = () => {
+  const onLeave = async () => {
+    const ok = await confirm({
+      title: '이 만남을 떠날까요?',
+      message: `${encounter.name}와(과)의 만남을 정리하고 마을을 떠납니다.`,
+      confirmLabel: '떠나기',
+      tone: 'danger',
+    });
+    if (!ok) return;
     reset();
     router.back();
   };
-  const onTakeIn = () => {
+  const onTakeIn = async () => {
+    const ok = await confirm({
+      title: '제자로 거둘까요?',
+      message: `${encounter.name}을(를) 사문에 거둡니다.`,
+      confirmLabel: '거두기',
+    });
+    if (!ok) return;
     if (encounter.affinity >= TAKE_IN_THRESHOLD) {
       // TODO: discipleStore.addFromEncounter(encounter) — 슬롯 합류 처리
       Alert.alert(

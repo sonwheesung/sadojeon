@@ -4,33 +4,42 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
+import {
+  DiscipleHeader,
+  DiscipleStatusPanel,
+  DiscipleTodayLog,
+  MoodPanel,
+  StatGrowthPanel,
+  TalentPanel,
+} from '@/components/disciple';
+import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
+import { useDiscipleStore } from '@/stores';
 import { colors, spacing, typography } from '@/theme';
+import type { Talents } from '@/types';
+
+// 사용자 시안 결 (image-cache/2.png) + 기존 풍부 정보 통합.
+// - 시안 결: 헤더·재능 5축·풍경 텍스트·활동 4버튼
+// - 기존 유지: 무공 트리·장비 슬롯·의뢰 기록·기타 스탯
 
 // ─── Placeholder data ──────────────────────────────────────────────────────
 
-interface Profile {
-  name: string;
-  hanja: string;
-  yearLabel: string;
-  personality: string;
-  talent: string;
-  trust: number;
-  trustMax: number;
-}
-
-const PROFILE: Profile = {
-  name: '독고연',
-  hanja: '獨孤衍',
-  yearLabel: '2년차',
-  personality: '과묵·신중',
-  talent: '검술 특화',
-  trust: 5,
-  trustMax: 5,
+const PLACEHOLDER_TALENTS: Talents = {
+  body: 3,
+  qi: 4,
+  agility: 3,
+  insight: 5,
+  mind: 5,
 };
+
+const PLACEHOLDER_MOODS = [
+  '마음이 따뜻하다',
+  '사형과 친하다',
+  '약초를 잘 다룬다',
+] as const;
 
 interface Skill {
   name: string;
-  current: number; // index into STAGES (0..3); also doubles as max reached when 'reached' is current
+  current: number; // index into STAGES (0..3)
   reached: number; // max stage index reached
 }
 
@@ -67,28 +76,48 @@ const STATS = [
   { label: '깨달음 진척', value: '42 / 100' },
 ];
 
-const ACTIONS = ['면담', '훈시', '폐관', '일정 변경', '하산 검토'];
-
 // ─── Screen ────────────────────────────────────────────────────────────────
 
+// 제자 상세는 관찰 화면 — 활동 선택(면담·수련·파견·폐관) 셀렉터는 제거됨.
+//   면담 → 일상 이벤트(한 마디·희망·상담)로 대체
+//   수련 → 일정 변경(주간 패턴·세부 종목)으로 대체
+//   파견 → 의뢰 화면에서 제자 선택
+//   폐관 → 이벤트성(벌 선택 / 제자의 폐관 청원)
 export default function DiscipleDetailScreen() {
-  useLocalSearchParams<{ id: string }>(); // id 사용 시점 — store 연결 후
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const fromStore = useDiscipleStore((s) => (id ? s.disciples[id] : undefined));
+  const starting = STARTING_DISCIPLE_POOL.find((d) => d.id === id);
+
+  const name = fromStore?.name ?? starting?.name ?? '제자';
+  const hanjaName = fromStore?.hanjaName ?? starting?.hanjaName ?? '?';
+  const starRank = starting?.starRank ?? 1;
+  const talents = fromStore?.talents ?? PLACEHOLDER_TALENTS;
+  // 풍경 텍스트 — 추후 통찰 차등 + 시나리오 풀에서. 그레이박스: 고정 placeholder.
+  const moods = PLACEHOLDER_MOODS;
 
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
-        <Header />
+        <Header onBack={() => router.back()} />
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
-          <ProfileSection />
+          {/* 시안 결 */}
+          <DiscipleHeader name={name} hanjaName={hanjaName} starRank={starRank} />
+          {fromStore && <DiscipleStatusPanel disciple={fromStore} />}
+          {id && <DiscipleTodayLog discipleId={id} />}
+          <TalentPanel talents={talents} />
+          {fromStore && <StatGrowthPanel disciple={fromStore} />}
+          <MoodPanel lines={moods} />
+
+          {/* 기존 그레이박스 유지 */}
           <SkillSection />
           <EquipmentSection />
           <MiscSection />
         </ScrollView>
-        <ActionRow />
       </PaperCard>
     </SafetyZone>
   );
@@ -96,58 +125,22 @@ export default function DiscipleDetailScreen() {
 
 // ─── Header ────────────────────────────────────────────────────────────────
 
-function Header() {
+function Header({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
       <Pressable
         style={styles.backButton}
         hitSlop={8}
-        onPress={() => router.back()}
+        onPress={onBack}
         accessibilityRole="button"
         accessibilityLabel="뒤로"
       >
         <Text style={styles.backIcon}>←</Text>
       </Pressable>
       <View style={styles.titleWrap}>
-        <Text style={styles.titleKr} numberOfLines={1}>
-          {PROFILE.name}
-        </Text>
-        <Text style={styles.titleHanja} numberOfLines={1}>
-          ({PROFILE.hanja})
-        </Text>
+        <Text style={styles.title}>제자 상세</Text>
       </View>
-      <View style={styles.headerSeal} />
-    </View>
-  );
-}
-
-// ─── Profile ───────────────────────────────────────────────────────────────
-
-function ProfileSection() {
-  return (
-    <View style={styles.profile}>
-      <View style={styles.portrait} />
-      <View style={styles.profileInfo}>
-        <InfoRow label="입문" value={PROFILE.yearLabel} />
-        <InfoRow label="성격" value={PROFILE.personality} />
-        <InfoRow label="재능" value={PROFILE.talent} />
-        <View style={styles.trustRow}>
-          <Text style={styles.trustLabel}>사부 신뢰도</Text>
-          <Text style={styles.trustValue}>
-            {PROFILE.trust}/{PROFILE.trustMax}
-          </Text>
-          <View style={styles.smallSeal} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <View style={{ width: 32 }} />
     </View>
   );
 }
@@ -200,11 +193,8 @@ function SkillRow({ name, current, reached }: Skill) {
                   <View style={styles.skillLineSpacer} />
                 )}
               </View>
-              <Text style={[styles.stageHanja, !isReached && styles.stageMuted]}>
-                {stage.hanja}
-              </Text>
               <Text style={[styles.stageKr, !isReached && styles.stageMuted]}>
-                ({stage.kr})
+                {stage.kr}
               </Text>
               <View style={[styles.currentDot, !isCurrent && styles.currentDotHidden]} />
             </View>
@@ -274,36 +264,10 @@ function MiscSection() {
   );
 }
 
-// ─── Action row ────────────────────────────────────────────────────────────
-
-function ActionRow() {
-  return (
-    <View style={styles.actionRow}>
-      {ACTIONS.map((label) => (
-        <Pressable
-          key={label}
-          style={styles.actionButton}
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          onPress={() => {
-            if (label === '일정 변경') router.push('/schedule');
-          }}
-        >
-          <View style={styles.actionIcon} />
-          <Text style={styles.actionLabel} numberOfLines={1}>
-            {label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 // ─── Styles ────────────────────────────────────────────────────────────────
 
 const NODE_SIZE = 14;
 const NODE_FILL = 6;
-const PORTRAIT_RATIO = 0.42;
 const EQUIP_SLOT = 44;
 
 const styles = StyleSheet.create({
@@ -314,127 +278,29 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     gap: spacing.sm,
   },
-  backButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  backButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   backIcon: {
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.lg,
     color: colors.ink,
   },
-  titleWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  titleKr: {
+  titleWrap: { flex: 1, alignItems: 'center' },
+  title: {
     fontFamily: typography.serifBold,
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.md,
     color: colors.ink,
     letterSpacing: typography.letterSpacing.wide,
   },
-  titleHanja: {
-    fontFamily: typography.serifCN,
-    fontSize: typography.sizes.md,
-    color: colors.inkLight,
-  },
-  headerSeal: {
-    width: 24,
-    height: 24,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.seal,
-    borderRadius: 2,
-  },
 
   // Body -----------------------------------------------------------------
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-
-  // Profile --------------------------------------------------------------
-  profile: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  portrait: {
-    width: `${PORTRAIT_RATIO * 100}%`,
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-  },
-  profileInfo: {
-    flex: 1,
-    gap: spacing.xs,
-    justifyContent: 'center',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.inkSoft,
-    paddingBottom: 2,
-  },
-  infoLabel: {
-    width: 40,
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  infoValue: {
-    flex: 1,
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
-  trustRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: 4,
-  },
-  trustLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  trustValue: {
-    flex: 1,
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
-  smallSeal: {
-    width: 16,
-    height: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.seal,
-    borderRadius: 2,
-  },
+  body: { flex: 1 },
+  bodyContent: { paddingBottom: spacing.sm, gap: spacing.base },
 
   // Section --------------------------------------------------------------
-  section: {
-    gap: spacing.sm,
-  },
+  section: { gap: spacing.sm },
 
   // Skill ----------------------------------------------------------------
-  skillList: {
-    gap: spacing.sm,
-  },
+  skillList: { gap: spacing.sm },
   skillRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -468,9 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inkSoft,
     opacity: 0.4,
   },
-  skillLineSpacer: {
-    flex: 1,
-  },
+  skillLineSpacer: { flex: 1 },
   node: {
     width: NODE_SIZE,
     height: NODE_SIZE,
@@ -492,16 +356,11 @@ const styles = StyleSheet.create({
     borderRadius: NODE_FILL / 2,
     backgroundColor: colors.ink,
   },
-  stageHanja: {
+  stageKr: {
     marginTop: 2,
-    fontFamily: typography.serifCN,
+    fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
     color: colors.ink,
-  },
-  stageKr: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
   },
   stageMuted: {
     color: colors.inkSoft,
@@ -519,10 +378,7 @@ const styles = StyleSheet.create({
   },
 
   // Equipment ------------------------------------------------------------
-  equipmentRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
+  equipmentRow: { flexDirection: 'row', gap: spacing.xs },
   equipmentCol: {
     flex: 1,
     alignItems: 'center',
@@ -544,14 +400,8 @@ const styles = StyleSheet.create({
   },
 
   // Misc -----------------------------------------------------------------
-  miscRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  miscCol: {
-    flex: 1,
-    gap: 4,
-  },
+  miscRow: { flexDirection: 'row', gap: spacing.sm },
+  miscCol: { flex: 1, gap: 4 },
   miscColLabel: {
     fontFamily: typography.serifMedium,
     fontSize: typography.sizes.xs,
@@ -602,38 +452,6 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: typography.serifMedium,
     fontSize: typography.sizes.xs,
-    color: colors.ink,
-  },
-
-  // Action row -----------------------------------------------------------
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    height: 56,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingHorizontal: 2,
-  },
-  actionIcon: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 2,
-  },
-  actionLabel: {
-    fontFamily: typography.serifMedium,
-    fontSize: 10,
     color: colors.ink,
   },
 });

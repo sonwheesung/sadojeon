@@ -18,4 +18,9 @@ export function useInboxBadgeCount(): number {
   );
 }
 
+// 안 읽은 서신 총 갯수 — 탭 배지용 (쌓인 갯수 표시).
+export function useInboxUnreadCount(): number {
+  return useInboxStore((s) => s.items.filter((it) => !it.read).length);
+}
+
 export { DECISION_KINDS };

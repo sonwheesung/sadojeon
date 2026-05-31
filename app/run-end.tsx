@@ -1,78 +1,70 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import {
+  useCodexStore,
+  useDiscipleStore,
+  useGameStore,
+  useMasterStore,
+  useSectStore,
+  useTimeStore,
+} from '@/stores';
+import {
+  evaluateGraduation,
+  GRADE_LABEL,
+  GRADE_STARS,
+  mainArtSummary,
+} from '@/systems/graduationSystem';
 import { endRun } from '@/systems/runLifecycle';
+import type { Disciple, Season } from '@/types';
 import { colors, spacing, typography } from '@/theme';
 
-// 시안: docs/references/run-end-mockup.png
-// 사양: docs/16_회차_다회차.md "다회차 — 사문은 영속, 사부는 한 일생"
-// 그레이박스 단계 — 데이터는 placeholder, 일러스트는 dashed.
+// 회차 종결 화면 — docs/16_회차_다회차.md "다회차 — 사문은 영속, 사부는 한 일생"
+// 사부 사망(timeSystem) → phase='ended' → (tabs)/index 에서 자동 진입.
+// [다음 회차 시작] → endRun + phase='playing' + 메인 복귀 (master null 이라 StartSelectModal 자동).
 
-// ─── Placeholder data ─────────────────────────────────────────────────────
-
-const SECT_META = {
-  sectName: '운림산문',
-  runLabel: '제3회차',
-  endLabel: '18년 마지막 겨울',
+const SEASON_LABEL: Record<Season, string> = {
+  spring: '봄',
+  summer: '여름',
+  autumn: '가을',
+  winter: '겨울',
 };
-
-const MASTER_EPITAPH = {
-  name: '임청허',
-  hanjaName: '林淸虛',
-  insightStars: 4,
-  tenureYears: 18,
-  line: '말이 묻힌 두루마리, 마음 닿는 사람만 길어 마심.',
-};
-
-interface DiscipleRecord {
-  id: string;
-  name: string;
-  stage: string;
-  route: string;
-  region: string;
-  grade: number; // 0~5
-}
-
-const DISCIPLES: DiscipleRecord[] = [
-  { id: 'd1', name: '진백호', stage: '화경', route: '의적', region: '강남 일대', grade: 5 },
-  { id: 'd2', name: '장철강', stage: '대성', route: '정파 협객', region: '하북 표국', grade: 4 },
-  { id: 'd3', name: '윤소소', stage: '소성', route: '서원', region: '강남 어른', grade: 3 },
-  { id: 'd4', name: '독고연', stage: '대성', route: '의적', region: '천하 외전', grade: 4 },
-  { id: 'd5', name: '옥향', stage: '입문', route: '회색', region: '낙척 강호', grade: 2 },
-  { id: 'd6', name: '서윤우', stage: '입문', route: '미정', region: '행방 묘연', grade: 1 },
-  { id: 'd7', name: '아화', stage: '미도달', route: '하산 거부', region: '소식 없음', grade: 0 },
-];
-
-const REPLIED = ['진백호', '장철강', '독고연'];
-const UNREPLIED = ['서윤우', '아화', '기타 3명'];
-
-const CARRYOVER = [
-  '누적 비급 23권',
-  '도감 발견 42 / 250',
-  '사문 건물 일부 유지',
-  '거두지 못한 인연 기록',
-];
-
-const LOST = [
-  '영약 잔량',
-  '금고 은 24냥',
-  '사문 등급',
-  '사부 4스탯 (모두 초기화)',
-  '후원자 채널 3종',
-];
-
-// ─── Screen ────────────────────────────────────────────────────────────────
 
 export default function RunEndScreen() {
-  const onStartNextRun = () => {
-    endRun();
-    router.replace('/slot-select');
-  };
+  const sect = useSectStore((s) => s.sect);
+  const master = useMasterStore((s) => s.master);
+  const order = useDiscipleStore((s) => s.order);
+  const disciples = useDiscipleStore((s) => s.disciples);
+  const scrollCount = useCodexStore((s) => s.scrolls.length);
+  const time = useTimeStore((s) => s.current);
+  const confirm = useConfirm();
 
-  const onViewRecord = () => {
-    // 후속: 회차 기록 보기 화면. 그레이박스 단계에서는 동작 없음.
+  const list: Disciple[] = order
+    .map((id) => disciples[id])
+    .filter((d): d is Disciple => d != null);
+
+  const sectName = sect?.name ?? '무명산문';
+  const masterName = master?.name ?? '?';
+  const masterHanja = master?.hanjaName ?? '?';
+  const tenureYears = master?.yearsAsMaster ?? 0;
+  const insightStars = master?.stats.insight ?? 0;
+  const endLabel = `${time.year}년차 ${SEASON_LABEL[time.season]}`;
+
+  const onStartNextRun = async () => {
+    const ok = await confirm({
+      title: '다음 회차를 시작할까요?',
+      message:
+        '이 사부의 일생이 끝납니다. 비급만 다음 사부에게 인계되고, 연구·영약·금고·사부 스탯은 초기화됩니다.',
+      confirmLabel: '다음 회차',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    endRun();
+    useGameStore.getState().setPhase('playing');
+    router.replace('/(tabs)');
   };
 
   return (
@@ -84,20 +76,28 @@ export default function RunEndScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Header />
-          <SectMeta />
-          <MasterEpitaph />
-          <DiscipleList />
-          <DispatchPanel />
-          <CarryoverGrid />
+          <Text style={styles.sectMeta} numberOfLines={1}>
+            {`${sectName} · ${endLabel} 사부의 마지막 날`}
+          </Text>
+
+          <MasterEpitaph
+            name={masterName}
+            hanjaName={masterHanja}
+            insightStars={insightStars}
+            tenureYears={tenureYears}
+          />
+
+          <DiscipleList list={list} />
+
+          <CarryoverGrid scrollCount={scrollCount} />
+
           <Aphorism />
         </ScrollView>
-        <FooterButtons onViewRecord={onViewRecord} onStartNextRun={onStartNextRun} />
+        <FooterButtons onStartNextRun={onStartNextRun} />
       </PaperCard>
     </SafetyZone>
   );
 }
-
-// ─── Header ────────────────────────────────────────────────────────────────
 
 function Header() {
   return (
@@ -116,17 +116,17 @@ function Header() {
   );
 }
 
-function SectMeta() {
-  return (
-    <Text style={styles.sectMeta} numberOfLines={1}>
-      {`${SECT_META.sectName} · ${SECT_META.runLabel} · ${SECT_META.endLabel}`}
-    </Text>
-  );
-}
-
-// ─── Master epitaph ───────────────────────────────────────────────────────
-
-function MasterEpitaph() {
+function MasterEpitaph({
+  name,
+  hanjaName,
+  insightStars,
+  tenureYears,
+}: {
+  name: string;
+  hanjaName: string;
+  insightStars: number;
+  tenureYears: number;
+}) {
   return (
     <View style={styles.epitaphPanel}>
       <View style={styles.epitaphRow}>
@@ -135,95 +135,92 @@ function MasterEpitaph() {
         </View>
         <View style={styles.epitaphInfo}>
           <View style={styles.epitaphNameRow}>
-            <Text style={styles.masterName}>{MASTER_EPITAPH.name}</Text>
-            <Text style={styles.masterHanja}>{`(${MASTER_EPITAPH.hanjaName})`}</Text>
+            <Text style={styles.masterName}>{name}</Text>
+            <Text style={styles.masterHanja}>{`(${hanjaName})`}</Text>
           </View>
-          <Text style={styles.epitaphMeta}>{`통찰 단계 ${MASTER_EPITAPH.insightStars}단계`}</Text>
-          <Text style={styles.epitaphMeta}>{`사부 재직 기간 ${MASTER_EPITAPH.tenureYears}년`}</Text>
+          <Text style={styles.epitaphMeta}>{`통찰 ${insightStars}/5`}</Text>
+          <Text style={styles.epitaphMeta}>{`사부 재직 ${tenureYears}년`}</Text>
           <View style={styles.epitaphSeal} />
         </View>
       </View>
-      <Text style={styles.epitaphLine}>{MASTER_EPITAPH.line}</Text>
+      <Text style={styles.epitaphLine}>
+        말이 묻힌 두루마리, 마음 닿는 사람만 길어 마심.
+      </Text>
     </View>
   );
 }
 
-// ─── Disciple list ────────────────────────────────────────────────────────
-
-function DiscipleList() {
+function DiscipleList({ list }: { list: Disciple[] }) {
   return (
     <View style={styles.discipleSection}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>거쳐간 제자</Text>
-        <Text style={styles.sectionMeta}>{`총 ${DISCIPLES.length}명`}</Text>
+        <Text style={styles.sectionMeta}>{`총 ${list.length}명`}</Text>
       </View>
       <View style={styles.discipleList}>
-        {DISCIPLES.map((d, idx) => (
-          <DiscipleRow key={d.id} record={d} last={idx === DISCIPLES.length - 1} />
-        ))}
+        {list.length === 0 ? (
+          <Text style={styles.emptyText}>거두지 못한 회차였다.</Text>
+        ) : (
+          list.map((d, idx) => (
+            <DiscipleRow key={d.id} disciple={d} last={idx === list.length - 1} />
+          ))
+        )}
       </View>
     </View>
   );
 }
 
-function DiscipleRow({ record, last }: { record: DiscipleRecord; last: boolean }) {
-  const dim = record.grade <= 1;
-  const highlight = record.grade >= 5;
+function DiscipleRow({ disciple, last }: { disciple: Disciple; last: boolean }) {
+  const grade = evaluateGraduation(disciple);
+  const stars = GRADE_STARS[grade];
+  const dim = stars <= 1;
+  const highlight = stars >= 5;
   return (
-    <View style={[styles.discipleRow, last && styles.discipleRowLast, dim && styles.discipleRowDim]}>
+    <View
+      style={[
+        styles.discipleRow,
+        last && styles.discipleRowLast,
+        dim && styles.discipleRowDim,
+      ]}
+    >
       <View style={[styles.discipleAvatar, dim && styles.discipleAvatarDim]} />
       <View style={styles.discipleBody}>
-        <Text style={[styles.discipleName, dim && styles.discipleNameDim]} numberOfLines={1}>
-          {record.name}
+        <Text
+          style={[styles.discipleName, dim && styles.discipleNameDim]}
+          numberOfLines={1}
+        >
+          {disciple.name}
         </Text>
         <Text style={styles.discipleMeta} numberOfLines={1}>
-          {`무공 도달 ${record.stage} · 노선 ${record.route} · 강호 좌표 ${record.region}`}
+          {`${mainArtSummary(disciple)} · ${GRADE_LABEL[grade]}`}
         </Text>
       </View>
       <View style={styles.gradeWrap}>
         {highlight ? <View style={styles.gradeSeal} /> : null}
-        <Text style={[styles.gradeValue, dim && styles.gradeValueDim]}>{`${record.grade}/5`}</Text>
+        <Text style={[styles.gradeValue, dim && styles.gradeValueDim]}>
+          {`${stars}/5`}
+        </Text>
       </View>
     </View>
   );
 }
 
-// ─── Dispatch panel ───────────────────────────────────────────────────────
+function CarryoverGrid({ scrollCount }: { scrollCount: number }) {
+  const carryover = [
+    `누적 비급 ${scrollCount}권`,
+    '거두지 못한 인연 기록',
+  ];
+  const lost = [
+    '연구 진행도 · 영약 잔량',
+    '금고 · 사문 등급',
+    '사부 4스탯 (모두 초기화)',
+  ];
 
-function DispatchPanel() {
-  return (
-    <View style={styles.subSection}>
-      <Text style={styles.subSectionTitle}>임종 직전 닿은 소식</Text>
-      <View style={styles.dispatchRow}>
-        <View style={styles.dispatchCard}>
-          <Text style={styles.dispatchCardTitle}>답이 온 제자</Text>
-          {REPLIED.map((name) => (
-            <Text key={name} style={styles.dispatchItem} numberOfLines={1}>
-              · {name}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.dispatchCard}>
-          <Text style={styles.dispatchCardTitle}>끝내 닿지 않은 이름</Text>
-          {UNREPLIED.map((name) => (
-            <Text key={name} style={styles.dispatchItem} numberOfLines={1}>
-              · {name}
-            </Text>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ─── Carryover grid ───────────────────────────────────────────────────────
-
-function CarryoverGrid() {
   return (
     <View style={styles.carryoverRow}>
       <View style={styles.carryoverCard}>
         <Text style={styles.carryoverCardTitle}>다음 사부에게 인계</Text>
-        {CARRYOVER.map((line) => (
+        {carryover.map((line) => (
           <Text key={line} style={styles.carryoverItem} numberOfLines={1}>
             · {line}
           </Text>
@@ -234,7 +231,7 @@ function CarryoverGrid() {
       </View>
       <View style={styles.carryoverCard}>
         <Text style={styles.carryoverCardTitle}>회차와 함께 사라짐</Text>
-        {LOST.map((line) => (
+        {lost.map((line) => (
           <Text key={line} style={styles.carryoverItem} numberOfLines={1}>
             · {line}
           </Text>
@@ -244,8 +241,6 @@ function CarryoverGrid() {
   );
 }
 
-// ─── Aphorism ─────────────────────────────────────────────────────────────
-
 function Aphorism() {
   return (
     <Text style={styles.aphorism}>
@@ -254,25 +249,9 @@ function Aphorism() {
   );
 }
 
-// ─── Footer buttons ───────────────────────────────────────────────────────
-
-function FooterButtons({
-  onViewRecord,
-  onStartNextRun,
-}: {
-  onViewRecord: () => void;
-  onStartNextRun: () => void;
-}) {
+function FooterButtons({ onStartNextRun }: { onStartNextRun: () => void }) {
   return (
     <View style={styles.footer}>
-      <Pressable
-        style={styles.footerRecord}
-        onPress={onViewRecord}
-        accessibilityRole="button"
-        accessibilityLabel="회차 기록 보기"
-      >
-        <Text style={styles.footerRecordLabel}>회차 기록 보기</Text>
-      </Pressable>
       <Pressable
         style={styles.footerStart}
         onPress={onStartNextRun}
@@ -285,14 +264,10 @@ function FooterButtons({
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  // Body
   body: { flex: 1 },
   bodyContent: { paddingBottom: spacing.sm, gap: spacing.sm },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -329,7 +304,6 @@ const styles = StyleSheet.create({
     letterSpacing: typography.letterSpacing.wide,
   },
 
-  // Sect meta
   sectMeta: {
     textAlign: 'center',
     fontFamily: typography.serif,
@@ -337,7 +311,6 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
 
-  // Epitaph
   epitaphPanel: {
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -400,7 +373,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Disciple section
   discipleSection: { gap: spacing.xs },
   sectionHeader: {
     flexDirection: 'row',
@@ -422,6 +394,14 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
     borderRadius: 4,
+  },
+  emptyText: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
   discipleRow: {
     flexDirection: 'row',
@@ -475,38 +455,6 @@ const styles = StyleSheet.create({
   },
   gradeValueDim: { color: colors.inkSoft },
 
-  // Sub-section (dispatch)
-  subSection: { gap: spacing.xs },
-  subSectionTitle: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
-  dispatchRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  dispatchCard: {
-    flex: 1,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    gap: 4,
-  },
-  dispatchCardTitle: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
-  },
-  dispatchItem: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkLight,
-  },
-
-  // Carryover grid
   carryoverRow: {
     flexDirection: 'row',
     gap: spacing.xs,
@@ -544,7 +492,6 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
 
-  // Aphorism
   aphorism: {
     textAlign: 'center',
     fontFamily: typography.serif,
@@ -554,7 +501,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // Footer buttons
   placeholderLabel: {
     fontFamily: typography.serif,
     fontSize: 9,
@@ -562,27 +508,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
     paddingTop: spacing.sm,
   },
-  footerRecord: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerRecordLabel: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
   footerStart: {
-    flex: 1.4,
     height: 44,
     borderWidth: 1,
     borderStyle: 'solid',

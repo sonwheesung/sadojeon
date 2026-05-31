@@ -1,0 +1,257 @@
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { usePendingStore } from '@/stores/pendingStore';
+import type { LlmDebugEntry } from '@/stores/pendingStore';
+import { triggerPostSettlement } from '@/systems/timeSystem';
+import type { DailyLogKind } from '@/types';
+import { colors, radius, spacing, typography } from '@/theme';
+import { LlmDebugPanel } from './LlmDebugPanel';
+
+// 하루 정산 모달 — advanceTurn 끝에 자동 표시.
+// PM 결의 일일 정산 + LLM 백그라운드 대기 화면.
+//
+// 동작:
+// - 진행 직후 자동 표시
+// - 최소 2초 [다음 ▶] 버튼 비활성 (정산 음미 + LLM 응답 도착 대기 자연스럽게)
+// - 사용자 [다음 ▶] → clear → 다음 모달 (한 마디·희망·도덕) 트리거
+//
+// 표시 내용:
+// - 날짜
+// - 각 제자 일지 한 줄씩 (강조 색)
+// - [DEV] LLM I/O 디버그 패널 (이 turn 에서 호출된 LLM 호출들)
+
+const MIN_DISPLAY_MS = 2000;
+
+export function DailySettlementModal() {
+  const settlement = usePendingStore((s) => s.settlement);
+  const clearStore = usePendingStore((s) => s.clearSettlement);
+  const [canClose, setCanClose] = useState(false);
+
+  const onClose = () => {
+    clearStore();
+    triggerPostSettlement();
+  };
+
+  // 정산 표시 시 최소 시간 후 [다음] 활성화 — 음미 시간 + LLM 자연스러운 대기.
+  useEffect(() => {
+    if (settlement) {
+      setCanClose(false);
+      const t = setTimeout(() => setCanClose(true), MIN_DISPLAY_MS);
+      return () => clearTimeout(t);
+    }
+    setCanClose(false);
+    return undefined;
+  }, [settlement]);
+
+  if (!settlement) {
+    return <Modal visible={false} transparent />;
+  }
+
+  const { dateLabel, log, llmDebugs } = settlement;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={() => canClose && onClose()}>
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
+          <Text style={styles.title}>하루 정산</Text>
+          <Text style={styles.date}>{dateLabel}</Text>
+          <View style={styles.divider} />
+
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {log.entries.length === 0 ? (
+              <Text style={styles.empty}>사문은 조용히 그날을 보냈다.</Text>
+            ) : (
+              log.entries.map((e) => (
+                <Text key={e.id} style={[styles.line, lineStyle(e.kind)]}>
+                  · {e.text}
+                </Text>
+              ))
+            )}
+
+            {llmDebugs.length > 0 ? (
+              <DebugList debugs={llmDebugs} />
+            ) : null}
+          </ScrollView>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.confirm,
+              !canClose && styles.confirmDisabled,
+              canClose && pressed && styles.confirmPressed,
+            ]}
+            onPress={() => canClose && onClose()}
+            disabled={!canClose}
+            accessibilityRole="button"
+            accessibilityLabel={canClose ? '다음' : '잠시 대기'}
+          >
+            <Text
+              style={[styles.confirmLabel, !canClose && styles.confirmLabelDisabled]}
+            >
+              {canClose ? '다음 ▶' : '하루를 기록하는 중…'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function DebugList({ debugs }: { debugs: LlmDebugEntry[] }) {
+  if (!__DEV__) return null;
+  return (
+    <View style={styles.debugBlock}>
+      {debugs.map((d, idx) => (
+        <View key={idx} style={styles.debugEntry}>
+          <Text style={styles.debugCaption}>
+            [{d.source}] {d.discipleName} — {d.llmCalled ? 'LLM 응답' : '룰 폴백'}
+          </Text>
+          <LlmDebugPanel prompt={d.prompt} raw={d.raw} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function lineStyle(kind: DailyLogKind) {
+  switch (kind) {
+    case 'promotion':
+      return styles.linePromotion;
+    case 'collapse':
+      return styles.lineCollapse;
+    case 'plateau':
+      return styles.linePlateau;
+    case 'stamina_drop':
+      return styles.lineStaminaDrop;
+    case 'stamina_rise':
+      return styles.lineStaminaRise;
+    case 'override':
+      return styles.lineOverride;
+    default:
+      return styles.lineDefault;
+  }
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 460,
+    maxHeight: '92%',
+    backgroundColor: colors.paper,
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: colors.brown,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  title: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xl,
+    color: colors.brown,
+    letterSpacing: typography.letterSpacing.wider,
+    textAlign: 'center',
+  },
+  date: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.sm,
+    color: colors.inkSoft,
+    textAlign: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.inkSoft,
+    opacity: 0.4,
+    marginVertical: spacing.xs,
+  },
+  body: { maxHeight: 360 },
+  bodyContent: { gap: 4 },
+  empty: {
+    fontFamily: typography.serif,
+    fontStyle: 'italic',
+    fontSize: typography.sizes.sm,
+    color: colors.inkSoft,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  line: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.sm,
+    color: colors.ink,
+    lineHeight: typography.sizes.sm * 1.5,
+  },
+  lineDefault: { color: colors.inkLight },
+  linePromotion: {
+    fontFamily: typography.serifBold,
+    color: colors.brown,
+  },
+  lineCollapse: {
+    fontFamily: typography.serifBold,
+    color: colors.seal,
+  },
+  linePlateau: {
+    color: colors.inkSoft,
+    fontStyle: 'italic',
+  },
+  lineStaminaDrop: {
+    fontFamily: typography.serifMedium,
+    color: colors.sealDark,
+  },
+  lineStaminaRise: {
+    fontFamily: typography.serifMedium,
+    color: colors.green,
+  },
+  lineOverride: {
+    color: colors.inkLight,
+    fontStyle: 'italic',
+  },
+
+  debugBlock: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  debugEntry: {
+    gap: 2,
+  },
+  debugCaption: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+
+  confirm: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.base,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: colors.brown,
+    backgroundColor: colors.paperBright,
+    borderRadius: radius.sm,
+  },
+  confirmDisabled: {
+    borderColor: colors.inkSoft,
+    backgroundColor: colors.paperLight,
+    opacity: 0.6,
+  },
+  confirmPressed: { opacity: 0.85 },
+  confirmLabel: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.md,
+    color: colors.brown,
+    letterSpacing: typography.letterSpacing.wider,
+  },
+  confirmLabelDisabled: { color: colors.inkSoft },
+});

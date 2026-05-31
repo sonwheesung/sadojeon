@@ -1,7 +1,8 @@
 import { router, type Href } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -47,117 +48,6 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 const DECISION_ACTIONS = ['결정 필요', '응답 필요'] as const;
 
-// 화면 진입 시 빈 인박스에 주입할 placeholder. createdAtDay 는 현재일 기준 상대값.
-function buildSeed(today: number): InboxItem[] {
-  return [
-    {
-      id: 'seed-event-baekho',
-      kind: 'event',
-      title: '백호가 갈취 사건을 일으켰습니다',
-      preview:
-        '백호가 인근 마을에서 상인들을 협박하여 재물을 갈취하였다는 소식이 전해졌습니다. 사문 명예에 영향을 미칠 수 있습니다.',
-      eventId: 'baekho-extortion',
-      priority: 'urgent',
-      createdAtDay: today,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-one-icheong',
-      kind: 'one_liner',
-      title: '이청하: 사부님, 오늘 검법이 손에 잡힙니다',
-      preview: '고된 수련 끝에 마침내 감이 잡혔습니다.\n더 정진하여 사부님의 기대에 부응하겠습니다.',
-      body: '고된 수련 끝에 마침내 감이 잡혔습니다.',
-      priority: 'normal',
-      createdAtDay: today,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-complaint-soyul',
-      kind: 'complaint',
-      title: '강소율: 왜 백호 사형만 직강을 받습니까?',
-      preview: '저는 늘 뒷전인 듯하여 서운합니다.\n실력이 늦지 않는 것도 이 때문이라 생각됩니다.',
-      body: '저는 늘 뒷전인 듯하여 서운합니다.',
-      priority: 'high',
-      createdAtDay: today,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-report-week',
-      kind: 'report',
-      title: '이번 주 수련 진행 보고',
-      preview: '3년차 봄 5주차 제자 수련 및 사문 운영 현황 보고입니다.\n세부 내용은 첨부된 보고서를 확인해 주십시오.',
-      body: '3년차 봄 5주차 제자 수련 및 사문 운영 현황 보고.',
-      priority: 'low',
-      createdAtDay: today - 1,
-      read: true,
-      resolved: true,
-    },
-    {
-      id: 'seed-rumor-sapa',
-      kind: 'rumor',
-      title: '강남에서 사파 세력이 봉기했다 합니다',
-      preview: '강남 지역 사파 세력이 연합하여 각지에서 활동을 시작했다는 풍문입니다.\n상세한 내막은 불분명하나 예의 주시할 필요가 있습니다.',
-      body: '강남 지역 사파 세력 연합 풍문.',
-      priority: 'normal',
-      createdAtDay: today - 1,
-      read: true,
-      resolved: true,
-    },
-    {
-      id: 'seed-letter-jin',
-      kind: 'letter',
-      title: '[졸업 제자] 진백호 — 영약 한 병 보냅니다',
-      preview: '제자가 강호에서 구한 영약을 보냅니다.\n사부님의 은혜에 보답할 방법을 찾고 있다고 합니다.',
-      body: '제자가 강호에서 구한 영약을 보냅니다.',
-      senderName: '진백호',
-      priority: 'normal',
-      createdAtDay: today - 2,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-visit-dokgocheon',
-      kind: 'visit',
-      title: '떠돌이 협객이 사문을 찾았습니다',
-      preview:
-        "자신을 '독고천'이라 칭하는 협객이 사문을 방문하였습니다.\n면담을 요청하며 사부님과의 대화를 원한다고 합니다.",
-      body: '독고천이라 칭하는 협객의 방문.',
-      visitorName: '독고천',
-      priority: 'high',
-      createdAtDay: today - 2,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-rec-icheong',
-      kind: 'recommendation',
-      title: '이청하의 메인 무공 선정 시기입니다',
-      preview: '이청하가 여러 무공을 익혔으므로, 이제 메인 무공을 정할 시기입니다.\n사부님의 판단이 제자의 미래를 좌우할 것입니다.',
-      body: '메인 무공 선정 권고.',
-      topic: 'main-art-selection',
-      priority: 'high',
-      createdAtDay: today - 3,
-      read: false,
-      resolved: false,
-    },
-    {
-      id: 'seed-diplo-mengju',
-      kind: 'diplomacy',
-      title: '[무림 맹주 연맹] 연서 — 협력 제안의 건',
-      preview: '연맹에서 사문 간 협력 체결을 제안하는 서신입니다.\n응답 여부에 따라 향후 관계 변화가 예상됩니다.',
-      body: '무림 맹주 연맹의 협력 제안.',
-      fromFaction: '무림 맹주 연맹',
-      priority: 'normal',
-      createdAtDay: today - 4,
-      read: true,
-      resolved: true,
-    },
-  ];
-}
-
 function relativeDayLabel(diff: number): string {
   if (diff <= 0) return '오늘';
   if (diff === 1) return '어제';
@@ -169,14 +59,10 @@ function relativeDayLabel(diff: number): string {
 export default function InboxScreen() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
-  const addMany = useInboxStore((s) => s.addMany);
   const markRead = useInboxStore((s) => s.markRead);
   const reset = useInboxStore((s) => s.reset);
+  const confirm = useConfirm();
   const [filter, setFilter] = useState<FilterKey>('all');
-
-  useEffect(() => {
-    if (items.length === 0) addMany(buildSeed(totalDay));
-  }, [items.length, addMany, totalDay]);
 
   const filtered = useMemo(() => {
     return items.filter((it) => {
@@ -198,15 +84,26 @@ export default function InboxScreen() {
     [items],
   );
 
-  const onMarkAllRead = () => {
-    items.filter((it) => !it.read).forEach((it) => markRead(it.id));
+  const onMarkAllRead = async () => {
+    const unread = items.filter((it) => !it.read);
+    if (unread.length === 0) return;
+    const ok = await confirm({
+      title: '모두 읽음 처리',
+      message: `읽지 않은 서신 ${unread.length}건을 모두 읽음으로 표시할까요?`,
+      confirmLabel: '모두 읽음',
+    });
+    if (!ok) return;
+    unread.forEach((it) => markRead(it.id));
   };
 
-  const onClearAll = () => {
-    Alert.alert('전체 삭제', '모든 서신을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => reset() },
-    ]);
+  const onClearAll = async () => {
+    const ok = await confirm({
+      title: '전체 삭제',
+      message: '모든 서신을 삭제합니다. 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      tone: 'danger',
+    });
+    if (ok) reset();
   };
 
   const onPressItem = (it: InboxItem) => {
@@ -266,10 +163,10 @@ function Header({
       </View>
       <View style={styles.headerCenter}>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          사문 서함
+          서신함
         </Text>
         <Text style={styles.headerTitleCn} numberOfLines={1}>
-          信函
+          書信函
         </Text>
       </View>
       <View style={styles.headerRight}>

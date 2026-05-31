@@ -1,176 +1,109 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import {
+  CodexActions,
+  CodexGrid,
+  CodexHeader,
+  CodexTabs,
+  type CodexEntry,
+} from '@/components/codex';
+import {
+  CODEX_CATEGORIES,
+  CODEX_CATEGORY_LABEL,
+  CODEX_CATEGORY_LABEL_HANJA,
+  type CodexCategoryKey,
+} from '@/data/labels';
 import { colors, spacing, typography } from '@/theme';
 
-// ─── Category label map ────────────────────────────────────────────────────
-
-const CATEGORY_LABEL: Record<string, string> = {
-  martial: '무공 도감',
-  item: '물품 도감',
-  people: '인물 도감',
-  event: '사건 기록',
-};
-
-const FILTERS_BY_CATEGORY: Record<string, readonly string[]> = {
-  martial: ['전체', '검법', '도법', '창법', '권법', '심법'],
-  item: ['전체', '무구', '의복', '호신부', '단약', '잡화'],
-  people: ['전체', '정파', '사파', '중도', '강호'],
-  event: ['전체', '사문', '강호', '개인'],
-};
+// 사용자 시안 결 (image-cache/6.png) — 무공 도감 카테고리 화면.
 
 // ─── Placeholder data ──────────────────────────────────────────────────────
 
-interface CodexEntry {
-  id: string;
-  name: string;
-  rating: number;
-  ratingMax: number;
-  unlocked: boolean;
+const ENTRIES_BY_CATEGORY: Partial<Record<CodexCategoryKey, readonly CodexEntry[]>> = {
+  sword: [
+    { id: 'cheongpung', name: '청풍검법', grade: 3, unlocked: true },
+    { id: 'baekun', name: '백운검', grade: 2, unlocked: true },
+    { id: 'yugwang', name: '유광검', grade: 4, unlocked: true },
+    { id: 'nakyeop', name: '낙엽검', grade: 2, unlocked: true },
+    { id: 'muyeong', name: '무영검', grade: 3, unlocked: true },
+    { id: 's6', unlocked: false },
+    { id: 's7', unlocked: false },
+    { id: 's8', unlocked: false },
+    { id: 's9', unlocked: false },
+  ],
+};
+
+const FOUND_BY_CATEGORY: Record<CodexCategoryKey, number> = {
+  sword: 5, saber: 0, fist: 0, palm: 0, lightness: 0, internal: 0, external: 0, hidden: 0,
+};
+
+const TOTAL_BY_CATEGORY: Record<CodexCategoryKey, number> = {
+  sword: 25, saber: 22, fist: 20, palm: 18, lightness: 15, internal: 28, external: 24, hidden: 20,
+};
+
+function isCategoryKey(v: string | undefined): v is CodexCategoryKey {
+  return v != null && (CODEX_CATEGORIES as readonly string[]).includes(v);
 }
-
-const ENTRIES: CodexEntry[] = [
-  { id: 'cheongryong', name: '청룡검결', rating: 4, ratingMax: 5, unlocked: true },
-  { id: 'taesan', name: '태산심법', rating: 3, ratingMax: 5, unlocked: true },
-  { id: 'palgwae', name: '팔괘검법', rating: 2, ratingMax: 5, unlocked: true },
-  { id: 'u1', name: '???', rating: 1, ratingMax: 5, unlocked: false },
-  { id: 'honwon', name: '혼원도', rating: 4, ratingMax: 5, unlocked: true },
-  { id: 'yuseong', name: '유성보법', rating: 3, ratingMax: 5, unlocked: true },
-  { id: 'gimun', name: '기문둔갑', rating: 2, ratingMax: 5, unlocked: true },
-  { id: 'u2', name: '???', rating: 0, ratingMax: 5, unlocked: false },
-  { id: 'gangryong', name: '강룡권', rating: 3, ratingMax: 5, unlocked: true },
-  { id: 'u3', name: '???', rating: 0, ratingMax: 5, unlocked: false },
-  { id: 'unryong', name: '운룡심법', rating: 4, ratingMax: 5, unlocked: true },
-  { id: 'u4', name: '???', rating: 0, ratingMax: 5, unlocked: false },
-];
-
-const FOUND = 42;
-const TOTAL = 250;
 
 // ─── Screen ────────────────────────────────────────────────────────────────
 
-export default function CodexCategoryScreen() {
+export default function CodexScreen() {
   const { category } = useLocalSearchParams<{ category: string }>();
-  const label = CATEGORY_LABEL[category ?? ''] ?? '도감';
-  const filters = FILTERS_BY_CATEGORY[category ?? ''] ?? ['전체'];
-  const [filter, setFilter] = useState(filters[0]);
+  const initial: CodexCategoryKey = isCategoryKey(category) ? category : 'sword';
+  const [active, setActive] = useState<CodexCategoryKey>(initial);
 
-  const ratio = FOUND / TOTAL;
+  const entries = ENTRIES_BY_CATEGORY[active] ?? [];
+
+  const handlePressEntry = (id: string) => {
+    // 추후: 무공 상세 (martial-art 화면)로 이동
+    void id;
+  };
 
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
-        <Header label={label} found={FOUND} total={TOTAL} />
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+        <Header onBack={() => router.back()} />
+        <View style={styles.body}>
+          <CodexHeader
+            hanjaCategory={CODEX_CATEGORY_LABEL_HANJA[active]}
+            koreanCategory={CODEX_CATEGORY_LABEL[active]}
+            foundCount={FOUND_BY_CATEGORY[active]}
+            totalCount={TOTAL_BY_CATEGORY[active]}
+          />
+          <CodexTabs active={active} onChange={setActive} />
+          <CodexGrid entries={entries} onPressEntry={handlePressEntry} />
         </View>
-        <Text style={styles.foundLine}>
-          발견 {FOUND} · 미발견 {TOTAL - FOUND}
-        </Text>
-        <FilterTabs options={filters} active={filter} onChange={setFilter} />
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.grid}>
-            {ENTRIES.map((e) => (
-              <Cell key={e.id} entry={e} />
-            ))}
-          </View>
-          <View style={styles.bottomArt}>
-            <Text style={styles.bottomArtLabel}>책장 일러스트</Text>
-          </View>
-        </ScrollView>
+        <View style={styles.footer}>
+          <CodexActions onSort={() => { /* 추후 */ }} onClose={() => router.back()} />
+        </View>
       </PaperCard>
     </SafetyZone>
   );
 }
 
-function Header({ label, found, total }: { label: string; found: number; total: number }) {
+function Header({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
       <Pressable
         style={styles.backButton}
         hitSlop={8}
-        onPress={() => router.back()}
+        onPress={onBack}
         accessibilityRole="button"
         accessibilityLabel="뒤로"
       >
         <Text style={styles.backIcon}>←</Text>
       </Pressable>
       <View style={styles.titleWrap}>
-        <Text style={styles.title} numberOfLines={1}>
-          {label}
-        </Text>
+        <Text style={styles.title}>무공 도감</Text>
       </View>
-      <Text style={styles.progress}>
-        {found} / {total}
-      </Text>
+      <View style={{ width: 32 }} />
     </View>
   );
 }
-
-function FilterTabs({
-  options,
-  active,
-  onChange,
-}: {
-  options: readonly string[];
-  active: string;
-  onChange: (s: string) => void;
-}) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.filterRow}
-    >
-      {options.map((opt) => {
-        const isActive = opt === active;
-        return (
-          <Pressable
-            key={opt}
-            style={[styles.filterTab, isActive && styles.filterTabActive]}
-            onPress={() => onChange(opt)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-          >
-            <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>{opt}</Text>
-            {isActive ? <View style={styles.filterDot} /> : null}
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
-function Cell({ entry }: { entry: CodexEntry }) {
-  return (
-    <View style={styles.cellWrap}>
-      <Pressable
-        style={[styles.cell, !entry.unlocked && styles.cellLocked]}
-        accessibilityRole="button"
-      >
-        <View style={[styles.cellIcon, !entry.unlocked && styles.cellIconLocked]} />
-        <Text
-          style={[styles.cellName, !entry.unlocked && styles.cellNameLocked]}
-          numberOfLines={1}
-        >
-          {entry.name}
-        </Text>
-        <Text style={[styles.cellRating, !entry.unlocked && styles.cellRatingLocked]}>
-          {entry.unlocked ? `${entry.rating}/${entry.ratingMax}` : `?/${entry.ratingMax}`}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// ─── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   header: {
@@ -188,137 +121,16 @@ const styles = StyleSheet.create({
   titleWrap: { flex: 1, alignItems: 'center' },
   title: {
     fontFamily: typography.serifBold,
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     color: colors.ink,
     letterSpacing: typography.letterSpacing.wide,
   },
-  progress: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
+  body: {
+    flex: 1,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-
-  progressTrack: {
-    height: 6,
-    backgroundColor: colors.paperDark,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginVertical: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.ink,
-  },
-  foundLine: {
-    textAlign: 'center',
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
-    paddingBottom: spacing.xs,
-  },
-
-  filterRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  filterTab: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    gap: 2,
-  },
-  filterTabActive: {
-    borderStyle: 'solid',
-    borderColor: colors.ink,
-    backgroundColor: colors.ink,
-  },
-  filterLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  filterLabelActive: {
-    fontFamily: typography.serifBold,
-    color: colors.paperBright,
-  },
-  filterDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.seal,
-  },
-
-  body: { flex: 1 },
-  bodyContent: { paddingBottom: spacing.sm, gap: spacing.sm },
-
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  cellWrap: {
-    width: '25%',
-    padding: 3,
-  },
-  cell: {
-    aspectRatio: 0.8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    gap: 4,
-  },
-  cellLocked: {
-    opacity: 0.55,
-  },
-  cellIcon: {
-    width: '70%',
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 2,
-  },
-  cellIconLocked: {
-    borderColor: colors.inkSoft,
-  },
-  cellName: {
-    fontFamily: typography.serifBold,
-    fontSize: 11,
-    color: colors.ink,
-  },
-  cellNameLocked: {
-    color: colors.inkSoft,
-  },
-  cellRating: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
-  },
-  cellRatingLocked: {
-    color: colors.inkSoft,
-  },
-
-  bottomArt: {
-    width: '100%',
-    aspectRatio: 3,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomArtLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
+  footer: {
+    paddingTop: spacing.sm,
   },
 });

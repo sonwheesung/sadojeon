@@ -63,7 +63,23 @@
       "PowerShell(Copy-Item *)",
       "PowerShell(Remove-Item *)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\project\\\\sadojeon\" -File | Where-Object { $_.Extension -in '.png','.jpg','.jpeg','.webp' } | Select-Object Name, LastWriteTime, Length | Format-Table -AutoSize)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "PowerShell(npx tsc --noEmit; \"exit=$LASTEXITCODE\")",
+      "WebSearch",
+      "WebFetch(domain:docs.expo.dev)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__get_logs",
+      "PowerShell(git mv *)",
+      "PowerShell(git *)",
+      "PowerShell(Move-Item *)",
+      "PowerShell(npx tsc --noEmit)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

@@ -27,6 +27,9 @@ export interface InboxItemBase {
   fromId?: string;
   title: string;
   preview: string;
+  // 결정 데이터 — 이벤트가 서신함으로 들어올 때 해소에 필요한 정보를 담는다.
+  // 예: { domain:'wish'|'oneLiner'|'moral', templateId, discipleId, responses }.
+  payload?: Record<string, unknown>;
 }
 
 export interface OneLinerItem extends InboxItemBase {

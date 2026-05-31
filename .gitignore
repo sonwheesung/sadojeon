@@ -32,8 +32,12 @@ yarn-error.*
 
 # local env files
 .env
-.env*.local
+.env.*
 *.env
+!.env.example
+
+# MCP (contains access token)
+.mcp.json
 
 # planning docs (tracked separately)
 /docs/

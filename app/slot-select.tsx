@@ -1,73 +1,130 @@
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
-import { useGameStore } from '@/stores';
+import { useBackConfirm } from '@/hooks/useBackConfirm';
+import { runs as runsRepo, type RunRecord } from '@/data/repositories';
+import {
+  useDiscipleStore,
+  useGameStore,
+  useMasterStore,
+  useScheduleStore,
+  useSectStore,
+  useTimeStore,
+} from '@/stores';
+import { loadRun } from '@/systems/runSync';
+import { RUN_CHILD_SLICES } from '@/systems/runSlices';
 import { colors, spacing, typography } from '@/theme';
 
 // 시안: docs/references/slot-select-mockup.png
 // 사양: docs/16_회차_다회차.md "사부 슬롯 — 평행 2슬롯"
 // 그레이박스 단계 — 일러스트·산수화는 dashed placeholder, 데이터는 임시값.
 
-interface SlotSummary {
-  slot: 1 | 2;
-  // null 이면 빈 슬롯
-  data: {
-    sectName: string;
-    sectHanja: string;
-    runNumber: number;
-    timeLabel: string;
-    masterName: string;
-    insightStars: number;
-    scrollCount: number;
-    discipleCount: number;
-  } | null;
+const SLOTS = [1, 2] as const;
+const SLOT_SEAL_LABEL: Record<number, string> = { 1: '壹', 2: '貳' };
+const SEASON_KR: Record<string, string> = {
+  spring: '봄',
+  summer: '여름',
+  autumn: '가을',
+  winter: '겨울',
+};
+
+function timeLabelOf(run: RunRecord): string {
+  const c = (run.gameTime as { current?: { year?: number; season?: string; week?: number } })
+    .current;
+  if (!c?.year) return '진행 전';
+  return `${c.year}년차 ${SEASON_KR[c.season ?? ''] ?? ''} ${c.week ?? 1}주차`;
 }
 
-const PLACEHOLDER_SLOTS: SlotSummary[] = [
-  {
-    slot: 1,
-    data: {
-      sectName: '운림산문',
-      sectHanja: '雲林山門',
-      runNumber: 3,
-      timeLabel: '5년차 봄 7주차',
-      masterName: '임청허',
-      insightStars: 4,
-      scrollCount: 23,
-      discipleCount: 7,
-    },
-  },
-  { slot: 2, data: null },
-];
-
-const SLOT_SEAL_LABEL: Record<1 | 2, string> = {
-  1: '壹',
-  2: '貳',
-};
+function field(obj: Record<string, unknown> | null, key: string, fallback: string): string {
+  const v = obj?.[key];
+  return typeof v === 'string' && v ? v : fallback;
+}
 
 // ─── Screen ────────────────────────────────────────────────────────────────
 
 export default function SlotSelectScreen() {
   const setSaveSlot = useGameStore((s) => s.setSaveSlot);
+  const [loading, setLoading] = useState(true);
+  const [bySlot, setBySlot] = useState<Record<number, RunRecord>>({});
 
-  const onPickSlot = (slot: 1 | 2, hasData: boolean) => {
+  // 뒤로가기 → 게임 종료 확인.
+  useBackConfirm(
+    {
+      title: '게임 종료',
+      message: '게임을 종료하시겠습니까?',
+      confirmLabel: '종료',
+      tone: 'danger',
+    },
+    () => BackHandler.exitApp(),
+  );
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await runsRepo.listForUser();
+      const map: Record<number, RunRecord> = {};
+      for (const r of list) map[r.slot] = r;
+      setBySlot(map);
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('[slot-select] 회차 로드 실패', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  // 빈 슬롯 → 새 회차: 로컬 상태 비우고 메인으로(시작 선택 모달 표시).
+  const startNew = (slot: number) => {
     setSaveSlot(slot);
-    // 그레이박스: 빈 슬롯이든 사용 슬롯이든 메인으로 진입
-    // 후속: 빈 슬롯이면 인트로/새 사부 생성 흐름으로 분기
-    router.replace(hasData ? '/(tabs)' : '/(tabs)');
+    useMasterStore.getState().reset();
+    useSectStore.getState().reset();
+    useDiscipleStore.getState().reset();
+    useTimeStore.getState().reset();
+    useScheduleStore.getState().reset();
+    RUN_CHILD_SLICES.forEach((slice) => slice.reset());
+    router.replace('/(tabs)');
+  };
+
+  // 사용 슬롯 → 이어 진행: DB 회차를 로드해 스토어 복원.
+  const resume = async (run: RunRecord) => {
+    setSaveSlot(run.slot);
+    try {
+      await loadRun(run.id);
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('[slot-select] 회차 로드 실패', e);
+    }
+    router.replace('/(tabs)');
+  };
+
+  const onPick = (slot: number) => {
+    const run = bySlot[slot];
+    if (run) resume(run);
+    else startNew(slot);
   };
 
   return (
     <SafetyZone variant="stack" background={colors.background}>
       <PaperCard>
         <Header />
-        <View style={styles.slotsRow}>
-          {PLACEHOLDER_SLOTS.map((s) => (
-            <SlotCard key={s.slot} summary={s} onPick={onPickSlot} />
-          ))}
-        </View>
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.ink} />
+          </View>
+        ) : (
+          <View style={styles.slotsRow}>
+            {SLOTS.map((slot) => (
+              <SlotCard key={slot} slot={slot} run={bySlot[slot]} onPick={onPick} />
+            ))}
+          </View>
+        )}
         <Footer />
       </PaperCard>
     </SafetyZone>
@@ -96,27 +153,29 @@ function Header() {
 // ─── Slot card ─────────────────────────────────────────────────────────────
 
 function SlotCard({
-  summary,
+  slot,
+  run,
   onPick,
 }: {
-  summary: SlotSummary;
-  onPick: (slot: 1 | 2, hasData: boolean) => void;
+  slot: number;
+  run?: RunRecord;
+  onPick: (slot: number) => void;
 }) {
-  const isEmpty = summary.data === null;
+  const isEmpty = !run;
   return (
     <Pressable
       style={[styles.card, isEmpty && styles.cardEmpty]}
-      onPress={() => onPick(summary.slot, !isEmpty)}
+      onPress={() => onPick(slot)}
       accessibilityRole="button"
-      accessibilityLabel={isEmpty ? `슬롯 ${summary.slot} 새로 시작` : `슬롯 ${summary.slot} 이어 진행`}
+      accessibilityLabel={isEmpty ? `슬롯 ${slot} 새로 시작` : `슬롯 ${slot} 이어 진행`}
     >
-      <SlotSeal slot={summary.slot} dim={isEmpty} />
-      {isEmpty ? <EmptyBody /> : <ActiveBody data={summary.data!} />}
+      <SlotSeal slot={slot} dim={isEmpty} />
+      {run ? <ActiveBody run={run} /> : <EmptyBody />}
     </Pressable>
   );
 }
 
-function SlotSeal({ slot, dim }: { slot: 1 | 2; dim: boolean }) {
+function SlotSeal({ slot, dim }: { slot: number; dim: boolean }) {
   return (
     <View style={[styles.slotSeal, dim && styles.slotSealDim]}>
       <Text style={[styles.slotSealLabel, dim && styles.slotSealLabelDim]}>
@@ -128,24 +187,22 @@ function SlotSeal({ slot, dim }: { slot: 1 | 2; dim: boolean }) {
 
 // ─── Active body ──────────────────────────────────────────────────────────
 
-function ActiveBody({ data }: { data: NonNullable<SlotSummary['data']> }) {
+function ActiveBody({ run }: { run: RunRecord }) {
   return (
     <View style={styles.cardBody}>
       <Text style={styles.sectName} numberOfLines={1}>
-        {data.sectName}
+        {field(run.sect, 'name', '무명산문')}
       </Text>
       <Text style={styles.sectHanja} numberOfLines={1}>
-        {`(${data.sectHanja})`}
+        {`(${field(run.sect, 'hanjaName', '無名山門')})`}
       </Text>
       <Text style={styles.runLabel} numberOfLines={1}>
-        {`제${data.runNumber}회차 · ${data.timeLabel}`}
+        {timeLabelOf(run)}
       </Text>
 
       <View style={styles.metaList}>
-        <MetaRow label="현재 사부" value={data.masterName} />
-        <MetaRow label="통찰" value={`${data.insightStars}/5`} />
-        <MetaRow label="누적 비급" value={`${data.scrollCount}권`} />
-        <MetaRow label="거쳐간 제자" value={`${data.discipleCount}명`} />
+        <MetaRow label="현재 사부" value={field(run.master, 'name', '—')} />
+        <MetaRow label="상태" value={run.status === 'ended' ? '종료' : '진행 중'} />
       </View>
 
       <View style={styles.landscape}>
@@ -241,6 +298,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Card

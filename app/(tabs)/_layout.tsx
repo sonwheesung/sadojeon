@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { useTabBarScreenOptions } from '@/components/navigation/useTabBarScreenOptions';
-import { useInboxBadgeCount } from '@/hooks/useInboxBadgeCount';
+import { useInboxUnreadCount } from '@/hooks/useInboxBadgeCount';
 
 // Canvas dimensions output by scripts/icon-alpha.mjs. Update these if the
 // source artwork is reprocessed and the canvas size changes.
@@ -16,7 +16,7 @@ const ICON_ASPECT = {
 
 export default function TabLayout() {
   const screenOptions = useTabBarScreenOptions();
-  const inboxBadge = useInboxBadgeCount();
+  const inboxBadge = useInboxUnreadCount();
 
   return (
     <Tabs screenOptions={screenOptions}>

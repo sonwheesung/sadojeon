@@ -18,12 +18,15 @@ import {
   NotoSerifSC_700Bold,
 } from '@expo-google-fonts/noto-serif-sc';
 
+import { ConfirmProvider } from '@/components/common/ConfirmDialog';
+import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// 인증되면 사문 선택(slot-select)이 루트 앵커 — 로그인 직후 여기로 착지.
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: 'slot-select',
 };
 
 export default function RootLayout() {
@@ -36,6 +39,13 @@ export default function RootLayout() {
     'NotoSerifSC-Bold': NotoSerifSC_700Bold,
   });
 
+  const status = useAuthStore((s) => s.status);
+  const init = useAuthStore((s) => s.init);
+
+  useEffect(() => {
+    init();
+  }, [init]);
+
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
@@ -43,32 +53,45 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
+  if (status === 'loading') return null; // 세션 복원 중 — 스플래시 유지
+
+  // 게이팅은 선언적 Stack.Protected 로만 — 명령형 router 이동·네비훅 없음(리렌더 루프 방지).
+  const authed = status === 'authed';
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.paper },
-            animation: 'fade',
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="slot-select" />
-          <Stack.Screen name="run-end" />
-          <Stack.Screen name="schedule" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="village" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="dialogue" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="disciple/[id]" />
-          <Stack.Screen name="equipment/[slot]" />
-          <Stack.Screen name="inventory/[category]" />
-          <Stack.Screen name="codex/[category]" />
-          <Stack.Screen name="inbox/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="activity/[target]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="martial-art/[target]" options={{ presentation: 'modal' }} />
-        </Stack>
+        <ConfirmProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.paper },
+              animation: 'fade',
+            }}
+          >
+            <Stack.Protected guard={authed}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="slot-select" />
+              <Stack.Screen name="run-end" />
+              <Stack.Screen name="schedule/index" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="village/index" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="dialogue/index" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="disciple/[id]" />
+              <Stack.Screen name="equipment/[slot]" />
+              <Stack.Screen name="inventory/[category]" />
+              <Stack.Screen name="codex/[category]" />
+              <Stack.Screen name="inbox/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="activity/[target]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="martial-art/[target]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="npc/index" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="npc/[id]" options={{ presentation: 'modal' }} />
+            </Stack.Protected>
+            <Stack.Protected guard={!authed}>
+              <Stack.Screen name="login" />
+            </Stack.Protected>
+          </Stack>
+        </ConfirmProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
