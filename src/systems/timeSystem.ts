@@ -14,6 +14,7 @@ import { triggerDailyMoralEvent } from './moralEventSystem';
 import { tickOverrideExpiry } from './overrideSystem';
 import { captureSnapshot } from './reportSystem';
 import { tickDailyTraining } from './trainingSystem';
+import { tickQuests } from './questSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
@@ -62,6 +63,7 @@ export function advanceTurn() {
   }
 
   const reports = tickDailyTraining();
+  tickQuests(); // 기한 도래 의뢰 결산 → 마일스톤(서신함)
   const dateLabel = buildDateLabel();
   const { log, badges, milestones } = buildTickArtifacts(reports, dateLabel);
   usePendingStore.getState().setDailyTick(log, badges, milestones);

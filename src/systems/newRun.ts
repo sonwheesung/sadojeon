@@ -13,12 +13,14 @@ import {
   useEventHistoryStore,
   useLlmSettingsStore,
   useMasterStore,
+  useQuestStore,
   useScheduleStore,
   useSectAtmosphereStore,
   useSectStore,
   useTimeStore,
 } from '@/stores';
 import { captureSnapshot } from './reportSystem';
+import { generateBoard } from './questSystem';
 import { RUN_CHILD_SLICES } from './runSlices';
 import type {
   Disciple,
@@ -104,6 +106,7 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
     age: 10,
     efficiency: seed.efficiency ?? {},
     insight: seed.insight ?? 3,
+    fame: 0,
     martialArts: [startingArtInstance(seed.artId)],
     mainMartialArtId: seed.artId,
     // 경지 — 무공 입문 → 삼류 시작. 천장은 주력 무공서 등급(별 등급 폐기, docs/28 §5).
@@ -168,6 +171,9 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   // 새 회차 첫 날 = 1년차 봄 1월 1주차 1일 = 월 시작.
   // 첫 달은 결산 X (직전 데이터 없음). 첫 스냅샷 저장 + 패턴 설정 모달만.
   useScheduleStore.getState().reset();
+  // 의뢰 — 회차 초기화 + 사문 명성 기반 게시판 생성.
+  useQuestStore.getState().reset();
+  generateBoard();
   useScheduleStore.getState().setSnapshot(captureSnapshot());
   useScheduleStore.getState().openMonthlySetup();
 }

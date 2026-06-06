@@ -41,7 +41,7 @@ export type DiscipleBadge =
   | 'good_progress';  // 오늘 큰 진척
 
 // 변곡점 — 모달 강제 표시. 작은 진척과 구분되는 큰 사건만.
-export type MilestoneKind = 'promotion' | 'collapse' | 'graduation';
+export type MilestoneKind = 'promotion' | 'collapse' | 'graduation' | 'quest';
 
 export interface Milestone {
   id: string;

@@ -9,6 +9,7 @@ export { useEncounterStore } from './encounterStore';
 export { usePendingStore } from './pendingStore';
 export type { PendingOneLiner, PendingWish } from './pendingStore';
 export { useScheduleStore } from './scheduleStore';
+export { useQuestStore } from './questStore';
 export { useJianghuStore } from './jianghuStore';
 export { useItemStore } from './itemStore';
 export { useSectAtmosphereStore } from './sectAtmosphereStore';

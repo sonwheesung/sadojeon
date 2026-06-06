@@ -72,6 +72,8 @@ export interface Disciple {
   efficiency: EfficiencyMap;
   // 오성(悟性) — 깨달음 확률(1~5). 재능 5축 중 유일 잔존. docs/28 §1·§5-3.
   insight: number;
+  // 명성(名聲) — 의뢰 수행으로 누적. 직업 적합도·졸업 등급에 반영. docs/28 §3·§4.
+  fame: number;
 
   martialArts: MartialArtInstance[];
   mainMartialArtId?: string;

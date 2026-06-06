@@ -86,8 +86,9 @@ function personaFit(d: Disciple, job: Job): number {
 function fitness(d: Disciple, job: Job): number {
   const a = abilityFit(d, job);
   const p = personaFit(d, job);
-  // 능력 50% + 인격 35% + 제자 의지 15%(현재 인격 부합 재사용). docs/28 §3.
-  return 0.5 * a + 0.35 * p + 0.15 * p;
+  const fame = Math.max(0, Math.min(1, (d.fame ?? 0) / 80));
+  // 능력 45% + 인격 30% + 명성 15% + 제자 의지 10%(인격 재사용). docs/28 §3.
+  return 0.45 * a + 0.3 * p + 0.15 * fame + 0.1 * p;
 }
 
 export interface JobChance {

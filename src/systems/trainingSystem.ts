@@ -385,8 +385,8 @@ export function tickDailyTraining(): DiscipleTickReport[] {
   for (const id of store.order) {
     const d = store.disciples[id];
     if (!d) continue;
-    // 졸업·하산 제자는 더 이상 사문 일정에 포함되지 않는다.
-    if (d.status === 'graduated' || d.status === 'departed') continue;
+    // 졸업·하산·파견(의뢰) 제자는 사문 일과에 포함되지 않는다.
+    if (d.status === 'graduated' || d.status === 'departed' || d.status === 'questing') continue;
 
     const plan = resolveDayPlan(d, day);
 
