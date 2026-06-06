@@ -8,8 +8,10 @@ import type {
   Disciple,
   EventTemplate,
   EventTier,
-  PersonalityTraits,
+  LegacyPersonalityAxis,
+  LegacyPersonalityMap,
 } from '@/types';
+import { legacyAxisValue } from './personalityCompat';
 
 // ─── Eligibility ────────────────────────────────────────────────────────────
 
@@ -17,22 +19,22 @@ function isActive(d: Disciple): boolean {
   return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
 }
 
-function meetsFloor(d: Disciple, req?: Partial<PersonalityTraits>): boolean {
+function meetsFloor(d: Disciple, req?: LegacyPersonalityMap): boolean {
   if (!req) return true;
-  for (const k of Object.keys(req) as (keyof PersonalityTraits)[]) {
+  for (const k of Object.keys(req) as LegacyPersonalityAxis[]) {
     const v = req[k];
     if (v == null) continue;
-    if (d.personality[k] < v) return false;
+    if (legacyAxisValue(d.personality, k) < v) return false;
   }
   return true;
 }
 
-function meetsCeiling(d: Disciple, forb?: Partial<PersonalityTraits>): boolean {
+function meetsCeiling(d: Disciple, forb?: LegacyPersonalityMap): boolean {
   if (!forb) return true;
-  for (const k of Object.keys(forb) as (keyof PersonalityTraits)[]) {
+  for (const k of Object.keys(forb) as LegacyPersonalityAxis[]) {
     const v = forb[k];
     if (v == null) continue;
-    if (d.personality[k] > v) return false;
+    if (legacyAxisValue(d.personality, k) > v) return false;
   }
   return true;
 }

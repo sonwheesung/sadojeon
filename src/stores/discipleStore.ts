@@ -15,33 +15,50 @@ import { PERSONALITY } from '@/data/constants';
 import { slotAwareStorage } from './persistStorage';
 
 const DEFAULT_PERSONALITY: PersonalityTraits = {
-  diligence: PERSONALITY.DEFAULT,
-  pride: PERSONALITY.DEFAULT,
-  loyalty: PERSONALITY.DEFAULT,
-  curiosity: PERSONALITY.DEFAULT,
-  empathy: PERSONALITY.DEFAULT,
+  integrity: PERSONALITY.DEFAULT,
+  freedom: PERSONALITY.DEFAULT,
+  warmth: PERSONALITY.DEFAULT,
+  prudence: PERSONALITY.DEFAULT,
+  mercy: PERSONALITY.DEFAULT,
+  ambition: PERSONALITY.DEFAULT,
 };
 
-// 구 1~5 척도 → 1~100 밴드 환산 (n×20−10): 1→10·2→30·3→50·4→70·5→90.
-function rescalePersonality(p?: Partial<PersonalityTraits>): PersonalityTraits {
-  const conv = (v: number | undefined) =>
-    v == null ? PERSONALITY.DEFAULT : Math.max(1, Math.min(100, Math.round(v * 20 - 10)));
+type LooseTraits = Record<string, number | undefined>;
+
+// 구 5축(성실·자존·의리·호기·공감) 세이브 → 6축 매핑. docs/28 §6.
+// 인격은 회차 스코프라 손실 허용(베스트에포트). 구 1~5 척도면 ×20−10 환산 후 매핑. 이미 6축이면 통과.
+function migratePersonality(p: LooseTraits): PersonalityTraits {
+  if (typeof p.integrity === 'number') {
+    return {
+      integrity: p.integrity,
+      freedom: p.freedom ?? 50,
+      warmth: p.warmth ?? 50,
+      prudence: p.prudence ?? 50,
+      mercy: p.mercy ?? 50,
+      ambition: p.ambition ?? 50,
+    };
+  }
+  const sc = (v?: number) =>
+    v == null ? 50 : v <= 5 ? Math.max(1, Math.min(100, Math.round(v * 20 - 10))) : v;
+  const dil = sc(p.diligence);
+  const pri = sc(p.pride);
+  const loy = sc(p.loyalty);
+  const cur = sc(p.curiosity);
+  const emp = sc(p.empathy);
   return {
-    diligence: conv(p?.diligence),
-    pride: conv(p?.pride),
-    loyalty: conv(p?.loyalty),
-    curiosity: conv(p?.curiosity),
-    empathy: conv(p?.empathy),
+    integrity: Math.round((dil + loy) / 2), // 성실+의리 → 강직
+    freedom: cur, // 호기 → 자유
+    warmth: emp, // 공감 → 다정
+    prudence: 50,
+    mercy: emp, // 공감 → 자비
+    ambition: pri, // 자존 → 야망
   };
 }
 
-// 영속·DB 하이드레이트 공통 관문: 없으면 기본값, 구 1~5 스케일이면 자동 환산.
-// 5축 최댓값이 5 이하 = 옛 척도(신 척도는 기본 50·시드 30~90이라 전 축 ≤5 불가).
-// 멱등(idempotent) — 이미 1~100 이면 그대로 통과.
+// 영속·DB 하이드레이트 공통 관문: 없으면 기본값, 구 5축이면 6축 매핑.
 function normalizePersonality(p?: PersonalityTraits): PersonalityTraits {
   if (!p) return DEFAULT_PERSONALITY;
-  const max = Math.max(p.diligence, p.pride, p.loyalty, p.curiosity, p.empathy);
-  return max <= 5 ? rescalePersonality(p) : p;
+  return migratePersonality(p as unknown as LooseTraits);
 }
 
 // 구 무공 모델 { stage(5명칭), progress 0~100 } → 신 모델 { seong 1~10, exp }. docs/26.
@@ -274,9 +291,9 @@ export const useDiscipleStore = create<DiscipleStore>()(
     {
       name: 'disciple',
       storage: createJSONStorage(() => slotAwareStorage),
-      version: 3, // v1→v2: 성격 1~5→1~100. v2→v3: 무공 {stage,progress}→{seong,exp} (withDefaults 처리)
+      version: 4, // v3→v4: 성격 5축→인격 6축 (withDefaults→normalizePersonality 가 매핑)
       partialize: (s) => ({ disciples: s.disciples, order: s.order }),
-      migrate: (persisted: unknown, version: number) => {
+      migrate: (persisted: unknown) => {
         const p = (persisted ?? {}) as {
           disciples?: Record<string, Disciple>;
           order?: string[];
@@ -284,12 +301,8 @@ export const useDiscipleStore = create<DiscipleStore>()(
         const disciples = p.disciples ?? {};
         const patched: Record<string, Disciple> = {};
         for (const [id, d] of Object.entries(disciples)) {
-          // v2 미만 세이브는 성격이 구 1~5 척도 → 1~100 으로 환산.
-          const dd =
-            version < 2 && d.personality
-              ? { ...d, personality: rescalePersonality(d.personality) }
-              : d;
-          patched[id] = withDefaults(dd);
+          // 성격 5축→6축, 무공 {stage,progress}→{seong,exp}, 효율 기본값 등은 withDefaults 가 처리.
+          patched[id] = withDefaults(d);
         }
         return { disciples: patched, order: p.order ?? [] };
       },

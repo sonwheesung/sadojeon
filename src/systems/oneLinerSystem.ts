@@ -43,19 +43,16 @@ function clampPref(v: number): number {
   return Math.max(TONE_PREF_MIN, Math.min(TONE_PREF_MAX, Math.round(v)));
 }
 
-// 톤 선호도 자동 산출 — docs/12.
-// personality 5축 (diligence·pride·loyalty·curiosity·empathy, 1~100) 을 가중합산.
-// 계수는 1~100 스케일 기준 (구 1~5 계수 ÷20). 출력은 ±7 clamp.
+// 톤 선호도 자동 산출 — docs/12. 인격 6축(0~100) 가중합산. 출력 ±7 clamp.
+// 다정·자비 = 격려 수용 ↑, 신중·의무(낮은 자유) = 끄덕임, 강직 = 경계 수용·야망 = 반발.
 export function deriveTonePreferences(
   p: PersonalityTraits,
 ): OneLinerTonePreferences {
   return {
-    encourage: clampPref(2 + 0.025 * p.pride + 0.015 * p.loyalty + 0.02 * p.empathy),
-    nod: clampPref(1 + 0.01 * p.loyalty + 0.015 * p.empathy),
-    caution: clampPref(-1 + 0.02 * p.diligence - 0.025 * p.pride),
-    ignore: clampPref(
-      -2 - 0.025 * p.loyalty - 0.03 * p.curiosity - 0.015 * p.empathy,
-    ),
+    encourage: clampPref(2 + 0.02 * p.warmth + 0.02 * p.mercy),
+    nod: clampPref(1 + 0.015 * p.prudence + 0.015 * (100 - p.freedom)),
+    caution: clampPref(-1 + 0.02 * p.integrity - 0.02 * p.ambition),
+    ignore: clampPref(-2 - 0.03 * p.warmth - 0.02 * p.mercy),
   };
 }
 

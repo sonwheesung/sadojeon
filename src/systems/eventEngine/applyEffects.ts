@@ -8,10 +8,13 @@ import type {
   CascadeEffect,
   Disciple,
   EventEffects,
+  LegacyPersonalityAxis,
+  LegacyPersonalityMap,
   MasterEffect,
   PerpetratorEffect,
   PersonalityTraits,
 } from '@/types';
+import { applyLegacyShift, legacyAxisValue } from './personalityCompat';
 
 const DARKNESS_RISK_ORDER: readonly Disciple['darknessRisk'][] = [
   'low',
@@ -40,22 +43,22 @@ function isActive(d: Disciple): boolean {
   return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
 }
 
-function meetsFloor(d: Disciple, req?: Partial<PersonalityTraits>): boolean {
+function meetsFloor(d: Disciple, req?: LegacyPersonalityMap): boolean {
   if (!req) return true;
-  for (const k of Object.keys(req) as (keyof PersonalityTraits)[]) {
+  for (const k of Object.keys(req) as LegacyPersonalityAxis[]) {
     const v = req[k];
     if (v == null) continue;
-    if (d.personality[k] < v) return false;
+    if (legacyAxisValue(d.personality, k) < v) return false;
   }
   return true;
 }
 
-function meetsCeiling(d: Disciple, forb?: Partial<PersonalityTraits>): boolean {
+function meetsCeiling(d: Disciple, forb?: LegacyPersonalityMap): boolean {
   if (!forb) return true;
-  for (const k of Object.keys(forb) as (keyof PersonalityTraits)[]) {
+  for (const k of Object.keys(forb) as LegacyPersonalityAxis[]) {
     const v = forb[k];
     if (v == null) continue;
-    if (d.personality[k] > v) return false;
+    if (legacyAxisValue(d.personality, k) > v) return false;
   }
   return true;
 }
@@ -96,10 +99,10 @@ function applyPerpetratorEffect(
   }
   if (eff.personalityShift) {
     const next: PersonalityTraits = { ...d.personality };
-    for (const k of Object.keys(eff.personalityShift) as (keyof PersonalityTraits)[]) {
+    for (const k of Object.keys(eff.personalityShift) as LegacyPersonalityAxis[]) {
       const delta = eff.personalityShift[k];
       if (delta == null) continue;
-      next[k] = Math.max(1, Math.min(100, next[k] + delta)); // 성격 1~100
+      applyLegacyShift(next, k, delta); // 구 5축 조건 → 6축 모델 매핑 적용
     }
     patch.personality = next;
   }

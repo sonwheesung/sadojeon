@@ -5,7 +5,7 @@
 // Phase A 에선 moral 도메인만 본 모델을 따른다.
 // 기존 MoralEventTemplate 등은 점진적으로 EventTemplate<MoralChoiceTone> 별칭으로 narrow.
 
-import type { PersonalityTraits } from './disciple';
+import type { LegacyPersonalityMap, PersonalityTraits } from './disciple';
 import type {
   AtmosphereEffect,
   CascadeEffect,
@@ -33,8 +33,8 @@ export interface EventTrigger {
   weight: number;
   minYearInSect?: number;
   maxYearInSect?: number;
-  requirePersonality?: Partial<PersonalityTraits>;
-  forbidPersonality?: Partial<PersonalityTraits>;
+  requirePersonality?: LegacyPersonalityMap;
+  forbidPersonality?: LegacyPersonalityMap;
   requireMinDarkness?: 0 | 1 | 2 | 3;
   onlyForDiscipleId?: string;
   requireSiblingId?: string;

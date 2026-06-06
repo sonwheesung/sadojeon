@@ -41,13 +41,20 @@ export type EfficiencyTier = '특화' | '상성' | '보통' | '미숙' | '상극
 export type EfficiencyKey = MartialArtSchool | StatId;
 export type EfficiencyMap = Partial<Record<EfficiencyKey, EfficiencyTier>>;
 
+// 인격 6축 (0~100, 50=중립, 키=고극). docs/28 §6. 옛 5축(성실·자존·의리·호기·공감) 폐기.
 export interface PersonalityTraits {
-  diligence: number;
-  pride: number;
-  loyalty: number;
-  curiosity: number;
-  empathy: number;
+  integrity: number; // 강직 (↔유순)
+  freedom: number; // 자유 (↔의무)
+  warmth: number; // 다정 (↔무뚝뚝)
+  prudence: number; // 신중 (↔충동)
+  mercy: number; // 자비 (↔냉정)
+  ambition: number; // 야망 (↔평온)
 }
+
+// 구 5축 시나리오 조건 호환 — moralEvent 데이터가 아직 이 이름을 쓴다.
+// 평가기가 6축 값으로 매핑(personalityCompat). 추후 시나리오 6축 재작성 시 제거.
+export type LegacyPersonalityAxis = 'diligence' | 'pride' | 'loyalty' | 'curiosity' | 'empathy';
+export type LegacyPersonalityMap = Partial<Record<LegacyPersonalityAxis, number>>;
 
 // 한 마디 응답 톤별 신뢰 변동 가중치 — docs/12.
 // 디폴트는 personality 에서 자동 산출되지만, 특수 캐릭터는 수동 오버라이드 가능.
