@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SectionLabel } from '@/components/common/SectionLabel';
-import { expToNext, statCap } from '@/data/training';
+import { statCap } from '@/data/training';
 import type { Disciple } from '@/types';
 import { STAT_LABEL, type StatId, type StatTrack } from '@/types/training';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -13,6 +13,8 @@ import { colors, radius, spacing, typography } from '@/theme';
 
 const ABILITY: StatId[] = ['strength', 'agility', 'endurance'];
 const KNOWLEDGE: StatId[] = ['formation', 'etiquette', 'knowledge'];
+// 비무공 소양 — 교습(공부)으로 키움. 정탐·호위는 의뢰(B) 도입 시 합류.
+const APTITUDE: StatId[] = ['medicine', 'alchemy'];
 
 export function StatGrowthPanel({ disciple }: { disciple: Disciple }) {
   return (
@@ -21,6 +23,7 @@ export function StatGrowthPanel({ disciple }: { disciple: Disciple }) {
       <View style={styles.panel}>
         <Group title="능력치" ids={ABILITY} disciple={disciple} />
         <Group title="지식" ids={KNOWLEDGE} disciple={disciple} />
+        <Group title="소양" ids={APTITUDE} disciple={disciple} />
       </View>
     </View>
   );
@@ -55,12 +58,9 @@ function StatRow({
   disciple: Disciple;
 }) {
   const level = track?.level ?? 0;
-  const exp = track?.exp ?? 0;
   const cap = statCap(id);
   const maxed = level >= cap;
-  const need = expToNext(level);
-  const pct = maxed ? 1 : need > 0 ? Math.max(0, Math.min(1, exp / need)) : 0;
-  // 체력은 최대 체력 수치로 (Lv×10). 그 외는 Lv.
+  // 체력은 최대 체력 수치(Lv×10). 그 외는 Lv. EXP 진행도는 노출 X — 관찰 가능한 결과(값)만.
   const valueText =
     id === 'endurance'
       ? `${disciple.maxStamina ?? level * 10}`
@@ -68,9 +68,7 @@ function StatRow({
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{STAT_LABEL[id]}</Text>
-      <View style={styles.barTrack}>
-        <View style={[styles.barFill, maxed && styles.barFillMax, { width: `${pct * 100}%` }]} />
-      </View>
+      <View style={styles.spacer} />
       <Text style={[styles.lv, maxed && styles.lvMax]}>
         {valueText}
         {maxed ? ' (최대)' : ''}
@@ -107,6 +105,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.ink,
   },
+  spacer: { flex: 1 },
   barTrack: {
     flex: 1,
     height: 8,

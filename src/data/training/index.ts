@@ -91,6 +91,25 @@ export const TRAINING_OPTIONS: readonly TrainingOption[] = [
     grantsStat: 'knowledge',
     expBase: 11,
   },
+  // 비무공 소양 — 교습(공부). 효율(특화~상극)이 속도 차등. docs/28 §1·§2.
+  {
+    id: 'study_medicine',
+    category: 'study',
+    label: '의술',
+    staminaDelta: -6,
+    stressDelta: 9,
+    grantsStat: 'medicine',
+    expBase: 11,
+  },
+  {
+    id: 'study_alchemy',
+    category: 'study',
+    label: '약초학',
+    staminaDelta: -7,
+    stressDelta: 10,
+    grantsStat: 'alchemy',
+    expBase: 10,
+  },
 
   // 휴식 — 회복 + 스트레스 해소. 성장 없음. (회복량 상향 — 훈련 소모 대비 체감되게)
   { id: 'rest_idle', category: 'rest', label: '그냥 쉼', staminaDelta: 50, stressDelta: -15 },
