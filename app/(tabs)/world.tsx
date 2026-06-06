@@ -6,12 +6,22 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
+import { ROUTE_LABEL } from '@/data/careers';
+import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
 import { useJianghuStore, type JianghuEvent, type JianghuFaction } from '@/stores/jianghuStore';
 import { useMasterStore } from '@/stores/masterStore';
 import { colors, spacing, typography } from '@/theme';
 
 type Faction = JianghuFaction;
 type ActiveEvent = JianghuEvent;
+
+const GRADUATE_STATUS_LABEL: Record<GraduateStatus, string> = {
+  active: '활동',
+  injured: '부상',
+  retired: '은거',
+  dead: '별세',
+  missing: '실종',
+};
 
 // 사부 통찰 → 별 1~5 (stats.insight 는 이미 1~5, MASTER_STAT).
 function insightStars(value: number): number {
@@ -24,6 +34,7 @@ export default function WorldScreen() {
   const factions = useJianghuStore((s) => s.factions);
   const events = useJianghuStore((s) => s.events);
   const seedDefaults = useJianghuStore((s) => s.seedDefaults);
+  const graduates = useGraduateStore((s) => s.records);
   const insightStat = useMasterStore((s) => s.master?.stats.insight ?? 3);
 
   // 정세가 비어 있으면(구 회차 등) 기본값 시드 — 화면이 비지 않게.
@@ -42,6 +53,9 @@ export default function WorldScreen() {
           showsVerticalScrollIndicator={false}
         >
           <BannerSlot />
+
+          <SectionLabel>하산 제자</SectionLabel>
+          <GraduateList graduates={graduates} />
 
           <SectionLabel>강호 정세</SectionLabel>
           <FactionColumns factions={factions} />
@@ -86,6 +100,38 @@ function BannerSlot() {
   return (
     <View style={styles.banner}>
       <Text style={styles.bannerLabel}>강호 산수 베너 자리</Text>
+    </View>
+  );
+}
+
+function GraduateList({ graduates }: { graduates: GraduateRecord[] }) {
+  if (graduates.length === 0) {
+    return (
+      <View style={styles.graduateEmpty}>
+        <Text style={styles.graduateEmptyLabel}>아직 강호로 나간 제자가 없다.</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.graduateList}>
+      {graduates.map((g) => {
+        const gone = g.status === 'dead' || g.status === 'missing';
+        return (
+          <View key={g.id} style={[styles.graduateRow, gone && styles.graduateGone]}>
+            <View style={styles.graduateMain}>
+              <Text style={styles.graduateName} numberOfLines={1}>
+                {g.name}
+              </Text>
+              <Text style={styles.graduateTitle} numberOfLines={1}>
+                {ROUTE_LABEL[g.route]} · {g.title}
+              </Text>
+            </View>
+            <Text style={[styles.graduateStatus, gone && styles.graduateStatusGone]}>
+              {GRADUATE_STATUS_LABEL[g.status]}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -210,6 +256,62 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bannerLabel: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+  },
+
+  // Graduate list
+  graduateList: {
+    gap: spacing.xs,
+  },
+  graduateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.inkSoft,
+    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  graduateGone: {
+    opacity: 0.5,
+  },
+  graduateMain: {
+    flex: 1,
+    gap: 2,
+  },
+  graduateName: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.sm,
+    color: colors.ink,
+  },
+  graduateTitle: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+  },
+  graduateStatus: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    color: colors.inkLight,
+    flexShrink: 0,
+  },
+  graduateStatusGone: {
+    color: colors.seal,
+  },
+  graduateEmpty: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.inkSoft,
+    borderRadius: 4,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  graduateEmptyLabel: {
     fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
     color: colors.inkSoft,

@@ -9,6 +9,7 @@ import { moralToInbox, milestonesToInbox } from './eventInbox';
 import type { Season } from '@/types/game';
 import { isMonthStart, monthOfYear, weekOfMonth } from './calendar';
 import { buildTickArtifacts } from './dailyLogSystem';
+import { tickCareers } from './careerSystem';
 import { checkGraduations } from './graduationSystem';
 import { triggerDailyMoralEvent } from './moralEventSystem';
 import { tickOverrideExpiry } from './overrideSystem';
@@ -44,6 +45,8 @@ export function advanceTurn() {
         age: m.age + 1,
       });
     }
+    // 졸업 제자 평생 궤적 한 해 진행(승급·좌절·전직·사망) → 강호 풍문. docs/28 §4.
+    tickCareers();
   }
 
   // 회차 종결 — 사부 수명 도달 시 phase='ended' (그레이박스 99 = 비활성).

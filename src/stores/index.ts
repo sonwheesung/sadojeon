@@ -10,6 +10,8 @@ export { usePendingStore } from './pendingStore';
 export type { PendingOneLiner, PendingWish } from './pendingStore';
 export { useScheduleStore } from './scheduleStore';
 export { useQuestStore } from './questStore';
+export { useGraduateStore } from './graduateStore';
+export type { GraduateRecord, GraduateStatus } from './graduateStore';
 export { useJianghuStore } from './jianghuStore';
 export { useItemStore } from './itemStore';
 export { useSectAtmosphereStore } from './sectAtmosphereStore';
