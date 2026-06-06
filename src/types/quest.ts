@@ -67,11 +67,19 @@ export interface QuestEventEffect {
   resultText?: string;
 }
 
+// 확률 판정 — 현재 스탯/무공으로 성공률 계산. by='martial'이면 주력 무공 성.
+export interface QuestEventRoll {
+  by: QuestEventStat | 'martial';
+  base: number; // 스탯 0일 때 성공률(0~1). 스탯이 높을수록 0.95까지 상승.
+}
+
 export interface QuestEventChoice {
   key: string;
   label: string;
-  require?: QuestEventChoiceRequire;
-  effect: QuestEventEffect;
+  require?: QuestEventChoiceRequire; // 절대 조건(자금 등) — 미충족 시 비활성
+  roll?: QuestEventRoll; // 현재 스탯 기반 성공 확률 판정 (없으면 무판정 확정)
+  effect: QuestEventEffect; // 성공(또는 무판정) 효과
+  failEffect?: QuestEventEffect; // 판정 실패 시 효과
 }
 
 export interface QuestEvent {

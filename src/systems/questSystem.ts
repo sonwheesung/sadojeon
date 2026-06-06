@@ -33,6 +33,7 @@ import type {
   QuestEvent,
   QuestEventChoice,
   QuestEventEffect,
+  QuestEventRoll,
   QuestOutcome,
   RelationLevel,
 } from '@/types';
@@ -115,7 +116,19 @@ export interface QuestEventChoiceView {
   available: boolean;
   note?: string;
   effect: QuestEventEffect;
+  failEffect?: QuestEventEffect;
+  roll?: QuestEventRoll;
   cost: number;
+}
+
+// 파티의 판정 역량 0~100 (무공=주력 성×10, 그 외=능력치 Lv 최고).
+function capValue(active: ActiveQuest, by: QuestEventRoll['by']): number {
+  const ds = useDiscipleStore.getState();
+  const party = active.discipleIds
+    .map((id) => ds.disciples[id])
+    .filter((d): d is Disciple => d != null);
+  if (by === 'martial') return party.reduce((m, d) => Math.max(m, mainSeongOf(d) * 10), 0);
+  return party.reduce((m, d) => Math.max(m, d.stats?.[by as StatId]?.level ?? 0), 0);
 }
 
 function evalRequire(active: ActiveQuest, c: QuestEventChoice): { available: boolean; note?: string } {
@@ -168,7 +181,16 @@ function maybeFireEvent(active: ActiveQuest): void {
   const names = active.discipleIds.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const choices: QuestEventChoiceView[] = event.choices.map((c) => {
     const { available, note } = evalRequire(active, c);
-    return { key: c.key, label: c.label, available, note, effect: c.effect, cost: c.require?.money ?? 0 };
+    return {
+      key: c.key,
+      label: c.label,
+      available,
+      note,
+      effect: c.effect,
+      failEffect: c.failEffect,
+      roll: c.roll,
+      cost: c.require?.money ?? 0,
+    };
   });
   const itemId = `qevent-${active.quest.id}-${event.id}`;
   useInboxStore.getState().add({
@@ -191,8 +213,16 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
   const qs = useQuestStore.getState();
   const active = qs.active.find((a) => a.quest.id === questId);
   if (!active) return;
-  const e = choice.effect;
   if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
+
+  // 확률 판정 — 현재 스탯/무공으로 성공률. 실패면 failEffect.
+  let e = choice.effect;
+  if (choice.roll) {
+    const cap = capValue(active, choice.roll.by);
+    const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
+    if (Math.random() >= p) e = choice.failEffect ?? {};
+  }
+
   qs.updateActive(questId, {
     successDelta: (active.successDelta ?? 0) + (e.successDelta ?? 0),
     riskDelta: (active.riskDelta ?? 0) + (e.riskDelta ?? 0),
@@ -216,6 +246,23 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
       if (e.stressDelta) ds.adjustStress(id, e.stressDelta);
     }
   }
+
+  // 결과 서신 — 사부가 급보의 결말을 전해 듣는다(읽기만).
+  const day = useTimeStore.getState().totalDay;
+  const leadName = useDiscipleStore.getState().disciples[active.discipleIds[0]]?.name ?? '제자';
+  const text = e.resultText ?? '강호의 일은 그렇게 지나갔다.';
+  useInboxStore.getState().add({
+    id: `qresult-${questId}-${day}`,
+    kind: 'report',
+    title: `${leadName} — 의뢰 중`,
+    preview: text,
+    body: text,
+    priority: 'normal',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'quest_event_result' },
+  });
 }
 
 // ─── 결산 ─────────────────────────────────────────────────────────────────
