@@ -49,6 +49,8 @@ import {
   ENLIGHTENMENT_PITY_STEP,
   REALM_GAIN,
   REALM_INTERNAL_REQ,
+  REALM_EXTERNAL_REQ,
+  REALM_SEONG_GATE,
   REALM_SEONG_CAP,
   effectiveRealmCeiling,
   enlightenmentChance,
@@ -298,10 +300,10 @@ export interface DiscipleTickReport {
   statGains: StatGain[];
 }
 
-// 경지 갱신 + 자동 승급. docs/23 · docs/26 · project_realm_seong_design.
-// 경지 = 내공(심법 누적) + 주력 무공 성(숙련) + 깨달음(벽). 별도 "무공 막대" 없음.
-// 심법 → 내공 누적. 초식/경공은 여기서 막대 기여 X (초식은 tickDiscipleArt 에서 성 EXP 로 처리).
-// 자동 승급: 내공 ≥ 요구 + 주력무공 성 ≥ 현 경지 상한 + 천장 이내 + 벽 아님. 벽이면 깨달음 게이트.
+// 경지 갱신 + 자동 승급 — 세 기둥 게이트. docs/28 §5.
+// 경지 = 내공(심법 누적) + 외공(strength level) + 주력 무공서(등급 천장 + 성 게이트) + 깨달음(벽).
+// 가장 약한 기둥이 경지를 잡아끈다(lockstep): 약학만 → 무공서 없어 삼류, 체력만 → 내공·무공 0이라 못 오름.
+// 자동 승급: 내공·외공 ≥ 요구 + 무공서 성 ≥ 게이트(초절정5·화경7) + 천장 이내 + 벽 아님. 벽이면 깨달음.
 function applyRealmTick(
   discipleId: string,
   plan: DayPlan,
@@ -331,24 +333,32 @@ function applyRealmTick(
   const mainGrade = mainId ? findMartialArt(mainId)?.grade : undefined;
   const ceiling = mainGrade ? effectiveRealmCeiling(star, mainGrade) : realmCeiling(star);
 
-  // 자동 승급 — 벽 없는 전이. 내공 ≥ 요구 + 천장 이내.
+  // 외공(체력·근골 ≈ strength level) + 주력 무공서 성 — 나머지 두 기둥. docs/28 §5.
+  const external = d.stats?.strength?.level ?? 0;
+  const mainSeong = mainId ? (d.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
+
+  // 자동 승급 — 벽 없는 전이. 세 기둥(내공·외공·무공서 성) 모두 충족 + 천장 이내.
   for (;;) {
     const target = nextRealm(realm);
     if (!target) break;
-    if (realmIndex(target) > realmIndex(ceiling)) break; // 천장 초과
+    if (realmIndex(target) > realmIndex(ceiling)) break; // 천장(무공서 등급) 초과
     if (internal < REALM_INTERNAL_REQ[target]) break; // 내공 부족
+    if (external < REALM_EXTERNAL_REQ[target]) break; // 외공 부족
+    if (mainSeong < REALM_SEONG_GATE[target]) break; // 무공서 성 게이트(초절정↑)
     if (isWallTransition(star, target)) break; // 깨달음 벽 — 자동 X
     realm = target;
     pity = 0;
     petitioned = false;
   }
 
-  // 벽 도달 — 내공 찼는데 깨달음 게이트.
+  // 벽 도달 — 세 기둥 다 찼는데 깨달음 게이트.
   const wallTarget = nextRealm(realm);
   const atWall =
     wallTarget != null &&
     realmIndex(wallTarget) <= realmIndex(ceiling) &&
     internal >= REALM_INTERNAL_REQ[wallTarget] &&
+    external >= REALM_EXTERNAL_REQ[wallTarget] &&
+    mainSeong >= REALM_SEONG_GATE[wallTarget] &&
     isWallTransition(star, wallTarget);
 
   if (atWall && wallTarget) {

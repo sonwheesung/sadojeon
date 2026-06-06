@@ -52,6 +52,30 @@ export const REALM_INTERNAL_REQ: Record<Realm, number> = {
   hwagyeong: 1300,
 };
 
+// targetRealm 진입 외공(체력·근골 ≈ strength level 0~100) 요구. docs/28 §5-1. 세 기둥 중 하나.
+// "체력만으론 경지 X" — 내공·무공서와 함께 충족해야. 가장 약한 기둥이 경지를 잡아끈다.
+export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
+  none: 0,
+  samryu: 10,
+  iryu: 20,
+  ilryu: 35,
+  jeoljeong: 50,
+  chojeoljeong: 65,
+  hwagyeong: 78,
+};
+
+// targetRealm 진입 주력 무공서 성 게이트. docs/28 §5: ~절정 등급무관(0), 초절정 5성, 화경 7성(대성).
+// 무공서 등급 천장(effectiveRealmCeiling)이 1차, 이 성 게이트가 "그 무공을 익혔나" 2차.
+export const REALM_SEONG_GATE: Record<Realm, number> = {
+  none: 0,
+  samryu: 0,
+  iryu: 0,
+  ilryu: 0,
+  jeoljeong: 0,
+  chojeoljeong: 5,
+  hwagyeong: 7,
+};
+
 // 깨달음 벽 — 경지 위치 고정(별 등급 폐기, docs/23 §5 · docs/28). 절정 진입부터 벽.
 // 일류→절정, 절정→초절정, 초절정→화경 진입이 깨달음 게이트. 그 아래는 막대 충족 시 자동.
 // 자질 차등은 starRank가 아니라 오성(enlightenmentChance)이 가른다.
