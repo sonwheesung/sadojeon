@@ -98,15 +98,30 @@ function buildWishPrompt(
 }
 
 async function resolveDecision(decision: 'accept' | 'reject'): Promise<void> {
-  const pending = usePendingStore.getState().wish;
+  const pend = usePendingStore.getState();
+  const pending = pend.wish;
   if (!pending) return;
   const tpl = templateOf(pending.templateId);
   const disciple = useDiscipleStore.getState().disciples[pending.discipleId];
-  if (!tpl || !disciple) {
-    usePendingStore.getState().clearWish();
-    return;
-  }
 
+  // 선택 즉시 모달 닫기 — LLM 응답은 백그라운드. 사용자는 계속 진행.
+  pend.clearWish();
+  if (!tpl || !disciple) return;
+
+  pend.beginResolution();
+  try {
+    await resolveWishInner(decision, pending, tpl, disciple);
+  } finally {
+    usePendingStore.getState().endResolution();
+  }
+}
+
+async function resolveWishInner(
+  decision: 'accept' | 'reject',
+  pending: NonNullable<ReturnType<typeof usePendingStore.getState>['wish']>,
+  tpl: WishTemplate,
+  disciple: Disciple,
+): Promise<void> {
   const baseTrustDelta =
     decision === 'accept' ? tpl.acceptTrustDelta : tpl.rejectTrustDelta;
   const defaultEffects: EventEffects = {
@@ -156,7 +171,6 @@ async function resolveDecision(decision: 'accept' | 'reject'): Promise<void> {
     prompt: debugPrompt,
     raw: debugRaw,
   });
-  usePendingStore.getState().clearWish();
 }
 
 export async function acceptWish(): Promise<void> {

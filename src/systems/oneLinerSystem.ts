@@ -152,14 +152,28 @@ function buildOneLinerPrompt(
 
 // 응답 처리 — async. LLM 호출 (가능하면) + 효과 적용 + 결과 표시.
 export async function respondToOneLiner(tone: OneLinerTone): Promise<void> {
-  const pending = usePendingStore.getState().oneLiner;
+  const pend = usePendingStore.getState();
+  const pending = pend.oneLiner;
   if (!pending) return;
   const disciple = useDiscipleStore.getState().disciples[pending.discipleId];
-  if (!disciple) {
-    usePendingStore.getState().clearOneLiner();
-    return;
-  }
 
+  // 선택 즉시 모달 닫기 — LLM 응답은 백그라운드. 사용자는 계속 진행.
+  pend.clearOneLiner();
+  if (!disciple) return;
+
+  pend.beginResolution();
+  try {
+    await respondOneLinerInner(tone, pending, disciple);
+  } finally {
+    usePendingStore.getState().endResolution();
+  }
+}
+
+async function respondOneLinerInner(
+  tone: OneLinerTone,
+  pending: NonNullable<ReturnType<typeof usePendingStore.getState>['oneLiner']>,
+  disciple: Disciple,
+): Promise<void> {
   const prefs = tonePreferencesFor(disciple);
   const baseTrustDelta = prefs[tone];
   const defaultEffects: EventEffects = {
@@ -211,5 +225,4 @@ export async function respondToOneLiner(tone: OneLinerTone): Promise<void> {
     prompt: debugPrompt,
     raw: debugRaw,
   });
-  usePendingStore.getState().clearOneLiner();
 }

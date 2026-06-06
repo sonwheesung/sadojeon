@@ -2,6 +2,7 @@ import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import {
@@ -37,6 +38,7 @@ export default function GoodsScreen() {
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
+        <AppHeader />
         <Header />
         <Tabs active={tab} onChange={setTab} />
         <ScrollView

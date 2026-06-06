@@ -10,30 +10,39 @@ export const MARTIAL_ART_GRADE_LABEL: Record<MartialArtGrade, string> = {
   legendary: '신품',
 };
 
-// 무공 수련 단계 (5단계) — docs/06_훈련_일정.md "무공 단계 — 5단계"
-// 입문 / 소성 / 대성 / 화경 / 초절정
+// 무공 숙련도 명칭 밴드 (4단계) — 성(1~10)에서 파생. docs/26_무공_숙련도.md.
+// 입문(1~3성) / 소성(4~6성) / 대성(7~9성) / 극성(10성).
+// 화경·초절정은 *무공 단계*가 아니라 *사람의 경지* (docs/23) 로 분리됨.
 export type MartialStage =
   | 'introduction'
   | 'small_completion'
   | 'great_completion'
-  | 'transcendent'
-  | 'peerless';
+  | 'ultimate';
 
 export const MARTIAL_STAGE_LABEL: Record<MartialStage, string> = {
   introduction: '입문',
   small_completion: '소성',
   great_completion: '대성',
-  transcendent: '화경',
-  peerless: '초절정',
+  ultimate: '극성',
 };
 
 export const MARTIAL_STAGE_ORDER: readonly MartialStage[] = [
   'introduction',
   'small_completion',
   'great_completion',
-  'transcendent',
-  'peerless',
+  'ultimate',
 ] as const;
+
+// 무공 노선(색) — docs/04 "무공 색깔". 정도/중도/사도/마도.
+// 상극 판정·노선 유도·마공 위험의 기준. (사람의 흑화가 먼저, 무공 변질이 나중 — docs/04 §흑화 4단계.)
+export type MartialPath = 'jeong' | 'jung' | 'sa' | 'ma';
+
+export const MARTIAL_PATH_LABEL: Record<MartialPath, string> = {
+  jeong: '정도',
+  jung: '중도',
+  sa: '사도',
+  ma: '마도',
+};
 
 export type MartialArtSchool =
   | 'sword'
@@ -59,18 +68,19 @@ export interface MartialArt {
   description: string;
   school: MartialArtSchool;
   grade: MartialArtGrade;
+  path: MartialPath; // 노선(색) — 상극·마공 판정. docs/04.
   requirements: TalentRequirement[];
   preferredTalents: TalentAxis[];
-  stages: number;
   isSectArt: boolean;
 }
 
-// 제자가 익히고 있는 무공의 진행 상태.
-// stage: 현재 도달 단계 (MartialStage), progress: 해당 단계 안 진행도 0~100
+// 제자가 익히고 있는 무공의 진행 상태. docs/26_무공_숙련도.md.
+// seong: 현재 숙련 성(1~10), exp: 현재 성 안에서 누적 경험치.
+// 명칭 단계(MartialStage)는 seongToStage(seong) 로 파생 — 별도 저장 X.
 export interface MartialArtInstance {
   artId: string;
-  stage: MartialStage;
-  progress: number;
+  seong: number;
+  exp: number;
   unlockedAt: number;
 }
 

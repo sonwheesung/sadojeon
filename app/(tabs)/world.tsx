@@ -2,6 +2,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
@@ -12,9 +13,9 @@ import { colors, spacing, typography } from '@/theme';
 type Faction = JianghuFaction;
 type ActiveEvent = JianghuEvent;
 
-// 사부 통찰 → 별 1~5 (stats.insight 0~100 → /20).
+// 사부 통찰 → 별 1~5 (stats.insight 는 이미 1~5, MASTER_STAT).
 function insightStars(value: number): number {
-  return Math.min(5, Math.max(1, Math.round(value / 20)));
+  return Math.min(5, Math.max(1, Math.round(value)));
 }
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ export default function WorldScreen() {
   const factions = useJianghuStore((s) => s.factions);
   const events = useJianghuStore((s) => s.events);
   const seedDefaults = useJianghuStore((s) => s.seedDefaults);
-  const insightStat = useMasterStore((s) => s.master?.stats.insight ?? 60);
+  const insightStat = useMasterStore((s) => s.master?.stats.insight ?? 3);
 
   // 정세가 비어 있으면(구 회차 등) 기본값 시드 — 화면이 비지 않게.
   useEffect(() => {
@@ -33,6 +34,7 @@ export default function WorldScreen() {
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
+        <AppHeader />
         <Header insight={insightStars(insightStat)} />
         <ScrollView
           style={styles.body}

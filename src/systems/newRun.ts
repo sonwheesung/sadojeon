@@ -63,7 +63,7 @@ function defaultSect(): SectState {
     name: '무명산문',
     hanjaName: '無名山門',
     reputation: 10,
-    resources: 12345, // 동화 단위. 환산은 SectStatus 측에서.
+    resources: 12345, // 동화 단위. 금/은/동 환산은 AppHeader 에서.
     facilities: [],
   };
 }
@@ -83,10 +83,11 @@ export interface DiscipleSeed {
 }
 
 function startingArtInstance(artId: string): MartialArtInstance {
+  // 입문 = 1성, EXP 0. docs/26.
   return {
     artId,
-    stage: 'introduction',
-    progress: 0,
+    seong: 1,
+    exp: 0,
     unlockedAt: 0,
   };
 }
@@ -107,7 +108,7 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
     // 경지 — 무공 입문 → 삼류 시작. 별 등급이 천장(하드캡)을 정함.
     starRank: pool.starRank,
     realm: 'samryu',
-    realmProgress: { internal: 0, martial: 0, pity: 0, petitioned: false },
+    realmProgress: { internal: 0, pity: 0, petitioned: false },
     trustToMaster: 30,
     // 체력 = endurance Lv × 10. 시작 Lv 5 → 최대 체력 50. docs/25.
     stamina: deriveMaxStamina(START_ENDURANCE_LEVEL),

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
@@ -161,6 +162,7 @@ export default function QuestScreen() {
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
+        <AppHeader />
         <Header influence={MASTER_INFLUENCE} insight={MASTER_INSIGHT} />
         <ScrollView
           style={styles.body}

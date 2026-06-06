@@ -1,12 +1,18 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SectionLabel } from '@/components/common/SectionLabel';
-import { findMartialArt } from '@/data/martialArts';
+import {
+  findMartialArt,
+  expToNextSeong,
+  seongCap,
+  seongToStage,
+} from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { OVERRIDE_LABEL } from '@/systems/overrideSystem';
 import { staminaSceneLabel } from '@/systems/staminaSystem';
+import { trustSceneLabel } from '@/systems/trustSystem';
 import type { Disciple, DiscipleStatus } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 import { REALM_LABEL } from '@/types/realm';
@@ -22,12 +28,6 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   departed: '하산',
 };
 
-function trustLabel(value: number): string {
-  // 0~100 → 0~5 단계
-  const level = Math.min(5, Math.max(0, Math.round(value / 20)));
-  return `신뢰 ${level}/5`;
-}
-
 // 메인 무공 한 줄 풍경 — "{무공명} {단계} — 손맛 풍경".
 // 메인 무공 없으면 null (행 표시 X).
 function mainArtScene(d: Disciple): { text: string; tone: 'normal' | 'doorstep' } | null {
@@ -37,30 +37,38 @@ function mainArtScene(d: Disciple): { text: string; tone: 'normal' | 'doorstep' 
   if (!main) return null;
   const art = findMartialArt(main.artId);
   const name = art?.name ?? main.artId;
-  const stage = MARTIAL_STAGE_LABEL[main.stage];
-  if (main.progress >= PLATEAU.SECOND_START) {
-    return { text: `${name} ${stage} — 다음 경지가 코앞이다`, tone: 'doorstep' };
+  const stage = MARTIAL_STAGE_LABEL[seongToStage(main.seong)];
+  const head = `${name} ${stage} ${main.seong}성`;
+  const atCap = art ? main.seong >= seongCap(art.grade) : false;
+  if (atCap) {
+    return { text: `${head} — 이 무공의 끝에 닿았다`, tone: 'doorstep' };
   }
-  if (main.progress >= PLATEAU.FIRST_START) {
-    return { text: `${name} ${stage} — 손에 익어 간다`, tone: 'normal' };
+  const frac = (main.exp / expToNextSeong(main.seong)) * 100;
+  if (frac >= PLATEAU.SECOND_START) {
+    return { text: `${head} — 다음 성이 코앞이다`, tone: 'doorstep' };
   }
-  if (main.progress >= 30) {
-    return { text: `${name} ${stage} — 한결 다듬어졌다`, tone: 'normal' };
+  if (frac >= PLATEAU.FIRST_START) {
+    return { text: `${head} — 손에 익어 간다`, tone: 'normal' };
   }
-  return { text: `${name} ${stage} — 형을 짚는 중`, tone: 'normal' };
+  if (frac >= 30) {
+    return { text: `${head} — 한결 다듬어졌다`, tone: 'normal' };
+  }
+  return { text: `${head} — 성을 다지는 중`, tone: 'normal' };
 }
 
-// 마음 상태 — 정체기 진입 시만 한 줄. 평소엔 null.
-// 메인 무공 진척이 정체 구간(>= 70)에 들어가면 표시.
+// 마음 상태 — 성 끝물(정체 구간) 진입 시만 한 줄. 평소·상한 도달 시엔 null.
 function mindScene(d: Disciple): { text: string; tone: 'mild' | 'heavy' } | null {
   const main = d.mainMartialArtId
     ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
     : d.martialArts[0];
   if (!main) return null;
-  if (main.progress >= PLATEAU.SECOND_START) {
+  const art = findMartialArt(main.artId);
+  if (art && main.seong >= seongCap(art.grade)) return null;
+  const frac = (main.exp / expToNextSeong(main.seong)) * 100;
+  if (frac >= PLATEAU.SECOND_START) {
     return { text: '벽 앞에 선 듯, 무언가 가로막혀 있다', tone: 'heavy' };
   }
-  if (main.progress >= PLATEAU.FIRST_START) {
+  if (frac >= PLATEAU.FIRST_START) {
     return { text: '마음에 풀리지 않은 것이 있는 듯하다', tone: 'mild' };
   }
   return null;
@@ -100,16 +108,13 @@ export function DiscipleStatusPanel({ disciple }: Props) {
         />
         <Row label="명령" value={orderLine} valueStyle={onLeave ? styles.rowValueHeavy : undefined} />
         <Row label="기색" value={staminaSceneLabel(disciple.stamina, disciple.maxStamina)} />
-        <Row label="신뢰" value={trustLabel(disciple.trustToMaster)} />
+        <Row label="신뢰" value={trustSceneLabel(disciple.trustToMaster)} />
         <Row
           label="경지"
           value={REALM_LABEL[disciple.realm]}
           valueStyle={styles.rowValueDoorstep}
         />
-        <Row
-          label="경지 진척"
-          value={`무공 ${disciple.realmProgress.martial}% · 내공 ${disciple.realmProgress.internal}`}
-        />
+        <Row label="내공" value={`${disciple.realmProgress.internal}`} />
         {art && (
           <Row
             label="무공"

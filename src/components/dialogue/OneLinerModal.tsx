@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
@@ -25,8 +24,6 @@ export function OneLinerModal() {
   const disciple = useDiscipleStore((s) =>
     pending ? s.disciples[pending.discipleId] : undefined,
   );
-  const [isResolving, setIsResolving] = useState(false);
-
   // 도덕·희망·변곡점·정산·[DEV]디버그 오버레이 떠 있으면 가린다
   // (우선순위: 디버그 > 정산 > 변곡점 > 도덕 > 희망 > 한 마디).
   const blocked =
@@ -38,15 +35,8 @@ export function OneLinerModal() {
 
   const visible = !blocked && pending != null && disciple != null;
 
-  const onPick = async (tone: OneLinerTone) => {
-    if (isResolving) return;
-    setIsResolving(true);
-    try {
-      await respondToOneLiner(tone);
-    } finally {
-      setIsResolving(false);
-    }
-  };
+  // 선택 즉시 모달 닫힘 — LLM 응답은 백그라운드. 진행 시 정산이 대기.
+  const onPick = (tone: OneLinerTone) => void respondToOneLiner(tone).catch(() => {});
 
   return (
     <Modal
@@ -54,7 +44,7 @@ export function OneLinerModal() {
       transparent
       animationType="fade"
       onRequestClose={() => {
-        if (pending && !isResolving) onPick('nod');
+        if (pending) onPick('nod');
       }}
     >
       <View style={styles.backdrop}>
@@ -64,22 +54,15 @@ export function OneLinerModal() {
               <Text style={styles.speaker}>{disciple.name}</Text>
               <Text style={styles.body}>{pending.body}</Text>
               <View style={styles.divider} />
-              {isResolving ? (
-                <View style={styles.resolvingBlock}>
-                  <ActivityIndicator color={colors.seal} />
-                  <Text style={styles.resolvingText}>사부가 생각하고 있다…</Text>
-                </View>
-              ) : (
-                <View style={styles.choices}>
-                  {ONE_LINER_TONE_ORDER.map((tone) => (
-                    <ResponseButton
-                      key={tone}
-                      text={pending.responses[tone]}
-                      onPress={() => onPick(tone)}
-                    />
-                  ))}
-                </View>
-              )}
+              <View style={styles.choices}>
+                {ONE_LINER_TONE_ORDER.map((tone) => (
+                  <ResponseButton
+                    key={tone}
+                    text={pending.responses[tone]}
+                    onPress={() => onPick(tone)}
+                  />
+                ))}
+              </View>
             </>
           ) : null}
         </View>
@@ -157,17 +140,5 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
     color: colors.ink,
     lineHeight: typography.sizes.base * 1.5,
-  },
-  resolvingBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.base,
-  },
-  resolvingText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
   },
 });

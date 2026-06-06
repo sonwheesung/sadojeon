@@ -8,7 +8,13 @@
 // 6. 현재 체력 0 도달 시 강제 휴식 (triggerCollapse)
 // 7. 종목 lingering 을 내일 fatiguePenalty 로 적재
 
-import { findMartialArt } from '@/data/martialArts';
+import {
+  findMartialArt,
+  EXP_BASE_BY_STAGE,
+  expToNextSeong,
+  seongCap,
+  seongToStage,
+} from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
 import {
   BASE_MAX_STAMINA,
@@ -29,6 +35,7 @@ import type {
   TrainingCategory,
 } from '@/types';
 import { MARTIAL_STAGE_ORDER } from '@/types/martialArt';
+// (MARTIAL_STAGE_ORDER 는 밴드 승급 방향 비교에 사용)
 import {
   MARTIAL_AXES,
   MARTIAL_AXIS_LABEL,
@@ -41,6 +48,8 @@ import {
   ENLIGHTENMENT_PITY_STEP,
   REALM_GAIN,
   REALM_INTERNAL_REQ,
+  REALM_SEONG_CAP,
+  effectiveRealmCeiling,
   enlightenmentChance,
   isWallTransition,
   nextRealm,
@@ -55,18 +64,11 @@ import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
 const MARTIAL_STAMINA_DELTA = -10;
 const MARTIAL_STRESS_DELTA = 5;
 
-// 단계별 기본 진척.
-const BASE_BY_STAGE: Record<MartialStage, number> = {
-  introduction: 8,
-  small_completion: 5,
-  great_completion: 3,
-  transcendent: 1.5,
-  peerless: 0.5,
-};
-
-function plateauMultiplier(progress: number): number {
-  if (progress >= PLATEAU.SECOND_START) return PLATEAU.SECOND_MULTIPLIER;
-  if (progress >= PLATEAU.FIRST_START) return PLATEAU.FIRST_MULTIPLIER;
+// 성 안에서의 정체기 — EXP 충전률(0~100%) 기준. docs/26.
+function plateauMultiplier(exp: number, seong: number): number {
+  const frac = (exp / expToNextSeong(seong)) * 100;
+  if (frac >= PLATEAU.SECOND_START) return PLATEAU.SECOND_MULTIPLIER;
+  if (frac >= PLATEAU.FIRST_START) return PLATEAU.FIRST_MULTIPLIER;
   return 1.0;
 }
 
@@ -81,12 +83,6 @@ function talentMultiplier(art: MartialArt, talents: Talents): number {
 function aptitudeMultiplier(talents: Talents, statId: StatId): number {
   const axis = STAT_APTITUDE[statId];
   return Math.max(0.5, talents[axis] / 3);
-}
-
-function nextStage(stage: MartialStage): MartialStage | null {
-  const idx = MARTIAL_STAGE_ORDER.indexOf(stage);
-  if (idx < 0 || idx >= MARTIAL_STAGE_ORDER.length - 1) return null;
-  return MARTIAL_STAGE_ORDER[idx + 1];
 }
 
 // 무공 카테고리에서 진행할 무공 — 일일 선택 > 메인 > 첫 무공.
@@ -217,7 +213,9 @@ function resolveDayPlan(d: Disciple, day: number): DayPlan {
 export interface TickResult {
   artId: string;
   delta: number;
-  promoted?: MartialStage;
+  seongBefore: number;
+  seong: number; // 적립 후 성
+  promoted?: MartialStage; // 명칭 밴드를 넘어섰을 때만 (서신함 변곡점)
 }
 
 function tickDiscipleArt(
@@ -229,29 +227,39 @@ function tickDiscipleArt(
   const art = findMartialArt(instance.artId);
   if (!art) return null;
 
-  const base = BASE_BY_STAGE[instance.stage];
+  // 성 상한 = min(별 등급 한계, 현재 경지 한계). 경지가 받쳐줘야 더 깊어진다. docs/26.
+  const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm ?? 'samryu']);
+  const seongBefore = instance.seong;
+  const bandBefore = seongToStage(seongBefore);
+
+  const base = EXP_BASE_BY_STAGE[bandBefore];
   const tMul = talentMultiplier(art, d.talents);
-  const pMul = plateauMultiplier(instance.progress);
+  const pMul = plateauMultiplier(instance.exp, instance.seong);
   const delta = base * tMul * pMul * intensity * progressMul;
 
-  let progress = instance.progress + delta;
-  let stage = instance.stage;
-  let promoted: MartialStage | undefined;
+  let seong = instance.seong;
+  let exp = instance.exp + delta;
 
-  if (progress >= 100) {
-    const next = nextStage(stage);
-    if (next) {
-      stage = next;
-      progress = 0;
-      promoted = next;
-    } else {
-      progress = 100;
-    }
+  // 상한 전까지만 성 승급. 넘친 EXP 이월. docs/26.
+  while (seong < cap && exp >= expToNextSeong(seong)) {
+    exp -= expToNextSeong(seong);
+    seong += 1;
+  }
+  if (seong >= cap) {
+    seong = cap;
+    exp = 0; // 상한 도달 — EXP 멈춤 ("(최대)")
   }
 
+  // 명칭 밴드를 위로 넘었으면 승급 변곡점.
+  const bandAfter = seongToStage(seong);
+  const promoted =
+    MARTIAL_STAGE_ORDER.indexOf(bandAfter) > MARTIAL_STAGE_ORDER.indexOf(bandBefore)
+      ? bandAfter
+      : undefined;
+
   return {
-    next: { ...instance, progress, stage },
-    result: { artId: instance.artId, delta, promoted },
+    next: { ...instance, seong, exp },
+    result: { artId: instance.artId, delta, seongBefore, seong, promoted },
   };
 }
 
@@ -278,10 +286,10 @@ export interface DiscipleTickReport {
   statGains: StatGain[];
 }
 
-// 경지 막대 갱신 + 자동 승급(벽 없는 구간). docs/23.
-// 초식 → 무공 막대 +, 심법 → 내공 +, 경공 → 막대 기여 X(민첩만).
-// 무공 외도(체력·공부·휴식) → 무공 막대 감소(몸이 까먹음), 내공 불감소.
-// 막대 둘 다 충족 + 천장 이내 + 벽 아님 → 자동 승급(무공막대 0 리셋, 내공 이월). 벽이면 정체(깨달음 — 후속).
+// 경지 갱신 + 자동 승급. docs/23 · docs/26 · project_realm_seong_design.
+// 경지 = 내공(심법 누적) + 주력 무공 성(숙련) + 깨달음(벽). 별도 "무공 막대" 없음.
+// 심법 → 내공 누적. 초식/경공은 여기서 막대 기여 X (초식은 tickDiscipleArt 에서 성 EXP 로 처리).
+// 자동 승급: 내공 ≥ 요구 + 주력무공 성 ≥ 현 경지 상한 + 천장 이내 + 벽 아님. 벽이면 깨달음 게이트.
 function applyRealmTick(
   discipleId: string,
   plan: DayPlan,
@@ -293,7 +301,6 @@ function applyRealmTick(
   if (!d) return;
 
   let internal = d.realmProgress?.internal ?? 0;
-  let martial = d.realmProgress?.martial ?? 0;
   let pity = d.realmProgress?.pity ?? 0;
   let petitioned = d.realmProgress?.petitioned ?? false;
   let realm: Realm = d.realm ?? 'samryu';
@@ -301,42 +308,34 @@ function applyRealmTick(
   const eff = Math.max(0, progressMul);
   const startRealm = realm;
 
-  if (plan.category === 'martial') {
-    if (plan.optionId === 'simbeop') {
-      internal += REALM_GAIN.internalPerDay * eff;
-    } else if (plan.optionId === 'gyeonggong') {
-      // 경공 = 민첩만. 막대 기여 없음(감소도 없음 — 무공 수련 중).
-    } else {
-      // 초식 또는 폐관(override) → 무공 막대.
-      martial = Math.min(100, martial + REALM_GAIN.martialPerDay * eff);
-    }
-  } else {
-    // 무공 외도 → 무공 막대 감소.
-    martial = Math.max(0, martial - REALM_GAIN.martialDecayPerDay);
+  // 심법 → 내공 누적 (이월·불감소). 그 외 축은 내공에 기여 X.
+  if (plan.category === 'martial' && plan.optionId === 'simbeop') {
+    internal += REALM_GAIN.internalPerDay * eff;
   }
 
-  const ceiling = realmCeiling(star);
+  // 경지 천장 = 별 잠재 ∧ 주력 무공서 등급. 비급이 받쳐줘야 위로 간다. docs/04 · docs/23.
+  // (경지는 내공+깨달음이 민다. 무공 성은 경지를 따라 자랄 뿐, 승급 요구치는 아님 — 정통 무협.)
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  const mainGrade = mainId ? findMartialArt(mainId)?.grade : undefined;
+  const ceiling = mainGrade ? effectiveRealmCeiling(star, mainGrade) : realmCeiling(star);
 
-  // 자동 승급 — 벽 없는 전이.
+  // 자동 승급 — 벽 없는 전이. 내공 ≥ 요구 + 천장 이내.
   for (;;) {
     const target = nextRealm(realm);
     if (!target) break;
     if (realmIndex(target) > realmIndex(ceiling)) break; // 천장 초과
-    if (martial < 100) break;
-    if (internal < REALM_INTERNAL_REQ[target]) break;
+    if (internal < REALM_INTERNAL_REQ[target]) break; // 내공 부족
     if (isWallTransition(star, target)) break; // 깨달음 벽 — 자동 X
     realm = target;
-    martial = 0;
     pity = 0;
     petitioned = false;
   }
 
-  // 벽 도달 — 막대 둘 다 찼는데 깨달음 게이트.
+  // 벽 도달 — 내공 찼는데 깨달음 게이트.
   const wallTarget = nextRealm(realm);
   const atWall =
     wallTarget != null &&
     realmIndex(wallTarget) <= realmIndex(ceiling) &&
-    martial >= 100 &&
     internal >= REALM_INTERNAL_REQ[wallTarget] &&
     isWallTransition(star, wallTarget);
 
@@ -348,7 +347,6 @@ function applyRealmTick(
       const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
       if (guaranteed || Math.random() < chance) {
         realm = wallTarget; // 돌파!
-        martial = 0;
         pity = 0;
         petitioned = false;
         cancelOverride(discipleId); // 폐관 해제 — 벽 넘음
@@ -366,7 +364,6 @@ function applyRealmTick(
     realm,
     realmProgress: {
       internal: Math.round(internal),
-      martial: Math.round(martial),
       pity,
       petitioned,
     },

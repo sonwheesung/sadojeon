@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
@@ -18,30 +17,12 @@ export function WishModal() {
   const disciple = useDiscipleStore((s) =>
     pending ? s.disciples[pending.discipleId] : undefined,
   );
-  const [isResolving, setIsResolving] = useState(false);
-
   const blocked = moralPending != null || settlement != null || debugActive;
   const visible = !blocked && pending != null && disciple != null;
 
-  const onAccept = async () => {
-    if (isResolving) return;
-    setIsResolving(true);
-    try {
-      await acceptWish();
-    } finally {
-      setIsResolving(false);
-    }
-  };
-
-  const onReject = async () => {
-    if (isResolving) return;
-    setIsResolving(true);
-    try {
-      await rejectWish();
-    } finally {
-      setIsResolving(false);
-    }
-  };
+  // 선택 즉시 모달 닫힘 — LLM 응답은 백그라운드. 진행 시 정산이 대기.
+  const onAccept = () => void acceptWish().catch(() => {});
+  const onReject = () => void rejectWish().catch(() => {});
 
   return (
     <Modal
@@ -49,7 +30,7 @@ export function WishModal() {
       transparent
       animationType="fade"
       onRequestClose={() => {
-        if (pending && !isResolving) onReject();
+        if (pending) onReject();
       }}
     >
       <View style={styles.backdrop}>
@@ -59,31 +40,24 @@ export function WishModal() {
               <Text style={styles.speaker}>{disciple.name}</Text>
               <Text style={styles.body}>{pending.body}</Text>
               <View style={styles.divider} />
-              {isResolving ? (
-                <View style={styles.resolvingBlock}>
-                  <ActivityIndicator color={colors.seal} />
-                  <Text style={styles.resolvingText}>사부가 생각하고 있다…</Text>
-                </View>
-              ) : (
-                <View style={styles.actions}>
-                  <Pressable
-                    style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
-                    onPress={onReject}
-                    accessibilityRole="button"
-                    accessibilityLabel="거절"
-                  >
-                    <Text style={styles.btnLabel}>아니, 일정대로 해라.</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.btn, styles.btnAccept, pressed && styles.pressed]}
-                    onPress={onAccept}
-                    accessibilityRole="button"
-                    accessibilityLabel="허락"
-                  >
-                    <Text style={[styles.btnLabel, styles.btnLabelAccept]}>좋다. 그리 하여라.</Text>
-                  </Pressable>
-                </View>
-              )}
+              <View style={styles.actions}>
+                <Pressable
+                  style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+                  onPress={onReject}
+                  accessibilityRole="button"
+                  accessibilityLabel="거절"
+                >
+                  <Text style={styles.btnLabel}>아니, 일정대로 해라.</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.btn, styles.btnAccept, pressed && styles.pressed]}
+                  onPress={onAccept}
+                  accessibilityRole="button"
+                  accessibilityLabel="허락"
+                >
+                  <Text style={[styles.btnLabel, styles.btnLabelAccept]}>좋다. 그리 하여라.</Text>
+                </Pressable>
+              </View>
             </>
           ) : null}
         </View>
@@ -155,16 +129,4 @@ const styles = StyleSheet.create({
     color: colors.seal,
   },
   pressed: { opacity: 0.85 },
-  resolvingBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.base,
-  },
-  resolvingText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-  },
 });

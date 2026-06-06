@@ -1,12 +1,37 @@
 // 경지 데이터 — docs/23_경지_시스템.md. 모든 수치 그레이박스(밸런싱 전 임시).
 
+import type { MartialArtGrade } from '@/types/martialArt';
 import { REALM_ORDER, type Realm } from '@/types/realm';
 
-// 별 등급 → 양육 천장(하드캡). docs/23 §3. ★1~3 절정, ★4 초절정, ★5 화경.
+// 별 등급 → 잠재 천장(하드캡). docs/23 §3. ★1~3 절정, ★4 초절정, ★5 화경.
 export function realmCeiling(starRank: number): Realm {
   if (starRank >= 5) return 'hwagyeong';
   if (starRank >= 4) return 'chojeoljeong';
   return 'jeoljeong';
+}
+
+// 무공서(비급) 등급 → 받쳐주는 경지. docs/04 "별 1~5 등급 체계".
+// 하품 검법으론 절정에 못 닿는다 — 상승 무공서가 있어야 위로 간다.
+export function artGradeRealmCeiling(grade: MartialArtGrade): Realm {
+  switch (grade) {
+    case 'novice':
+      return 'ilryu'; //        하품 ~일류
+    case 'apprentice':
+      return 'jeoljeong'; //    중품 ~절정
+    case 'master':
+      return 'chojeoljeong'; // 상품 ~초절정
+    case 'grandmaster':
+    case 'legendary':
+      return 'hwagyeong'; //    절품·신품 화경
+  }
+}
+
+// 실제 경지 천장 = 잠재(별) ∧ 무공서 등급 둘 중 낮은 것.
+// → 천재(★5)라도 비급이 받쳐주지 않으면 못 오른다. 무공서 교체가 곧 성장의 열쇠.
+export function effectiveRealmCeiling(starRank: number, grade: MartialArtGrade): Realm {
+  const byStar = realmCeiling(starRank);
+  const byArt = artGradeRealmCeiling(grade);
+  return REALM_ORDER.indexOf(byStar) <= REALM_ORDER.indexOf(byArt) ? byStar : byArt;
 }
 
 export function nextRealm(r: Realm): Realm | null {
@@ -45,12 +70,50 @@ export function isWallTransition(starRank: number, target: Realm): boolean {
   return (WALLS_BY_STAR[s] ?? []).includes(target);
 }
 
-// 일일 적립·감소 (그레이박스). 효율(체력비율)에 곱해진다.
+// 일일 내공 적립 (그레이박스). 효율(체력비율)에 곱해진다.
 export const REALM_GAIN = {
-  martialPerDay: 12, // 초식 수련 1일 → 무공 막대 +
   internalPerDay: 10, // 심법 수련 1일 → 내공 +
-  martialDecayPerDay: 3, // 무공 외도(체력·공부·휴식) 시 무공 막대 -
 } as const;
+
+// 경지별 주력 무공 성(成) 상한 — 그 경지가 받쳐주는 무공 깊이. docs/26 · project_realm_seong_design.
+// 무공 성은 그 경지를 "따라" 자라되 min(별 등급 상한, 이 경지 상한) 까지만. → 10성은 화경이라야.
+export const REALM_SEONG_CAP: Record<Realm, number> = {
+  none: 0,
+  samryu: 3, //   입문 밴드 끝
+  iryu: 4,
+  ilryu: 6, //    소성 밴드 끝
+  jeoljeong: 7, // 대성 입
+  chojeoljeong: 8,
+  hwagyeong: 10, // 극성
+};
+
+// 무공서 학습 경지 게이트 — 어려운(상급) 비급은 그 경지에 올라야 입문 가능. docs/26 §5-1.
+// 충분한 내공·경지·깨달음 없이는 상승 무공을 "이해조차" 못 한다(화산귀환 결).
+export function artGradeLearnRealm(grade: MartialArtGrade): Realm {
+  switch (grade) {
+    case 'novice':
+    case 'apprentice':
+      return 'samryu'; //     하품·중품 — 입문기부터
+    case 'master':
+      return 'iryu'; //        상품 — 이류부터
+    case 'grandmaster':
+      return 'ilryu'; //       절품 — 일류부터
+    case 'legendary':
+      return 'jeoljeong'; //   신품 — 절정부터
+  }
+}
+
+// 새 무공을 익힐 때 시작 성 — 경지가 받침이 되어 기초를 건너뛴다(고수는 금방 익힘). docs/26 §5-2.
+// 실제 시작 성 = min(이 floor, seongCap(등급), REALM_SEONG_CAP[경지]).
+export const REALM_LEARN_FLOOR: Record<Realm, number> = {
+  none: 1,
+  samryu: 1,
+  iryu: 2,
+  ilryu: 3,
+  jeoljeong: 4,
+  chojeoljeong: 5,
+  hwagyeong: 6,
+};
 
 // 깨달음(무의) 확률 — f(오성, 경지 높이). docs/23 §6. 오성 1~5(talents.insight).
 // 경지 높을수록 base·계수 낮음.

@@ -6,9 +6,15 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { MartialStage, MonthlySnapshot } from '@/types';
+import type { MartialArtInstance, MartialStage, MonthlySnapshot } from '@/types';
 import { MARTIAL_STAGE_LABEL, MARTIAL_STAGE_ORDER } from '@/types/martialArt';
+import { seongToStage } from '@/data/martialArts';
 import { totalMonth } from './calendar';
+
+// 단조 증가 숙련 점수 — 성 승급 시 exp 가 리셋돼도 성*1000 이 지배해 항상 ↑. docs/26.
+function masteryScore(a: MartialArtInstance): number {
+  return a.seong * 1000 + a.exp;
+}
 
 // 현재 시점 스냅샷 캡처.
 export function captureSnapshot(): MonthlySnapshot {
@@ -20,14 +26,14 @@ export function captureSnapshot(): MonthlySnapshot {
   for (const id of ds.order) {
     const d = ds.disciples[id];
     if (!d) continue;
-    const progressSum = d.martialArts.reduce((s, a) => s + a.progress, 0);
-    const stages: Record<string, string> = {};
+    const masterySum = d.martialArts.reduce((s, a) => s + masteryScore(a), 0);
+    const seongs: Record<string, number> = {};
     for (const a of d.martialArts) {
-      stages[a.artId] = a.stage;
+      seongs[a.artId] = a.seong;
     }
     disciples[id] = {
-      progressSum,
-      stages,
+      masterySum,
+      seongs,
       trust: d.trustToMaster,
     };
   }
@@ -67,25 +73,20 @@ export function computeMonthlyReport(): MonthlyReport | null {
     const prev = snapshot.disciples[id];
     if (!d || !prev) continue;
 
-    const curProgress = d.martialArts.reduce((s, a) => s + a.progress, 0);
-    // 단계 승급 — 진척 100 도달이 한 달에 N번 일어났는지. 승급 시 progress=0 으로 리셋되므로
-    // 단순 (현재 progressSum - 직전 progressSum) 이 음수일 수 있음. 승급 횟수를 함께 가산.
+    const curMastery = d.martialArts.reduce((s, a) => s + masteryScore(a), 0);
+    // 명칭 밴드(입문→소성 등)를 넘은 무공만 승급으로 기록. 같은 밴드 안 성 증가는 진척에만 반영.
     const promotions: DiscipleReportRow['promotions'] = [];
     for (const a of d.martialArts) {
-      const prevStage = prev.stages[a.artId];
-      if (prevStage && prevStage !== a.stage) {
-        const fromIdx = MARTIAL_STAGE_ORDER.indexOf(prevStage as MartialStage);
-        const toIdx = MARTIAL_STAGE_ORDER.indexOf(a.stage);
-        if (toIdx > fromIdx) {
-          promotions.push({
-            artId: a.artId,
-            from: prevStage as MartialStage,
-            to: a.stage,
-          });
-        }
+      const prevSeong = prev.seongs[a.artId];
+      if (prevSeong == null) continue;
+      const fromStage = seongToStage(prevSeong);
+      const toStage = seongToStage(a.seong);
+      if (MARTIAL_STAGE_ORDER.indexOf(toStage) > MARTIAL_STAGE_ORDER.indexOf(fromStage)) {
+        promotions.push({ artId: a.artId, from: fromStage, to: toStage });
       }
     }
-    const progressDelta = curProgress - prev.progressSum + promotions.length * 100;
+    // masteryScore 가 단조 증가라 보정 불필요 (성*1000 + exp).
+    const progressDelta = curMastery - prev.masterySum;
     const trustDelta = d.trustToMaster - prev.trust;
 
     rows.push({

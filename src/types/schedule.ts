@@ -40,15 +40,15 @@ export interface DiscipleOverride {
   durationDays: number; // 만료까지 일수
 }
 
-// 월 시작 시점의 핵심 지표 스냅샷 — 월말 결산 시 비교용. docs/06.
+// 월 시작 시점의 핵심 지표 스냅샷 — 월말 결산 시 비교용. docs/06 · docs/26.
 export interface MonthlySnapshot {
   totalMonth: number; // 직전 월 totalMonth (1년차 1월 = 1)
-  // 제자별 무공 진척 합 (모든 art instance progress 누적). 진척 X 인 단계 승급도 추적.
+  // 제자별 무공 숙련 점수 합(성*1000+exp, 단조 증가) + 무공별 성 (밴드 승급 추적).
   disciples: Record<
     string,
     {
-      progressSum: number;
-      stages: Record<string, string>; // artId → stage label
+      masterySum: number;
+      seongs: Record<string, number>; // artId → 현재 성(1~10)
       trust: number;
     }
   >;

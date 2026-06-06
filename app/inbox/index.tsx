@@ -10,8 +10,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { colors, spacing, typography } from '@/theme';
 import type { InboxItem, InboxKind } from '@/types';
 
-// ─── Placeholder data ───────────────────────────────────────────────────────
-
+// 서신함 — 헤더 봉투 아이콘으로 진입하는 스택(모달) 라우트.
 // docs/12_인박스_면담.md "응답 필요 여부" 매핑.
 const KIND_LABEL: Record<InboxKind, string> = {
   event: '이벤트',
@@ -112,7 +111,7 @@ export default function InboxScreen() {
   };
 
   return (
-    <SafetyZone variant="tab" background={colors.background}>
+    <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
         <Header onMarkAllRead={onMarkAllRead} onClearAll={onClearAll} />
         <FilterTabs current={filter} onChange={setFilter} decisionCount={decisionCount} />

@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -9,8 +8,8 @@ import type { DailyLogKind } from '@/types';
 import { colors, radius, spacing, typography } from '@/theme';
 
 // 오늘의 일지 — 메인 상단 인라인 패널.
-// 어제 → 오늘 사이 각 제자가 무엇을 했는지 한 줄 요약.
-// 줄 탭 → 그 제자 상세 화면으로 이동 (상세는 거기서).
+// 어제 → 오늘 사이 각 제자가 무엇을 했는지 한 줄 요약 (표시 전용).
+// 제자 상세는 로스터에서 진입 — 여기서는 이동하지 않는다(라우트 중복 방지).
 // 헤더 탭 → 패널 전체 접힘 (양이 많을 때).
 export function DailyLogPanel() {
   const log = usePendingStore((s) => s.dailyLog);
@@ -34,13 +33,7 @@ export function DailyLogPanel() {
       {!collapsedAll && (
         <View style={styles.panel}>
           {groups.map((g) => (
-            <Pressable
-              key={g.discipleId}
-              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              onPress={() => router.push(`/disciple/${g.discipleId}`)}
-              accessibilityRole="button"
-              accessibilityLabel={`${g.discipleName} 상세`}
-            >
+            <View key={g.discipleId} style={styles.row}>
               <Text style={styles.shortText} numberOfLines={1}>
                 <Text style={styles.shortName}>{g.discipleName}</Text>
                 <Text style={styles.shortDash}> — </Text>
@@ -48,8 +41,7 @@ export function DailyLogPanel() {
                   {g.primaryLabel}
                 </Text>
               </Text>
-              <Text style={styles.chevronSmall}>›</Text>
-            </Pressable>
+            </View>
           ))}
         </View>
       )}
@@ -101,11 +93,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  rowPressed: {
-    opacity: 0.6,
+    paddingVertical: 2,
   },
   shortText: {
     flex: 1,
@@ -142,11 +130,5 @@ const styles = StyleSheet.create({
   primaryStaminaRise: {
     fontFamily: typography.serifMedium,
     color: colors.green,
-  },
-  chevronSmall: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.md,
-    color: colors.inkSoft,
-    paddingHorizontal: spacing.xs,
   },
 });

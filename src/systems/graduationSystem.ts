@@ -2,13 +2,14 @@
 // 그레이박스 단순화: 무공 단계 + 신뢰 두 축 기반.
 // 추후 명성·노선 안정성 도입 시 종합 평가로 확장.
 
-import { findMartialArt } from '@/data/martialArts';
+import { findMartialArt, seongToStage } from '@/data/martialArts';
+import { effectiveRealmCeiling, realmCeiling, realmIndex } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, Milestone } from '@/types';
-import { MARTIAL_STAGE_LABEL, MARTIAL_STAGE_ORDER } from '@/types/martialArt';
+import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 
 export type GraduationGrade =
   | 'failure' //    ☆ 실패
@@ -36,7 +37,7 @@ export const GRADE_LABEL: Record<GraduationGrade, string> = {
   legendary: '전설',
 };
 
-// 메인 무공 단계 + 신뢰 (≥60 = 높음) 두 축 매트릭스.
+// 메인 무공 성(1~10) + 신뢰 (≥60 = 높음) 매트릭스. docs/26.
 export function evaluateGraduation(disciple: Disciple): GraduationGrade {
   const main = disciple.mainMartialArtId
     ? disciple.martialArts.find((a) => a.artId === disciple.mainMartialArtId)
@@ -44,23 +45,17 @@ export function evaluateGraduation(disciple: Disciple): GraduationGrade {
   if (!main) return 'failure';
 
   const trustHigh = disciple.trustToMaster >= 60;
+  const seong = main.seong;
 
-  switch (main.stage) {
-    case 'peerless':
-      return 'legendary';
-    case 'transcendent':
-      return 'renowned';
-    case 'great_completion':
-      return trustHigh ? 'excellent' : 'good';
-    case 'small_completion':
-      return trustHigh ? 'good' : 'common';
-    case 'introduction':
-    default:
-      return main.progress >= 50 ? 'common' : 'failure';
-  }
+  if (seong >= 10) return 'legendary'; // 극성
+  if (seong >= 8) return 'renowned'; //   대성 상
+  if (seong >= 7) return trustHigh ? 'excellent' : 'good'; // 대성 입
+  if (seong >= 4) return trustHigh ? 'good' : 'common'; //    소성
+  if (seong >= 2) return 'common'; //                        입문 다짐
+  return 'failure'; //                                        1성
 }
 
-// 메인 무공 한 줄 요약 — run-end 화면용. "청풍검법 대성" 식.
+// 메인 무공 한 줄 요약 — run-end 화면용. "청풍검법 대성 8성" 식.
 export function mainArtSummary(disciple: Disciple): string {
   const main = disciple.mainMartialArtId
     ? disciple.martialArts.find((a) => a.artId === disciple.mainMartialArtId)
@@ -68,8 +63,8 @@ export function mainArtSummary(disciple: Disciple): string {
   if (!main) return '무공 미입문';
   const art = findMartialArt(main.artId);
   const name = art?.name ?? main.artId;
-  const stage = MARTIAL_STAGE_LABEL[main.stage];
-  return `${name} ${stage}`;
+  const stage = MARTIAL_STAGE_LABEL[seongToStage(main.seong)];
+  return `${name} ${stage} ${main.seong}성`;
 }
 
 // 졸업(하산) 조건 — docs/06 "정상 하산 조건".
@@ -81,9 +76,12 @@ export function isGraduationEligible(d: Disciple): boolean {
     ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
     : d.martialArts[0];
   if (!main) return false;
-  const stageIdx = MARTIAL_STAGE_ORDER.indexOf(main.stage);
-  // index 2 = great_completion (대성)
-  return stageIdx >= 2 && d.trustToMaster >= 60;
+  // "더 가르칠 게 없다" = 제 천장(별 ∧ 무공서 등급)에 닿고 신뢰 ≥ 60. docs/23 · docs/26.
+  const art = findMartialArt(main.artId);
+  const ceiling = art
+    ? effectiveRealmCeiling(d.starRank ?? 1, art.grade)
+    : realmCeiling(d.starRank ?? 1);
+  return realmIndex(d.realm) >= realmIndex(ceiling) && d.trustToMaster >= 60;
 }
 
 // 매일 진행 후 호출. 졸업 가능한 활성 제자를 graduated 처리 + milestone 큐에 추가.

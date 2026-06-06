@@ -10,11 +10,17 @@ import {
   StageTree,
 } from '@/components/martial-art';
 import { TRAIN_ACTION_LABEL } from '@/data/labels';
-import { findMartialArt } from '@/data/martialArts';
+import {
+  findMartialArt,
+  expToNextSeong,
+  seongCap,
+  seongToStage,
+} from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { colors, spacing, typography } from '@/theme';
 import type {
   MartialArtGrade,
+  MartialArtInstance,
   MartialArtSchool,
   MartialStage,
 } from '@/types';
@@ -38,14 +44,43 @@ const GRADE_TO_STAR: Record<MartialArtGrade, number> = {
   legendary: 5,
 };
 
-// 단계별 다음 요건 — docs/06_훈련_일정.md. 그레이박스 텍스트.
+// 밴드별 다음 요건 — docs/26_무공_숙련도.md. 그레이박스 텍스트.
 const NEXT_REQ: Record<MartialStage, string> = {
-  introduction: '꾸준한 수련으로 진행도 100',
-  small_completion: '실전 경험 + 진행도 100',
-  great_completion: '깨달음 + 절품 영약 + 인연',
-  transcendent: '큰 깨달음 + 극품 영약 + 천운',
-  peerless: '극의에 닿았다. 더 이상 위가 없다.',
+  introduction: '꾸준한 초식 수련으로 성을 쌓는다',
+  small_completion: '실전 경험을 더해 성을 깊인다',
+  great_completion: '깨달음과 정진으로 극의에 다가간다',
+  ultimate: '극성 — 이 무공의 끝에 닿았다',
 };
+
+// 현재 성 + 성 안 EXP 막대 + 다음 요건. 상한 도달 시 "(최대)". docs/26.
+function SeongProgress({
+  instance,
+  grade,
+}: {
+  instance: MartialArtInstance;
+  grade: MartialArtGrade;
+}) {
+  const cap = seongCap(grade);
+  const atCap = instance.seong >= cap;
+  const need = expToNextSeong(instance.seong);
+  const frac = atCap ? 100 : Math.min(100, (instance.exp / need) * 100);
+  return (
+    <>
+      <ProgressBar
+        label="숙련"
+        progress={frac}
+        rightLabel={atCap ? `${cap}성 (최대)` : `${instance.seong}성`}
+      />
+      <NextRequirement
+        text={
+          atCap
+            ? `이 비급의 한계 ${cap}성에 이르렀다.`
+            : NEXT_REQ[seongToStage(instance.seong)]
+        }
+      />
+    </>
+  );
+}
 
 export default function MartialArtScreen() {
   const { target } = useLocalSearchParams<{ target: string }>();
@@ -74,9 +109,8 @@ export default function MartialArtScreen() {
               grade={GRADE_TO_STAR[art.grade]}
             />
             <View style={styles.progressPanel}>
-              <StageTree current={mainInstance.stage} />
-              <ProgressBar progress={Math.floor(mainInstance.progress)} />
-              <NextRequirement text={NEXT_REQ[mainInstance.stage]} />
+              <StageTree current={seongToStage(mainInstance.seong)} />
+              <SeongProgress instance={mainInstance} grade={art.grade} />
             </View>
           </View>
         ) : (

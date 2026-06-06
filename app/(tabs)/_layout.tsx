@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { useTabBarScreenOptions } from '@/components/navigation/useTabBarScreenOptions';
-import { useInboxUnreadCount } from '@/hooks/useInboxBadgeCount';
 
 // Canvas dimensions output by scripts/icon-alpha.mjs. Update these if the
 // source artwork is reprocessed and the canvas size changes.
@@ -16,15 +15,14 @@ const ICON_ASPECT = {
 
 export default function TabLayout() {
   const screenOptions = useTabBarScreenOptions();
-  const inboxBadge = useInboxUnreadCount();
 
   return (
     <Tabs screenOptions={screenOptions}>
       <Tabs.Screen
         name="index"
         options={{
-          title: '사문',
-          tabBarAccessibilityLabel: '사문 — 메인 화면',
+          title: '일과',
+          tabBarAccessibilityLabel: '일과 — 하루 진행과 제자 관리',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               source={require('../../assets/images/icons/menu-sect.png')}
@@ -36,11 +34,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="inbox"
+        name="sect"
         options={{
-          title: '서신함',
-          tabBarAccessibilityLabel: '서신함 — 알림과 결정',
-          tabBarBadge: inboxBadge > 0 ? inboxBadge : undefined,
+          title: '사문',
+          tabBarAccessibilityLabel: '사문 — 사문과 사부 정보',
+          // TODO(아이콘): 전용 사문/스승 아이콘 필요. 임시로 봉투 아이콘 재사용.
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               source={require('../../assets/images/icons/menu-inbox.png')}

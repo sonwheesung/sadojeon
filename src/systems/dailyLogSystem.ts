@@ -127,18 +127,28 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
     });
   }
 
-  // 6) 승급 — arts 중 promoted 있으면 별도 줄.
+  // 6) 무공 성장 — 밴드 승급(굵은 줄) 또는 성 +1(가벼운 줄). docs/26.
   for (const a of report.arts) {
-    if (!a.promoted) continue;
     const art = findMartialArt(a.artId);
-    const stageLabel = MARTIAL_STAGE_LABEL[a.promoted];
-    entries.push({
-      id: `${id}-promotion-${a.artId}`,
-      kind: 'promotion',
-      discipleId: id,
-      discipleName: name,
-      text: `${name}이 ${art?.name ?? a.artId} ${stageLabel} 경지에 올랐다.`,
-    });
+    const artName = art?.name ?? a.artId;
+    if (a.promoted) {
+      const stageLabel = MARTIAL_STAGE_LABEL[a.promoted];
+      entries.push({
+        id: `${id}-promotion-${a.artId}`,
+        kind: 'promotion',
+        discipleId: id,
+        discipleName: name,
+        text: `${name}이 ${artName} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
+      });
+    } else if (a.seong > a.seongBefore) {
+      entries.push({
+        id: `${id}-seong-${a.artId}`,
+        kind: 'growth',
+        discipleId: id,
+        discipleName: name,
+        text: `${name}의 ${artName}이 ${a.seong}성에 올랐다.`,
+      });
+    }
   }
 
   return entries;
@@ -211,7 +221,8 @@ function computeBadges(report: DiscipleTickReport): DiscipleBadge[] {
     out.push('plateau');
   }
   const leveledUp = report.statGains.some((g) => g.levelUps > 0);
-  if (totalDelta >= PROGRESS_GOOD || leveledUp) out.push('good_progress');
+  const seongUp = report.arts.some((a) => a.seong > a.seongBefore && !a.promoted);
+  if (totalDelta >= PROGRESS_GOOD || leveledUp || seongUp) out.push('good_progress');
   return out;
 }
 
@@ -248,7 +259,7 @@ function buildMilestones(reports: DiscipleTickReport[]): Milestone[] {
         artName: art?.name ?? a.artId,
         newStage: a.promoted,
         title: '경지 도약',
-        body: `${d.name}이 ${art?.name ?? a.artId} ${stageLabel} 경지에 올랐다.`,
+        body: `${d.name}이 ${art?.name ?? a.artId} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
       });
     }
   }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { DailyChoiceModal } from '@/components/dialogue/DailyChoiceModal';
@@ -11,11 +12,9 @@ import { MonthlyReportModal } from '@/components/dialogue/MonthlyReportModal';
 import { MonthlyScheduleModal } from '@/components/dialogue/MonthlyScheduleModal';
 import { StartSelectModal } from '@/components/dialogue/StartSelectModal';
 import { DailyLogPanel } from '@/components/sect/DailyLogPanel';
+import { DiscipleMoodPanel } from '@/components/sect/DiscipleMoodPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
-import { LlmToggleCard } from '@/components/sect/LlmToggleCard';
-import { SectHeader } from '@/components/sect/SectHeader';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
-import { SectStatus } from '@/components/sect/SectStatus';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
 import { useGameStore, useMasterStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
@@ -59,16 +58,15 @@ export default function SectScreen() {
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
-        <SectHeader />
+        <AppHeader />
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <LlmToggleCard />
           <DailyLogPanel />
           <DiscipleRoster />
-          <SectStatus />
+          <DiscipleMoodPanel />
         </ScrollView>
         <SectProgressBar onProgress={() => setChoiceOpen(true)} />
       </PaperCard>

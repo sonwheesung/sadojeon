@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { Disciple, DailyActivity, PersonalityTraits, RelationLevel, StatId } from '@/types';
+import type {
+  Disciple,
+  DailyActivity,
+  MartialArtInstance,
+  PersonalityTraits,
+  RelationLevel,
+  StatId,
+} from '@/types';
 import { BASE_MAX_STAMINA, deriveMaxStamina, expToNext, statCap } from '@/data/training';
+import { expToNextSeong, findMartialArt, initialSeong } from '@/data/martialArts';
 import { PERSONALITY } from '@/data/constants';
 import { slotAwareStorage } from './persistStorage';
 
@@ -36,6 +44,31 @@ function normalizePersonality(p?: PersonalityTraits): PersonalityTraits {
   return max <= 5 ? rescalePersonality(p) : p;
 }
 
+// 구 무공 모델 { stage(5명칭), progress 0~100 } → 신 모델 { seong 1~10, exp }. docs/26.
+// 5단계(화경·초절정 포함)를 성으로 접어 환산. 멱등 — 이미 seong 있으면 통과.
+const OLD_STAGE_TO_SEONG: Record<string, number> = {
+  introduction: 1,
+  small_completion: 4,
+  great_completion: 7,
+  transcendent: 9,
+  peerless: 10,
+};
+
+function normalizeMartialInstance(inst: MartialArtInstance): MartialArtInstance {
+  if (typeof inst?.seong === 'number') return inst;
+  const legacy = inst as unknown as {
+    artId: string;
+    stage?: string;
+    progress?: number;
+    unlockedAt?: number;
+  };
+  const seong = OLD_STAGE_TO_SEONG[legacy.stage ?? ''] ?? 1;
+  const need = expToNextSeong(seong);
+  const prog = typeof legacy.progress === 'number' ? legacy.progress : 0;
+  const exp = Math.max(0, Math.min(need - 1, Math.round((prog / 100) * need)));
+  return { artId: legacy.artId, seong, exp, unlockedAt: legacy.unlockedAt ?? 0 };
+}
+
 interface DiscipleStore {
   disciples: Record<string, Disciple>;
   order: string[];
@@ -53,6 +86,8 @@ interface DiscipleStore {
   // 반환: 레벨업 횟수 (0 = 변동 없음).
   addStatExp: (id: string, statId: StatId, expDelta: number) => number;
   setRelation: (id: string, otherId: string, level: RelationLevel) => void;
+  // 무공서 전수 — 없으면 1성으로 학습, 그 무공을 주력(훈련 대상)으로 지정. docs/26 §5-1.
+  assignMainMartialArt: (id: string, artId: string) => void;
   get: (id: string) => Disciple | undefined;
   reset: () => void;
 }
@@ -62,6 +97,7 @@ function withDefaults(d: Disciple): Disciple {
   return {
     ...d,
     personality: normalizePersonality(d.personality),
+    martialArts: (d.martialArts ?? []).map(normalizeMartialInstance),
     maxStamina: d.maxStamina ?? BASE_MAX_STAMINA,
     stress: d.stress ?? 0,
     stats: d.stats ?? {},
@@ -70,7 +106,6 @@ function withDefaults(d: Disciple): Disciple {
     realm: d.realm ?? (d.martialArts && d.martialArts.length > 0 ? 'samryu' : 'none'),
     realmProgress: {
       internal: d.realmProgress?.internal ?? 0,
-      martial: d.realmProgress?.martial ?? 0,
       pity: d.realmProgress?.pity ?? 0,
       petitioned: d.realmProgress?.petitioned ?? false,
     },
@@ -211,6 +246,26 @@ export const useDiscipleStore = create<DiscipleStore>()(
           };
         }),
 
+      assignMainMartialArt: (id, artId) =>
+        set((s) => {
+          const cur = s.disciples[id];
+          if (!cur) return s;
+          const has = cur.martialArts.some((a) => a.artId === artId);
+          let martialArts = cur.martialArts;
+          if (!has) {
+            // 새 무공 — 경지 기반 시작 성(고수는 기초 건너뜀). 기존 무공은 보존. docs/26 §5-2.
+            const art = findMartialArt(artId);
+            const seong = art ? initialSeong(cur, art) : 1;
+            martialArts = [...cur.martialArts, { artId, seong, exp: 0, unlockedAt: 0 }];
+          }
+          return {
+            disciples: {
+              ...s.disciples,
+              [id]: { ...cur, martialArts, mainMartialArtId: artId },
+            },
+          };
+        }),
+
       get: (id) => get().disciples[id],
 
       reset: () => set({ disciples: {}, order: [] }),
@@ -218,7 +273,7 @@ export const useDiscipleStore = create<DiscipleStore>()(
     {
       name: 'disciple',
       storage: createJSONStorage(() => slotAwareStorage),
-      version: 2, // v1→v2: 성격 5축 1~5 → 1~100 재환산
+      version: 3, // v1→v2: 성격 1~5→1~100. v2→v3: 무공 {stage,progress}→{seong,exp} (withDefaults 처리)
       partialize: (s) => ({ disciples: s.disciples, order: s.order }),
       migrate: (persisted: unknown, version: number) => {
         const p = (persisted ?? {}) as {

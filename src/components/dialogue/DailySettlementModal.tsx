@@ -26,21 +26,26 @@ const MIN_DISPLAY_MS = 2000;
 export function DailySettlementModal() {
   const settlement = usePendingStore((s) => s.settlement);
   const clearStore = usePendingStore((s) => s.clearSettlement);
-  const [canClose, setCanClose] = useState(false);
+  const inflight = usePendingStore((s) => s.inflightResolutions);
+  const [timerDone, setTimerDone] = useState(false);
+
+  // [다음] 활성 = 최소 음미 시간 경과 + 백그라운드 LLM 해결이 모두 끝남.
+  // 미완 응답이 남아 있으면 "하루를 기록하는 중…" 으로 계속 대기(선택은 안 기다림).
+  const canClose = timerDone && inflight === 0;
 
   const onClose = () => {
     clearStore();
     triggerPostSettlement();
   };
 
-  // 정산 표시 시 최소 시간 후 [다음] 활성화 — 음미 시간 + LLM 자연스러운 대기.
+  // 정산 표시 시 최소 시간 후 타이머 완료.
   useEffect(() => {
     if (settlement) {
-      setCanClose(false);
-      const t = setTimeout(() => setCanClose(true), MIN_DISPLAY_MS);
+      setTimerDone(false);
+      const t = setTimeout(() => setTimerDone(true), MIN_DISPLAY_MS);
       return () => clearTimeout(t);
     }
-    setCanClose(false);
+    setTimerDone(false);
     return undefined;
   }, [settlement]);
 

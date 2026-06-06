@@ -61,6 +61,10 @@ interface PendingStore {
   // 직전 LLM 호출 — [DEV] 응답 직후 요청·응답을 즉시 띄우는 오버레이용. 사용자 [닫기] 시 clear.
   lastDebug: LlmDebugEntry | null;
 
+  // 백그라운드에서 도는 이벤트 해결(LLM) 수. 선택 직후 ++, 완료 시 --.
+  // 진행(정산) 시 0이 될 때까지 "하루를 기록하는 중…" 으로 대기. 선택은 기다리지 않음.
+  inflightResolutions: number;
+
   setOneLiner: (v: PendingOneLiner) => void;
   clearOneLiner: () => void;
   setWish: (v: PendingWish) => void;
@@ -78,6 +82,9 @@ interface PendingStore {
   setSettlement: (v: SettlementData) => void;
   clearSettlement: () => void;
   clearLastDebug: () => void;
+
+  beginResolution: () => void;
+  endResolution: () => void;
 }
 
 // [DEV] 직전 LLM 호출 오버레이를 띄울지. prompt/raw 가 있어야(=LLM 실제 시도) 띄움.
@@ -97,6 +104,7 @@ export const usePendingStore = create<PendingStore>((set) => ({
   settlement: null,
   llmDebugBuffer: [],
   lastDebug: null,
+  inflightResolutions: 0,
 
   setOneLiner: (v) => set({ oneLiner: v }),
   clearOneLiner: () => set({ oneLiner: null }),
@@ -134,4 +142,9 @@ export const usePendingStore = create<PendingStore>((set) => ({
   setSettlement: (v) => set({ settlement: v, llmDebugBuffer: [] }),
   clearSettlement: () => set({ settlement: null }),
   clearLastDebug: () => set({ lastDebug: null }),
+
+  beginResolution: () =>
+    set((s) => ({ inflightResolutions: s.inflightResolutions + 1 })),
+  endResolution: () =>
+    set((s) => ({ inflightResolutions: Math.max(0, s.inflightResolutions - 1) })),
 }));

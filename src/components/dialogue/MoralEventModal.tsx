@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useMoralEventStore } from '@/stores/moralEventStore';
 import { useMasterStore } from '@/stores/masterStore';
@@ -16,19 +15,13 @@ export function MoralEventModal() {
   const settlement = usePendingStore((s) => s.settlement);
   const debugActive = usePendingStore(isDebugOverlayActive);
   const masterName = useMasterStore((s) => s.master?.name ?? '사부');
-  const [isResolving, setIsResolving] = useState(false);
 
   // 정산·[DEV]디버그 오버레이가 떠 있으면 도덕 이벤트도 가린다 — 정산·디버그가 최우선.
   const visible = pending != null && settlement == null && !debugActive;
 
-  const onPick = async (tone: MoralChoiceTone) => {
-    if (isResolving) return;
-    setIsResolving(true);
-    try {
-      await resolveMoralChoice(tone);
-    } finally {
-      setIsResolving(false);
-    }
+  // 선택 즉시 모달 닫힘(pending 클리어) — LLM 응답은 백그라운드. 진행 시 정산이 대기.
+  const onPick = (tone: MoralChoiceTone) => {
+    void resolveMoralChoice(tone).catch(() => {});
   };
 
   return (
@@ -38,7 +31,7 @@ export function MoralEventModal() {
       animationType="fade"
       // 강제 결정 — onRequestClose 시 admonish (가장 중립적).
       onRequestClose={() => {
-        if (pending && !isResolving) onPick('admonish');
+        if (pending) onPick('admonish');
       }}
     >
       <View style={styles.backdrop}>
@@ -66,22 +59,11 @@ export function MoralEventModal() {
 
               <View style={styles.divider} />
 
-              {isResolving ? (
-                <View style={styles.resolvingBlock}>
-                  <ActivityIndicator color={colors.seal} />
-                  <Text style={styles.resolvingText}>사부가 생각하고 있다…</Text>
-                </View>
-              ) : (
-                <View style={styles.choices}>
-                  {pending.choices.map((c) => (
-                    <ChoiceButton
-                      key={c.tone}
-                      choice={c}
-                      onPress={() => onPick(c.tone)}
-                    />
-                  ))}
-                </View>
-              )}
+              <View style={styles.choices}>
+                {pending.choices.map((c) => (
+                  <ChoiceButton key={c.tone} choice={c} onPress={() => onPick(c.tone)} />
+                ))}
+              </View>
             </>
           ) : null}
         </View>
@@ -184,18 +166,6 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xs,
   },
   choices: { gap: spacing.xs },
-  resolvingBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.base,
-  },
-  resolvingText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-  },
   choiceButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.base,

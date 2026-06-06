@@ -217,25 +217,17 @@ export async function resolveChoice(
 }
 
 async function resolveMoral(tone: MoralChoiceTone): Promise<void> {
-  const pending = useMoralEventStore.getState().pending;
+  const moralStore = useMoralEventStore.getState();
+  const pending = moralStore.pending;
   if (!pending) return;
-  const template = findTemplate(pending.templateId);
-  if (!template) {
-    useMoralEventStore.getState().clear();
-    return;
-  }
-  const choice = template.choices.find((c) => c.tone === tone);
-  if (!choice) {
-    useMoralEventStore.getState().clear();
-    return;
-  }
 
-  const ds = useDiscipleStore.getState();
-  const perpetrator = ds.disciples[pending.discipleId];
-  if (!perpetrator) {
-    useMoralEventStore.getState().clear();
-    return;
-  }
+  const template = findTemplate(pending.templateId);
+  const choice = template?.choices.find((c) => c.tone === tone);
+  const perpetrator = useDiscipleStore.getState().disciples[pending.discipleId];
+
+  // 선택 즉시 모달 닫기 — 사용자는 LLM 응답을 기다리지 않고 계속 진행. 해결은 백그라운드.
+  moralStore.clear();
+  if (!template || !choice || !perpetrator) return;
 
   const input: ResolveInput = {
     template,
@@ -246,41 +238,41 @@ async function resolveMoral(tone: MoralChoiceTone): Promise<void> {
     siblings: buildSiblingSummaries(perpetrator.id),
     history: useEventHistoryStore.getState().sliceFor(template.id, template.category),
   };
-
   const resolver = selectResolver(template);
-  const output = await resolver.resolve(input);
 
-  applyAllEffects(
-    output.effects,
-    perpetrator.id,
-    perpetrator.name,
-    pending.siblingName,
-  );
+  const pendingStore = usePendingStore.getState();
+  pendingStore.beginResolution();
+  try {
+    const output = await resolver.resolve(input);
 
-  const day = useTimeStore.getState().totalDay;
-  useEventHistoryStore.getState().push({
-    id: `${day}-${template.id}-${perpetrator.id}-${Math.random().toString(36).slice(2, 6)}`,
-    day,
-    domain: 'moral',
-    templateId: template.id,
-    category: template.category,
-    tier: template.tier,
-    discipleId: perpetrator.id,
-    discipleName: perpetrator.name,
-    siblingId: pending.siblingId,
-    tone,
-    appliedEffects: output.effects,
-    llmCalled: output.llmCalled,
-    narration: output.narration,
-  });
+    applyAllEffects(output.effects, perpetrator.id, perpetrator.name, pending.siblingName);
 
-  // 응답 결과 화면 X — 응답 직후 모달 즉시 닫힘. 디버그는 정산 모달 누적.
-  usePendingStore.getState().pushLlmDebug({
-    source: 'moral',
-    discipleName: perpetrator.name,
-    llmCalled: output.llmCalled,
-    prompt: output.llmPrompt,
-    raw: output.llmRaw,
-  });
-  useMoralEventStore.getState().clear();
+    const day = useTimeStore.getState().totalDay;
+    useEventHistoryStore.getState().push({
+      id: `${day}-${template.id}-${perpetrator.id}-${Math.random().toString(36).slice(2, 6)}`,
+      day,
+      domain: 'moral',
+      templateId: template.id,
+      category: template.category,
+      tier: template.tier,
+      discipleId: perpetrator.id,
+      discipleName: perpetrator.name,
+      siblingId: pending.siblingId,
+      tone,
+      appliedEffects: output.effects,
+      llmCalled: output.llmCalled,
+      narration: output.narration,
+    });
+
+    // 결과는 다음 정산 모달에 누적 표시.
+    usePendingStore.getState().pushLlmDebug({
+      source: 'moral',
+      discipleName: perpetrator.name,
+      llmCalled: output.llmCalled,
+      prompt: output.llmPrompt,
+      raw: output.llmRaw,
+    });
+  } finally {
+    usePendingStore.getState().endResolution();
+  }
 }

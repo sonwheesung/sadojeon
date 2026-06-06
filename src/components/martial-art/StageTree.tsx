@@ -8,7 +8,7 @@ interface StageTreeProps {
   reachedIndex?: number; // 도달한 최대 단계 (default: current 인덱스)
 }
 
-// 무공 학습 — 5단계 노드 트리. 시안 결 (입문→소성→대성→화경→초절정).
+// 무공 숙련 — 4밴드 노드 트리. 입문→소성→대성→극성 (성 1~10 에서 파생, docs/26).
 // 도달한 노드 = 진한 채움, 미도달 = 점선 빈 원, 현재 = 위에 붉은 인장 점.
 export function StageTree({ current, reachedIndex }: StageTreeProps) {
   const currentIdx = MARTIAL_STAGE_ORDER.indexOf(current);

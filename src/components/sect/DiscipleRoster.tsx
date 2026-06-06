@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { SectionLabel } from '@/components/common/SectionLabel';
-import { findMartialArt } from '@/data/martialArts';
+import { findMartialArt, seongToStage } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -27,12 +27,6 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   departed: '하산',
 };
 
-function trustLabel(value: number): string {
-  // 0~100 → 0~5 단계
-  const level = Math.min(5, Math.max(0, Math.round(value / 20)));
-  return `신뢰 ${level}/5`;
-}
-
 function mainArtLabel(d: Disciple): string {
   const main = d.mainMartialArtId
     ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
@@ -40,14 +34,13 @@ function mainArtLabel(d: Disciple): string {
   if (!main) return '입문 전';
   const art = findMartialArt(main.artId);
   const name = art?.name ?? main.artId;
-  const stage = MARTIAL_STAGE_LABEL[main.stage];
-  return `${name} ${stage} ${Math.floor(main.progress)}`;
+  const stage = MARTIAL_STAGE_LABEL[seongToStage(main.seong)];
+  return `${name} ${stage} ${main.seong}성`;
 }
 
 export function DiscipleRoster() {
   const order = useDiscipleStore((s) => s.order);
   const disciples = useDiscipleStore((s) => s.disciples);
-  const currentYear = useTimeStore((s) => s.current.year);
   const totalDay = useTimeStore((s) => s.totalDay);
   const overrides = useScheduleStore((s) => s.overrides);
   const dailyBadges = usePendingStore((s) => s.dailyBadges);
@@ -86,7 +79,6 @@ export function DiscipleRoster() {
             <DiscipleCard
               key={id}
               d={d}
-              currentYear={currentYear}
               statusLine={statusLine}
               onLeave={onLeave}
               leaveLabel={onLeave ? OVERRIDE_LABEL[ov!.command] : ''}
@@ -101,20 +93,17 @@ export function DiscipleRoster() {
 
 function DiscipleCard({
   d,
-  currentYear,
   statusLine,
   onLeave,
   leaveLabel,
   badges,
 }: {
   d: Disciple;
-  currentYear: number;
   statusLine: string;
   onLeave: boolean;
   leaveLabel: string;
   badges: DiscipleBadge[];
 }) {
-  const yearsIn = Math.max(1, currentYear - d.entryYear + 1);
   return (
     <Pressable
       style={[styles.card, onLeave && styles.cardOnLeave]}
@@ -142,9 +131,6 @@ function DiscipleCard({
       <Text style={styles.cardName} numberOfLines={1}>
         {d.name}
       </Text>
-      <Text style={styles.cardSub} numberOfLines={1}>
-        입문 {yearsIn}년차
-      </Text>
       <Text style={styles.cardRealm} numberOfLines={1}>
         {REALM_LABEL[d.realm]}
       </Text>
@@ -153,9 +139,6 @@ function DiscipleCard({
       </Text>
       <Text style={styles.cardSub} numberOfLines={1}>
         {statusLine}
-      </Text>
-      <Text style={styles.cardLine} numberOfLines={1}>
-        {trustLabel(d.trustToMaster)}
       </Text>
       <Text style={styles.cardSub} numberOfLines={1}>
         {staminaSceneLabel(d.stamina, d.maxStamina)}
