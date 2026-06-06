@@ -28,7 +28,6 @@ import type {
   PersonalityTraits,
   ScrollInventoryItem,
   SectState,
-  Talents,
 } from '@/types';
 
 // ─── Master ─────────────────────────────────────────────────────────────────
@@ -79,8 +78,8 @@ function defaultSect(): SectState {
 export interface DiscipleSeed {
   poolId: string;
   artId: string;
-  talents: Talents;
   efficiency?: EfficiencyMap;
+  insight?: number; // 오성 1~5 — 깨달음 확률
   personality: PersonalityTraits;
 }
 
@@ -103,13 +102,11 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
     hanjaName: pool.hanjaName,
     entryYear: useTimeStore.getState().current.year,
     age: 10,
-    talents: seed.talents,
     efficiency: seed.efficiency ?? {},
-    hiddenTalents: {},
+    insight: seed.insight ?? 3,
     martialArts: [startingArtInstance(seed.artId)],
     mainMartialArtId: seed.artId,
-    // 경지 — 무공 입문 → 삼류 시작. 별 등급이 천장(하드캡)을 정함.
-    starRank: pool.starRank,
+    // 경지 — 무공 입문 → 삼류 시작. 천장은 주력 무공서 등급(별 등급 폐기, docs/28 §5).
     realm: 'samryu',
     realmProgress: { internal: 0, pity: 0, petitioned: false },
     trustToMaster: 30,

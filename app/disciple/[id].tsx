@@ -11,26 +11,16 @@ import {
   MartialTrainingPanel,
   MoodPanel,
   StatGrowthPanel,
-  TalentPanel,
 } from '@/components/disciple';
 import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
 import { useDiscipleStore } from '@/stores';
 import { colors, spacing, typography } from '@/theme';
-import type { Talents } from '@/types';
 
 // 사용자 시안 결 (image-cache/2.png) + 기존 풍부 정보 통합.
 // - 시안 결: 헤더·재능 5축·풍경 텍스트·활동 4버튼
 // - 기존 유지: 무공 트리·장비 슬롯·의뢰 기록·기타 스탯
 
 // ─── Placeholder data ──────────────────────────────────────────────────────
-
-const PLACEHOLDER_TALENTS: Talents = {
-  body: 3,
-  qi: 4,
-  agility: 3,
-  insight: 5,
-  mind: 5,
-};
 
 const PLACEHOLDER_MOODS = [
   '마음이 따뜻하다',
@@ -62,7 +52,6 @@ export default function DiscipleDetailScreen() {
 
   const name = fromStore?.name ?? starting?.name ?? '제자';
   const hanjaName = fromStore?.hanjaName ?? starting?.hanjaName ?? '?';
-  const talents = fromStore?.talents ?? PLACEHOLDER_TALENTS;
   // 풍경 텍스트 — 추후 통찰 차등 + 시나리오 풀에서. 그레이박스: 고정 placeholder.
   const moods = PLACEHOLDER_MOODS;
 
@@ -79,7 +68,6 @@ export default function DiscipleDetailScreen() {
           <DiscipleHeader name={name} hanjaName={hanjaName} />
           {fromStore && <DiscipleStatusPanel disciple={fromStore} />}
           {id && <DiscipleTodayLog discipleId={id} />}
-          <TalentPanel talents={talents} />
           {fromStore && <StatGrowthPanel disciple={fromStore} />}
           <MoodPanel lines={moods} />
 

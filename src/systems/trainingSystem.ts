@@ -32,7 +32,6 @@ import type {
   MartialArtInstance,
   MartialStage,
   StatId,
-  Talents,
   TrainingCategory,
 } from '@/types';
 import { MARTIAL_STAGE_ORDER } from '@/types/martialArt';
@@ -40,7 +39,6 @@ import { MARTIAL_STAGE_ORDER } from '@/types/martialArt';
 import {
   MARTIAL_AXES,
   MARTIAL_AXIS_LABEL,
-  STAT_APTITUDE,
   type MartialAxis,
 } from '@/types/training';
 import type { Realm } from '@/types/realm';
@@ -75,28 +73,14 @@ function plateauMultiplier(exp: number, seong: number): number {
   return 1.0;
 }
 
-// 무공 학습 효율 배율 — 효율맵(갈래) 우선, 미시드(구 세이브)면 옛 talents 폴백. docs/28 §2.
-// 효율맵이 있는(시드된) 캐릭터는 미기재 갈래 = '보통'. 맵이 비면 구 세이브로 보고 talents 폴백.
+// 무공 학습 효율 배율 — 갈래 효율맵. 미기재 갈래 = '보통'. docs/28 §2.
 function learnMultiplier(art: MartialArt, d: Disciple): number {
-  const eff = d.efficiency;
-  if (eff && Object.keys(eff).length > 0) {
-    return EFFICIENCY_MULTIPLIER[eff[art.school] ?? '보통'];
-  }
-  if (art.preferredTalents.length === 0) return 1.0;
-  const avg =
-    art.preferredTalents.reduce((acc, axis) => acc + d.talents[axis], 0) /
-    art.preferredTalents.length;
-  return Math.max(0.5, avg / 3);
+  return EFFICIENCY_MULTIPLIER[d.efficiency?.[art.school] ?? '보통'];
 }
 
-// 단련/비무공 능력치 학습 효율 — 효율맵 우선, 미시드(구 세이브)면 talents 폴백. docs/28 §2.
+// 단련/비무공 능력치 학습 효율 — 영역 효율맵. 미기재 영역 = '보통'. docs/28 §2.
 function aptitudeMultiplier(d: Disciple, statId: StatId): number {
-  const eff = d.efficiency;
-  if (eff && Object.keys(eff).length > 0) {
-    return EFFICIENCY_MULTIPLIER[eff[statId] ?? '보통'];
-  }
-  const axis = STAT_APTITUDE[statId];
-  return Math.max(0.5, d.talents[axis] / 3);
+  return EFFICIENCY_MULTIPLIER[d.efficiency?.[statId] ?? '보통'];
 }
 
 // 무공 카테고리에서 진행할 무공 — 일일 선택 > 메인 > 첫 무공.
@@ -363,7 +347,7 @@ function applyRealmTick(
   if (atWall && wallTarget) {
     if (isSeclusion) {
       // 폐관 중 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공).
-      const insight = d.talents.insight ?? 1;
+      const insight = d.insight;
       const chance = enlightenmentChance(insight, wallTarget) + pity * ENLIGHTENMENT_PITY_STEP;
       const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
       if (guaranteed || Math.random() < chance) {

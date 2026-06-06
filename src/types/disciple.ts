@@ -1,4 +1,4 @@
-import type { MartialArtInstance, MartialArtSchool, TalentAxis } from './martialArt';
+import type { MartialArtInstance, MartialArtSchool } from './martialArt';
 import type { Realm, RealmProgress } from './realm';
 import type { StatId, StatTrack } from './training';
 
@@ -25,17 +25,8 @@ export type RelationLevel = 'enemy' | 'distant' | 'neutral' | 'friend' | 'sworn'
 
 export type DarknessLevel = 0 | 1 | 2 | 3 | 4;
 
-export interface Talents {
-  body: number;
-  qi: number;
-  agility: number;
-  insight: number;
-  mind: number;
-}
-
 // 영역 학습 효율 — docs/28 §2. 캐릭터의 타고난 재능(속도 배율)을 갈래/영역마다 매김.
-// 별 등급(starRank)·재능 5축(talents)을 대체하는 새 축. 안 적은 갈래 = '보통'.
-// 슬라이스 2: 무공 갈래(MartialArtSchool) 효율. 비무공 영역 효율은 능력치 확장(슬라이스 3) 때.
+// 별 등급(starRank)·재능 5축을 대체하는 성장 속도 축. 안 적은 갈래 = '보통'.
 export type EfficiencyTier = '특화' | '상성' | '보통' | '미숙' | '상극';
 // 효율 키 = 무공 갈래(MartialArtSchool) + 비무공/단련 능력치(StatId). 안 적은 키 = '보통'.
 export type EfficiencyKey = MartialArtSchool | StatId;
@@ -77,10 +68,10 @@ export interface Disciple {
   entryYear: number;
   age: number;
 
-  talents: Talents;
-  hiddenTalents: Partial<Record<TalentAxis, number>>;
-  // 영역 학습 효율(속도). 미시드(구 세이브)면 talents 로 폴백. docs/28 §2.
-  efficiency?: EfficiencyMap;
+  // 영역 학습 효율(속도) — 무공 갈래·비무공 영역. docs/28 §2. (옛 재능 5축 대체.)
+  efficiency: EfficiencyMap;
+  // 오성(悟性) — 깨달음 확률(1~5). 재능 5축 중 유일 잔존. docs/28 §1·§5-3.
+  insight: number;
 
   martialArts: MartialArtInstance[];
   mainMartialArtId?: string;

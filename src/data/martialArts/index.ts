@@ -94,17 +94,15 @@ export function findMartialArt(id: string): MartialArt | undefined {
   return MARTIAL_ARTS.find((m) => m.id === id);
 }
 
-// 무공 학습 자격 — 재능 요구치 + 경지 게이트(어려운 비급은 경지 올라야 입문). docs/26 §5-1.
+// 무공 학습 자격 — 경지 게이트만(어려운 비급은 경지 올라야 입문). docs/26 §5-1.
+// 재능 게이트 폐기: 누구든 학습 가능, 효율(상극이면 ×0.04)이 성장 속도로 차등. docs/28 §2·§5.
 export function canLearnArt(disciple: Disciple, art: MartialArt): boolean {
-  const talentOk = art.requirements.every(
-    (r) => (disciple.talents[r.axis] ?? 0) >= r.minimum,
-  );
-  const realmOk = realmIndex(disciple.realm) >= realmIndex(artGradeLearnRealm(art.grade));
-  return talentOk && realmOk;
+  return realmIndex(disciple.realm) >= realmIndex(artGradeLearnRealm(art.grade));
 }
 
+// 그 갈래에 재능(효율)이 있나 — 상극이면 false('어색함' 힌트용, 학습 자체는 막지 않음).
 export function talentMet(disciple: Disciple, art: MartialArt): boolean {
-  return art.requirements.every((r) => (disciple.talents[r.axis] ?? 0) >= r.minimum);
+  return disciple.efficiency?.[art.school] !== '상극';
 }
 
 // 새 무공을 익힐 때 시작 성 — 경지가 받침이 되어 기초를 건너뛴다. docs/26 §5-2.

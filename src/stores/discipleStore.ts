@@ -119,6 +119,7 @@ function withDefaults(d: Disciple): Disciple {
     stress: d.stress ?? 0,
     stats: d.stats ?? {},
     efficiency: d.efficiency ?? {},
+    insight: d.insight ?? (d as unknown as { talents?: { insight?: number } }).talents?.insight ?? 3,
     // 경지 — 구버전 세이브 보정. 무공 입문 상태면 삼류, 미입문이면 none.
     realm: d.realm ?? (d.martialArts && d.martialArts.length > 0 ? 'samryu' : 'none'),
     realmProgress: {
