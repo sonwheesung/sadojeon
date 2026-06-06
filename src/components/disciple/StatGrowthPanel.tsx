@@ -13,8 +13,8 @@ import { colors, radius, spacing, typography } from '@/theme';
 
 const ABILITY: StatId[] = ['strength', 'agility', 'endurance'];
 const KNOWLEDGE: StatId[] = ['formation', 'etiquette', 'knowledge'];
-// 비무공 소양 — 교습(공부)으로 키움. 정탐·호위는 의뢰(B) 도입 시 합류.
-const APTITUDE: StatId[] = ['medicine', 'alchemy'];
+// 비무공 소양 — 의술·영약은 교습(공부), 정탐·호위는 의뢰(실전)로 성장.
+const APTITUDE: StatId[] = ['medicine', 'alchemy', 'scouting', 'guarding'];
 
 export function StatGrowthPanel({ disciple }: { disciple: Disciple }) {
   return (
