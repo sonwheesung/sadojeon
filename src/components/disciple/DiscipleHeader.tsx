@@ -1,17 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing, typography, radius } from '@/theme';
-import { starText } from '@/data/labels';
 
 interface DiscipleHeaderProps {
   name: string; // 한글 이름
   hanjaName: string; // 한자 이름
-  starRank: number; // 1~5
 }
 
 // 제자 상세 — 상단 초상 패널. 이미지 시안 결 (양피지 두루마리 + 초상 + 이름).
 // 그레이박스 단계: 초상은 dashed placeholder. 폴리시 단계에서 실제 일러스트 차입.
-export function DiscipleHeader({ name, hanjaName, starRank }: DiscipleHeaderProps) {
+export function DiscipleHeader({ name, hanjaName }: DiscipleHeaderProps) {
   return (
     <View style={styles.scroll}>
       <View style={styles.portrait}>
@@ -24,7 +22,6 @@ export function DiscipleHeader({ name, hanjaName, starRank }: DiscipleHeaderProp
         <Text style={styles.korean} numberOfLines={1}>
           {name}
         </Text>
-        <Text style={styles.star}>{starText(starRank)}</Text>
       </View>
     </View>
   );

@@ -73,9 +73,6 @@ export function StartSelectModal({ visible, onComplete }: Props) {
                       {pool?.name ?? c.poolId}
                     </Text>
                     <Text style={styles.hanja}>{pool?.hanjaName ?? '?'}</Text>
-                    <Text style={styles.star}>
-                      {pool ? '★'.repeat(pool.starRank) : ''}
-                    </Text>
                     <View style={styles.check}>
                       <Text style={styles.checkMark}>{isSelected ? '✓' : ''}</Text>
                     </View>

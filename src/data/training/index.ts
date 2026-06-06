@@ -23,8 +23,8 @@ export function expToNext(level: number): number {
 }
 
 // 성장 상한 — 별 등급 하드캡 폐기(docs/28 §2·docs/25 §3). 효율이 *속도*만 차등(소프트캡).
-// 실용 천장만 둔다: 일반 Lv 100, 체력 Lv 18(최대 체력 180). starRank 인자는 호환용(무시).
-export function statCap(_starRank: number, statId: StatId): number {
+// 실용 천장만 둔다: 일반 Lv 100, 체력 Lv 18(최대 체력 180).
+export function statCap(statId: StatId): number {
   if (statId === 'endurance') return 18; // ×10 = 최대 체력 180
   return 100;
 }

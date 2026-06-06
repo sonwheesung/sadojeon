@@ -62,7 +62,6 @@ export default function DiscipleDetailScreen() {
 
   const name = fromStore?.name ?? starting?.name ?? '제자';
   const hanjaName = fromStore?.hanjaName ?? starting?.hanjaName ?? '?';
-  const starRank = starting?.starRank ?? 1;
   const talents = fromStore?.talents ?? PLACEHOLDER_TALENTS;
   // 풍경 텍스트 — 추후 통찰 차등 + 시나리오 풀에서. 그레이박스: 고정 placeholder.
   const moods = PLACEHOLDER_MOODS;
@@ -77,7 +76,7 @@ export default function DiscipleDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* 시안 결 */}
-          <DiscipleHeader name={name} hanjaName={hanjaName} starRank={starRank} />
+          <DiscipleHeader name={name} hanjaName={hanjaName} />
           {fromStore && <DiscipleStatusPanel disciple={fromStore} />}
           {id && <DiscipleTodayLog discipleId={id} />}
           <TalentPanel talents={talents} />

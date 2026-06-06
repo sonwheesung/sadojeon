@@ -4,8 +4,8 @@ import type { MartialArtGrade } from '@/types/martialArt';
 import { REALM_ORDER, type Realm } from '@/types/realm';
 
 // 별 등급 폐기(docs/28 §5). 천장은 주력 무공서 등급이 정한다.
-// 이 함수는 주력 무공서가 없을 때의 기본값만 — 무공 기둥이 비면 경지가 못 오르므로 보수적으로 일류.
-export function realmCeiling(_starRank?: number): Realm {
+// 주력 무공서가 없을 때의 기본값만 — 무공 기둥이 비면 경지가 못 오르므로 보수적으로 일류.
+export function realmCeiling(): Realm {
   return 'ilryu';
 }
 
@@ -25,9 +25,9 @@ export function artGradeRealmCeiling(grade: MartialArtGrade): Realm {
   }
 }
 
-// 실제 경지 천장 = 주력 무공서 등급(별 등급 폐기, docs/28 §5). starRank 인자는 호환용(무시).
+// 실제 경지 천장 = 주력 무공서 등급(별 등급 폐기, docs/28 §5).
 // 천장에 닿는 *속도*는 무공 갈래 효율(소프트캡)이 정한다 — trainingSystem.
-export function effectiveRealmCeiling(_starRank: number, grade: MartialArtGrade): Realm {
+export function effectiveRealmCeiling(grade: MartialArtGrade): Realm {
   return artGradeRealmCeiling(grade);
 }
 
@@ -81,7 +81,7 @@ export const REALM_SEONG_GATE: Record<Realm, number> = {
 // 자질 차등은 starRank가 아니라 오성(enlightenmentChance)이 가른다.
 const WALL_TARGETS: readonly Realm[] = ['jeoljeong', 'chojeoljeong', 'hwagyeong'];
 
-export function isWallTransition(_starRank: number, target: Realm): boolean {
+export function isWallTransition(target: Realm): boolean {
   return WALL_TARGETS.includes(target);
 }
 

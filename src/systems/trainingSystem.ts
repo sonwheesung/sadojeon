@@ -318,7 +318,6 @@ function applyRealmTick(
   let pity = d.realmProgress?.pity ?? 0;
   let petitioned = d.realmProgress?.petitioned ?? false;
   let realm: Realm = d.realm ?? 'samryu';
-  const star = d.starRank ?? 1;
   const eff = Math.max(0, progressMul);
   const startRealm = realm;
 
@@ -331,7 +330,7 @@ function applyRealmTick(
   // (경지는 내공+깨달음이 민다. 무공 성은 경지를 따라 자랄 뿐, 승급 요구치는 아님 — 정통 무협.)
   const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
   const mainGrade = mainId ? findMartialArt(mainId)?.grade : undefined;
-  const ceiling = mainGrade ? effectiveRealmCeiling(star, mainGrade) : realmCeiling(star);
+  const ceiling = mainGrade ? effectiveRealmCeiling(mainGrade) : realmCeiling();
 
   // 외공(체력·근골 ≈ strength level) + 주력 무공서 성 — 나머지 두 기둥. docs/28 §5.
   const external = d.stats?.strength?.level ?? 0;
@@ -345,7 +344,7 @@ function applyRealmTick(
     if (internal < REALM_INTERNAL_REQ[target]) break; // 내공 부족
     if (external < REALM_EXTERNAL_REQ[target]) break; // 외공 부족
     if (mainSeong < REALM_SEONG_GATE[target]) break; // 무공서 성 게이트(초절정↑)
-    if (isWallTransition(star, target)) break; // 깨달음 벽 — 자동 X
+    if (isWallTransition(target)) break; // 깨달음 벽 — 자동 X
     realm = target;
     pity = 0;
     petitioned = false;
@@ -359,7 +358,7 @@ function applyRealmTick(
     internal >= REALM_INTERNAL_REQ[wallTarget] &&
     external >= REALM_EXTERNAL_REQ[wallTarget] &&
     mainSeong >= REALM_SEONG_GATE[wallTarget] &&
-    isWallTransition(star, wallTarget);
+    isWallTransition(wallTarget);
 
   if (atWall && wallTarget) {
     if (isSeclusion) {

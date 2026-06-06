@@ -76,11 +76,9 @@ export function isGraduationEligible(d: Disciple): boolean {
     ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
     : d.martialArts[0];
   if (!main) return false;
-  // "더 가르칠 게 없다" = 제 천장(별 ∧ 무공서 등급)에 닿고 신뢰 ≥ 60. docs/23 · docs/26.
+  // "더 가르칠 게 없다" = 제 천장(무공서 등급)에 닿고 신뢰 ≥ 60. docs/23 · docs/26.
   const art = findMartialArt(main.artId);
-  const ceiling = art
-    ? effectiveRealmCeiling(d.starRank ?? 1, art.grade)
-    : realmCeiling(d.starRank ?? 1);
+  const ceiling = art ? effectiveRealmCeiling(art.grade) : realmCeiling();
   return realmIndex(d.realm) >= realmIndex(ceiling) && d.trustToMaster >= 60;
 }
 

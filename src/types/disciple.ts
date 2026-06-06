@@ -85,8 +85,7 @@ export interface Disciple {
   martialArts: MartialArtInstance[];
   mainMartialArtId?: string;
 
-  // 경지(境地) — 제자의 무 격. docs/23. 별 등급이 천장(하드캡)을 정함.
-  starRank: number; // 1~5 (별 등급, 천장 산출용)
+  // 경지(境地) — 제자의 무 격. docs/23. 천장은 주력 무공서 등급 + 갈래 효율(별 등급 폐기, docs/28 §5).
   realm: Realm;
   realmProgress: RealmProgress; // 내공·무공 막대
 

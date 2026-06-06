@@ -15,13 +15,12 @@ const ABILITY: StatId[] = ['strength', 'agility', 'endurance'];
 const KNOWLEDGE: StatId[] = ['formation', 'etiquette', 'knowledge'];
 
 export function StatGrowthPanel({ disciple }: { disciple: Disciple }) {
-  const starRank = disciple.starRank ?? 1;
   return (
     <View style={styles.section}>
       <SectionLabel>단련</SectionLabel>
       <View style={styles.panel}>
-        <Group title="능력치" ids={ABILITY} disciple={disciple} starRank={starRank} />
-        <Group title="지식" ids={KNOWLEDGE} disciple={disciple} starRank={starRank} />
+        <Group title="능력치" ids={ABILITY} disciple={disciple} />
+        <Group title="지식" ids={KNOWLEDGE} disciple={disciple} />
       </View>
     </View>
   );
@@ -31,18 +30,16 @@ function Group({
   title,
   ids,
   disciple,
-  starRank,
 }: {
   title: string;
   ids: StatId[];
   disciple: Disciple;
-  starRank: number;
 }) {
   return (
     <View style={styles.group}>
       <Text style={styles.groupTitle}>{title}</Text>
       {ids.map((id) => (
-        <StatRow key={id} id={id} track={disciple.stats?.[id]} starRank={starRank} disciple={disciple} />
+        <StatRow key={id} id={id} track={disciple.stats?.[id]} disciple={disciple} />
       ))}
     </View>
   );
@@ -51,17 +48,15 @@ function Group({
 function StatRow({
   id,
   track,
-  starRank,
   disciple,
 }: {
   id: StatId;
   track?: StatTrack;
-  starRank: number;
   disciple: Disciple;
 }) {
   const level = track?.level ?? 0;
   const exp = track?.exp ?? 0;
-  const cap = statCap(starRank, id);
+  const cap = statCap(id);
   const maxed = level >= cap;
   const need = expToNext(level);
   const pct = maxed ? 1 : need > 0 ? Math.max(0, Math.min(1, exp / need)) : 0;

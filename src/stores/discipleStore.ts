@@ -120,7 +120,6 @@ function withDefaults(d: Disciple): Disciple {
     stats: d.stats ?? {},
     efficiency: d.efficiency ?? {},
     // 경지 — 구버전 세이브 보정. 무공 입문 상태면 삼류, 미입문이면 none.
-    starRank: d.starRank ?? 1,
     realm: d.realm ?? (d.martialArts && d.martialArts.length > 0 ? 'samryu' : 'none'),
     realmProgress: {
       internal: d.realmProgress?.internal ?? 0,
@@ -224,7 +223,7 @@ export const useDiscipleStore = create<DiscipleStore>()(
           if (!current) return s;
           const stats = { ...(current.stats ?? {}) };
           const track = stats[statId] ?? { level: 0, exp: 0 };
-          const cap = statCap(current.starRank ?? 1, statId);
+          const cap = statCap(statId);
           let { level, exp } = track;
           exp += expDelta;
           // 상한 전까지만 레벨업. docs/25.
