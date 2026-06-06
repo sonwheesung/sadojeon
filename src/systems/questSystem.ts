@@ -11,6 +11,8 @@ import {
   QUEST_POOL,
   maxGradeForReputation,
 } from '@/data/quests';
+import { findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
+import { REALM_SEONG_CAP } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useQuestStore } from '@/stores/questStore';
@@ -20,6 +22,7 @@ import type {
   ActiveQuest,
   Disciple,
   Milestone,
+  PersonalityTraits,
   Quest,
   QuestDomain,
   QuestOutcome,
@@ -127,37 +130,127 @@ function rollOutcome(active: ActiveQuest): QuestOutcome {
   return risk.death ? 'disaster' : risk.injury ? 'crisis' : 'fail';
 }
 
+// 무공 도메인(결투·큰의뢰) — 주력 무공 성 EXP 적립(상한 = min(등급, 경지)).
+const MARTIAL_DOMAINS: readonly QuestDomain[] = ['duel', 'grand'];
+
+function gainMainSeongExp(d: Disciple, exp: number): void {
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  if (!mainId || exp <= 0) return;
+  const art = findMartialArt(mainId);
+  if (!art) return;
+  const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm]);
+  const martialArts = d.martialArts.map((a) => {
+    if (a.artId !== mainId) return a;
+    let seong = a.seong;
+    let e = a.exp + exp;
+    while (seong < cap && e >= expToNextSeong(seong)) {
+      e -= expToNextSeong(seong);
+      seong += 1;
+    }
+    if (seong >= cap) {
+      seong = cap;
+      e = 0;
+    }
+    return { ...a, seong, exp: e };
+  });
+  useDiscipleStore.getState().update(d.id, { martialArts });
+}
+
+// 의뢰 수행 → 인격 6축 미세 변화. 도메인·회색·결과가 사람을 빚는다. docs/28 §6.
+function personaDeltas(
+  q: Quest,
+  outcome: QuestOutcome,
+): Partial<Record<keyof PersonalityTraits, number>> {
+  const d: Partial<Record<keyof PersonalityTraits, number>> = {};
+  const add = (k: keyof PersonalityTraits, v: number) => {
+    d[k] = (d[k] ?? 0) + v;
+  };
+  if (outcome !== 'fail') {
+    switch (q.domain) {
+      case 'guard':
+        add('integrity', 2);
+        break;
+      case 'scout':
+        add('prudence', 2);
+        break;
+      case 'duel':
+        add('ambition', 2);
+        add('integrity', 1);
+        break;
+      case 'medicine':
+        add('mercy', 3);
+        add('warmth', 2);
+        break;
+      case 'grand':
+        add('ambition', 3);
+        break;
+    }
+  }
+  if (q.gray) {
+    add('mercy', -4); // 어둠의 일은 마음을 식힌다
+    add('prudence', 1);
+  }
+  if (outcome === 'disaster' || outcome === 'crisis') add('prudence', 2); // 사선의 흔적
+  return d;
+}
+
 // 결산 적용 + 마일스톤 1건 반환.
 function resolveQuest(active: ActiveQuest): Milestone {
   const q = active.quest;
-  const outcome = rollOutcome(active);
-  const scale = OUTCOME_SCALE[outcome];
+  let outcome = rollOutcome(active);
   const ds = useDiscipleStore.getState();
-  const stat = QUEST_DOMAIN_STAT[q.domain];
-
-  // 자금 — 사문 금고.
-  if (scale.money > 0) useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money));
-  // 사문 명성 — 제자 명성 합의 일부.
-  if (scale.fame > 0) useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * 0.3));
-
   const present = active.discipleIds.filter((id) => ds.disciples[id]);
-  // 부상/사망 대상 (위기=1명 부상, 재난=1명 상실).
+
+  // 조합 시너지 — 의원(의술 ≥30) 동행 시 부상·사망 한 단계 완화. docs/28 §7 "호위+의술".
+  const hasMedic = present.some((id) => (ds.disciples[id]?.stats?.medicine?.level ?? 0) >= 30);
+  let medicSaved = false;
+  if (hasMedic) {
+    if (outcome === 'disaster') {
+      outcome = 'crisis';
+      medicSaved = true;
+    } else if (outcome === 'crisis') {
+      outcome = 'partial';
+      medicSaved = true;
+    }
+  }
+
+  const scale = OUTCOME_SCALE[outcome];
+  const stat = QUEST_DOMAIN_STAT[q.domain];
+  const isMartial = MARTIAL_DOMAINS.includes(q.domain);
+
+  if (scale.money > 0) {
+    useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money));
+  }
+  if (scale.fame > 0) {
+    useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * 0.3));
+  }
+
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
+  let lostName = '';
 
   for (let i = 0; i < present.length; i += 1) {
     const id = present[i];
     const d = ds.disciples[id];
     if (!d) continue;
-    // 성장 — stat 도메인만(duel/grand 무공 성장은 B2).
-    if (stat && scale.growth > 0) {
-      ds.addStatExp(id, stat, Math.max(1, Math.round(35 * scale.growth)));
+    // 성장 — 능력치(호위·정탐·의술) 또는 무공 성(결투·큰의뢰).
+    if (scale.growth > 0) {
+      if (stat) ds.addStatExp(id, stat, Math.max(1, Math.round(35 * scale.growth)));
+      else if (isMartial) gainMainSeongExp(d, Math.max(1, Math.round(60 * scale.growth)));
     }
-    // 명성 — 나간 사람 몫.
-    const fameGain = Math.round(q.reward.fame * scale.fame);
-    const patch: Partial<Disciple> = { fame: (d.fame ?? 0) + fameGain };
-    // 상태 — 재난 희생자=상실, 위기 희생자=부상, 그 외 복귀.
+    // 인격 변화.
+    const deltas = personaDeltas(q, outcome);
+    const persona: PersonalityTraits = { ...d.personality };
+    for (const k of Object.keys(deltas) as (keyof PersonalityTraits)[]) {
+      persona[k] = Math.max(1, Math.min(100, persona[k] + (deltas[k] ?? 0)));
+    }
+    const patch: Partial<Disciple> = {
+      fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame),
+      personality: persona,
+    };
+    // 상태 — 재난 희생자=상실, 재난 생존/위기 희생자=부상, 그 외 복귀.
     if (outcome === 'disaster' && i === victimIdx) {
       patch.status = 'departed';
+      lostName = d.name;
     } else if (outcome === 'disaster') {
       patch.status = 'injured';
       patch.injuryDaysRemaining = 21;
@@ -170,23 +263,29 @@ function resolveQuest(active: ActiveQuest): Milestone {
     ds.update(id, patch);
   }
 
-  const lead = ds.disciples[present[0]] ?? ds.disciples[active.discipleIds[0]];
-  const leadName = lead?.name ?? '제자';
   const names = present.map((id) => ds.disciples[id]?.name ?? '?').join('·');
-  const rewardLine =
-    outcome === 'disaster'
-      ? '돌아오지 못한 이가 있다.'
-      : `보상 — 자금 ${Math.round(q.reward.money * scale.money)} · 명성 ${
-          scale.fame > 0 ? '↑' : '—'
-        }${stat && scale.growth > 0 ? ` · ${QUEST_DOMAIN_LABEL[q.domain]} 경험 ↑` : ''}`;
+  const leadId = present[0] ?? active.discipleIds[0];
+  const leadName = ds.disciples[present[0]]?.name ?? '제자';
+  const tag = `[${QUEST_GRADE_LABEL[q.grade]}·${QUEST_DOMAIN_LABEL[q.domain]}]`;
+
+  let body: string;
+  if (outcome === 'disaster' && lostName) {
+    body = `${tag} ${q.title} — ${names}\n임무 도중 ${lostName}이(가) 돌아오지 못했다. 남은 이들은 상처를 안고 사문으로 돌아왔다.`;
+  } else {
+    const reward = `자금 ${Math.round(q.reward.money * scale.money)}${
+      scale.fame > 0 ? ' · 명성 ↑' : ''
+    }${scale.growth > 0 ? ` · ${QUEST_DOMAIN_LABEL[q.domain]} 경험 ↑` : ''}`;
+    const medicNote = medicSaved ? ' (동행한 의원이 큰 화를 막았다)' : '';
+    body = `${tag} ${q.title} — ${names}\n${OUTCOME_LABEL[outcome]}.${medicNote} ${reward}`;
+  }
 
   return {
     id: `quest-${q.id}-${active.dueDay}`,
     kind: 'quest',
-    discipleId: present[0] ?? active.discipleIds[0],
+    discipleId: leadId,
     discipleName: leadName,
     title: `의뢰 ${OUTCOME_LABEL[outcome]}`,
-    body: `[${QUEST_GRADE_LABEL[q.grade]}·${QUEST_DOMAIN_LABEL[q.domain]}] ${q.title} — ${names}\n${OUTCOME_LABEL[outcome]}. ${rewardLine}`,
+    body,
   };
 }
 
