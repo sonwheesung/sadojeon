@@ -35,15 +35,20 @@ export const MARTIAL_AXIS_LABEL: Record<MartialAxis, string> = {
   chosik: '초식',
 };
 
-// 단련 스탯 ID — Lv/EXP 트랙. 무공은 별도(MartialArtInstance) 라 여기 없음.
-// endurance 는 최대 체력으로 환산된다 (deriveMaxStamina).
+// 단련/비무공 능력치 ID — Lv/EXP 트랙. 무공 갈래는 별도(무공서별 성, MartialArtInstance).
+// endurance 는 최대 체력으로 환산된다 (deriveMaxStamina). docs/28 §1 비무공 영역.
+// 외공≈strength, 학문≈knowledge/formation, 예절=etiquette 로 매핑(별도 외공/학문 stat 안 둠).
 export type StatId =
   | 'endurance' // 최대 체력 (지구력)
-  | 'strength' // 근력
+  | 'strength' // 근력 (≈외공)
   | 'agility' // 민첩
-  | 'formation' // 진법
+  | 'formation' // 진법 (학문계)
   | 'etiquette' // 예절
-  | 'knowledge'; // 기본 지식 (견문·상식 — 의뢰·강호에서 쓰임)
+  | 'knowledge' // 기본 지식·학문 (견문·병법)
+  | 'medicine' // 의술 (직업: 의원·신의)
+  | 'alchemy' // 영약제조 (직업: 약왕)
+  | 'scouting' // 정탐·은신 (직업: 그림자·살수)
+  | 'guarding'; // 호위 (직업: 호위장·표국)
 
 export const STAT_LABEL: Record<StatId, string> = {
   endurance: '체력',
@@ -51,17 +56,25 @@ export const STAT_LABEL: Record<StatId, string> = {
   agility: '민첩',
   formation: '진법',
   etiquette: '예절',
-  knowledge: '기본지식',
+  knowledge: '학문',
+  medicine: '의술',
+  alchemy: '영약제조',
+  scouting: '정탐',
+  guarding: '호위',
 };
 
-// 스탯이 EXP 배율에 쓰는 적성 축 (talents). "진법 특화 = insight 높음".
+// 스탯의 talents 폴백 적성 축 (효율맵 미시드 시에만 사용). docs/28: 효율맵이 1차.
 export const STAT_APTITUDE: Record<StatId, TalentAxis> = {
   endurance: 'body',
   strength: 'body',
   agility: 'agility',
   formation: 'insight',
   etiquette: 'mind',
-  knowledge: 'insight', // 견문·이해 = 오성
+  knowledge: 'insight',
+  medicine: 'mind',
+  alchemy: 'insight',
+  scouting: 'agility',
+  guarding: 'body',
 };
 
 // Lv/EXP 트랙. exp 가 expToNext(level) 에 도달하면 레벨업.

@@ -37,7 +37,9 @@ export interface Talents {
 // 별 등급(starRank)·재능 5축(talents)을 대체하는 새 축. 안 적은 갈래 = '보통'.
 // 슬라이스 2: 무공 갈래(MartialArtSchool) 효율. 비무공 영역 효율은 능력치 확장(슬라이스 3) 때.
 export type EfficiencyTier = '특화' | '상성' | '보통' | '미숙' | '상극';
-export type EfficiencyMap = Partial<Record<MartialArtSchool, EfficiencyTier>>;
+// 효율 키 = 무공 갈래(MartialArtSchool) + 비무공/단련 능력치(StatId). 안 적은 키 = '보통'.
+export type EfficiencyKey = MartialArtSchool | StatId;
+export type EfficiencyMap = Partial<Record<EfficiencyKey, EfficiencyTier>>;
 
 export interface PersonalityTraits {
   diligence: number;

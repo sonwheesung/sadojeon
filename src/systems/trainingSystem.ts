@@ -87,10 +87,14 @@ function learnMultiplier(art: MartialArt, d: Disciple): number {
   return Math.max(0.5, avg / 3);
 }
 
-// 단련 스탯 적성 배율 — "진법 특화 제자는 같은 공부로 EXP 더". talents 축 기준.
-function aptitudeMultiplier(talents: Talents, statId: StatId): number {
+// 단련/비무공 능력치 학습 효율 — 효율맵 우선, 미시드(구 세이브)면 talents 폴백. docs/28 §2.
+function aptitudeMultiplier(d: Disciple, statId: StatId): number {
+  const eff = d.efficiency;
+  if (eff && Object.keys(eff).length > 0) {
+    return EFFICIENCY_MULTIPLIER[eff[statId] ?? '보통'];
+  }
   const axis = STAT_APTITUDE[statId];
-  return Math.max(0.5, talents[axis] / 3);
+  return Math.max(0.5, d.talents[axis] / 3);
 }
 
 // 무공 카테고리에서 진행할 무공 — 일일 선택 > 메인 > 첫 무공.
@@ -439,7 +443,7 @@ export function tickDailyTraining(): DiscipleTickReport[] {
     // 3) 단련 스탯 EXP (체력·공부 종목).
     const statGains: StatGain[] = [];
     if (plan.grantStat && plan.expBase > 0 && progressMul > 0) {
-      const aptMul = aptitudeMultiplier(d.talents, plan.grantStat);
+      const aptMul = aptitudeMultiplier(d, plan.grantStat);
       const expDelta = Math.max(1, Math.round(plan.expBase * aptMul * progressMul));
       const levelUps = store.addStatExp(id, plan.grantStat, expDelta);
       const track = store.disciples[id]?.stats?.[plan.grantStat];
