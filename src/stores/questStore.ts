@@ -13,6 +13,7 @@ interface QuestStore {
   setBoard: (board: Quest[]) => void;
   removeFromBoard: (questId: string) => void;
   addActive: (a: ActiveQuest) => void;
+  updateActive: (questId: string, patch: Partial<ActiveQuest>) => void;
   removeActive: (questId: string) => void;
   reset: () => void;
 }
@@ -26,6 +27,10 @@ export const useQuestStore = create<QuestStore>()(
       removeFromBoard: (questId) =>
         set((s) => ({ board: s.board.filter((q) => q.id !== questId) })),
       addActive: (a) => set((s) => ({ active: [...s.active, a] })),
+      updateActive: (questId, patch) =>
+        set((s) => ({
+          active: s.active.map((a) => (a.quest.id === questId ? { ...a, ...patch } : a)),
+        })),
       removeActive: (questId) =>
         set((s) => ({ active: s.active.filter((x) => x.quest.id !== questId) })),
       reset: () => set({ board: [], active: [] }),

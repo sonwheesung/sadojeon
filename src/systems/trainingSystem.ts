@@ -400,8 +400,10 @@ export function tickDailyTraining(): DiscipleTickReport[] {
     const incomingPenalty = d.fatiguePenalty ?? 0;
 
     // 효율 = 체력 비율(소모 전 기준) × 어제 잔여 피로.
+    // 스트레스 → 훈련 효율 ↓ (멘탈. 100이면 −40%). 휴식으로 해소되면 회복.
+    const stressFactor = 1 - Math.min(0.4, (stressBefore / 100) * 0.4);
     const progressMul =
-      staminaRatioMultiplier(staminaBefore, maxStamina) * (1 - incomingPenalty);
+      staminaRatioMultiplier(staminaBefore, maxStamina) * (1 - incomingPenalty) * stressFactor;
 
     // 1) 체력·스트레스 변동.
     store.adjustStamina(id, Math.round(plan.staminaDelta));

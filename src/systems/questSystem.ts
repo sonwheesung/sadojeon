@@ -12,14 +12,17 @@ import {
   QUEST_POOL,
   maxGradeForReputation,
 } from '@/data/quests';
+import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
 import { findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
 import { REALM_SEONG_CAP } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
   Disciple,
@@ -27,6 +30,9 @@ import type {
   PersonalityTraits,
   Quest,
   QuestDomain,
+  QuestEvent,
+  QuestEventChoice,
+  QuestEventEffect,
   QuestOutcome,
   RelationLevel,
 } from '@/types';
@@ -95,6 +101,125 @@ export function dispatchQuest(questId: string, discipleIds: string[]): boolean {
 
 // ─── 결산 ─────────────────────────────────────────────────────────────────
 
+// ─── 의뢰 중 돌발 이벤트 ─────────────────────────────────────────────────
+
+function mainSeongOf(d: Disciple): number {
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  return (mainId ? d.martialArts.find((a) => a.artId === mainId)?.seong : 0) ?? 0;
+}
+
+// 직렬화된 선택지 — 서신함 payload·해소에 쓰임. 게이트는 발동 시점에 미리 평가.
+export interface QuestEventChoiceView {
+  key: string;
+  label: string;
+  available: boolean;
+  note?: string;
+  effect: QuestEventEffect;
+  cost: number;
+}
+
+function evalRequire(active: ActiveQuest, c: QuestEventChoice): { available: boolean; note?: string } {
+  const req = c.require;
+  if (!req) return { available: true };
+  const ds = useDiscipleStore.getState();
+  const party = active.discipleIds
+    .map((id) => ds.disciples[id])
+    .filter((d): d is Disciple => d != null);
+  if (req.stat && req.min != null) {
+    const max = party.reduce((m, d) => Math.max(m, d.stats?.[req.stat as StatId]?.level ?? 0), 0);
+    if (max < req.min) return { available: false, note: `${STAT_LABEL[req.stat as StatId]} ${req.min}↑ 필요` };
+  }
+  if (req.martialSeong != null) {
+    const max = party.reduce((m, d) => Math.max(m, mainSeongOf(d)), 0);
+    if (max < req.martialSeong) return { available: false, note: `무공 ${req.martialSeong}성↑ 필요` };
+  }
+  if (req.money != null) {
+    if ((useSectStore.getState().sect?.resources ?? 0) < req.money) {
+      return { available: false, note: `자금 ${req.money} 필요` };
+    }
+  }
+  return { available: true };
+}
+
+function pickEvent(active: ActiveQuest): QuestEvent | null {
+  const gradeIdx = QUEST_GRADE_ORDER.indexOf(active.quest.grade);
+  const pool = QUEST_EVENTS.filter(
+    (e) =>
+      e.domains.includes(active.quest.domain) &&
+      (!e.minGrade || QUEST_GRADE_ORDER.indexOf(e.minGrade) <= gradeIdx),
+  );
+  if (pool.length === 0) return null;
+  const total = pool.reduce((s, e) => s + e.weight, 0);
+  let r = Math.random() * total;
+  for (const e of pool) {
+    r -= e.weight;
+    if (r <= 0) return e;
+  }
+  return pool[pool.length - 1];
+}
+
+// 중반 1회 — 등급 확률로 돌발 이벤트 발동 → 서신함 강제 선택(결산 보류).
+function maybeFireEvent(active: ActiveQuest): void {
+  if (Math.random() >= QUEST_EVENT_CHANCE[active.quest.grade]) return;
+  const event = pickEvent(active);
+  if (!event) return;
+  const ds = useDiscipleStore.getState();
+  const leadName = ds.disciples[active.discipleIds[0]]?.name ?? '제자';
+  const names = active.discipleIds.map((id) => ds.disciples[id]?.name ?? '?').join('·');
+  const choices: QuestEventChoiceView[] = event.choices.map((c) => {
+    const { available, note } = evalRequire(active, c);
+    return { key: c.key, label: c.label, available, note, effect: c.effect, cost: c.require?.money ?? 0 };
+  });
+  const itemId = `qevent-${active.quest.id}-${event.id}`;
+  useInboxStore.getState().add({
+    id: itemId,
+    kind: 'event',
+    eventId: event.id,
+    title: `${leadName} — 의뢰 중 급보`,
+    preview: `[${QUEST_GRADE_LABEL[active.quest.grade]}·${QUEST_DOMAIN_LABEL[active.quest.domain]}] ${active.quest.title} (${names})\n${event.prompt}`,
+    priority: 'high',
+    createdAtDay: useTimeStore.getState().totalDay,
+    read: false,
+    resolved: false,
+    payload: { domain: 'quest_event', questId: active.quest.id, choices },
+  });
+  useQuestStore.getState().updateActive(active.quest.id, { pendingEventId: itemId });
+}
+
+// 서신함 해소 → 선택 효과를 의뢰·제자에 적용. inboxResolve 에서 호출.
+export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceView): void {
+  const qs = useQuestStore.getState();
+  const active = qs.active.find((a) => a.quest.id === questId);
+  if (!active) return;
+  const e = choice.effect;
+  if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
+  qs.updateActive(questId, {
+    successDelta: (active.successDelta ?? 0) + (e.successDelta ?? 0),
+    riskDelta: (active.riskDelta ?? 0) + (e.riskDelta ?? 0),
+    rewardMult: (active.rewardMult ?? 1) * (e.rewardMult ?? 1),
+    rewardFlag: e.rewardFlag ?? active.rewardFlag,
+    pendingEventId: undefined,
+  });
+  if (e.persona || e.stressDelta) {
+    const ds = useDiscipleStore.getState();
+    for (const id of active.discipleIds) {
+      const d = ds.disciples[id];
+      if (!d) continue;
+      if (e.persona) {
+        const persona: PersonalityTraits = { ...d.personality };
+        for (const k of Object.keys(e.persona)) {
+          const kk = k as keyof PersonalityTraits;
+          persona[kk] = Math.max(1, Math.min(100, persona[kk] + (e.persona[k] ?? 0)));
+        }
+        ds.update(id, { personality: persona });
+      }
+      if (e.stressDelta) ds.adjustStress(id, e.stressDelta);
+    }
+  }
+}
+
+// ─── 결산 ─────────────────────────────────────────────────────────────────
+
 const OUTCOME_LABEL: Record<QuestOutcome, string> = {
   full: '완수',
   partial: '성공',
@@ -125,6 +250,7 @@ function rollOutcome(active: ActiveQuest): QuestOutcome {
   // 조합 시너지 — 자격 있는 동행이 둘 이상이면 합공·정탐 더블 보너스. docs/28 §7.
   const capable = caps.filter((c) => c >= q.minStat).length;
   s += Math.max(0, capable - 1) * 0.12;
+  s += active.successDelta ?? 0; // 돌발 이벤트 선택 보정
   s = Math.max(-1, Math.min(1.5, s));
   const r = Math.random();
   const risk = QUEST_GRADE_RISK[q.grade];
@@ -232,6 +358,13 @@ function bumpRelations(ids: string[]): void {
 function resolveQuest(active: ActiveQuest): Milestone {
   const q = active.quest;
   let outcome = rollOutcome(active);
+
+  // 돌발 이벤트 위험 보정 — 부상·사망 확률 가산(무모한 선택의 대가).
+  if (active.riskDelta && Math.random() < active.riskDelta) {
+    if (outcome === 'full' || outcome === 'partial') outcome = 'crisis';
+    else if (outcome === 'crisis') outcome = QUEST_GRADE_RISK[q.grade].death ? 'disaster' : 'crisis';
+  }
+
   const ds = useDiscipleStore.getState();
   const present = active.discipleIds.filter((id) => ds.disciples[id]);
 
@@ -251,12 +384,14 @@ function resolveQuest(active: ActiveQuest): Milestone {
   const scale = OUTCOME_SCALE[outcome];
   const stat = QUEST_DOMAIN_STAT[q.domain];
   const isMartial = MARTIAL_DOMAINS.includes(q.domain);
+  // 돌발 이벤트 보상 배수 + 귀인(noble) 후사.
+  const mult = (active.rewardMult ?? 1) * (active.rewardFlag === 'noble' ? 1.5 : 1);
 
   if (scale.money > 0) {
-    useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money));
+    useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money * mult));
   }
   if (scale.fame > 0) {
-    useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * 0.3));
+    useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * mult * 0.3));
   }
   // 사문 분위기 — 의뢰 사상색(정파/사파·회색) 누적. docs/28 §7.
   if (outcome !== 'fail') {
@@ -286,7 +421,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
       persona[k] = Math.max(1, Math.min(100, persona[k] + (deltas[k] ?? 0)));
     }
     const patch: Partial<Disciple> = {
-      fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame),
+      fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame * mult),
       personality: persona,
     };
     // 상태 — 재난 희생자=상실, 재난 생존/위기 희생자=부상, 그 외 복귀.
@@ -339,12 +474,23 @@ function resolveQuest(active: ActiveQuest): Milestone {
 export function tickQuests(): void {
   const today = useTimeStore.getState().totalDay;
   const qs = useQuestStore.getState();
-  const due = qs.active.filter((a) => today >= a.dueDay);
+  // 1) 돌발 이벤트 — 의뢰당 1회, 기간 중반 이후.
+  for (const a of qs.active) {
+    if (a.eventRolled) continue;
+    const span = a.dueDay - a.startedDay;
+    if (today - a.startedDay < Math.ceil(span / 2)) continue;
+    qs.updateActive(a.quest.id, { eventRolled: true });
+    maybeFireEvent(a);
+  }
+  // 2) 결산 — 기한 도래 + 미해소 이벤트 없을 때만(강제 선택 대기).
+  const due = useQuestStore
+    .getState()
+    .active.filter((a) => today >= a.dueDay && !a.pendingEventId);
   if (due.length === 0) return;
   const milestones: Milestone[] = [];
   for (const a of due) {
     milestones.push(resolveQuest(a));
-    qs.removeActive(a.quest.id);
+    useQuestStore.getState().removeActive(a.quest.id);
   }
   usePendingStore.getState().pushMilestones(milestones);
 }

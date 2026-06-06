@@ -13,6 +13,7 @@ import type {
   PendingMoralEvent,
 } from '@/types';
 import { SECLUSION_PETITION_DAYS } from '@/data/realm';
+import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
 import { resolveMoralChoice } from './moralEventSystem';
 import { issueOverride } from './overrideSystem';
 import { saveCurrentRunSilently } from './runSync';
@@ -23,6 +24,8 @@ export interface InboxResponseOption {
   key: string;
   // 사용자에 보이는 응답 문구 (톤 라벨 직접 노출 X — feedback_hidden_game_state).
   label: string;
+  // 게이트 미충족 등으로 선택 불가(표시는 하되 비활성). 의뢰 이벤트 등.
+  disabled?: boolean;
 }
 
 type Payload = Record<string, unknown>;
@@ -38,7 +41,13 @@ function bodyOf(item: InboxItem): string {
 // 응답 가능 항목인지. 그 외(보고·풍문 등)는 읽기만.
 export function isRespondable(item: InboxItem): boolean {
   const d = payloadOf(item).domain;
-  return d === 'oneLiner' || d === 'wish' || d === 'moral' || d === 'seclusion_petition';
+  return (
+    d === 'oneLiner' ||
+    d === 'wish' ||
+    d === 'moral' ||
+    d === 'seclusion_petition' ||
+    d === 'quest_event'
+  );
 }
 
 // 항목의 응답 선택지.
@@ -66,6 +75,14 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
       { key: 'allow', label: '폐관을 허락한다' },
       { key: 'hold', label: '아직 이르다 (보류)' },
     ];
+  }
+  if (p.domain === 'quest_event') {
+    const choices = (p.choices ?? []) as QuestEventChoiceView[];
+    return choices.map((c) => ({
+      key: c.key,
+      label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
+      disabled: !c.available,
+    }));
   }
   return [];
 }
@@ -120,6 +137,11 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
           .update(discipleId, { realmProgress: { ...d.realmProgress, petitioned: false } });
       }
     }
+  } else if (p.domain === 'quest_event') {
+    const questId = String(p.questId ?? '');
+    const choices = (p.choices ?? []) as QuestEventChoiceView[];
+    const choice = choices.find((c) => c.key === key);
+    if (choice) applyQuestEventChoice(questId, choice);
   }
 
   useInboxStore.getState().remove(item.id);

@@ -378,10 +378,11 @@ function ReplyRow({
 }) {
   return (
     <Pressable
-      style={[styles.reply, active && styles.replyActive]}
+      style={[styles.reply, active && styles.replyActive, option.disabled && { opacity: 0.4 }]}
       onPress={onPress}
+      disabled={option.disabled}
       accessibilityRole="button"
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ selected: active, disabled: option.disabled }}
       accessibilityLabel={option.label}
     >
       <View style={[styles.replyRadio, active && styles.replyRadioActive]}>

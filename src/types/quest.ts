@@ -35,4 +35,50 @@ export interface ActiveQuest {
   discipleIds: string[]; // 파견 제자(1~N)
   startedDay: number; // 파견 시작 totalDay
   dueDay: number; // totalDay ≥ dueDay 면 결산
+  // 돌발 이벤트 누적 보정 (결산에 반영).
+  successDelta?: number; // 성공도 +
+  riskDelta?: number; // 부상·사망 확률 +
+  rewardMult?: number; // 보상 배수(기본 1)
+  rewardFlag?: 'noble'; // 귀인 등 특수 보상
+  eventRolled?: boolean; // 이벤트 1회 발동 완료
+  pendingEventId?: string; // 미해소 이벤트 서신함 id (있으면 결산 보류)
+}
+
+// ─── 의뢰 중 돌발 이벤트 — docs/28 §7. 서신함 강제 선택. ──────────────────
+// 의뢰 도메인·등급에 맞는 이벤트만 발동(마을 청소에 기관 함정 X).
+export interface QuestEventChoiceRequire {
+  stat?: QuestEventStat; // 능력치 Lv 게이트
+  min?: number;
+  martialSeong?: number; // 주력 무공 성 게이트
+  money?: number; // 자금 비용(영약 즉석 구매 등)
+}
+
+// 게이트로 쓰는 능력치(StatId 부분집합). 순환 의존 피해 문자열로.
+export type QuestEventStat = 'medicine' | 'alchemy' | 'scouting' | 'guarding' | 'formation';
+
+export interface QuestEventEffect {
+  successDelta?: number;
+  riskDelta?: number;
+  rewardMult?: number;
+  rewardFlag?: 'noble';
+  // 인격 6축 델타 (키=integrity·freedom·warmth·prudence·mercy·ambition).
+  persona?: Partial<Record<string, number>>;
+  stressDelta?: number; // 자책·멘탈 → 일정 기간 훈련 효율↓(stress)
+  resultText?: string;
+}
+
+export interface QuestEventChoice {
+  key: string;
+  label: string;
+  require?: QuestEventChoiceRequire;
+  effect: QuestEventEffect;
+}
+
+export interface QuestEvent {
+  id: string;
+  domains: QuestDomain[]; // 이 도메인 의뢰에서만 발동
+  minGrade?: QuestGrade; // 이 등급 이상에서만(위험·극험 한정 이벤트)
+  weight: number;
+  prompt: string;
+  choices: QuestEventChoice[];
 }
