@@ -8,7 +8,19 @@ export const QUEST_DOMAIN_LABEL: Record<QuestDomain, string> = {
   scout: '정탐',
   duel: '결투',
   medicine: '의술',
+  assassin: '살수',
   grand: '큰의뢰',
+};
+
+// 의뢰 사상색 → 사문 분위기(도의 ↔ 무도) 영향. docs/28 §7 "사문 분위기 영향".
+// + = 정파(도의), − = 사파(무도). 살수·회색 의뢰가 사문을 어둡게 한다.
+export const QUEST_DOMAIN_RIGHTEOUSNESS: Record<QuestDomain, number> = {
+  guard: 2,
+  medicine: 2,
+  grand: 2,
+  duel: 0,
+  scout: 0,
+  assassin: -3,
 };
 
 export const QUEST_GRADE_LABEL: Record<QuestGrade, string> = {
@@ -33,6 +45,7 @@ export const QUEST_DOMAIN_STAT: Record<QuestDomain, StatId | null> = {
   scout: 'scouting',
   duel: null,
   medicine: 'medicine',
+  assassin: 'scouting', // 살수 = 정탐·은신 기반
   grand: null,
 };
 
@@ -78,4 +91,20 @@ export const QUEST_POOL: readonly Quest[] = [
   // ── 극험 ──
   { id: 'q-grand-meng', domain: 'grand', grade: 'extreme', title: '무림맹 밀명', client: '무림맹', preview: '강호의 명운이 걸린 일이오.', weeks: 4, reward: { money: 70, fame: 15 }, recommended: 3, minStat: 65 },
   { id: 'q-hyeolsu', domain: 'duel', grade: 'extreme', title: "사파 거물 '혈수' 추적", client: '무림맹', preview: '악명 자객의 행적을 끝까지 쫓는다.', weeks: 4, reward: { money: 80, fame: 16 }, recommended: 3, minStat: 65 },
+  // ── 호위 보강 ──
+  { id: 'q-defend-sect', domain: 'guard', grade: 'normal', title: '사문 보호', client: '사문', preview: '사문을 노리는 무리가 있다.', weeks: 2, reward: { money: 16, fame: 4 }, recommended: 1, minStat: 20 },
+  // ── 의술 보강 ──
+  { id: 'q-treat-wound', domain: 'medicine', grade: 'normal', title: '큰 부상 치료', client: '지방 부호', preview: '중상을 입은 자를 살려달라.', weeks: 2, reward: { money: 18, fame: 4 }, recommended: 1, minStat: 25 },
+  { id: 'q-antidote', domain: 'medicine', grade: 'dangerous', title: '해독 의뢰', client: '중독된 가문', preview: '맹독에 당한 일가를 구하라.', weeks: 3, reward: { money: 30, fame: 7 }, recommended: 1, minStat: 40 },
+  // ── 결투 보강 ──
+  { id: 'q-duel-master', domain: 'duel', grade: 'dangerous', title: '정파 명사 도전', client: '지방 무관', preview: '이름난 무인과의 비무에 나선다.', weeks: 2, reward: { money: 32, fame: 9 }, recommended: 1, minStat: 45 },
+  // ── 살수(청부·어둠) ──
+  { id: 'q-assassin-small', domain: 'assassin', grade: 'normal', title: '작은 청부', client: '익명', preview: '소문 없이 한 사람을 처리한다.', weeks: 2, reward: { money: 25, fame: 3 }, recommended: 1, minStat: 25, gray: true },
+  { id: 'q-assassin-contract', domain: 'assassin', grade: 'dangerous', title: '사파의 청부', client: '사파 중개', preview: '어둠의 일은 흔적을 남기지 않는다.', weeks: 3, reward: { money: 45, fame: 7 }, recommended: 2, minStat: 45, gray: true },
+  { id: 'q-assassin-big', domain: 'assassin', grade: 'extreme', title: '거물 암살', client: '익명', preview: '돌아오지 못할 수도 있는 일.', weeks: 4, reward: { money: 85, fame: 14 }, recommended: 2, minStat: 65, gray: true },
+  // ── 큰 의뢰 보강 ──
+  { id: 'q-grand-crisis', domain: 'grand', grade: 'dangerous', title: '강호 위기 구원', client: '강호 연합', preview: '한 지방의 안위가 걸렸다.', weeks: 3, reward: { money: 40, fame: 10 }, recommended: 2, minStat: 45 },
+  { id: 'q-grand-noble', domain: 'grand', grade: 'dangerous', title: '명문 가문 의뢰', client: '명문가', preview: '큰 가문이 사문에 손을 내밀었다.', weeks: 3, reward: { money: 42, fame: 9 }, recommended: 2, minStat: 45 },
+  { id: 'q-grand-sapa', domain: 'grand', grade: 'extreme', title: '사파 거두 토벌', client: '무림맹', preview: '한 시대의 악을 끊는다.', weeks: 4, reward: { money: 75, fame: 16 }, recommended: 3, minStat: 65 },
+  { id: 'q-grand-evil', domain: 'grand', grade: 'extreme', title: '극악 정벌', client: '무림맹', preview: '강호의 명운이 걸린 대전.', weeks: 4, reward: { money: 90, fame: 18 }, recommended: 3, minStat: 70 },
 ] as const;

@@ -1,8 +1,8 @@
 // 의뢰(依賴) — 강호 파견. docs/28 §4 경로 B. 비무공 능력치(정탐·호위) 성장 + 명성 + 자금.
 // 제자를 1~N명 파견 → 주(일) 단위 진행 → 결산 outcome 5분기.
 
-export type QuestDomain = 'guard' | 'scout' | 'duel' | 'medicine' | 'grand';
-//                         호위    정탐     결투    의술      큰의뢰(복합)
+export type QuestDomain = 'guard' | 'scout' | 'duel' | 'medicine' | 'assassin' | 'grand';
+//                         호위    정탐     결투    의술      살수        큰의뢰(복합)
 
 export type QuestGrade = 'menial' | 'minor' | 'normal' | 'dangerous' | 'extreme';
 //                        잡일      소무      보통      위험         극험

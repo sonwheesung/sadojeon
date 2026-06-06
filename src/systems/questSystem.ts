@@ -4,6 +4,7 @@
 
 import {
   QUEST_DOMAIN_LABEL,
+  QUEST_DOMAIN_RIGHTEOUSNESS,
   QUEST_DOMAIN_STAT,
   QUEST_GRADE_LABEL,
   QUEST_GRADE_ORDER,
@@ -17,6 +18,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useSectStore } from '@/stores/sectStore';
+import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type {
   ActiveQuest,
@@ -26,6 +28,7 @@ import type {
   Quest,
   QuestDomain,
   QuestOutcome,
+  RelationLevel,
 } from '@/types';
 
 // ─── 역량·자격 ────────────────────────────────────────────────────────────
@@ -119,6 +122,9 @@ function rollOutcome(active: ActiveQuest): QuestOutcome {
   const avg = caps.length ? caps.reduce((a, b) => a + b, 0) / caps.length : 0;
   const headFactor = active.discipleIds.length / Math.max(1, q.recommended);
   let s = (avg - q.minStat) / Math.max(20, q.minStat) + (headFactor - 1) * 0.4;
+  // 조합 시너지 — 자격 있는 동행이 둘 이상이면 합공·정탐 더블 보너스. docs/28 §7.
+  const capable = caps.filter((c) => c >= q.minStat).length;
+  s += Math.max(0, capable - 1) * 0.12;
   s = Math.max(-1, Math.min(1.5, s));
   const r = Math.random();
   const risk = QUEST_GRADE_RISK[q.grade];
@@ -167,31 +173,59 @@ function personaDeltas(
   };
   if (outcome !== 'fail') {
     switch (q.domain) {
-      case 'guard':
-        add('integrity', 2);
+      case 'guard': // 자비·충성(의무)
+        add('mercy', 2);
+        add('freedom', -1);
         break;
       case 'scout':
         add('prudence', 2);
         break;
       case 'duel':
-        add('ambition', 2);
         add('integrity', 1);
+        add('ambition', 2);
         break;
       case 'medicine':
         add('mercy', 3);
         add('warmth', 2);
         break;
+      case 'assassin': // 냉정·실리
+        add('mercy', -3);
+        add('ambition', 1);
+        break;
       case 'grand':
-        add('ambition', 3);
+        add('integrity', 1);
+        add('ambition', 2);
         break;
     }
   }
   if (q.gray) {
-    add('mercy', -4); // 어둠의 일은 마음을 식힌다
+    add('mercy', -3); // 어둠의 일은 마음을 식힌다
     add('prudence', 1);
   }
   if (outcome === 'disaster' || outcome === 'crisis') add('prudence', 2); // 사선의 흔적
   return d;
+}
+
+// 같은 의뢰 동행 → 호감도 한 단계 상승. docs/28 §7·§8.
+const REL_UP: Record<RelationLevel, RelationLevel> = {
+  enemy: 'distant',
+  distant: 'neutral',
+  neutral: 'friend',
+  friend: 'sworn',
+  sworn: 'sworn',
+};
+
+function bumpRelations(ids: string[]): void {
+  const ds = useDiscipleStore.getState();
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) {
+      const a = ds.disciples[ids[i]];
+      const b = ds.disciples[ids[j]];
+      if (!a || !b) continue;
+      ds.setRelation(ids[i], ids[j], REL_UP[a.relationships[ids[j]] ?? 'neutral']);
+      ds.setRelation(ids[j], ids[i], REL_UP[b.relationships[ids[i]] ?? 'neutral']);
+    }
+  }
 }
 
 // 결산 적용 + 마일스톤 1건 반환.
@@ -223,6 +257,14 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
   if (scale.fame > 0) {
     useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * 0.3));
+  }
+  // 사문 분위기 — 의뢰 사상색(정파/사파·회색) 누적. docs/28 §7.
+  if (outcome !== 'fail') {
+    const righteousness = QUEST_DOMAIN_RIGHTEOUSNESS[q.domain] + (q.gray ? -3 : 0);
+    useSectAtmosphereStore.getState().adjust({
+      righteousness,
+      unity: present.length >= 2 ? 2 : 0,
+    });
   }
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
@@ -262,6 +304,10 @@ function resolveQuest(active: ActiveQuest): Milestone {
     }
     ds.update(id, patch);
   }
+
+  // 친밀도 — 함께 살아 돌아온 동문은 가까워진다.
+  const survivors = present.filter((id) => ds.disciples[id]?.status !== 'departed');
+  if (outcome !== 'disaster' && survivors.length >= 2) bumpRelations(survivors);
 
   const names = present.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const leadId = present[0] ?? active.discipleIds[0];
