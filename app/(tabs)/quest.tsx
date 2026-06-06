@@ -1,486 +1,266 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
+import {
+  QUEST_DOMAIN_LABEL,
+  QUEST_GRADE_LABEL,
+  QUEST_GRADE_RISK,
+} from '@/data/quests';
+import { useDiscipleStore, useQuestStore, useTimeStore } from '@/stores';
+import { canDispatch, dispatchQuest, fitPhrase, generateBoard } from '@/systems/questSystem';
 import { colors, spacing, typography } from '@/theme';
+import type { ActiveQuest, Disciple, Quest } from '@/types';
 
-// ─── Placeholder data ───────────────────────────────────────────────────────
-
-const MASTER_INFLUENCE = 3; // 사부 인망
-const MASTER_INSIGHT = 3; // 사부 통찰
-
-type QuestGrade = '잡일' | '소무' | '보통' | '위험' | '극험';
-const GRADES: QuestGrade[] = ['잡일', '소무', '보통', '위험', '극험'];
-const GRADE_SHORT: Record<QuestGrade, string> = {
-  잡일: '잡',
-  소무: '소',
-  보통: '보',
-  위험: '위',
-  극험: '극',
-};
-const GRADE_DANGEROUS: Record<QuestGrade, boolean> = {
-  잡일: false,
-  소무: false,
-  보통: false,
-  위험: true,
-  극험: true,
-};
-
-interface ActiveQuest {
-  id: string;
-  grade: QuestGrade;
-  headline: string;
-  assigned: string;
-  progress: string;
-}
-
-interface Quest {
-  id: string;
-  grade: QuestGrade;
-  headline: string;
-  client: string;
-  preview: string;
-  reward: string;
-  danger: string;
-  deadline: string;
-  recommended: string;
-  gray?: boolean; // 도덕적 회색 의뢰
-}
-
-const ACTIVE_QUESTS: ActiveQuest[] = [
-  {
-    id: 'active-bandit',
-    grade: '위험',
-    headline: '산적 토벌 — 강북 산길',
-    assigned: '백호 · 2주째 진행',
-    progress: '3주차 / 4주 예정',
-  },
-  {
-    id: 'active-missing',
-    grade: '보통',
-    headline: '실종자 수색 — 황도촌',
-    assigned: '윤소소 · 1주째 진행',
-    progress: '1주차 / 3주 예정',
-  },
-];
-
-const NEW_QUESTS: Quest[] = [
-  {
-    id: 'q-market',
-    grade: '잡일',
-    headline: '시장 짐 운반',
-    client: '마을 노점',
-    preview: '사흘간 짐 옮길 일손이 필요합니다.',
-    reward: '동 5냥',
-    danger: '위험 없음',
-    deadline: '3일 안',
-    recommended: '추천 1명',
-  },
-  {
-    id: 'q-hwanghwa',
-    grade: '보통',
-    headline: '황화촌 실종자 수색',
-    client: '황화촌 촌장',
-    preview: '사흘 전부터 행상이 돌아오지 않습니다.',
-    reward: '은 8냥',
-    danger: '부상 가능',
-    deadline: '2주 안',
-    recommended: '추천 1-2명',
-  },
-  {
-    id: 'q-heuksa',
-    grade: '위험',
-    headline: '흑사파 거점 정찰',
-    client: '익명',
-    preview: '강남 봉기 정보. 정탐만 가능합니다.',
-    reward: '은 30냥 + 비급',
-    danger: '중상 가능',
-    deadline: '1계절',
-    recommended: '추천 2명',
-  },
-  {
-    id: 'q-hyeolsu',
-    grade: '극험',
-    headline: '사파 거물 추적',
-    client: '무림맹',
-    preview: "악명 자객 '혈수'의 행적을 추적해 주시오.",
-    reward: '금 2냥 + 비급 3/5',
-    danger: '사망 가능',
-    deadline: '1계절',
-    recommended: '추천 2-3명',
-  },
-  {
-    id: 'q-secret',
-    grade: '위험',
-    headline: '은밀한 처리',
-    client: '도시 권력자',
-    preview: '조용히 처리해 주시면 후사하겠습니다.',
-    reward: '금 1냥',
-    danger: '인망 ↓ 가능',
-    deadline: '2주 안',
-    recommended: '추천 1명',
-    gray: true,
-  },
-];
-
-type FilterKey = 'all' | QuestGrade;
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: '전체' },
-  ...GRADES.map((g) => ({ key: g as FilterKey, label: g })),
-];
-
-// ─── Screen ─────────────────────────────────────────────────────────────────
+// 의뢰 화면 — 파견 중 + 게시판. 파견은 모달. 결산은 서신함(마일스톤). docs/28 §4.
 
 export default function QuestScreen() {
-  const [filter, setFilter] = useState<FilterKey>('all');
-
-  const activeFiltered = useMemo(
-    () => (filter === 'all' ? ACTIVE_QUESTS : ACTIVE_QUESTS.filter((q) => q.grade === filter)),
-    [filter],
-  );
-  const newFiltered = useMemo(
-    () => (filter === 'all' ? NEW_QUESTS : NEW_QUESTS.filter((q) => q.grade === filter)),
-    [filter],
-  );
-
-  const onRefreshBoard = () => {
-    // TODO: 마을 방문 → 게시판 갱신. /village 라우트 또는 별도 액션.
-  };
-  const onCleanExpired = () => {
-    // TODO: 만료·거절 의뢰 일괄 정리.
-  };
-  const onPressActive = (_id: string) => {
-    // TODO: 진행 중 의뢰 상세 (파견 제자 상태, 중간 보고).
-  };
-  const onPressNew = (_id: string) => {
-    // TODO: 의뢰 상세 → 파견 결정 화면.
-  };
+  const board = useQuestStore((s) => s.board);
+  const active = useQuestStore((s) => s.active);
+  const [dispatchQuest_, setDispatchQuest] = useState<Quest | null>(null);
 
   return (
     <SafetyZone variant="tab" background={colors.background}>
       <PaperCard>
         <AppHeader />
-        <Header influence={MASTER_INFLUENCE} insight={MASTER_INSIGHT} />
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>의뢰</Text>
+          <Text style={styles.titleCn}>(依賴)</Text>
+        </View>
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
-          <BannerSlot />
-          <FilterTabs current={filter} onChange={setFilter} />
-
-          {activeFiltered.length > 0 && (
-            <>
-              <View style={styles.sectionHead}>
-                <SectionLabel>진행 중 의뢰</SectionLabel>
-                <Text style={styles.subText}>{activeFiltered.length}건</Text>
-              </View>
-              {activeFiltered.map((q) => (
-                <ActiveCard key={q.id} quest={q} onPress={() => onPressActive(q.id)} />
-              ))}
-            </>
+          <View style={styles.sectionHead}>
+            <SectionLabel>파견 중</SectionLabel>
+            <Text style={styles.count}>{active.length}건</Text>
+          </View>
+          {active.length === 0 ? (
+            <Empty label="파견 중인 의뢰가 없습니다." />
+          ) : (
+            active.map((a) => <ActiveCard key={a.quest.id} active={a} />)
           )}
 
-          {newFiltered.length > 0 && (
-            <>
-              <View style={styles.sectionHead}>
-                <SectionLabel>새 의뢰</SectionLabel>
-                <Text style={styles.subText}>{newFiltered.length}건 신규</Text>
-              </View>
-              {newFiltered.map((q) => (
-                <QuestCard key={q.id} quest={q} onPress={() => onPressNew(q.id)} />
-              ))}
-            </>
-          )}
-
-          {activeFiltered.length === 0 && newFiltered.length === 0 && (
-            <View style={styles.empty}>
-              <Text style={styles.emptyLabel}>해당 등급의 의뢰가 없습니다.</Text>
-            </View>
+          <View style={styles.sectionHead}>
+            <SectionLabel>게시판</SectionLabel>
+            <Text style={styles.count}>{board.length}건</Text>
+          </View>
+          {board.length === 0 ? (
+            <Empty label="받을 수 있는 의뢰가 없습니다. 마을을 방문해 보세요." />
+          ) : (
+            board.map((q) => (
+              <BoardCard key={q.id} quest={q} onPress={() => setDispatchQuest(q)} />
+            ))
           )}
         </ScrollView>
-        <ActionRow onRefresh={onRefreshBoard} onClean={onCleanExpired} />
+        <Pressable
+          onPress={generateBoard}
+          accessibilityRole="button"
+          accessibilityLabel="마을 방문 — 게시판 갱신"
+          style={styles.refresh}
+        >
+          <Text style={styles.refreshLabel}>마을 방문 — 게시판 갱신</Text>
+        </Pressable>
       </PaperCard>
+
+      {dispatchQuest_ && (
+        <DispatchModal quest={dispatchQuest_} onClose={() => setDispatchQuest(null)} />
+      )}
     </SafetyZone>
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
+// ─── 카드 ─────────────────────────────────────────────────────────────────
 
-function Header({ influence, insight }: { influence: number; insight: number }) {
-  return (
-    <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          의뢰
-        </Text>
-        <Text style={styles.headerTitleCn} numberOfLines={1}>
-          (依賴)
-        </Text>
-      </View>
-      <View style={styles.headerRight}>
-        <Text style={styles.headerMeta}>사부 인망 {influence}/5</Text>
-        <Text style={styles.headerMeta}>사부 통찰 {insight}/5</Text>
-      </View>
-    </View>
-  );
+function rewardLine(quest: Quest): string {
+  const fame = quest.reward.fame >= 8 ? '명성 ↑↑' : '명성 ↑';
+  return `자금 ${quest.reward.money} · ${fame} · ${QUEST_DOMAIN_LABEL[quest.domain]} 경험`;
 }
 
-function BannerSlot() {
-  return (
-    <View style={styles.banner}>
-      <Text style={styles.bannerLabel}>의뢰 게시판 베너 자리</Text>
-    </View>
-  );
-}
-
-function FilterTabs({
-  current,
-  onChange,
-}: {
-  current: FilterKey;
-  onChange: (k: FilterKey) => void;
-}) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.tabs}
-    >
-      {FILTERS.map((f) => {
-        const active = f.key === current;
-        const isDanger = f.key !== 'all' && GRADE_DANGEROUS[f.key as QuestGrade];
-        return (
-          <Pressable
-            key={f.key}
-            accessibilityRole="button"
-            accessibilityLabel={f.label}
-            onPress={() => onChange(f.key)}
-            style={[styles.tab, active && styles.tabActive]}
-          >
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{f.label}</Text>
-            {isDanger && <View style={styles.tabDot} />}
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
-function ActiveCard({ quest, onPress }: { quest: ActiveQuest; onPress: () => void }) {
+function BoardCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
+  const risk = QUEST_GRADE_RISK[quest.grade];
+  const warn = risk.death || quest.gray;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`진행 중 의뢰 ${quest.headline}`}
+      accessibilityLabel={`${QUEST_GRADE_LABEL[quest.grade]} 의뢰 ${quest.title}`}
       style={styles.card}
     >
-      <GradeBox grade={quest.grade} />
       <View style={styles.cardBody}>
-        <Text style={styles.cardHeadline} numberOfLines={1}>
-          {quest.headline}
+        <Text style={styles.cardHead} numberOfLines={1}>
+          <Text style={styles.tag}>
+            [{QUEST_DOMAIN_LABEL[quest.domain]}·{QUEST_GRADE_LABEL[quest.grade]}]
+          </Text>{' '}
+          {quest.title}
+          <Text style={styles.client}> — {quest.client}</Text>
+          {quest.gray ? <Text style={styles.gray}> · 회색</Text> : null}
         </Text>
-        <Text style={styles.cardSub} numberOfLines={1}>
-          {quest.assigned}
+        <Text style={styles.preview} numberOfLines={2}>
+          {quest.preview}
         </Text>
-        <Text style={styles.cardLine} numberOfLines={1}>
-          {quest.progress}
+        <Text style={[styles.footer, warn && styles.footerWarn]} numberOfLines={2}>
+          ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)} · ⚠ {risk.label} · 추천 {quest.recommended}명
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function ActiveCard({ active }: { active: ActiveQuest }) {
+  const totalDay = useTimeStore((s) => s.totalDay);
+  const ds = useDiscipleStore((s) => s.disciples);
+  const names = active.discipleIds.map((id) => ds[id]?.name ?? '?').join('·');
+  const elapsed = Math.max(0, Math.ceil((totalDay - active.startedDay) / 7));
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardBody}>
+        <Text style={styles.cardHead} numberOfLines={1}>
+          <Text style={styles.tag}>
+            [{QUEST_DOMAIN_LABEL[active.quest.domain]}·{QUEST_GRADE_LABEL[active.quest.grade]}]
+          </Text>{' '}
+          {active.quest.title}
+        </Text>
+        <Text style={styles.activeSub} numberOfLines={1}>
+          {names} · {Math.min(elapsed, active.quest.weeks)}/{active.quest.weeks}주
         </Text>
       </View>
       <View style={styles.activeBadge}>
         <Text style={styles.activeBadgeLabel}>진행 중</Text>
       </View>
-    </Pressable>
-  );
-}
-
-function QuestCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
-  const dangerous = GRADE_DANGEROUS[quest.grade];
-  const warn = dangerous || quest.gray;
-  const tagLabel = quest.gray ? `${quest.grade}·회색` : quest.grade;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${quest.grade} 등급 의뢰 ${quest.headline}`}
-      style={styles.card}
-    >
-      <GradeBox grade={quest.grade} warn={warn} />
-      <View style={styles.cardBody}>
-        <Text style={styles.cardHeadline} numberOfLines={1}>
-          {quest.headline}
-          <Text style={styles.cardHeadlineSub}> — {quest.client}</Text>
-        </Text>
-        <Text style={styles.cardPreview} numberOfLines={2}>
-          {quest.preview}
-        </Text>
-        <Text style={[styles.cardFooter, quest.gray && styles.cardFooterWarn]} numberOfLines={2}>
-          {quest.reward} · {quest.danger} · {quest.deadline} · {quest.recommended}
-        </Text>
-      </View>
-      <View style={[styles.gradeTag, warn && styles.gradeTagWarn]}>
-        <Text style={[styles.gradeTagLabel, warn && styles.gradeTagLabelWarn]}>{tagLabel}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function GradeBox({ grade, warn }: { grade: QuestGrade; warn?: boolean }) {
-  return (
-    <View style={[styles.gradeBox, warn && styles.gradeBoxWarn]}>
-      <Text style={[styles.gradeBoxChar, warn && styles.gradeBoxCharWarn]}>
-        {GRADE_SHORT[grade]}
-      </Text>
     </View>
   );
 }
 
-function ActionRow({ onRefresh, onClean }: { onRefresh: () => void; onClean: () => void }) {
+function Empty({ label }: { label: string }) {
   return (
-    <View style={styles.actionRow}>
-      <ActionButton label="마을 방문 — 게시판 갱신" onPress={onRefresh} />
-      <ActionButton label="거절·만료 정리" onPress={onClean} />
+    <View style={styles.empty}>
+      <Text style={styles.emptyLabel}>{label}</Text>
     </View>
   );
 }
 
-function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={styles.actionButton}
-    >
-      <Text style={styles.actionLabel} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
+// ─── 파견 모달 ───────────────────────────────────────────────────────────
+
+function DispatchModal({ quest, onClose }: { quest: Quest; onClose: () => void }) {
+  const order = useDiscipleStore((s) => s.order);
+  const disciples = useDiscipleStore((s) => s.disciples);
+  const risk = QUEST_GRADE_RISK[quest.grade];
+  const [selected, setSelected] = useState<string[]>([]);
+
+  const candidates = useMemo(
+    () => order.map((id) => disciples[id]).filter((d): d is Disciple => d != null),
+    [order, disciples],
   );
+
+  const toggle = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const onDispatch = () => {
+    if (selected.length === 0) return;
+    if (dispatchQuest(quest.id, selected)) onClose();
+  };
+
+  return (
+    <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.modal}>
+          <Text style={styles.modalTitle}>
+            [{QUEST_DOMAIN_LABEL[quest.domain]}·{QUEST_GRADE_LABEL[quest.grade]}] {quest.title}
+          </Text>
+          <Text style={styles.modalClient}>의뢰인: {quest.client}</Text>
+          <Text style={styles.modalDesc}>{quest.preview}</Text>
+          <Text style={styles.modalMeta}>
+            ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)}
+          </Text>
+          <Text style={[styles.modalMeta, (risk.death || quest.gray) && styles.footerWarn]}>
+            ⚠ {risk.label} · 추천 {quest.recommended}명
+          </Text>
+
+          <Text style={styles.pickLabel}>누구를 보낼까 {selected.length > 0 ? `(${selected.length}명)` : ''}</Text>
+          <ScrollView style={styles.pickList}>
+            {candidates.map((d) => {
+              const able = canDispatch(d, quest);
+              const isSel = selected.includes(d.id);
+              const reason =
+                d.status !== 'training'
+                  ? statusLabel(d.status)
+                  : !able
+                    ? '자격 미달'
+                    : fitPhrase(d, quest);
+              const disabled = d.status !== 'training' || !able;
+              return (
+                <Pressable
+                  key={d.id}
+                  onPress={() => !disabled && toggle(d.id)}
+                  disabled={disabled}
+                  style={[styles.pickRow, isSel && styles.pickRowSel, disabled && styles.pickRowOff]}
+                >
+                  <Text style={styles.pickCheck}>{isSel ? '☑' : disabled ? '✕' : '☐'}</Text>
+                  <Text style={styles.pickName}>{d.name}</Text>
+                  <Text style={styles.pickFit}>{reason}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <Pressable onPress={onClose} style={[styles.modalBtn, styles.modalBtnGhost]}>
+              <Text style={styles.modalBtnGhostLabel}>물린다</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDispatch}
+              disabled={selected.length === 0}
+              style={[styles.modalBtn, selected.length === 0 && styles.modalBtnOff]}
+            >
+              <Text style={styles.modalBtnLabel}>파견한다{selected.length > 0 ? ` (${selected.length})` : ''}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function statusLabel(s: Disciple['status']): string {
+  switch (s) {
+    case 'questing':
+      return '파견 중';
+    case 'injured':
+      return '부상 중';
+    case 'graduated':
+      return '하산';
+    case 'departed':
+      return '떠남';
+    default:
+      return '불가';
+  }
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
-const BANNER_ASPECT = 16 / 9;
-const GRADE_BOX_SIZE = 36;
-
 const styles = StyleSheet.create({
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    gap: spacing.sm,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    flexShrink: 1,
-  },
-  headerTitle: {
+  titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, paddingVertical: spacing.xs },
+  title: {
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.xl,
     color: colors.ink,
     letterSpacing: typography.letterSpacing.wide,
   },
-  headerTitleCn: {
-    fontFamily: typography.serifCN,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-  },
-  headerRight: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  headerMeta: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkLight,
-  },
-
-  // Body / scroll
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    gap: spacing.xs,
-    paddingBottom: spacing.sm,
-  },
-
-  // Banner
-  banner: {
-    width: '100%',
-    aspectRatio: BANNER_ASPECT,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  bannerLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-
-  // Filter tabs
-  tabs: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.inkSoft,
-    borderStyle: 'dashed',
-  },
-  tabActive: {
-    backgroundColor: colors.ink,
-    borderStyle: 'solid',
-    borderColor: colors.ink,
-  },
-  tabLabel: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  tabLabelActive: {
-    color: colors.paperBright,
-  },
-  tabDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.seal,
-  },
-
-  // Section head
+  titleCn: { fontFamily: typography.serifCN, fontSize: typography.sizes.sm, color: colors.inkSoft },
+  body: { flex: 1 },
+  bodyContent: { gap: spacing.xs, paddingBottom: spacing.sm },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  subText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-
-  // Card (공용 — 진행 중·새 의뢰)
+  count: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -489,95 +269,18 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
     borderRadius: 4,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  cardBody: {
-    flex: 1,
-    gap: 2,
-  },
-  cardHeadline: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
-  cardHeadlineSub: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  cardSub: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  cardLine: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
-  },
-  cardPreview: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkLight,
-    lineHeight: 16,
-  },
-  cardFooter: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
-    marginTop: 2,
-  },
-  cardFooterWarn: {
-    color: colors.seal,
-  },
-
-  // Grade box
-  gradeBox: {
-    width: GRADE_BOX_SIZE,
-    height: GRADE_BOX_SIZE,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gradeBoxWarn: {
-    borderColor: colors.seal,
-  },
-  gradeBoxChar: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.md,
-    color: colors.ink,
-  },
-  gradeBoxCharWarn: {
-    color: colors.seal,
-  },
-
-  // Grade tag
-  gradeTag: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    alignSelf: 'flex-start',
-  },
-  gradeTagWarn: {
-    borderColor: colors.seal,
-  },
-  gradeTagLabel: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
-  },
-  gradeTagLabelWarn: {
-    color: colors.seal,
-  },
-
-  // Active badge
+  cardBody: { flex: 1, gap: 3 },
+  cardHead: { fontFamily: typography.serifBold, fontSize: typography.sizes.sm, color: colors.ink },
+  tag: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  client: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  gray: { color: colors.seal, fontSize: typography.sizes.xs },
+  preview: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkLight, lineHeight: 16 },
+  footer: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink, marginTop: 2 },
+  footerWarn: { color: colors.seal },
+  activeSub: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink },
   activeBadge: {
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -587,31 +290,10 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     alignSelf: 'flex-start',
   },
-  activeBadgeLabel: {
-    fontFamily: typography.serif,
-    fontSize: 10,
-    color: colors.inkSoft,
-  },
-
-  // Empty
-  empty: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-  },
-
-  // Action row
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
+  activeBadgeLabel: { fontFamily: typography.serif, fontSize: 10, color: colors.inkSoft },
+  empty: { paddingVertical: spacing.lg, alignItems: 'center' },
+  emptyLabel: { fontFamily: typography.serif, fontSize: typography.sizes.sm, color: colors.inkSoft },
+  refresh: {
     minHeight: 44,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -619,11 +301,59 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
+    marginTop: spacing.sm,
   },
-  actionLabel: {
+  refreshLabel: { fontFamily: typography.serifMedium, fontSize: typography.sizes.sm, color: colors.ink },
+
+  // 모달
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modal: {
+    backgroundColor: colors.paper,
+    borderRadius: 8,
+    padding: spacing.base,
+    gap: spacing.xs,
+    maxHeight: '85%',
+  },
+  modalTitle: { fontFamily: typography.serifBold, fontSize: typography.sizes.md, color: colors.ink },
+  modalClient: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  modalDesc: { fontFamily: typography.serif, fontSize: typography.sizes.sm, color: colors.inkLight, lineHeight: 18 },
+  modalMeta: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink },
+  pickLabel: {
     fontFamily: typography.serifMedium,
     fontSize: typography.sizes.sm,
     color: colors.ink,
+    marginTop: spacing.xs,
   },
+  pickList: { maxHeight: 220 },
+  pickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 4,
+  },
+  pickRowSel: { backgroundColor: colors.paperDark },
+  pickRowOff: { opacity: 0.45 },
+  pickCheck: { fontFamily: typography.serif, fontSize: typography.sizes.md, color: colors.ink, width: 20 },
+  pickName: { fontFamily: typography.serifMedium, fontSize: typography.sizes.sm, color: colors.ink, width: 64 },
+  pickFit: { flex: 1, fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  modalActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  modalBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
+  },
+  modalBtnOff: { opacity: 0.4 },
+  modalBtnLabel: { fontFamily: typography.serifMedium, fontSize: typography.sizes.sm, color: colors.paperBright },
+  modalBtnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.inkSoft },
+  modalBtnGhostLabel: { fontFamily: typography.serifMedium, fontSize: typography.sizes.sm, color: colors.ink },
 });
