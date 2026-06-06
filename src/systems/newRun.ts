@@ -22,6 +22,7 @@ import { captureSnapshot } from './reportSystem';
 import { RUN_CHILD_SLICES } from './runSlices';
 import type {
   Disciple,
+  EfficiencyMap,
   Master,
   MartialArtInstance,
   PersonalityTraits,
@@ -79,6 +80,7 @@ export interface DiscipleSeed {
   poolId: string;
   artId: string;
   talents: Talents;
+  efficiency?: EfficiencyMap;
   personality: PersonalityTraits;
 }
 
@@ -102,6 +104,7 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
     entryYear: useTimeStore.getState().current.year,
     age: 10,
     talents: seed.talents,
+    efficiency: seed.efficiency ?? {},
     hiddenTalents: {},
     martialArts: [startingArtInstance(seed.artId)],
     mainMartialArtId: seed.artId,

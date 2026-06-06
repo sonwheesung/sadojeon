@@ -101,6 +101,7 @@ function withDefaults(d: Disciple): Disciple {
     maxStamina: d.maxStamina ?? BASE_MAX_STAMINA,
     stress: d.stress ?? 0,
     stats: d.stats ?? {},
+    efficiency: d.efficiency ?? {},
     // 경지 — 구버전 세이브 보정. 무공 입문 상태면 삼류, 미입문이면 none.
     starRank: d.starRank ?? 1,
     realm: d.realm ?? (d.martialArts && d.martialArts.length > 0 ? 'samryu' : 'none'),

@@ -16,6 +16,7 @@ import {
   seongToStage,
 } from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
+import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import {
   BASE_MAX_STAMINA,
   findTrainingOption,
@@ -72,10 +73,17 @@ function plateauMultiplier(exp: number, seong: number): number {
   return 1.0;
 }
 
-function talentMultiplier(art: MartialArt, talents: Talents): number {
+// 무공 학습 효율 배율 — 효율맵(갈래) 우선, 미시드(구 세이브)면 옛 talents 폴백. docs/28 §2.
+// 효율맵이 있는(시드된) 캐릭터는 미기재 갈래 = '보통'. 맵이 비면 구 세이브로 보고 talents 폴백.
+function learnMultiplier(art: MartialArt, d: Disciple): number {
+  const eff = d.efficiency;
+  if (eff && Object.keys(eff).length > 0) {
+    return EFFICIENCY_MULTIPLIER[eff[art.school] ?? '보통'];
+  }
   if (art.preferredTalents.length === 0) return 1.0;
-  const sum = art.preferredTalents.reduce((acc, axis) => acc + talents[axis], 0);
-  const avg = sum / art.preferredTalents.length;
+  const avg =
+    art.preferredTalents.reduce((acc, axis) => acc + d.talents[axis], 0) /
+    art.preferredTalents.length;
   return Math.max(0.5, avg / 3);
 }
 
@@ -233,7 +241,7 @@ function tickDiscipleArt(
   const bandBefore = seongToStage(seongBefore);
 
   const base = EXP_BASE_BY_STAGE[bandBefore];
-  const tMul = talentMultiplier(art, d.talents);
+  const tMul = learnMultiplier(art, d);
   const pMul = plateauMultiplier(instance.exp, instance.seong);
   const delta = base * tMul * pMul * intensity * progressMul;
 
