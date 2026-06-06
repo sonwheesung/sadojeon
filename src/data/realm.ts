@@ -3,11 +3,10 @@
 import type { MartialArtGrade } from '@/types/martialArt';
 import { REALM_ORDER, type Realm } from '@/types/realm';
 
-// 별 등급 → 잠재 천장(하드캡). docs/23 §3. ★1~3 절정, ★4 초절정, ★5 화경.
-export function realmCeiling(starRank: number): Realm {
-  if (starRank >= 5) return 'hwagyeong';
-  if (starRank >= 4) return 'chojeoljeong';
-  return 'jeoljeong';
+// 별 등급 폐기(docs/28 §5). 천장은 주력 무공서 등급이 정한다.
+// 이 함수는 주력 무공서가 없을 때의 기본값만 — 무공 기둥이 비면 경지가 못 오르므로 보수적으로 일류.
+export function realmCeiling(_starRank?: number): Realm {
+  return 'ilryu';
 }
 
 // 무공서(비급) 등급 → 받쳐주는 경지. docs/04 "별 1~5 등급 체계".
@@ -26,12 +25,10 @@ export function artGradeRealmCeiling(grade: MartialArtGrade): Realm {
   }
 }
 
-// 실제 경지 천장 = 잠재(별) ∧ 무공서 등급 둘 중 낮은 것.
-// → 천재(★5)라도 비급이 받쳐주지 않으면 못 오른다. 무공서 교체가 곧 성장의 열쇠.
-export function effectiveRealmCeiling(starRank: number, grade: MartialArtGrade): Realm {
-  const byStar = realmCeiling(starRank);
-  const byArt = artGradeRealmCeiling(grade);
-  return REALM_ORDER.indexOf(byStar) <= REALM_ORDER.indexOf(byArt) ? byStar : byArt;
+// 실제 경지 천장 = 주력 무공서 등급(별 등급 폐기, docs/28 §5). starRank 인자는 호환용(무시).
+// 천장에 닿는 *속도*는 무공 갈래 효율(소프트캡)이 정한다 — trainingSystem.
+export function effectiveRealmCeiling(_starRank: number, grade: MartialArtGrade): Realm {
+  return artGradeRealmCeiling(grade);
 }
 
 export function nextRealm(r: Realm): Realm | null {
@@ -55,19 +52,13 @@ export const REALM_INTERNAL_REQ: Record<Realm, number> = {
   hwagyeong: 1300,
 };
 
-// 깨달음 벽 — 별 등급별, targetRealm 으로 들어갈 때 깨달음이 필요한가. docs/23 §5.
-// 벽이면 막대가 다 차도 자동 승급 X(깨달음 필요 — Phase 3). 벽 아니면 막대 충족 시 자동.
-const WALLS_BY_STAR: Record<number, Realm[]> = {
-  5: ['chojeoljeong', 'hwagyeong'],
-  4: ['jeoljeong', 'chojeoljeong'],
-  3: ['ilryu', 'jeoljeong'],
-  2: ['iryu', 'ilryu', 'jeoljeong'],
-  1: ['iryu', 'ilryu', 'jeoljeong'],
-};
+// 깨달음 벽 — 경지 위치 고정(별 등급 폐기, docs/23 §5 · docs/28). 절정 진입부터 벽.
+// 일류→절정, 절정→초절정, 초절정→화경 진입이 깨달음 게이트. 그 아래는 막대 충족 시 자동.
+// 자질 차등은 starRank가 아니라 오성(enlightenmentChance)이 가른다.
+const WALL_TARGETS: readonly Realm[] = ['jeoljeong', 'chojeoljeong', 'hwagyeong'];
 
-export function isWallTransition(starRank: number, target: Realm): boolean {
-  const s = Math.max(1, Math.min(5, Math.floor(starRank)));
-  return (WALLS_BY_STAR[s] ?? []).includes(target);
+export function isWallTransition(_starRank: number, target: Realm): boolean {
+  return WALL_TARGETS.includes(target);
 }
 
 // 일일 내공 적립 (그레이박스). 효율(체력비율)에 곱해진다.
