@@ -12,6 +12,7 @@ import type {
   MoralChoiceTone,
   PendingMoralEvent,
 } from '@/types';
+import { JOB_POOL } from '@/data/jobs';
 import { SECLUSION_PETITION_DAYS } from '@/data/realm';
 import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
 import { resolveMoralChoice } from './moralEventSystem';
@@ -46,8 +47,14 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'wish' ||
     d === 'moral' ||
     d === 'seclusion_petition' ||
-    d === 'quest_event'
+    d === 'quest_event' ||
+    d === 'graduation'
   );
+}
+
+interface GraduationChoiceView {
+  key: string;
+  label: string;
 }
 
 // 항목의 응답 선택지.
@@ -83,6 +90,10 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
       label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
       disabled: !c.available,
     }));
+  }
+  if (p.domain === 'graduation') {
+    const choices = (p.choices ?? []) as GraduationChoiceView[];
+    return choices.map((c) => ({ key: c.key, label: c.label }));
   }
   return [];
 }
@@ -142,6 +153,26 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
     const choices = (p.choices ?? []) as QuestEventChoiceView[];
     const choice = choices.find((c) => c.key === key);
     if (choice) applyQuestEventChoice(questId, choice);
+  } else if (p.domain === 'graduation') {
+    // 사부가 권한 강호 행로 확정 → 졸업 후 평생 직책 궤적의 출발점(docs/28 §4).
+    const ds = useDiscipleStore.getState();
+    const d = ds.disciples[discipleId];
+    if (d) {
+      ds.update(discipleId, { graduatedJob: key });
+      const job = JOB_POOL.find((j) => j.id === key);
+      useInboxStore.getState().add({
+        id: `graduation-done-${discipleId}-${createdAtDay}`,
+        kind: 'report',
+        title: `${d.name} — 강호로`,
+        preview: `${d.name}이 ${job?.name ?? '제 길'}의 길을 걷기로 했다.`,
+        body: `${d.name}이 ${job?.name ?? '제 길'}의 길을 걷기로 했다.\n${job?.desc ?? ''}`,
+        priority: 'normal',
+        createdAtDay,
+        read: false,
+        resolved: false,
+        payload: { domain: 'graduation_result', discipleId },
+      });
+    }
   }
 
   useInboxStore.getState().remove(item.id);

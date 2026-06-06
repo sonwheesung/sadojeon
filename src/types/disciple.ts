@@ -100,6 +100,9 @@ export interface Disciple {
   currentActivity?: DailyActivity;
   injuryDaysRemaining?: number;
 
+  // 하산 시 사부가 권한 강호 행로(직업 id, jobSystem). 졸업 후 평생 직책 궤적의 출발점. docs/28 §3·§4.
+  graduatedJob?: string;
+
   darknessLevel: DarknessLevel;
   darknessRisk: 'low' | 'medium' | 'high';
 

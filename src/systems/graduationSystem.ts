@@ -3,14 +3,47 @@
 // 추후 명성·노선 안정성 도입 시 종합 평가로 확장.
 
 import { findMartialArt, seongToStage } from '@/data/martialArts';
+import { JOB_TIER_LABEL } from '@/data/jobs';
 import { effectiveRealmCeiling, realmCeiling, realmIndex } from '@/data/realm';
-import { evaluateJobs } from './jobSystem';
+import { evaluateJobs, type JobChance } from './jobSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
+import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, Milestone } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
+
+// 적합도 확률 → 관찰 풍경(숨겨진 변수 직접 노출 X, feedback_hidden_game_state).
+function jobFitPhrase(prob: number): string {
+  if (prob >= 0.4) return '천직처럼 보인다';
+  if (prob >= 0.25) return '잘 어울린다';
+  if (prob >= 0.12) return '무난하다';
+  return '쉽지 않은 길';
+}
+
+// 하산 시 강호 행로 선택을 서신함 강제 결정으로 띄운다. docs/28 §3 — 사부가 권하고 제자가 따른다.
+// 최소조건 충족 직업 풀(jobSystem)을 적합도 순으로, 상위 4개를 선택지로.
+function enqueueGraduationChoice(d: Disciple, day: number): void {
+  const jobs: JobChance[] = evaluateJobs(d).slice(0, 4);
+  if (jobs.length === 0) return; // 한량 등 무조건 후보가 있어 보통 비지 않음.
+  const choices = jobs.map((j) => ({
+    key: j.job.id,
+    label: `${j.job.name} — ${JOB_TIER_LABEL[j.job.tier]} · ${jobFitPhrase(j.prob)}`,
+  }));
+  useInboxStore.getState().add({
+    id: `graduation-${day}-${d.id}`,
+    kind: 'event',
+    eventId: `graduation-${d.id}`,
+    title: `${d.name} — 하산, 어느 길로`,
+    preview: `${mainArtSummary(d)}을 이룬 ${d.name}이 강호로 나섭니다.\n사부로서 어느 길을 권하시겠습니까.`,
+    priority: 'high',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'graduation', discipleId: d.id, choices },
+  });
+}
 
 export type GraduationGrade =
   | 'failure' //    ☆ 실패
@@ -95,19 +128,16 @@ export function checkGraduations(): void {
     if (!d || !isGraduationEligible(d)) continue;
     ds.update(id, { status: 'graduated' });
     const grade = evaluateGraduation(d);
-    // 가능 직업 풀 + 적합도 확률 (docs/28 §3). 선택 UI는 후속 — 지금은 상위 3개 풍경으로.
-    const jobLine = evaluateJobs(d)
-      .slice(0, 3)
-      .map((j) => `${j.job.name} ${Math.round(j.prob * 100)}%`)
-      .join(' · ');
     newMilestones.push({
       id: `${day}-${id}-graduation`,
       kind: 'graduation',
       discipleId: id,
       discipleName: d.name,
       title: '하산',
-      body: `${d.name}이 사부에게 마지막 절을 올렸다.\n${mainArtSummary(d)} — ${GRADE_LABEL[grade]}.\n${jobLine ? `가능 직업: ${jobLine}\n` : ''}강호로 나간다.`,
+      body: `${d.name}이 사부에게 마지막 절을 올렸다.\n${mainArtSummary(d)} — ${GRADE_LABEL[grade]}.\n강호로 나간다.`,
     });
+    // 강호 행로(직업)는 서신함 강제 결정으로. docs/28 §3.
+    enqueueGraduationChoice(d, day);
   }
 
   if (newMilestones.length > 0) {
