@@ -218,10 +218,15 @@ function rollRescueReveal(active: ActiveQuest): {
   rewardMult: number;
 } {
   const r = Math.random();
-  if (r < 0.45) {
-    return { text: '알고 보니 평범한 길손이었다. 거듭 절하며 제 갈 길을 갔다.', rewardMult: 1 };
+  if (r < 0.5) {
+    // 평민 — 특정 문파 X. 선행 소문이 돌아 사문 전반의 덕망(명성)↑.
+    useSectStore.getState().adjustReputation(3);
+    return {
+      text: '알고 보니 평범한 길손이었다. 그를 살렸다는 말이 돌아 사문의 덕망이 조금 올랐다.',
+      rewardMult: 1,
+    };
   }
-  const isRight = r < 0.8; // 0.45~0.8 명문 정파 / 0.8~ 사파
+  const isRight = r < 0.9; // 0.5~0.9 명문 정파 / 0.9~ 사파
   const pool = FACTIONS.filter((f) => f.alignment === (isRight ? 'right' : 'sapa'));
   const f = pool[Math.floor(Math.random() * pool.length)];
   if (!f) return { text: '구한 이는 말없이 사라졌다.', rewardMult: 1 };
