@@ -3,9 +3,29 @@
 // 현재 구동원: 의뢰 결산(성향). 추후 도덕 이벤트·졸업 노선·흑화·세가 자제 영입 등 추가.
 
 import { FACTIONS, repTier, type RepTier } from '@/data/factions';
+import { useInboxStore } from '@/stores/inboxStore';
 import { useReputationStore } from '@/stores/reputationStore';
+import { useSectStore } from '@/stores/sectStore';
+import { useTimeStore } from '@/stores/timeStore';
 
 export { repTier };
+
+// 강호 풍문 서신(읽기 전용) — careerSystem 과 같은 채널(jianghu_news).
+function pushFactionNews(title: string, body: string): void {
+  const day = useTimeStore.getState().totalDay;
+  useInboxStore.getState().add({
+    id: `faction-${day}-${Math.floor(Math.random() * 1e6)}`,
+    kind: 'rumor',
+    title,
+    preview: body,
+    body,
+    priority: 'normal',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'jianghu_news' },
+  });
+}
 
 // 사문 평판 조정.
 export function adjustSectRep(factionId: string, delta: number): void {
@@ -42,6 +62,31 @@ export function applyQuestReputation(
     const half = delta > 0 ? Math.ceil(delta / 2) : Math.floor(delta / 2);
     if (half !== 0) {
       for (const id of presentDiscipleIds) store.adjustDisciple(id, f.id, half);
+    }
+  }
+}
+
+// 매년 1회(연 경계) — 평판이 결과로 돌아온다. 맹우 문파는 후의(자금 선물), 적대 문파는 자객·시비(피해).
+// docs/30. 대부분 문파는 평범(0)이라 초반엔 거의 발동 X — 관계를 쌓아야 영향이 생김.
+export function tickReputationInfluence(): void {
+  const rep = useReputationStore.getState().sect;
+  for (const f of FACTIONS) {
+    const tier = repTier(rep[f.id] ?? 0);
+    if (tier === 'ally' && Math.random() < 0.5) {
+      const gift = 200 + Math.floor(Math.random() * 300);
+      useSectStore.getState().adjustResources(gift);
+      pushFactionNews(
+        `${f.name} — 후의`,
+        `${f.name}이 사문에 사례를 보내왔다. 두터운 관계의 보답으로 금자 ${gift}냥이 금고에 들었다.`,
+      );
+    } else if (tier === 'hostile' && Math.random() < 0.5) {
+      const cur = useSectStore.getState().sect?.resources ?? 0;
+      const loss = Math.min(cur, 150 + Math.floor(Math.random() * 250));
+      useSectStore.getState().adjustResources(-loss);
+      pushFactionNews(
+        `${f.name} — 시비`,
+        `${f.name}이 사문에 자객을 보냈다는 흉흉한 소문. 대응에 금자 ${loss}냥을 썼다.`,
+      );
     }
   }
 }
