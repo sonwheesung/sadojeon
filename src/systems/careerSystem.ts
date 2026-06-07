@@ -14,6 +14,7 @@ import { findFaction } from '@/data/factions';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useSectStore } from '@/stores/sectStore';
 import { adjustDiscipleRep, adjustSectRep } from './reputationSystem';
+import { combatRating } from './combatPower';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -22,12 +23,9 @@ import type { Disciple } from '@/types';
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const randInt = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
 
-// 졸업 스냅샷 역량 0~100 — 주력 무공 성×10. (추후 비무공 역량 가중 가능)
+// 졸업 스냅샷 역량 0~100 — 전투력 무위(combatRating: 주력 성×10 앵커 + 익힌 무공 깊이·경지). docs/27 §5.
 function powerOf(d: Disciple): number {
-  const main = d.mainMartialArtId
-    ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
-    : d.martialArts[0];
-  return clamp((main?.seong ?? 0) * 10);
+  return clamp(combatRating(d));
 }
 
 function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'normal'): void {
