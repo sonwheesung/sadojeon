@@ -17,6 +17,8 @@ export interface OneLinerCondition {
   ageMin?: number;
   ageMax?: number;
   seongMin?: number; // 주력 무공 성 ≥ (정체·자만)
+  needsRival?: boolean; // 자신보다 앞선 동문이 있을 때만(이름은 {rival} 치환)
+  isWeakest?: boolean; // 사문에서 자신이 제일 약할 때
 }
 
 export interface OneLinerTemplate {
@@ -37,11 +39,14 @@ export const ONE_LINERS: OneLinerTemplate[] = [
 
   // 일상 — 대체로 무관
   { id: 'd1', category: 'daily', body: '아침 안개가 산문을 덮었습니다. 좋은 날입니다.', when: { stressMax: 60 } },
-  { id: 'd2', category: 'daily', body: '간밤에 꿈을 꿨습니다. 까닭 없이 마음이 어지럽습니다.', when: { stressMin: 35 } },
+  { id: 'd2', category: 'daily', body: '간밤 꿈자리가 사나웠습니다. 오늘은 검을 내려놓고 좀 쉬고 싶습니다.', when: { stressMin: 35 } },
   { id: 'd3', category: 'daily', body: '사부님, 차 한 잔 드시지요. 갓 끓인 것입니다.' },
 
   // 관계
-  { id: 'r1', category: 'relation', body: '동문의 검을 보면 막막합니다. 따라잡을 수 있을까요.', when: { ageMin: 11 } },
+  // 비교·서열 — {rival}=자기보다 앞선 최강 동문 이름. 어림/연상 말투, 최약 여부로 분기.
+  { id: 'r1-young', category: 'relation', body: '사부님! {rival}는 어떻게 그렇게 잘해요? 저도 빨리 그렇게 되고 싶어요.', when: { ageMax: 11, needsRival: true } },
+  { id: 'r1-weak', category: 'relation', body: '사부님... 솔직히 제가 사문에서 제일 약한 것 같아요. {rival}만큼 하려면 멀었어요.', when: { isWeakest: true, needsRival: true } },
+  { id: 'r1-old', category: 'relation', body: '{rival}를 보면 아직 멀었구나 싶습니다. 더 갈아야겠지요.', when: { ageMin: 12, needsRival: true } },
   { id: 'r2', category: 'relation', body: '오늘 동문과 한 마디 나눴습니다. 마음이 풀립니다.', when: { stressMax: 65 } },
   { id: 'r3', category: 'relation', body: '... 누군가 저를 자꾸 쳐다보는 듯합니다.', when: { hasEnemy: true } },
 
@@ -65,6 +70,8 @@ export interface OneLinerCtx {
   hasEnemy: boolean;
   age: number;
   mainSeong: number;
+  rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
+  isWeakest: boolean; // 사문 최약
 }
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
@@ -81,6 +88,8 @@ function conditionMet(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean
   if (w.ageMin != null && c.age < w.ageMin) return false;
   if (w.ageMax != null && c.age > w.ageMax) return false;
   if (w.seongMin != null && c.mainSeong < w.seongMin) return false;
+  if (w.needsRival && !c.rivalName) return false;
+  if (w.isWeakest != null && c.isWeakest !== w.isWeakest) return false;
   return true;
 }
 
@@ -89,6 +98,11 @@ export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null 
   const pool = ONE_LINERS.filter((t) => conditionMet(t.when, c));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// 본문 변수 치환 — {rival}=최강 동문 이름. 발화 시점에 실제 이름으로 박는다.
+export function fillOneLinerBody(body: string, c: OneLinerCtx): string {
+  return body.replace(/\{rival\}/g, c.rivalName ?? '동문');
 }
 
 // 사부 응답 풀 — 톤별. 한 마디와 무관하게 범용으로 사용. 대사 또는 행동.
