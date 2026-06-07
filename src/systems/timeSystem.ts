@@ -22,6 +22,7 @@ import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
 import { tickDarkness } from './darknessSystem';
+import { tickElixirCraft } from './elixirSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 
@@ -56,6 +57,8 @@ export function advanceTurn() {
     runYoungTalentsTournament();
     // 문파 평판 영향 — 맹우 후의·적대 자객. docs/30.
     tickReputationInfluence();
+    // 신품 영약 제련 — 영약제조 특화 제자가 격년으로 구전대환단을 빚는다(무과금 화경 경로). docs/28 §5-1.
+    tickElixirCraft();
   }
 
   // 회차 종결 — 사부 수명 도달 시 phase='ended' (그레이박스 99 = 비활성).

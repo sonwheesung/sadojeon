@@ -287,10 +287,11 @@ export function expToNextSeong(seong: number): number {
   return 140 + (s - 1) * 80;
 }
 
-// 밴드별 하루 base EXP (고밴드일수록 적립도 작음). docs/26.
+// 밴드별 하루 base EXP. 고밴드도 적립이 너무 작으면 신품 무공서 7성(화경 게이트)에 평생 못 닿아
+// 완화(docs/28 §5·project_realm_balance 화경 경로): 순수수련으로도 신품 무공서 대성(7성) 도달 가능.
 export const EXP_BASE_BY_STAGE: Record<MartialStage, number> = {
   introduction: 10,
-  small_completion: 7,
-  great_completion: 4,
-  ultimate: 2,
+  small_completion: 9,
+  great_completion: 8,
+  ultimate: 6,
 };

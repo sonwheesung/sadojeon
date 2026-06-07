@@ -3,7 +3,14 @@
 // 소모: 화경 깨달음 벽에서 1개 소모(trainingSystem.applyRealmTick).
 
 import { useItemStore } from '@/stores/itemStore';
+import { useDiscipleStore } from '@/stores/discipleStore';
+import { useInboxStore } from '@/stores/inboxStore';
+import { useTimeStore } from '@/stores/timeStore';
 import { DIVINE_ELIXIR_ID, divineElixirItem } from '@/data/elixirs';
+
+// 신품 영약 제련 — 영약제조(alchemy) 이 경지에 닿은 제자가 신품 영약을 빚는다. docs/28 §5-1.
+// 무과금 화경 경로: 의뢰 드랍(운) 외에, 영약제조 특화 제자를 키우면 제련으로 확보.
+export const CRAFT_ALCHEMY_MIN = 45;
 
 // 사문이 신품 영약을 보유 중인가.
 export function hasDivineElixir(): boolean {
@@ -27,4 +34,36 @@ export function grantDivineElixir(): void {
 // 과금 직구매 훅(BM) — 후속 상점/IAP에서 호출. 현재는 지급만(결제 연동은 [11 BM]). docs/28 §5-1.
 export function purchaseDivineElixir(): void {
   grantDivineElixir();
+}
+
+// 격년 제련 — 영약제조(alchemy) ≥ CRAFT_ALCHEMY_MIN 제자가 있으면 신품 영약 1개를 빚는다.
+// timeSystem 연 경계에서 호출(2년마다). 제련 제자명으로 서신함 알림.
+export function tickElixirCraft(): void {
+  const year = useTimeStore.getState().current.year;
+  if (year % 2 !== 0) return; // 격년 — 신품 영약은 빚는 데 오래 걸린다
+  const ds = useDiscipleStore.getState();
+  const crafter = ds.order
+    .map((id) => ds.disciples[id])
+    .find(
+      (d) =>
+        d &&
+        d.status !== 'graduated' &&
+        d.status !== 'departed' &&
+        (d.stats?.alchemy?.level ?? 0) >= CRAFT_ALCHEMY_MIN,
+    );
+  if (!crafter) return;
+  grantDivineElixir();
+  const day = useTimeStore.getState().totalDay;
+  useInboxStore.getState().add({
+    id: `craft-${day}`,
+    kind: 'report',
+    title: `${crafter.name} — 신품 영약 제련`,
+    preview: `${crafter.name}이 오랜 연단 끝에 신품 영약 구전대환단을 빚어냈다.`,
+    body: `${crafter.name}이 영약제조의 묘리가 깊어져, 오랜 연단 끝에 **구전대환단**을 빚어냈다. 화경의 벽 앞에 선 동문이 폐관 중 복용하면 그 벽을 넘을 수 있다.`,
+    priority: 'high',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'jianghu_news' },
+  });
 }
