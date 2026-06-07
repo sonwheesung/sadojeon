@@ -12,6 +12,7 @@ import {
   useDiscipleStore,
   useEventHistoryStore,
   useGraduateStore,
+  useReputationStore,
   useLlmSettingsStore,
   useMasterStore,
   useQuestStore,
@@ -177,6 +178,8 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   generateBoard();
   // 졸업 제자 평생 궤적 — 회차 스코프 초기화. docs/28 §4.
   useGraduateStore.getState().reset();
+  // 문파 평판 — 회차 스코프 초기화(전원 평범). docs/30.
+  useReputationStore.getState().reset();
   useScheduleStore.getState().setSnapshot(captureSnapshot());
   useScheduleStore.getState().openMonthlySetup();
 }

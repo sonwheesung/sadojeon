@@ -7,10 +7,27 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { ROUTE_LABEL } from '@/data/careers';
+import {
+  FACTION_GROUP_LABEL,
+  FACTION_GROUP_ORDER,
+  REP_TIER_LABEL,
+  factionsByGroup,
+  repTier,
+  type RepTier,
+} from '@/data/factions';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
 import { useJianghuStore, type JianghuEvent, type JianghuFaction } from '@/stores/jianghuStore';
 import { useMasterStore } from '@/stores/masterStore';
+import { useReputationStore } from '@/stores/reputationStore';
 import { colors, spacing, typography } from '@/theme';
+
+const REP_TIER_COLOR: Record<RepTier, string> = {
+  ally: colors.gold,
+  friendly: colors.brown,
+  neutral: colors.inkSoft,
+  cold: colors.inkLight,
+  hostile: colors.seal,
+};
 
 type Faction = JianghuFaction;
 type ActiveEvent = JianghuEvent;
@@ -53,6 +70,9 @@ export default function WorldScreen() {
           showsVerticalScrollIndicator={false}
         >
           <BannerSlot />
+
+          <SectionLabel>문파 관계</SectionLabel>
+          <FactionRelations />
 
           <SectionLabel>하산 제자</SectionLabel>
           <GraduateList graduates={graduates} />
@@ -100,6 +120,36 @@ function BannerSlot() {
   return (
     <View style={styles.banner}>
       <Text style={styles.bannerLabel}>강호 산수 베너 자리</Text>
+    </View>
+  );
+}
+
+function FactionRelations() {
+  const sect = useReputationStore((s) => s.sect);
+  return (
+    <View style={styles.repList}>
+      {FACTION_GROUP_ORDER.map((g) => {
+        const list = factionsByGroup(g);
+        if (list.length === 0) return null;
+        return (
+          <View key={g} style={styles.repGroup}>
+            <Text style={styles.repGroupLabel}>{FACTION_GROUP_LABEL[g]}</Text>
+            {list.map((f) => {
+              const tier = repTier(sect[f.id] ?? 0);
+              return (
+                <View key={f.id} style={styles.repRow}>
+                  <Text style={styles.repName} numberOfLines={1}>
+                    {f.name}
+                  </Text>
+                  <Text style={[styles.repTier, { color: REP_TIER_COLOR[tier] }]}>
+                    {REP_TIER_LABEL[tier]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -259,6 +309,45 @@ const styles = StyleSheet.create({
     fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
     color: colors.inkSoft,
+  },
+
+  // Faction relations
+  repList: {
+    gap: spacing.sm,
+  },
+  repGroup: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.inkSoft,
+    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  repGroupLabel: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    color: colors.brown,
+    letterSpacing: typography.letterSpacing.wide,
+    paddingVertical: 4,
+  },
+  repRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.inkSoft,
+  },
+  repName: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.sm,
+    color: colors.ink,
+    flexShrink: 1,
+  },
+  repTier: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    flexShrink: 0,
   },
 
   // Graduate list

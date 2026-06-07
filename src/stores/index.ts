@@ -13,6 +13,7 @@ export { useQuestStore } from './questStore';
 export { useGraduateStore } from './graduateStore';
 export type { GraduateRecord, GraduateStatus } from './graduateStore';
 export { useJianghuStore } from './jianghuStore';
+export { useReputationStore } from './reputationStore';
 export { useItemStore } from './itemStore';
 export { useSectAtmosphereStore } from './sectAtmosphereStore';
 export { useMoralEventStore } from './moralEventStore';

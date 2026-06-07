@@ -22,6 +22,7 @@ import { useQuestStore } from '@/stores/questStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { applyQuestReputation } from './reputationSystem';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -447,6 +448,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
       righteousness,
       unity: present.length >= 2 ? 2 : 0,
     });
+    // 문파 평판 — 같은 사상색으로 정파↑·사파↓(동행 제자는 개인 인연도). docs/30.
+    applyQuestReputation(righteousness, scale.growth || 0.5, present);
   }
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
