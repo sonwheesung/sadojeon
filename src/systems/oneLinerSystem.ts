@@ -14,8 +14,8 @@ import {
   fillOneLinerBody,
   pickContextualOneLiner,
   pickResponse,
-  type OneLinerCtx,
 } from '@/data/scenarios/oneLiners';
+import { buildDiscipleCtx } from './discipleCtx';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -88,37 +88,8 @@ export function triggerDailyOneLiner(): void {
   const disciple = candidates[Math.floor(Math.random() * candidates.length)];
 
   // 상황 컨텍스트 — 현재 상태에 맞는 한 마디만 발화(무작위 X). docs/12.
-  const seongOf = (d: Disciple): number => {
-    const mid = d.mainMartialArtId ?? d.martialArts[0]?.artId;
-    return mid ? (d.martialArts.find((a) => a.artId === mid)?.seong ?? 0) : 0;
-  };
-  const maxSt = disciple.maxStamina || 1;
-  const mainSeong = seongOf(disciple);
-
-  // 라이벌 = 자신보다 앞선 최강 동문(이름), 최약 = 자신이 사문에서 제일 약함.
   const others = candidates.filter((d) => d.id !== disciple.id);
-  let rivalName: string | null = null;
-  let topSeong = mainSeong;
-  for (const o of others) {
-    const s = seongOf(o);
-    if (s > topSeong) {
-      topSeong = s;
-      rivalName = o.name;
-    }
-  }
-  const isWeakest = others.length > 0 && others.every((o) => seongOf(o) >= mainSeong);
-
-  const ctx: OneLinerCtx = {
-    stress: disciple.stress ?? 0,
-    staminaPct: Math.round((disciple.stamina / maxSt) * 100),
-    trust: disciple.trustToMaster ?? 0,
-    darknessRisk: disciple.darknessRisk,
-    hasEnemy: Object.values(disciple.relationships).some((v) => v === 'enemy'),
-    age: disciple.age ?? 10,
-    mainSeong,
-    rivalName,
-    isWeakest,
-  };
+  const ctx = buildDiscipleCtx(disciple, others);
   const template = pickContextualOneLiner(ctx);
   if (!template) return; // 지금 상태에 맞는 한 마디 없음 — 그 날은 발화 X
   const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름

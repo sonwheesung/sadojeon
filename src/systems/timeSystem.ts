@@ -18,6 +18,7 @@ import { captureSnapshot } from './reportSystem';
 import { tickDailyTraining } from './trainingSystem';
 import { generateBoard, tickQuests } from './questSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
+import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 
@@ -103,9 +104,10 @@ export function triggerPostSettlement(): void {
     useMoralEventStore.getState().clear();
   }
 
-  // 희망·한마디 — 각자 확률 굴려 서신함에 적재.
+  // 희망·한마디·면담 — 각자 확률 + 상황 조건 굴려 서신함에 적재.
   triggerDailyWish();
   triggerDailyOneLiner();
+  triggerDailyMeeting();
 
   // 변곡점(승급/탈진/졸업) — 모달 대신 서신함 알림으로. pending 큐 비움.
   const milestones = usePendingStore.getState().milestones;

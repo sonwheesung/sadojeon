@@ -14,6 +14,8 @@ import type {
 } from '@/types';
 import { SECLUSION_PETITION_DAYS } from '@/data/realm';
 import { graduateToCareer } from './careerSystem';
+import { applyMeetingChoice } from './meetingSystem';
+import type { MeetingOption } from '@/data/scenarios/meetings';
 import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
 import { resolveMoralChoice } from './moralEventSystem';
 import { issueOverride } from './overrideSystem';
@@ -48,7 +50,8 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'moral' ||
     d === 'seclusion_petition' ||
     d === 'quest_event' ||
-    d === 'graduation'
+    d === 'graduation' ||
+    d === 'meeting'
   );
 }
 
@@ -94,6 +97,10 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   if (p.domain === 'graduation') {
     const choices = (p.choices ?? []) as GraduationChoiceView[];
     return choices.map((c) => ({ key: c.key, label: c.label }));
+  }
+  if (p.domain === 'meeting') {
+    const options = (p.options ?? []) as MeetingOption[];
+    return options.map((o) => ({ key: o.key, label: o.label }));
   }
   return [];
 }
@@ -161,6 +168,11 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
       ds.update(discipleId, { graduatedJob: key });
       graduateToCareer(d, key);
     }
+  } else if (p.domain === 'meeting') {
+    // 면담 응답 — 선택지 효과(인격·신뢰·흑화·노선) 적용.
+    const options = (p.options ?? []) as MeetingOption[];
+    const opt = options.find((o) => o.key === key);
+    if (opt) applyMeetingChoice(discipleId, opt.effects);
   }
 
   useInboxStore.getState().remove(item.id);

@@ -76,7 +76,8 @@ export interface OneLinerCtx {
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
 
-function conditionMet(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean {
+// 상황 조건 매처 — 한마디·면담 공용.
+export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean {
   if (!w) return true;
   if (w.stressMin != null && c.stress < w.stressMin) return false;
   if (w.stressMax != null && c.stress > w.stressMax) return false;
@@ -95,7 +96,7 @@ function conditionMet(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean
 
 // 현재 상태에 맞는 한 마디 중 무작위 1개. 맞는 게 없으면 null(그 날은 발화 X).
 export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null {
-  const pool = ONE_LINERS.filter((t) => conditionMet(t.when, c));
+  const pool = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
