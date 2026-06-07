@@ -87,25 +87,30 @@ function computeLayout(arts: MartialArt[]): {
   return { positions, edges, width, height };
 }
 
-type NodeState = 'learned' | 'learnable' | 'locked' | 'neutral';
+type NodeState = 'learned' | 'learnable' | 'locked' | 'owned' | 'missing' | 'neutral';
 
 export function MartialTree({
   arts,
   disciple,
+  ownedIds,
   highlightId,
   onSelect,
 }: {
   arts: MartialArt[];
-  disciple?: Disciple;
+  disciple?: Disciple; // 주면 제자 학습 상태(보유 성·학습가능·잠금)
+  ownedIds?: Set<string>; // 주면(제자 없을 때) 사문 보유 비급 = 활성 / 미보유 = 비활성. 도감용
   highlightId?: string;
   onSelect?: (art: MartialArt) => void;
 }) {
   const { positions, edges, width, height } = useMemo(() => computeLayout(arts), [arts]);
 
   const stateOf = (a: MartialArt): NodeState => {
-    if (!disciple) return 'neutral';
-    if (disciple.martialArts.some((m) => m.artId === a.id)) return 'learned';
-    return canLearnArt(disciple, a) ? 'learnable' : 'locked';
+    if (disciple) {
+      if (disciple.martialArts.some((m) => m.artId === a.id)) return 'learned';
+      return canLearnArt(disciple, a) ? 'learnable' : 'locked';
+    }
+    if (ownedIds) return ownedIds.has(a.id) ? 'owned' : 'missing';
+    return 'neutral';
   };
 
   return (
@@ -130,7 +135,12 @@ export function MartialTree({
           const st = stateOf(a);
           const inst = disciple?.martialArts.find((m) => m.artId === a.id);
           const meta =
-            st === 'learned' ? `${inst?.seong ?? 1}성` : st === 'locked' ? '🔒' : MARTIAL_ART_GRADE_LABEL[a.grade];
+            st === 'learned'
+              ? `${inst?.seong ?? 1}성`
+              : st === 'locked'
+                ? '🔒'
+                : MARTIAL_ART_GRADE_LABEL[a.grade];
+          const muted = st === 'locked' || st === 'missing';
           return (
             <Pressable
               key={a.id}
@@ -144,7 +154,7 @@ export function MartialTree({
               accessibilityRole="button"
               accessibilityLabel={`${a.name} ${meta}`}
             >
-              <Text style={[styles.nodeName, st === 'locked' && styles.nodeNameMuted]} numberOfLines={1}>
+              <Text style={[styles.nodeName, muted && styles.nodeNameMuted]} numberOfLines={1}>
                 {a.name}
               </Text>
               <Text style={[styles.nodeMeta, st === 'learned' && styles.nodeMetaOn]} numberOfLines={1}>
@@ -162,6 +172,9 @@ const STATE_STYLE: Record<NodeState, object> = {
   learned: { borderColor: colors.seal, borderStyle: 'solid', borderWidth: 2, backgroundColor: colors.paperBright },
   learnable: { borderColor: colors.ink, borderStyle: 'solid', borderWidth: 1.5, backgroundColor: colors.paper },
   locked: { borderColor: colors.inkSoft, borderStyle: 'dashed', borderWidth: 1, backgroundColor: colors.paperLight, opacity: 0.6 },
+  // 도감: 보유 비급=또렷이, 미보유=흐리게(비활성)
+  owned: { borderColor: colors.seal, borderStyle: 'solid', borderWidth: 2, backgroundColor: colors.paperBright },
+  missing: { borderColor: colors.inkSoft, borderStyle: 'dashed', borderWidth: 1, backgroundColor: colors.paperLight, opacity: 0.38 },
   neutral: { borderColor: colors.inkSoft, borderStyle: 'solid', borderWidth: 1, backgroundColor: colors.paper },
 };
 

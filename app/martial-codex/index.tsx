@@ -5,14 +5,17 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { MartialTree } from '@/components/martial-art';
 import { LINEAGE_LABEL, allLineageIds, artsByLineage } from '@/data/martialArts';
+import { useCodexStore } from '@/stores/codexStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { colors, radius, spacing, typography } from '@/theme';
 
-// 무공 계보 — 문파(lineage)별로 무공을 선행조건 DAG 스킬트리로 본다. docs/26 §5-4.
-// discipleId 주면 그 제자 기준 보유/학습가능/잠금 표시. focus = 강조할 무공 id.
+// 무공 계보/도감 — 문파(lineage)별로 무공을 선행조건 DAG 스킬트리로 본다. docs/26 §5-4.
+// discipleId 주면 그 제자 기준(보유 성·학습가능·잠금). 없으면 도감 모드 — 사문 보유 비급=활성/미보유=비활성.
 export default function MartialCodexScreen() {
   const { discipleId, focus } = useLocalSearchParams<{ discipleId?: string; focus?: string }>();
   const disciple = useDiscipleStore((s) => (discipleId ? s.disciples[discipleId] : undefined));
+  const scrolls = useCodexStore((s) => s.scrolls);
+  const ownedIds = disciple ? undefined : new Set(scrolls.map((sc) => sc.artId));
   const lineages = allLineageIds();
 
   return (
@@ -37,12 +40,17 @@ export default function MartialCodexScreen() {
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
-          <Legend />
+          <Legend ownership={!disciple} />
           {lineages.map((lin) => (
             <View key={lin} style={styles.section}>
               <Text style={styles.lineageLabel}>{LINEAGE_LABEL[lin] ?? lin}</Text>
               <View style={styles.treeBox}>
-                <MartialTree arts={artsByLineage(lin)} disciple={disciple} highlightId={focus} />
+                <MartialTree
+                  arts={artsByLineage(lin)}
+                  disciple={disciple}
+                  ownedIds={ownedIds}
+                  highlightId={focus}
+                />
               </View>
             </View>
           ))}
@@ -52,12 +60,21 @@ export default function MartialCodexScreen() {
   );
 }
 
-function Legend() {
+function Legend({ ownership }: { ownership: boolean }) {
   return (
     <View style={styles.legend}>
-      <Text style={styles.legendItem}>● 보유</Text>
-      <Text style={styles.legendItem}>○ 학습 가능</Text>
-      <Text style={styles.legendItem}>🔒 선행/경지 미달</Text>
+      {ownership ? (
+        <>
+          <Text style={styles.legendItem}>● 사문 보유 비급</Text>
+          <Text style={styles.legendItem}>○ 미보유(흐림)</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.legendItem}>● 보유</Text>
+          <Text style={styles.legendItem}>○ 학습 가능</Text>
+          <Text style={styles.legendItem}>🔒 선행/경지 미달</Text>
+        </>
+      )}
     </View>
   );
 }

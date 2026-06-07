@@ -156,7 +156,9 @@ function CodexList() {
           <Pressable
             key={row.key}
             style={[styles.codexRow, idx === CODEX.length - 1 && styles.rowLast]}
-            onPress={() => router.push(`/codex/${row.key}` as Href)}
+            onPress={() =>
+              router.push((row.key === 'martial' ? '/martial-codex' : `/codex/${row.key}`) as Href)
+            }
             accessibilityRole="button"
             accessibilityLabel={`${row.label} 상세`}
           >
