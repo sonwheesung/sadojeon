@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { MartialTree } from '@/components/martial-art';
-import { LINEAGE_LABEL, allLineageIds, artsByLineage } from '@/data/martialArts';
+import { LINEAGE_LABEL, allLineageIds, artsByLineage, findMartialArt } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -16,7 +16,17 @@ export default function MartialCodexScreen() {
   const disciple = useDiscipleStore((s) => (discipleId ? s.disciples[discipleId] : undefined));
   const scrolls = useCodexStore((s) => s.scrolls);
   const ownedIds = disciple ? undefined : new Set(scrolls.map((sc) => sc.artId));
-  const lineages = allLineageIds();
+
+  // 도감 모드(제자 없음): 전 문파. 제자 진입: 그 제자가 타고 있는 계보만(주력·보유 무공의 문파).
+  const lineages = (() => {
+    const all = allLineageIds();
+    if (!disciple) return all;
+    const mine = new Set<string>();
+    for (const inst of disciple.martialArts) mine.add(findMartialArt(inst.artId)?.lineage ?? 'sect');
+    if (focus) mine.add(findMartialArt(focus)?.lineage ?? 'sect');
+    const filtered = all.filter((l) => mine.has(l));
+    return filtered.length ? filtered : all;
+  })();
 
   return (
     <SafetyZone variant="stack" background={colors.background}>
