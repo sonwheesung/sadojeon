@@ -10,7 +10,7 @@ import { seedNewRun } from '@/systems/newRun';
 import { colors, radius, spacing, typography } from '@/theme';
 
 // 시작 선택 모달 — 회차 첫 진입(master==null) 시 표시.
-// 2단 흐름: ① 명부(세로 갤러리, 일러스트+이름) → 탭 → ② 상세(유년 신상) → 거두기.
+// 2단 흐름: ① 명부(기립 인물 카드를 가로로 줄 세움) → 탭 → ② 상세(유년 신상) → 거두기.
 // 선택된 제자는 일러스트 활성(인장 테두리), 나머지는 비활성(흐림). 최소 2 / 최대 4.
 // 거두지 않은 후보는 강호로 흩어진다 (docs/08 NPC 시드).
 interface Props {
@@ -65,19 +65,25 @@ export function StartSelectModal({ visible, onComplete }: Props) {
                 거둘 제자를 고른다 — 최소 {SECT.MIN}명, 최대 {SECT.CAPACITY}명
               </Text>
               <Text style={styles.counter}>
-                {selected.length} / {SECT.CAPACITY} 선택
+                {selected.length} / {SECT.CAPACITY} 선택 · 인물을 눌러 살펴보기
               </Text>
 
-              <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-                {RECRUIT_POOL.map((c) => (
-                  <GalleryRow
-                    key={c.poolId}
-                    candidate={c}
-                    isSelected={selected.includes(c.poolId)}
-                    onOpen={() => setViewing(c.poolId)}
-                  />
-                ))}
-              </ScrollView>
+              <View style={styles.lineupArea}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.lineup}
+                >
+                  {RECRUIT_POOL.map((c) => (
+                    <GalleryCard
+                      key={c.poolId}
+                      candidate={c}
+                      isSelected={selected.includes(c.poolId)}
+                      onOpen={() => setViewing(c.poolId)}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
 
               <Pressable
                 style={({ pressed }) => [
@@ -102,8 +108,8 @@ export function StartSelectModal({ visible, onComplete }: Props) {
   );
 }
 
-// ─── 명부 한 줄 (일러스트 + 이름 + 첫인상) ─────────────────────────────────────
-function GalleryRow({
+// ─── 명부: 기립 인물 카드 (가로 줄 세움) ────────────────────────────────────────
+function GalleryCard({
   candidate,
   isSelected,
   onOpen,
@@ -117,30 +123,24 @@ function GalleryRow({
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.row,
-        isSelected && styles.rowSelected,
+        styles.figure,
+        isSelected && styles.figureSelected,
         pressed && styles.pressed,
       ]}
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`${name} 상세 보기${isSelected ? ' (선택됨)' : ''}`}
     >
-      <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={56} />
-      <View style={styles.rowBody}>
-        <View style={styles.rowHead}>
-          <Text style={[styles.name, isSelected && styles.nameSelected]}>{name}</Text>
-          <Text style={styles.hanja}>{pool?.hanjaName ?? '?'}</Text>
-          {isSelected && (
-            <View style={styles.check}>
-              <Text style={styles.checkMark}>✓</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.story} numberOfLines={2}>
-          {candidate.storyLine}
-        </Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
+      <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={96} height={120} />
+      <Text style={[styles.figureName, isSelected && styles.nameSelected]} numberOfLines={1}>
+        {name}
+      </Text>
+      <Text style={styles.figureHanja} numberOfLines={1}>
+        {pool?.hanjaName ?? ''}
+      </Text>
+      <Text style={[styles.figureTag, isSelected && styles.figureTagOn]}>
+        {isSelected ? '거둠 ✓' : '살펴보기'}
+      </Text>
     </Pressable>
   );
 }
@@ -176,7 +176,7 @@ function DetailView({
 
       <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.detailHead}>
-          <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={120} />
+          <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={120} height={150} />
           <Text style={[styles.detailName, isSelected && styles.nameSelected]}>{name}</Text>
           <Text style={styles.detailHanja}>{pool?.hanjaName ?? '?'}</Text>
         </View>
@@ -254,70 +254,53 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.85 },
 
-  // 명부 갤러리
-  list: { flex: 1 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // 명부 — 기립 인물 가로 줄
+  lineupArea: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  lineup: {
     gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+  },
+  figure: {
+    width: 116,
+    alignItems: 'center',
+    gap: 4,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.inkSoft,
     borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
     backgroundColor: colors.paperLight,
   },
-  rowSelected: {
+  figureSelected: {
     borderStyle: 'solid',
     borderWidth: 2,
     borderColor: colors.seal,
     backgroundColor: colors.paperBright,
   },
-  rowBody: { flex: 1, gap: 4 },
-  rowHead: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
-  },
-  name: {
+  figureName: {
+    marginTop: spacing.xs,
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.md,
     color: colors.ink,
   },
   nameSelected: { color: colors.seal },
-  hanja: {
-    flex: 1,
+  figureHanja: {
     fontFamily: typography.serifCN,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-  },
-  check: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.seal,
-    backgroundColor: colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkMark: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.seal,
-  },
-  story: {
-    fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
-    color: colors.inkLight,
-    lineHeight: typography.sizes.xs * 1.4,
-  },
-  chevron: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xl,
     color: colors.inkSoft,
   },
+  figureTag: {
+    marginTop: 2,
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+  },
+  figureTagOn: { color: colors.seal },
 
   // 상세
   back: { alignSelf: 'flex-start', paddingVertical: 2 },

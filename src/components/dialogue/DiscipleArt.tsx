@@ -13,16 +13,19 @@ interface Props {
   poolId: string;
   name: string;
   active: boolean;
-  size?: number;
+  size?: number; // 너비. height 미지정 시 정사각.
+  height?: number; // 세로(인물) 비율용.
 }
 
-export function DiscipleArt({ poolId, name, active, size = 56 }: Props) {
+export function DiscipleArt({ poolId, name, active, size = 56, height }: Props) {
   const src = DISCIPLE_ART[poolId];
+  const w = size;
+  const h = height ?? size;
   return (
     <View
       style={[
         styles.frame,
-        { width: size, height: size },
+        { width: w, height: h },
         active ? styles.frameActive : styles.frameDim,
       ]}
     >
@@ -33,7 +36,13 @@ export function DiscipleArt({ poolId, name, active, size = 56 }: Props) {
           resizeMode="cover"
         />
       ) : (
-        <Text style={[styles.placeholder, active && styles.placeholderActive, { fontSize: size * 0.4 }]}>
+        <Text
+          style={[
+            styles.placeholder,
+            active && styles.placeholderActive,
+            { fontSize: Math.min(w, h) * 0.42 },
+          ]}
+        >
           {name?.[0] ?? '?'}
         </Text>
       )}
