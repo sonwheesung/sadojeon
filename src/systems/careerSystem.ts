@@ -11,6 +11,8 @@ import {
   type RouteId,
 } from '@/data/careers';
 import { findFaction } from '@/data/factions';
+import { useDiscipleStore } from '@/stores/discipleStore';
+import { useSectStore } from '@/stores/sectStore';
 import { adjustDiscipleRep, adjustSectRep } from './reputationSystem';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -141,6 +143,89 @@ export function tickCareers(): void {
       pushNews(`${g.name} — 부상`, `${g.name}이 강호에서 크게 다쳐 한동안 몸을 추스른다 한다.`);
     }
 
+    // 후원 차등 — 성공한 졸업 제자가 사문에 보답(자금). 직책 높을수록 자주·많이. docs/08.
+    if (status === 'active' && level >= 2 && Math.random() < 0.1 + level * 0.06) {
+      const gift = 100 + level * 120 + Math.round(fame * 1.5);
+      useSectStore.getState().adjustResources(gift);
+      pushNews(
+        `${g.name} — 후원`,
+        `${ROUTE_LABEL[g.route]} ${title} ${g.name}이 사문을 잊지 않고 사례를 보내왔다. 금자 ${gift}냥이 금고에 들었다.`,
+      );
+    }
+
     gs.update(g.id, { level, power, fame, status, title });
   }
+
+  // 졸업 동문 간 강호 사건 — 옛 관계(친밀·적대)가 펼쳐진다. docs/08.
+  tickGraduateInteractions();
+}
+
+// 두 졸업 제자 사이 관계(양방향). 졸업해도 discipleStore 에 status='graduated'로 남아 관계 보존.
+function relBetween(aId: string, bId: string): string | undefined {
+  const ds = useDiscipleStore.getState();
+  return ds.disciples[aId]?.relationships?.[bId] ?? ds.disciples[bId]?.relationships?.[aId];
+}
+
+const LETHAL_ROUTES = new Set<RouteId>(['assassin', 'vigilante']);
+
+// 매년: 살아있는 졸업 제자 쌍의 관계가 강호에서 충돌·합류로 터진다. 연 최대 2건.
+function tickGraduateInteractions(): void {
+  const gs = useGraduateStore.getState();
+  const live = gs.records.filter((g) => g.status === 'active' || g.status === 'injured');
+  if (live.length < 2) return;
+  let fired = 0;
+  for (let i = 0; i < live.length && fired < 2; i += 1) {
+    for (let j = i + 1; j < live.length && fired < 2; j += 1) {
+      const a = live[i];
+      const b = live[j];
+      const rel = relBetween(a.id, b.id);
+      if (rel === 'enemy') {
+        if (Math.random() < 0.5) { resolveClash(a, b); fired += 1; }
+      } else if (rel === 'friend' || rel === 'sworn') {
+        if (Math.random() < 0.4) { resolveAlliance(a, b); fired += 1; }
+      } else if (a.route === b.route && Math.random() < 0.15) {
+        resolveEncounter(a, b); fired += 1;
+      }
+    }
+  }
+}
+
+// 적대 → 강호에서 칼을 겨눈다. 능력·명성 높은 쪽이 이기고, 진 쪽은 부상(위험 노선이면 사망).
+function resolveClash(a: GraduateRecord, b: GraduateRecord): void {
+  const gs = useGraduateStore.getState();
+  const sa = a.power + a.fame + randInt(0, 30);
+  const sb = b.power + b.fame + randInt(0, 30);
+  const winner = sa >= sb ? a : b;
+  const loser = sa >= sb ? b : a;
+  const fatal = LETHAL_ROUTES.has(loser.route) ? Math.random() < 0.45 : Math.random() < 0.2;
+  gs.update(winner.id, { fame: clamp(winner.fame + 6) });
+  gs.update(loser.id, fatal ? { status: 'dead' } : { status: 'injured', fame: clamp(loser.fame - 4) });
+  pushNews(
+    `${winner.name} ↔ ${loser.name} — 은원`,
+    fatal
+      ? `${winner.name}과 ${loser.name}이 강호에서 끝내 칼을 겨눴다. ${loser.name}은(는) 돌아오지 못했다.`
+      : `${winner.name}과 ${loser.name}이 칼을 겨눴다. ${loser.name}이 상처를 입고 물러났다 한다.`,
+  );
+}
+
+// 친밀 → 손을 잡는다. 둘 다 이름을 더 떨친다.
+function resolveAlliance(a: GraduateRecord, b: GraduateRecord): void {
+  const gs = useGraduateStore.getState();
+  gs.update(a.id, { fame: clamp(a.fame + 5) });
+  gs.update(b.id, { fame: clamp(b.fame + 5) });
+  pushNews(
+    `${a.name} · ${b.name} — 의기투합`,
+    `옛 동문 ${a.name}과 ${b.name}이 강호에서 손을 잡았다는 흐뭇한 소식. 둘의 이름이 함께 오른다.`,
+  );
+}
+
+// 같은 노선 우연한 마주침 — 가벼운 자극.
+function resolveEncounter(a: GraduateRecord, b: GraduateRecord): void {
+  const gs = useGraduateStore.getState();
+  gs.update(a.id, { fame: clamp(a.fame + 2) });
+  gs.update(b.id, { fame: clamp(b.fame + 2) });
+  pushNews(
+    `${a.name} · ${b.name} — 해후`,
+    `같은 ${ROUTE_LABEL[a.route]}의 길을 걷는 ${a.name}과 ${b.name}이 강호에서 마주쳐 한 수 겨뤘다 한다.`,
+  );
 }
