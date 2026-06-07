@@ -3,7 +3,10 @@
 // 유대·명성은 후속(스토어 연결 시 가중치 재배분). 선택 UI도 후속 — 지금은 풀·확률만 산출.
 
 import { JOB_POOL, type Job } from '@/data/jobs';
+import { JOB_ROUTE, ROUTE_FACTION } from '@/data/careers';
+import { repTier, type RepTier } from '@/data/factions';
 import { findMartialArt } from '@/data/martialArts';
+import { useReputationStore } from '@/stores/reputationStore';
 import type { Disciple, PersonalityTraits } from '@/types';
 import type { MartialArtSchool } from '@/types/martialArt';
 import type { StatId } from '@/types/training';
@@ -91,16 +94,35 @@ function fitness(d: Disciple, job: Job): number {
   return 0.45 * a + 0.3 * p + 0.15 * fame + 0.1 * p;
 }
 
+// 졸업 진로 게이트 — 직업 노선의 연관 문파 평판이 적합도를 가중. docs/30.
+// 정파 직업인데 정파와 척졌으면 거의 안 열리고, 맹우면 잘 열린다. 문파 없는 노선=1.0.
+const REP_FACTOR: Record<RepTier, number> = {
+  hostile: 0.2,
+  cold: 0.6,
+  neutral: 1,
+  friendly: 1.3,
+  ally: 1.6,
+};
+
+function reputationFactor(d: Disciple, job: Job): number {
+  const route = JOB_ROUTE[job.id];
+  const factionId = route ? ROUTE_FACTION[route] : undefined;
+  if (!factionId) return 1;
+  const rs = useReputationStore.getState();
+  const v = Math.max(rs.sect[factionId] ?? 0, rs.disciple[d.id]?.[factionId] ?? 0);
+  return REP_FACTOR[repTier(v)];
+}
+
 export interface JobChance {
   job: Job;
   prob: number; // 0~1
 }
 
-// 졸업 시점 가능 직업 + 확률(적합도 정규화). 조건 충족 직업만, 확률 내림차순.
+// 졸업 시점 가능 직업 + 확률(적합도×문파 평판 가중, 정규화). 조건 충족 직업만, 확률 내림차순.
 export function evaluateJobs(d: Disciple): JobChance[] {
   const scored = JOB_POOL.filter((j) => meetsJob(d, j)).map((j) => ({
     job: j,
-    score: Math.max(0.05, fitness(d, j)),
+    score: Math.max(0.02, fitness(d, j) * reputationFactor(d, j)),
   }));
   if (scored.length === 0) return [];
   const total = scored.reduce((s, x) => s + x.score, 0);

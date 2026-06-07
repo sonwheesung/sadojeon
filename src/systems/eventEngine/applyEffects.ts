@@ -94,6 +94,10 @@ function applyPerpetratorEffect(
       0,
       Math.min(4, d.darknessLevel + eff.darknessLevelBump),
     ) as Disciple['darknessLevel'];
+    // 흑화 진행 → 정파 문파 평판↓·사파↑(그 제자 인연도). docs/30.
+    if (eff.darknessLevelBump > 0) {
+      applyAlignmentReputation(-(eff.darknessLevelBump * 3), 1, [perpId]);
+    }
   }
   if (eff.darknessRiskBump) {
     patch.darknessRisk = bumpDarknessRisk(d.darknessRisk, eff.darknessRiskBump);
