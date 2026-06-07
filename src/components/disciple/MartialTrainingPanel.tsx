@@ -1,3 +1,4 @@
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -73,14 +74,24 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
     <View style={styles.section}>
       <View style={styles.headerRow}>
         <SectionLabel>무공 수련</SectionLabel>
-        <Pressable
-          style={styles.pickButton}
-          onPress={() => setPicking((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel="무공서 고르기"
-        >
-          <Text style={styles.pickLabel}>{picking ? '닫기' : '무공서 고르기 ▾'}</Text>
-        </Pressable>
+        <View style={styles.headerBtns}>
+          <Pressable
+            style={styles.pickButton}
+            onPress={() => router.push(`/martial-codex?discipleId=${disciple.id}` as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="무공 계보"
+          >
+            <Text style={styles.pickLabel}>계보 ▶</Text>
+          </Pressable>
+          <Pressable
+            style={styles.pickButton}
+            onPress={() => setPicking((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="무공서 고르기"
+          >
+            <Text style={styles.pickLabel}>{picking ? '닫기' : '무공서 고르기 ▾'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* 보유 무공 */}
@@ -184,6 +195,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerBtns: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   pickButton: {
     borderWidth: 1,
