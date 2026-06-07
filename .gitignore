@@ -50,3 +50,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# balance-sim 헤드리스 빌드 산출물
+.claude/skills/balance-sim/_headless.cjs

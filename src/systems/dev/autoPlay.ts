@@ -123,21 +123,20 @@ async function resolveAllRandom(emit: (e: AutoPlayEvent) => void): Promise<void>
   }
 }
 
-// 유휴 제자를 게시판 의뢰에 랜덤 파견(가끔).
+// 유휴 제자를 게시판 의뢰에 랜덤 파견. 낮은 확률 — 의뢰가 일상 이벤트(면담·한마디)를
+// 과하게 밀어내지 않게(파견 중엔 일과 이벤트 미발동). 한 번에 한 명만.
 function maybeDispatch(): void {
-  if (rand() > 0.4) return;
+  if (rand() > 0.08) return;
   const board = useQuestStore.getState().board;
   if (board.length === 0) return;
   const ds = useDiscipleStore.getState();
-  const idle = ds.order.map((id) => ds.disciples[id]).filter((d) => d && d.status === 'training');
-  for (const d of idle) {
-    if (rand() > 0.5) continue;
-    const q = board[Math.floor(rand() * board.length)];
-    if (q && canDispatch(d, q)) {
-      dispatchQuest(q.id, [d.id]);
-      break; // 한 번에 하나
-    }
-  }
+  const idle = ds.order
+    .map((id) => ds.disciples[id])
+    .filter((d) => d && d.status === 'training');
+  if (idle.length === 0) return;
+  const d = idle[Math.floor(rand() * idle.length)];
+  const q = board[Math.floor(rand() * board.length)];
+  if (d && q && canDispatch(d, q)) dispatchQuest(q.id, [d.id]);
 }
 
 // 한 턴 자동 진행. 'ended' = 회차 종결.

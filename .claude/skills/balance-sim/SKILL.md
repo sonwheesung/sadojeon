@@ -11,11 +11,18 @@ description: Run headless 15-year growth/balance simulations for Shidao — veri
 실제 게임은 Expo/RN/Zustand/AsyncStorage라 헤드리스 구동이 무겁다(스텁 다수 필요). 대신 핵심 공식·데이터를 순수 JS로 복제한 시뮬이 초 단위로 수천 회차를 돌려 밸런스 신호를 준다. **시뮬은 근사**(이벤트·정확한 스케줄·의뢰 풀 일부 생략)지만, 경지 천장·기둥 병목·치사율 같은 큰 그림은 신뢰할 만하다.
 
 ## 파일 (이 스킬 폴더)
-- `sim.cjs` — **메인 하네스**. 난이도 정책 × 전 조합 집계 + 보상표 + 의뢰 성장(QK) + 영약 화경 경로 + 조합 상세.
-- `sim_training.cjs` — 순수 수련 궤적(의뢰 없이 6+1명 15년, 연차 스냅샷). 경지·외공·성·전투력 추이.
-- `sim_combos.cjs` — 제자 조합별 의뢰 병행 상세(부상·사망·직업).
+**A. 공식 복제 시뮬(빠름, 근사)** — 밸런스 수치 튜닝용:
+- `sim.cjs` — 난이도 정책 × 전 조합 집계 + 보상표 + 의뢰 성장(QK) + 영약 화경 경로 + 조합 상세.
+- `sim_training.cjs` — 순수 수련 궤적. `sim_combos.cjs` — 조합별 의뢰 병행 상세.
+- 실행: `node .claude/skills/balance-sim/sim.cjs`. (게임 공식을 손으로 복제 — 근사. 스케줄 가정·이벤트/LLM 미포함.)
 
-실행: `node .claude/skills/balance-sim/sim.cjs` (또는 sim_training/sim_combos).
+**B. 실코드 헤드리스(진짜 게임 로직)** — 이벤트·면담·사문이벤트가 *맞는 상황에 발동하고 규칙 해소가 도는지* 검증:
+- `headless.ts` — 실제 TS(`seedNewRun`+`autoPlayRun`)를 자동 랜덤 플레이로 N년 구동, 발동 이벤트+트리거 컨텍스트 로그.
+- `run-headless.cjs` — esbuild로 번들(RN·AsyncStorage·runSync·supabase·expo-fs 스텁 + executorch external + `__DEV__` define) 후 Node 실행.
+- `_stubs/` — 헤드리스용 스텁. 실행: `node .claude/skills/balance-sim/run-headless.cjs [years]`.
+- **한계: LLM(executorch) 미동작 → 규칙 폴백.** LLM 실제 출력은 **in-app 하네스**(`app/dev/autoplay`, 실기기)에서만.
+
+**C. in-app 자동플레이(실제 LLM)** — `app/dev/autoplay.tsx` + `src/systems/dev/autoPlay.ts`. 실기기에서 랜덤 진행 + 온디바이스 Qwen3 실제 호출, prompt/raw/effects 로그. "LLM 응답 정당성"은 여기서만 검증 가능.
 
 ## 어떤 시뮬을 돌려야 하나 (목적별)
 

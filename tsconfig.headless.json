@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@assets/*": ["./assets/*"],
+      "@react-native-async-storage/async-storage": ["./.claude/skills/balance-sim/_stubs/async-storage.ts"],
+      "react-native": ["./.claude/skills/balance-sim/_stubs/empty.ts"]
+    }
+  }
+}
