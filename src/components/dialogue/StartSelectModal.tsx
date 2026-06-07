@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { DiscipleProfile } from './DiscipleProfile';
 import { RECRUIT_POOL } from '@/data/disciples/recruitPool';
 import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
 import { SECT } from '@/data/constants';
@@ -19,6 +20,7 @@ interface Props {
 
 export function StartSelectModal({ visible, onComplete }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string[]>([]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -26,6 +28,10 @@ export function StartSelectModal({ visible, onComplete }: Props) {
       if (prev.length >= SECT.CAPACITY) return prev;
       return [...prev, id];
     });
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const onStart = () => {
@@ -54,33 +60,51 @@ export function StartSelectModal({ visible, onComplete }: Props) {
               const pool = STARTING_DISCIPLE_POOL.find((d) => d.id === c.poolId);
               const isSelected = selected.includes(c.poolId);
               const disabled = !isSelected && selected.length >= SECT.CAPACITY;
+              const isOpen = expanded.includes(c.poolId);
               return (
-                <Pressable
+                <View
                   key={c.poolId}
-                  style={({ pressed }) => [
+                  style={[
                     styles.row,
                     isSelected && styles.rowSelected,
                     disabled && styles.rowDisabled,
-                    pressed && styles.rowPressed,
                   ]}
-                  onPress={() => toggle(c.poolId)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected, disabled }}
-                  accessibilityLabel={`${pool?.name ?? c.poolId} ${isSelected ? '선택 해제' : '선택'}`}
                 >
-                  <View style={styles.rowHead}>
-                    <Text style={[styles.name, isSelected && styles.nameSelected]}>
-                      {pool?.name ?? c.poolId}
-                    </Text>
-                    <Text style={styles.hanja}>{pool?.hanjaName ?? '?'}</Text>
-                    <View style={styles.check}>
-                      <Text style={styles.checkMark}>{isSelected ? '✓' : ''}</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.selectArea, pressed && styles.rowPressed]}
+                    onPress={() => toggle(c.poolId)}
+                    disabled={disabled}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected, disabled }}
+                    accessibilityLabel={`${pool?.name ?? c.poolId} ${isSelected ? '선택 해제' : '선택'}`}
+                  >
+                    <View style={styles.rowHead}>
+                      <Text style={[styles.name, isSelected && styles.nameSelected]}>
+                        {pool?.name ?? c.poolId}
+                      </Text>
+                      <Text style={styles.hanja}>{pool?.hanjaName ?? '?'}</Text>
+                      <View style={styles.check}>
+                        <Text style={styles.checkMark}>{isSelected ? '✓' : ''}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={styles.story} numberOfLines={2}>
-                    {c.storyLine}
-                  </Text>
-                </Pressable>
+                    <Text style={styles.story} numberOfLines={2}>
+                      {c.storyLine}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [styles.toggle, pressed && styles.rowPressed]}
+                    onPress={() => toggleExpand(c.poolId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${pool?.name ?? c.poolId} 유년 신상 ${isOpen ? '접기' : '펼치기'}`}
+                  >
+                    <Text style={styles.toggleLabel}>
+                      {isOpen ? '신상 접기 ▴' : '유년 신상 ▾'}
+                    </Text>
+                  </Pressable>
+
+                  {isOpen && <DiscipleProfile profile={c.childhood} />}
+                </View>
               );
             })}
           </ScrollView>
@@ -175,6 +199,20 @@ const styles = StyleSheet.create({
   rowPressed: {
     opacity: 0.85,
   },
+  selectArea: {
+    gap: 4,
+  },
+  toggle: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+  },
+  toggleLabel: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    color: colors.brown,
+    letterSpacing: typography.letterSpacing.wide,
+  },
   rowHead: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -189,15 +227,10 @@ const styles = StyleSheet.create({
     color: colors.seal,
   },
   hanja: {
+    flex: 1,
     fontFamily: typography.serifCN,
     fontSize: typography.sizes.sm,
     color: colors.inkSoft,
-  },
-  star: {
-    flex: 1,
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.sm,
-    color: colors.gold,
   },
   check: {
     width: 20,
