@@ -30,7 +30,7 @@ function powerOf(d: Disciple): number {
   return clamp((main?.seong ?? 0) * 10);
 }
 
-function pushNews(title: string, body: string): void {
+function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'normal'): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
     id: `jianghu-${day}-${Math.floor(Math.random() * 1e6)}`,
@@ -38,7 +38,7 @@ function pushNews(title: string, body: string): void {
     title,
     preview: body,
     body,
-    priority: 'normal',
+    priority,
     createdAtDay: day,
     read: false,
     resolved: false,
@@ -90,7 +90,9 @@ export function tickCareers(): void {
     let power = g.power;
     let fame = g.fame;
     let title = g.title;
+    let route = g.route;
     let status: GraduateStatus = g.status;
+    let setback = false;
 
     // 부상은 한 해 지나면 회복.
     if (status === 'injured') status = 'active';
@@ -132,6 +134,7 @@ export function tickCareers(): void {
         level -= 1;
         title = ladder[level];
         fame = clamp(fame - 4);
+        setback = true;
         pushNews(`${g.name} — 좌절`, `${g.name}이 자리에서 밀려 ${title}에 머문다는 소식.`);
       } else {
         // 말단에서 더 밀리면 무공을 놓고 은거.
@@ -140,7 +143,19 @@ export function tickCareers(): void {
       }
     } else if (Math.random() < 0.1) {
       status = 'injured';
+      setback = true;
       pushNews(`${g.name} — 부상`, `${g.name}이 강호에서 크게 다쳐 한동안 몸을 추스른다 한다.`);
+    }
+
+    // 3) 노선 전환 — 환멸(정→사)·개심(사→정). 활동 중일 때만. docs/28 §4.
+    if (status === 'active' || status === 'injured') {
+      const shift = maybeRouteShift(g, level, fame, setback);
+      if (shift) {
+        route = shift.route;
+        level = shift.level;
+        title = shift.title;
+        pushNews(shift.news[0], shift.news[1], 'high');
+      }
     }
 
     // 후원 차등 — 성공한 졸업 제자가 사문에 보답(자금). 직책 높을수록 자주·많이. docs/08.
@@ -149,11 +164,11 @@ export function tickCareers(): void {
       useSectStore.getState().adjustResources(gift);
       pushNews(
         `${g.name} — 후원`,
-        `${ROUTE_LABEL[g.route]} ${title} ${g.name}이 사문을 잊지 않고 사례를 보내왔다. 금자 ${gift}냥이 금고에 들었다.`,
+        `${ROUTE_LABEL[route]} ${title} ${g.name}이 사문을 잊지 않고 사례를 보내왔다. 금자 ${gift}냥이 금고에 들었다.`,
       );
     }
 
-    gs.update(g.id, { level, power, fame, status, title });
+    gs.update(g.id, { level, power, fame, status, title, route });
   }
 
   // 졸업 동문 간 강호 사건 — 옛 관계(친밀·적대)가 펼쳐진다. docs/08.
@@ -167,6 +182,53 @@ function relBetween(aId: string, bId: string): string | undefined {
 }
 
 const LETHAL_ROUTES = new Set<RouteId>(['assassin', 'vigilante']);
+
+// 노선 정렬 — 환멸(정→사)·개심(사→정) 전환의 양극. docs/28 §4 "배신·흑화·환멸 → 노선 전환".
+const LIGHT_ROUTES = new Set<RouteId>(['righteous', 'escort', 'healer', 'daoist']);
+const DARK_ROUTES = new Set<RouteId>(['assassin', 'shadow']);
+
+// 좌절을 겪은 정파 계열은 강호의 정의에 환멸을 느껴 어둠으로 기운다(드물게). 어둠 계열은
+// 이름을 떨치면 손을 씻기도 한다. 반환 시 새 노선·레벨·직책·소식, 없으면 null.
+function maybeRouteShift(
+  g: GraduateRecord,
+  level: number,
+  fame: number,
+  setback: boolean,
+): { route: RouteId; level: number; title: string; news: [string, string] } | null {
+  // 환멸 — 정 계열 + 올해 좌절 + 낮은 확률.
+  if (LIGHT_ROUTES.has(g.route) && setback && Math.random() < 0.08) {
+    const route: RouteId = fame >= 40 ? 'vigilante' : 'assassin';
+    const ladder = ROUTE_LADDER[route];
+    const lv = Math.min(ladder.length - 1, Math.max(0, level));
+    return {
+      route,
+      level: lv,
+      title: ladder[lv],
+      news: [
+        `${g.name} — 환멸`,
+        route === 'vigilante'
+          ? `${g.name}이 강호의 정의에 환멸을 느껴 스스로 칼을 들었다 한다. ${ROUTE_LABEL[route]}의 길로 들어섰다.`
+          : `${g.name}이 끝내 빛을 등졌다는 흉흉한 소문. ${ROUTE_LABEL[route]}의 그림자에 몸을 담갔다 한다.`,
+      ],
+    };
+  }
+  // 개심 — 어둠 계열 + 자리 잡힘 + 더 낮은 확률.
+  if (DARK_ROUTES.has(g.route) && level >= 2 && fame >= 50 && Math.random() < 0.05) {
+    const route: RouteId = 'righteous';
+    const ladder = ROUTE_LADDER[route];
+    const lv = Math.min(ladder.length - 1, Math.max(0, level - 1));
+    return {
+      route,
+      level: lv,
+      title: ladder[lv],
+      news: [
+        `${g.name} — 개심`,
+        `${g.name}이 지난 길을 뉘우치고 손을 씻었다는 놀라운 소식. ${ROUTE_LABEL[route]}의 길에서 새로 시작한다 한다.`,
+      ],
+    };
+  }
+  return null;
+}
 
 // 매년: 살아있는 졸업 제자 쌍의 관계가 강호에서 충돌·합류로 터진다. 연 최대 2건.
 function tickGraduateInteractions(): void {
