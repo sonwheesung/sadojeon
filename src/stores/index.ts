@@ -5,7 +5,6 @@ export { useMasterStore } from './masterStore';
 export { useSectStore } from './sectStore';
 export { useInboxStore } from './inboxStore';
 export { useCodexStore } from './codexStore';
-export { useEncounterStore } from './encounterStore';
 export { usePendingStore } from './pendingStore';
 export type { PendingOneLiner, PendingWish } from './pendingStore';
 export { useScheduleStore } from './scheduleStore';

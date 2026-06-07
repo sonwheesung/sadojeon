@@ -75,8 +75,6 @@ export default function RootLayout() {
               <Stack.Screen name="slot-select" />
               <Stack.Screen name="run-end" />
               <Stack.Screen name="schedule/index" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="village/index" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="dialogue/index" options={{ presentation: 'modal' }} />
               <Stack.Screen name="disciple/[id]" />
               <Stack.Screen name="master/index" />
               <Stack.Screen name="inbox/index" options={{ presentation: 'modal' }} />

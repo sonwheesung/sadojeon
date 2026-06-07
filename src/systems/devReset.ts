@@ -11,7 +11,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useCodexStore,
   useDiscipleStore,
-  useEncounterStore,
   useGameStore,
   useInboxStore,
   useMasterStore,
@@ -32,7 +31,6 @@ export async function resetEverything(): Promise<void> {
   useSectStore.getState().reset();
   useScheduleStore.getState().reset();
   useInboxStore.getState().reset();
-  useEncounterStore.getState().reset();
   useSectAtmosphereStore.getState().reset();
 
   // codex 는 회차 누적 (비급은 영구) — dev 리셋은 resetAll 로 모두 비움.
