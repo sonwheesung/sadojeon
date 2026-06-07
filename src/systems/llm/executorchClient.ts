@@ -58,35 +58,24 @@ interface LlmInstance {
   delete?: () => void;
 }
 
-let api: ExecutorchAPI | null = null;
-let requireAttempted = false;
 let instance: LlmInstance | null = null;
 let loadingPromise: Promise<boolean> | null = null;
 // 실제 로드된 모델명 — 로그에 기록할 모델 ID. 로드 전엔 설정 라벨(LLM_MODEL_ID) 폴백.
 let loadedModelName: string | null = null;
 
-// 현재(또는 예정) 모델 ID — LLM 로그에 함께 저장해 모델 교체 추적.
-export function currentModelId(): string {
-  return loadedModelName ?? LLM_MODEL_ID;
-}
-
-// require + 모듈 내부 native proxy 접근 모두 try/catch 로 감싼다.
-// Expo Go 또는 native 미링크 환경에서는 모듈은 로드되지만 proxy getter 가 throw —
-// 그 throw 가 React 렌더 트리까지 전파되지 않도록 한 함수 안에서 다 잡는다.
-function tryRequire(): ExecutorchAPI | null {
-  if (api) return api;
-  if (requireAttempted) return null;
-  requireAttempted = true;
+// ── 네이티브 모듈 로드는 반드시 "모듈 평가 시점"(require 가드 안)에서 한 번만 시도한다. ──
+// 렌더 중 동적 require 를 하면 native 미링크/Expo Go 일 때 Metro 의 guardedLoadModule 이
+// init 에러를 reportFatalError(전체 레드박스)로 띄운다 — 우리 try/catch 가 잡기 전에 발생.
+// 모듈 top-level 의 require 는 이미 상위 require 가드 안이라, throw 가 그대로 catch 로 잡혀 조용히 폴백된다.
+const api: ExecutorchAPI | null = (() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const m = require('react-native-executorch') as ExecutorchAPI;
-    // proxy getter 가 native 미링크 시 throw — 여기서 잡힘.
-    void m.isAvailable;
+    void m.isAvailable; // proxy getter 가 native 미링크 시 throw — 여기서 잡힘
     void m.LLMModule;
     void m.LLAMA3_2_3B_SPINQUANT;
-    api = m;
     return m;
-  } catch (e) {
+  } catch {
     if (typeof console !== 'undefined') {
       console.warn(
         '[llm] react-native-executorch unavailable (Expo Go or native not linked) — RuleResolver only',
@@ -94,15 +83,19 @@ function tryRequire(): ExecutorchAPI | null {
     }
     return null;
   }
+})();
+
+function tryRequire(): ExecutorchAPI | null {
+  return api;
+}
+
+// 현재(또는 예정) 모델 ID — LLM 로그에 함께 저장해 모델 교체 추적.
+export function currentModelId(): string {
+  return loadedModelName ?? LLM_MODEL_ID;
 }
 
 export function isLlmAvailable(): boolean {
-  try {
-    const m = tryRequire();
-    return Boolean(m?.isAvailable && m.LLMModule && m.LLAMA3_2_3B_SPINQUANT);
-  } catch {
-    return false;
-  }
+  return Boolean(api?.isAvailable && api.LLMModule && api.LLAMA3_2_3B_SPINQUANT);
 }
 
 export function isReady(): boolean {
@@ -117,15 +110,14 @@ function ensureInitialized(): void {
   if (initialized) return;
   initialized = true;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const exec = require('react-native-executorch') as {
+    const exec = api as unknown as {
       initExecutorch?: (opts: { resourceFetcher: unknown }) => void;
-    };
+    } | null;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fetcherMod = require('react-native-executorch-expo-resource-fetcher') as {
       ExpoResourceFetcher?: unknown;
     };
-    if (typeof exec.initExecutorch === 'function' && fetcherMod.ExpoResourceFetcher) {
+    if (exec && typeof exec.initExecutorch === 'function' && fetcherMod.ExpoResourceFetcher) {
       exec.initExecutorch({ resourceFetcher: fetcherMod.ExpoResourceFetcher });
     }
   } catch (e) {
