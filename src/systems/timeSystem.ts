@@ -19,6 +19,7 @@ import { tickDailyTraining } from './trainingSystem';
 import { generateBoard, tickQuests } from './questSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
+import { tickDarkness } from './darknessSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 
@@ -108,6 +109,7 @@ export function triggerPostSettlement(): void {
   triggerDailyWish();
   triggerDailyOneLiner();
   triggerDailyMeeting();
+  tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
 
   // 변곡점(승급/탈진/졸업) — 모달 대신 서신함 알림으로. pending 큐 비움.
   const milestones = usePendingStore.getState().milestones;

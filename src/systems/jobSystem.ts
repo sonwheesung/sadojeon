@@ -113,6 +113,17 @@ function reputationFactor(d: Disciple, job: Job): number {
   return REP_FACTOR[repTier(v)];
 }
 
+// 흑화 회귀 — 깊이 어두워진 제자는 졸업 시 사파/어둠 길로 기운다. docs/13.
+const DARK_ROUTES = new Set(['assassin', 'shadow', 'vigilante']);
+const LIGHT_ROUTES = new Set(['righteous', 'escort', 'healer', 'daoist']);
+function darknessFactor(d: Disciple, job: Job): number {
+  if (d.darknessLevel < 3) return 1;
+  const route = JOB_ROUTE[job.id];
+  if (route && DARK_ROUTES.has(route)) return d.darknessLevel >= 4 ? 2.2 : 1.6;
+  if (route && LIGHT_ROUTES.has(route)) return d.darknessLevel >= 4 ? 0.3 : 0.5;
+  return 1;
+}
+
 export interface JobChance {
   job: Job;
   prob: number; // 0~1
@@ -122,7 +133,7 @@ export interface JobChance {
 export function evaluateJobs(d: Disciple): JobChance[] {
   const scored = JOB_POOL.filter((j) => meetsJob(d, j)).map((j) => ({
     job: j,
-    score: Math.max(0.02, fitness(d, j) * reputationFactor(d, j)),
+    score: Math.max(0.02, fitness(d, j) * reputationFactor(d, j) * darknessFactor(d, j)),
   }));
   if (scored.length === 0) return [];
   const total = scored.reduce((s, x) => s + x.score, 0);
