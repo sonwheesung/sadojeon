@@ -26,6 +26,7 @@ import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
+import { combatRating } from './combatPower';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -44,16 +45,16 @@ import type {
 
 // ─── 역량·자격 ────────────────────────────────────────────────────────────
 
-// 제자의 의뢰 도메인 역량 0~100. (stat 도메인=능력치 Lv, duel/grand=주력 무공 성×10)
+// 제자의 의뢰 도메인 역량 0~100. (stat 도메인=능력치 Lv, duel/grand=전투력 무위 combatRating)
+// combatRating = 주력 성×10 앵커(기존 밸런스 보존) + 익힌 무공 깊이·경지 보너스. docs/27 §5.
 export function capability(d: Disciple, domain: QuestDomain): number {
   const stat = QUEST_DOMAIN_STAT[domain];
   if (stat) return d.stats?.[stat]?.level ?? 0;
-  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
-  const seong = (mainId ? d.martialArts.find((a) => a.artId === mainId)?.seong : 0) ?? 0;
+  const rating = combatRating(d);
   if (domain === 'grand') {
-    return Math.max(seong * 10, d.stats?.guarding?.level ?? 0, d.stats?.scouting?.level ?? 0);
+    return Math.max(rating, d.stats?.guarding?.level ?? 0, d.stats?.scouting?.level ?? 0);
   }
-  return seong * 10; // duel
+  return rating; // duel
 }
 
 // 적합 가늠 풍경 (효율 등급 직접 노출 X — feedback_hidden_game_state).

@@ -69,6 +69,26 @@ export function combatPower(d: Disciple): number {
   return Math.round(power * 10);
 }
 
+// 의뢰 결투·큰의뢰 판정용 무위(0~100+). 주력 성×10 앵커(기존 minStat 밸런스 보존)
+// + 익힌 무공 깊이(키트)·경지 보너스. combatPower(무차원)와 달리 0~100 척도라 minStat과 직접 비교.
+export function combatRating(d: Disciple): number {
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  const mainInst = mainId ? d.martialArts.find((a) => a.artId === mainId) : undefined;
+  const base = (mainInst?.seong ?? 0) * 10;
+  // 보조 무공 깊이 — 주력 외 (성−1) 합에 감쇠(키트 빌딩 보상, +0~15).
+  const others = d.martialArts
+    .filter((a) => a.artId !== mainInst?.artId)
+    .map((a) => Math.max(0, a.seong - 1))
+    .sort((x, y) => y - x);
+  const w = [0.5, 0.3, 0.2, 0.1];
+  let breadth = 0;
+  for (let i = 0; i < others.length; i += 1) breadth += others[i] * (w[i] ?? 0.05);
+  breadth = Math.min(15, breadth);
+  // 경지 보너스 — 같은 성이라도 높은 경지가 받친다(작게, +0~8).
+  const realmBonus = Math.min(8, Math.max(0, REALM_ORDER.indexOf(d.realm) - 2) * 2);
+  return Math.round(base + breadth + realmBonus);
+}
+
 // 거친 강함 풍문 — 정밀 수치 대신 등급·강호 결로 노출(docs/27 §6).
 // 경지를 받침으로 두고 전투력으로 한 단계 가감(같은 일류라도 손꼽히는지/평범한지).
 const REALM_RUMOR: Record<Realm, string> = {
