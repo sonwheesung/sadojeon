@@ -29,6 +29,9 @@ import { shiftPersona } from './personaShift';
 import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
+import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { bodyAgeMultiplier } from './trainingSystem';
+import { currentAge } from './discipleCtx';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -376,6 +379,10 @@ const OUTCOME_SCALE: Record<QuestOutcome, { money: number; fame: number; growth:
 // 극험 의뢰를 반복해도 한 번의 운으로 핵심 제자를 잃는 빈도를 낮춘다(극험만 양육 시 회당 ~20% 사망).
 const QUEST_DISASTER_FATALITY = 0.2;
 
+// 결투·큰의뢰(실전)는 무공 성뿐 아니라 외공(근골)도 단련. 외공 효율 × 나이 보정(실전도 어릴 때 더). docs/28 §5-1·docs/29.
+// → 의뢰 병행 양육이 경지를 잠식하지 않게(실전이 외공·성을 함께 키움).
+const QUEST_COMBAT_BODY = 20;
+
 function rollOutcome(active: ActiveQuest): QuestOutcome {
   const q = active.quest;
   const ds = useDiscipleStore.getState();
@@ -581,7 +588,15 @@ function resolveQuest(active: ActiveQuest): Milestone {
     // 성장 — 능력치(호위·정탐·의술) 또는 무공 성(결투·큰의뢰).
     if (scale.growth > 0) {
       if (stat) ds.addStatExp(id, stat, Math.max(1, Math.round(35 * scale.growth)));
-      else if (isMartial) gainMainSeongExp(d, Math.max(1, Math.round(60 * scale.growth)));
+      else if (isMartial) {
+        gainMainSeongExp(d, Math.max(1, Math.round(60 * scale.growth)));
+        // 실전 단련 — 결투·큰의뢰는 외공(근골)도 키운다(외공 효율 × 나이 보정).
+        const bodyTier = d.efficiency?.strength ?? '보통';
+        const bodyExp = Math.round(
+          QUEST_COMBAT_BODY * scale.growth * BODY_EFFICIENCY_MULTIPLIER[bodyTier] * bodyAgeMultiplier(currentAge(d)),
+        );
+        if (bodyExp > 0) ds.addStatExp(id, 'strength', bodyExp);
+      }
     }
     // 인격 변화 — 나이·관성 반영. docs/28 §6.
     const patch: Partial<Disciple> = {
