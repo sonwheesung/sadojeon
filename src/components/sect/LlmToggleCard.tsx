@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useLlmSettingsStore } from '@/stores/llmSettingsStore';
@@ -89,6 +90,13 @@ export function LlmToggleCard() {
           <View style={[styles.progressBar, { width: `${Math.round(progress * 100)}%` }]} />
         </View>
       ) : null}
+      <Pressable
+        onPress={() => router.push('/dev/autoplay' as Href)}
+        style={styles.qaLink}
+        accessibilityRole="button"
+      >
+        <Text style={styles.qaLinkText}>자동 플레이 QA ▶ (랜덤 진행·이벤트·LLM 검증)</Text>
+      </Pressable>
     </View>
   );
 }
@@ -163,5 +171,16 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 4,
     backgroundColor: colors.seal,
+  },
+  qaLink: {
+    marginTop: 2,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.inkSoft,
+  },
+  qaLinkText: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.brown,
   },
 });

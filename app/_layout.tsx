@@ -87,6 +87,7 @@ export default function RootLayout() {
               <Stack.Screen name="martial-codex/index" options={{ presentation: 'modal' }} />
               <Stack.Screen name="npc/index" options={{ presentation: 'modal' }} />
               <Stack.Screen name="npc/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="dev/autoplay" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!authed}>
               <Stack.Screen name="login" />
