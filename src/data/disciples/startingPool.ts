@@ -126,10 +126,10 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
   {
     id: 'sa-cheonhwa',
     name: '사천화',
-    hanjaName: '謝天花',
+    hanjaName: '謝天華',
     starRank: 5,
     gender: 'female',
-    originNote: '사천당가 분가의 딸. 독공 가풍.',
+    originNote: '사천 약·독 의가의 딸. 가전 독·해독.',
     group: 'lone',
     isPremium: true,
   },
