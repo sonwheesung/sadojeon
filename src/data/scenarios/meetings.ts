@@ -11,6 +11,7 @@ import {
   type OneLinerCondition,
   type OneLinerCtx,
 } from './oneLiners';
+import { GENERATED_MEETINGS } from './meetingsGenerated';
 
 export type MeetingBand = 'child' | 'growth' | 'turmoil' | 'departure';
 
@@ -37,6 +38,7 @@ export interface MeetingOption {
 export interface MeetingTemplate {
   id: string;
   band: MeetingBand;
+  disciple?: string; // 특정 제자 전용(poolId, 예: 'jang-cheol'). 없으면 누구에게나(범용)
   when?: OneLinerCondition; // 나이대(ageMin/Max) + 상태 조건. 없으면 언제든
   body: string; // 제자가 꺼내는 말 ({rival} 치환 가능)
   options: MeetingOption[]; // 2~4
@@ -139,13 +141,23 @@ export const MEETINGS: MeetingTemplate[] = [
       { key: 'content', label: '내가 못 간 길을 네가 간다면, 나는 그것으로 족하다.', effects: { persona: { warmth: 2, mercy: 1 }, trust: 3 } },
     ],
   },
+  // ── 워크플로 대량 생성분(범용 63 + 제자 전용 80, 검수 통과) ──
+  ...GENERATED_MEETINGS,
 ];
 
 // 현재 상태에 맞는 면담 중 무작위 1개. 없으면 null.
-export function pickContextualMeeting(c: OneLinerCtx): MeetingTemplate | null {
-  const pool = MEETINGS.filter((m) => matchesCondition(m.when, c));
+// 제자 전용(disciple) 면담은 그 제자에게만, 범용(disciple 없음)은 누구에게나.
+// 전용이 매칭되면 가중치를 줘 더 자주 뜨게(캐릭터 깊이).
+export function pickContextualMeeting(c: OneLinerCtx, discipleId?: string): MeetingTemplate | null {
+  const pool = MEETINGS.filter(
+    (m) => (!m.disciple || m.disciple === discipleId) && matchesCondition(m.when, c),
+  );
   if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const personal = pool.filter((m) => m.disciple);
+  // 전용 면담이 있으면 60% 확률로 그쪽에서, 아니면 전체에서.
+  const usePersonal = personal.length > 0 && Math.random() < 0.6;
+  const src = usePersonal ? personal : pool;
+  return src[Math.floor(Math.random() * src.length)];
 }
 
 // 본문 {rival} 치환 — 한마디와 동일 규칙 재사용.
