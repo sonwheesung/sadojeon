@@ -83,12 +83,13 @@ const REALM_RUMOR: Record<Realm, string> = {
 
 export function combatRumor(d: Disciple): string {
   const base = REALM_RUMOR[d.realm] ?? '';
+  if (d.realm === 'none' || d.martialArts.length === 0) return '아직 무위를 논할 수 없다';
   const p = combatPower(d);
   const ri = REALM_ORDER.indexOf(d.realm);
   // 같은 경지대 기대치 대비(거칠게) — 경지 인덱스가 받쳐주는 대략적 기대 전투력.
   const expected = Math.max(20, ri * ri * 18);
-  if (p >= expected * 1.6) return `${base} 중에서도 손꼽히는 고수`;
-  if (p >= expected * 1.1) return `${base}의 윗자리에 드는`;
-  if (p >= expected * 0.6) return `여느 ${base}`;
-  return `${base}이라 하나 아직 영근 데가 없는`;
+  if (p >= expected * 1.6) return `${base} 중에서도 손꼽힌다`;
+  if (p >= expected * 1.1) return `${base}의 윗자리에 든다`;
+  if (p >= expected * 0.6) return `여느 ${base}만 하다`;
+  return `${base}이라 하나 아직 영글지 않았다`;
 }

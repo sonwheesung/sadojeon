@@ -13,6 +13,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { OVERRIDE_LABEL } from '@/systems/overrideSystem';
 import { staminaSceneLabel } from '@/systems/staminaSystem';
 import { trustSceneLabel } from '@/systems/trustSystem';
+import { combatRumor } from '@/systems/combatPower';
 import type { Disciple, DiscipleStatus } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 import { REALM_LABEL } from '@/types/realm';
@@ -114,6 +115,7 @@ export function DiscipleStatusPanel({ disciple }: Props) {
           value={REALM_LABEL[disciple.realm]}
           valueStyle={styles.rowValueDoorstep}
         />
+        <Row label="강함" value={combatRumor(disciple)} valueStyle={styles.rowValueMild} />
         <Row label="내공" value={`${disciple.realmProgress.internal}`} />
         {art && (
           <Row
