@@ -372,6 +372,10 @@ const OUTCOME_SCALE: Record<QuestOutcome, { money: number; fame: number; growth:
   disaster: { money: 0, fame: 0, growth: 0 },
 };
 
+// 재난(disaster) 발생 시 희생자가 *사망*할 확률. 나머지는 중상으로 생존. docs/29.
+// 극험 의뢰를 반복해도 한 번의 운으로 핵심 제자를 잃는 빈도를 낮춘다(극험만 양육 시 회당 ~20% 사망).
+const QUEST_DISASTER_FATALITY = 0.2;
+
 function rollOutcome(active: ActiveQuest): QuestOutcome {
   const q = active.quest;
   const ds = useDiscipleStore.getState();
@@ -568,6 +572,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
   let lostName = '';
+  let gravelyHurtName = ''; // 재난에서 죽지 않고 중상으로 살아남은 자(있으면)
 
   for (let i = 0; i < present.length; i += 1) {
     const id = present[i];
@@ -583,10 +588,16 @@ function resolveQuest(active: ActiveQuest): Milestone {
       fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame * mult),
       personality: shiftPersona(d, personaDeltas(q, outcome)),
     };
-    // 상태 — 재난 희생자=상실, 재난 생존/위기 희생자=부상, 그 외 복귀.
+    // 상태 — 재난 희생자=생존 굴림(QUEST_DISASTER_FATALITY 확률 사망, 아니면 중상 28일). 그 외 부상/복귀.
     if (outcome === 'disaster' && i === victimIdx) {
-      patch.status = 'departed';
-      lostName = d.name;
+      if (Math.random() < QUEST_DISASTER_FATALITY) {
+        patch.status = 'departed';
+        lostName = d.name;
+      } else {
+        patch.status = 'injured';
+        patch.injuryDaysRemaining = 28; // 즉사는 면했으나 중상
+        gravelyHurtName = d.name;
+      }
     } else if (outcome === 'disaster') {
       patch.status = 'injured';
       patch.injuryDaysRemaining = 21;
@@ -611,6 +622,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
   let body: string;
   if (outcome === 'disaster' && lostName) {
     body = `${tag} ${q.title} — ${names}\n임무 도중 ${lostName}이(가) 돌아오지 못했다. 남은 이들은 상처를 안고 사문으로 돌아왔다.`;
+  } else if (outcome === 'disaster' && gravelyHurtName) {
+    body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${gravelyHurtName}이(가) 죽음의 문턱에서 가까스로 살아 돌아왔으나, 중상을 입어 오래 몸져눕는다.`;
   } else {
     const reward = `자금 ${Math.round(q.reward.money * scale.money)}${
       scale.fame > 0 ? ' · 명성 ↑' : ''
