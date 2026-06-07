@@ -39,10 +39,10 @@ export function adjustDiscipleRep(discipleId: string, factionId: string, delta: 
   useReputationStore.getState().adjustDisciple(discipleId, factionId, delta);
 }
 
-// 의뢰 사상색(righteousness, +정파/-사파) → 성향별 문파 평판 일괄 이동.
-// 정의로운 완수: 정파 문파↑·사파↓. 회색/사파 의뢰: 반대. outcomeScale(0~1)로 크기 조절.
-// 동행 제자(present)는 같은 방향으로 개인 인연도 소폭 적립 — "제자 둘 다" 주체.
-export function applyQuestReputation(
+// 사상색(righteousness, +정파/-사파) → 성향별 문파 평판 일괄 이동. 의뢰·도덕 이벤트 공용.
+// 정의로운 행위: 정파 문파↑·사파↓. 회색/사파 행위: 반대. scale(0~1)로 크기 조절.
+// 관여 제자(ids)는 같은 방향으로 개인 인연도 소폭 적립 — "제자 둘 다" 주체.
+export function applyAlignmentReputation(
   righteousness: number,
   outcomeScale: number,
   presentDiscipleIds: string[] = [],

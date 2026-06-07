@@ -15,6 +15,7 @@ import type {
   PersonalityTraits,
 } from '@/types';
 import { applyLegacyShift, legacyAxisValue } from './personalityCompat';
+import { applyAlignmentReputation } from '../reputationSystem';
 
 const DARKNESS_RISK_ORDER: readonly Disciple['darknessRisk'][] = [
   'low',
@@ -171,6 +172,12 @@ export function applyAllEffects(
     applyPerpetratorEffect(perpId, effects.perpetrator, perpName, siblingName);
   }
   if (effects.master) applyMasterEffect(effects.master);
-  if (effects.atmosphere) applyAtmosphereEffect(effects.atmosphere);
+  if (effects.atmosphere) {
+    applyAtmosphereEffect(effects.atmosphere);
+    // 도덕 결정의 사상색 → 문파 평판(정파↑·사파↓). 관여 제자 개인 인연도. docs/30.
+    if (effects.atmosphere.righteousnessDelta) {
+      applyAlignmentReputation(effects.atmosphere.righteousnessDelta, 0.5, [perpId]);
+    }
+  }
   if (effects.cascade) applyCascadeEffect(effects.cascade, perpId, perpName);
 }

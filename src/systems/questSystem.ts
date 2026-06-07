@@ -24,7 +24,7 @@ import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
-import { adjustDiscipleRep, adjustSectRep, applyQuestReputation } from './reputationSystem';
+import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -531,7 +531,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
       unity: present.length >= 2 ? 2 : 0,
     });
     // 문파 평판 — 같은 사상색으로 정파↑·사파↓(동행 제자는 개인 인연도). docs/30.
-    applyQuestReputation(righteousness, scale.growth || 0.5, present);
+    applyAlignmentReputation(righteousness, scale.growth || 0.5, present);
     // 후원 의뢰 완수 → 그 문파 평판 직접 강화(동행 제자 인연도).
     if (q.faction) {
       adjustSectRep(q.faction, 6);
