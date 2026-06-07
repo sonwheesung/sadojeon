@@ -19,26 +19,26 @@ export const QUEST_EVENTS: readonly QuestEvent[] = [
     domains: ['guard', 'medicine', 'grand'],
     minGrade: 'minor',
     weight: 10,
-    prompt: '길에서 치명상을 입은 낯선 이를 만났다. 손쓰지 않으면 곧 숨이 끊긴다.',
+    prompt: '길에서 치명상을 입은 낯선 이를 만났다. 행색만으론 정체를 알 수 없다 — 손쓰지 않으면 곧 숨이 끊긴다.',
     choices: [
       {
         key: 'heal-skill',
         label: '의술로 직접 살린다',
         roll: { by: 'medicine', base: 0.2 },
-        effect: { rewardFlag: 'noble', rewardMult: 1.15, persona: { mercy: 3 }, resultText: '능숙한 손길로 그를 살려냈다.' },
+        effect: { revealRescue: true, persona: { mercy: 3 }, resultText: '능숙한 손길로 그를 살려냈다.' },
         failEffect: { persona: { mercy: 1 }, stressDelta: 8, resultText: '손을 다 썼지만 끝내 숨이 끊겼다.' },
       },
       {
         key: 'heal-elixir',
         label: '영약을 써서 살린다 (자금)',
         require: { money: 20 },
-        effect: { rewardFlag: 'noble', rewardMult: 1.1, persona: { mercy: 2 }, resultText: '영약으로 목숨을 건졌다.' },
+        effect: { revealRescue: true, persona: { mercy: 2 }, resultText: '영약으로 목숨을 건졌다.' },
       },
       {
         key: 'heal-village',
         label: '마을에 도움을 청한다',
         roll: { by: 'medicine', base: 0.4 },
-        effect: { successDelta: -0.08, persona: { mercy: 1 }, resultText: '시간은 끌렸지만 살려냈다.' },
+        effect: { successDelta: -0.08, revealRescue: true, persona: { mercy: 1 }, resultText: '시간은 끌렸지만 살려냈다.' },
         failEffect: { stressDelta: 6, resultText: '도움이 닿기엔 늦었다.' },
       },
       {

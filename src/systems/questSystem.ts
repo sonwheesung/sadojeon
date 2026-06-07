@@ -22,7 +22,8 @@ import { useQuestStore } from '@/stores/questStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
-import { applyQuestReputation } from './reputationSystem';
+import { FACTIONS } from '@/data/factions';
+import { adjustDiscipleRep, adjustSectRep, applyQuestReputation } from './reputationSystem';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -209,6 +210,37 @@ function maybeFireEvent(active: ActiveQuest): void {
   useQuestStore.getState().updateActive(active.quest.id, { pendingEventId: itemId });
 }
 
+// 구한 이의 정체 공개 — 평민/명문(정파)/사파 무작위. 명문·사파는 그 문파 평판↑(동행 제자 인연도).
+// docs/30. 명문=귀인 보상(noble), 사파=은밀한 사례(소폭 보상).
+function rollRescueReveal(active: ActiveQuest): {
+  text: string;
+  rewardFlag?: 'noble';
+  rewardMult: number;
+} {
+  const r = Math.random();
+  if (r < 0.45) {
+    return { text: '알고 보니 평범한 길손이었다. 거듭 절하며 제 갈 길을 갔다.', rewardMult: 1 };
+  }
+  const isRight = r < 0.8; // 0.45~0.8 명문 정파 / 0.8~ 사파
+  const pool = FACTIONS.filter((f) => f.alignment === (isRight ? 'right' : 'sapa'));
+  const f = pool[Math.floor(Math.random() * pool.length)];
+  if (!f) return { text: '구한 이는 말없이 사라졌다.', rewardMult: 1 };
+  const amount = isRight ? 8 : 6;
+  adjustSectRep(f.id, amount);
+  for (const id of active.discipleIds) adjustDiscipleRep(id, f.id, Math.ceil(amount / 2));
+  if (isRight) {
+    return {
+      text: `구한 이는 ${f.name}의 고인(高人)이었다. ${f.name}과의 인연이 두터워졌다.`,
+      rewardFlag: 'noble',
+      rewardMult: 1,
+    };
+  }
+  return {
+    text: `구한 이는 ${f.name}의 사람이었다. ${f.name}이 은밀히 사례하니, 그쪽과의 관계가 두터워졌다.`,
+    rewardMult: 1.1,
+  };
+}
+
 // 서신함 해소 → 선택 효과를 의뢰·제자에 적용. inboxResolve 에서 호출.
 export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceView): void {
   const qs = useQuestStore.getState();
@@ -224,11 +256,14 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
     if (Math.random() >= p) e = choice.failEffect ?? {};
   }
 
+  // 구조 성공 시 정체 공개 → 문파 평판. (실패 effect엔 revealRescue 없음 = 죽어서 공개 X)
+  const reveal = e.revealRescue ? rollRescueReveal(active) : null;
+
   qs.updateActive(questId, {
     successDelta: (active.successDelta ?? 0) + (e.successDelta ?? 0),
     riskDelta: (active.riskDelta ?? 0) + (e.riskDelta ?? 0),
-    rewardMult: (active.rewardMult ?? 1) * (e.rewardMult ?? 1),
-    rewardFlag: e.rewardFlag ?? active.rewardFlag,
+    rewardMult: (active.rewardMult ?? 1) * (e.rewardMult ?? 1) * (reveal?.rewardMult ?? 1),
+    rewardFlag: reveal?.rewardFlag ?? e.rewardFlag ?? active.rewardFlag,
     pendingEventId: undefined,
   });
   if (e.persona || e.stressDelta) {
@@ -251,7 +286,9 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
   // 결과 서신 — 사부가 급보의 결말을 전해 듣는다(읽기만).
   const day = useTimeStore.getState().totalDay;
   const leadName = useDiscipleStore.getState().disciples[active.discipleIds[0]]?.name ?? '제자';
-  const text = e.resultText ?? '강호의 일은 그렇게 지나갔다.';
+  const text = [e.resultText ?? '강호의 일은 그렇게 지나갔다.', reveal?.text]
+    .filter(Boolean)
+    .join('\n');
   useInboxStore.getState().add({
     id: `qresult-${questId}-${day}`,
     kind: 'report',

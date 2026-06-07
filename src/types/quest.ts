@@ -64,6 +64,8 @@ export interface QuestEventEffect {
   // 인격 6축 델타 (키=integrity·freedom·warmth·prudence·mercy·ambition).
   persona?: Partial<Record<string, number>>;
   stressDelta?: number; // 자책·멘탈 → 일정 기간 훈련 효율↓(stress)
+  // 구한 이의 정체가 드러남 — 평민/명문/사파 무작위 → 해당 문파 평판↑(+ 명문은 귀인 보상). docs/30.
+  revealRescue?: boolean;
   resultText?: string;
 }
 
