@@ -27,6 +27,8 @@ import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
 import { combatRating } from './combatPower';
+import { grantDivineElixir } from './elixirSystem';
+import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -540,6 +542,28 @@ function resolveQuest(active: ActiveQuest): Milestone {
       adjustSectRep(q.faction, 6);
       for (const id of present) adjustDiscipleRep(id, q.faction, 3);
     }
+  }
+
+  // 신품 영약 드랍 — 극험(extreme) 의뢰를 온전히/위기 끝에 완수 시 낮은 확률(운). 화경의 열쇠. docs/28 §5-1.
+  if (
+    q.grade === 'extreme' &&
+    (outcome === 'full' || outcome === 'crisis') &&
+    Math.random() < DIVINE_ELIXIR_DROP_RATE
+  ) {
+    grantDivineElixir();
+    const day = useTimeStore.getState().totalDay;
+    useInboxStore.getState().add({
+      id: `elixir-${q.id}-${day}`,
+      kind: 'report',
+      title: '신품 영약 — 천운',
+      preview: '극험의 의뢰 끝에 신품 영약 구전대환단을 얻었다.',
+      body: '극험의 의뢰 끝에 천운이 따랐다. 신품 영약 **구전대환단**이 사문에 들었다. 화경의 벽 앞에 선 제자가 폐관 중 복용하면, 그 마지막 벽을 넘을 수 있다 한다.',
+      priority: 'high',
+      createdAtDay: day,
+      read: false,
+      resolved: false,
+      payload: { domain: 'jianghu_news' },
+    });
   }
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;

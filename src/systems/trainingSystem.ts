@@ -60,6 +60,7 @@ import {
 } from '@/data/realm';
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
+import { consumeDivineElixir } from './elixirSystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
 
 // 무공 카테고리 1일치 체력·스트레스 (종목 데이터엔 없으므로 상수).
@@ -365,17 +366,28 @@ function applyRealmTick(
 
   if (atWall && wallTarget) {
     if (isSeclusion) {
-      // 폐관 중 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공).
-      const insight = d.insight;
-      const chance = enlightenmentChance(insight, wallTarget) + pity * ENLIGHTENMENT_PITY_STEP;
-      const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
-      if (guaranteed || Math.random() < chance) {
-        realm = wallTarget; // 돌파!
-        pity = 0;
-        petitioned = false;
-        cancelOverride(discipleId); // 폐관 해제 — 벽 넘음
+      if (wallTarget === 'hwagyeong') {
+        // 화경 벽 — 신품 영약이 깨달음의 열쇠. 보유 시 소모하고 돌파, 없으면 못 넘는다(오성·pity 무관). docs/28 §5-1.
+        if (consumeDivineElixir()) {
+          realm = wallTarget;
+          pity = 0;
+          petitioned = false;
+          cancelOverride(discipleId);
+        }
+        // 영약 없으면 벽 앞에 머문다 — 다음 폐관에 영약 갖춰 재도전.
       } else {
-        pity += 1;
+        // 절정·초절정 벽 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공).
+        const insight = d.insight;
+        const chance = enlightenmentChance(insight, wallTarget) + pity * ENLIGHTENMENT_PITY_STEP;
+        const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
+        if (guaranteed || Math.random() < chance) {
+          realm = wallTarget; // 돌파!
+          pity = 0;
+          petitioned = false;
+          cancelOverride(discipleId); // 폐관 해제 — 벽 넘음
+        } else {
+          pity += 1;
+        }
       }
     } else if (!petitioned) {
       // 벽인데 폐관 안 함 → 제자가 폐관 청원 (once per 벽).
