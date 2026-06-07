@@ -47,7 +47,7 @@ export interface Job {
   personaMax?: Partial<Record<keyof PersonalityTraits, number>>;
 }
 
-// 그레이박스 풀 (~18종). docs/28 §10 32종 중 대표. 수치 튜닝 대상.
+// 그레이박스 풀 (32종). docs/28 §3·§4 노선×직책 사다리를 채운다. 수치 튜닝 대상.
 export const JOB_POOL: readonly Job[] = [
   // ── 정점 ──────────────────────────────────────────────
   {
@@ -101,6 +101,30 @@ export const JOB_POOL: readonly Job[] = [
     personaMin: { prudence: 70 },
     personaMax: { ambition: 35 },
   },
+  {
+    id: 'sword-saint',
+    name: '검성(劍聖)',
+    tier: 'peak',
+    desc: '한 자루 검으로 강호를 가른 떠돌이 검의 정점.',
+    martial: { schools: ['sword'], minSeong: 9 },
+    personaMin: { freedom: 55 },
+  },
+  {
+    id: 'chivalrous-chief',
+    name: '의적 거두',
+    tier: 'peak',
+    desc: '천하의 의적을 거느린 거두. 약자의 하늘.',
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 8 },
+    personaMin: { integrity: 60, freedom: 55, mercy: 60 },
+  },
+  {
+    id: 'caravan-master',
+    name: '상단 총관',
+    tier: 'peak',
+    desc: '거대 상단의 모든 표행을 총괄한다.',
+    statReq: { guarding: 75, etiquette: 65, knowledge: 55 },
+    personaMax: { freedom: 35 },
+  },
   // ── 상위 ──────────────────────────────────────────────
   {
     id: 'caravan-guard-captain',
@@ -150,6 +174,40 @@ export const JOB_POOL: readonly Job[] = [
     martial: { schools: COMBAT_SCHOOLS, minSeong: 6 },
     personaMin: { integrity: 55, freedom: 50, mercy: 55 },
   },
+  {
+    id: 'blade-master',
+    name: '이름난 검객',
+    tier: 'upper',
+    desc: '강호에 이름을 떨친 떠돌이 검객.',
+    martial: { schools: ['sword'], minSeong: 7 },
+    personaMin: { freedom: 50 },
+  },
+  {
+    id: 'shadow-captain',
+    name: '밀정 두목',
+    tier: 'upper',
+    desc: '강호 곳곳에 눈과 귀를 거느린 밀정의 수장.',
+    statReq: { scouting: 60 },
+    martial: { schools: ['lightness'], minSeong: 5 },
+  },
+  {
+    id: 'daoist-priest',
+    name: '도가 명숙',
+    tier: 'upper',
+    desc: '도관을 이끄는 명망 있는 도사.',
+    statReq: { knowledge: 55 },
+    martial: { schools: ['qigong'], minSeong: 6 },
+    personaMin: { prudence: 60 },
+    personaMax: { ambition: 40 },
+  },
+  {
+    id: 'strategist',
+    name: '강호 책사',
+    tier: 'upper',
+    desc: '병법과 모략으로 정파를 떠받치는 책사.',
+    statReq: { knowledge: 75, formation: 60 },
+    personaMin: { prudence: 65, integrity: 50 },
+  },
   // ── 보통 ──────────────────────────────────────────────
   {
     id: 'escort-warrior',
@@ -181,6 +239,46 @@ export const JOB_POOL: readonly Job[] = [
     statReq: { guarding: 25 },
     personaMin: { mercy: 50 },
   },
+  {
+    id: 'bounty-hunter',
+    name: '현상금 사냥꾼',
+    tier: 'common',
+    desc: '수배자를 쫓아 강호를 떠도는 무인.',
+    statReq: { scouting: 40 },
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 5 },
+    personaMin: { freedom: 50 },
+  },
+  {
+    id: 'spy-scout',
+    name: '정탐꾼',
+    tier: 'common',
+    desc: '발 빠른 정보꾼. 소문과 길목을 읽는다.',
+    statReq: { scouting: 35 },
+  },
+  {
+    id: 'wandering-daoist',
+    name: '도사',
+    tier: 'common',
+    desc: '강호를 떠도는 도사.',
+    statReq: { knowledge: 35 },
+    martial: { schools: ['qigong'], minSeong: 4 },
+  },
+  {
+    id: 'roving-hero',
+    name: '의협',
+    tier: 'common',
+    desc: '불의를 보면 칼을 뽑는 떠돌이 협객.',
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 5 },
+    personaMin: { mercy: 50, freedom: 50 },
+  },
+  {
+    id: 'sect-warrior',
+    name: '정파 무사',
+    tier: 'common',
+    desc: '정파 문파에 몸담은 무사.',
+    martial: { schools: ['sword', 'fist', 'palm', 'staff'], minSeong: 4 },
+    personaMin: { integrity: 50 },
+  },
   // ── 한계 ──────────────────────────────────────────────
   {
     id: 'quack-doctor',
@@ -188,6 +286,22 @@ export const JOB_POOL: readonly Job[] = [
     tier: 'limited',
     desc: '어설픈 의술로 먹고산다.',
     statReq: { medicine: 12 },
+  },
+  {
+    id: 'petty-assassin',
+    name: '말단 살수',
+    tier: 'limited',
+    desc: '뒷골목 청부를 받는 이름 없는 살수.',
+    statReq: { scouting: 20 },
+    martial: { schools: ['sword', 'darkArts'], minSeong: 3 },
+    personaMax: { mercy: 45 },
+  },
+  {
+    id: 'gatekeeper',
+    name: '문지기',
+    tier: 'limited',
+    desc: '표국·문파의 문을 지키는 말단 무사.',
+    statReq: { guarding: 15 },
   },
   {
     id: 'town-idler',

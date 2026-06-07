@@ -73,6 +73,21 @@ export const JOB_ROUTE: Record<string, RouteId> = {
   'righteous-bandit': 'vigilante',
   wanderer: 'wanderer',
   'town-idler': 'commoner',
+  // ── 32종 확장(docs/28 §3) — 노선×직책 사다리 채움 ──
+  'sword-saint': 'wanderer',
+  'blade-master': 'wanderer',
+  'bounty-hunter': 'wanderer',
+  'chivalrous-chief': 'vigilante',
+  'roving-hero': 'vigilante',
+  'caravan-master': 'escort',
+  gatekeeper: 'escort',
+  'shadow-captain': 'shadow',
+  'spy-scout': 'shadow',
+  'daoist-priest': 'daoist',
+  'wandering-daoist': 'daoist',
+  strategist: 'righteous',
+  'sect-warrior': 'righteous',
+  'petty-assassin': 'assassin',
 };
 
 // 노선 → 연관 문파 id(factions.ts). 졸업 시 그 문파 평판↑(제자가 그 길에 든다). docs/30.

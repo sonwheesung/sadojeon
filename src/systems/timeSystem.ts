@@ -10,6 +10,7 @@ import type { Season } from '@/types/game';
 import { isMonthStart, monthOfYear, weekOfMonth } from './calendar';
 import { buildTickArtifacts } from './dailyLogSystem';
 import { tickCareers } from './careerSystem';
+import { runYoungTalentsTournament } from './tournamentSystem';
 import { tickReputationInfluence } from './reputationSystem';
 import { checkGraduations } from './graduationSystem';
 import { triggerDailyMoralEvent } from './moralEventSystem';
@@ -50,6 +51,8 @@ export function advanceTurn() {
     }
     // 졸업 제자 평생 궤적 한 해 진행(승급·좌절·전직·사망) → 강호 풍문. docs/28 §4.
     tickCareers();
+    // 용봉지회 — 또래 제자 전투력 겨룸(자격 제자 있을 때만) → 명성·풍문. docs/27 §5.
+    runYoungTalentsTournament();
     // 문파 평판 영향 — 맹우 후의·적대 자객. docs/30.
     tickReputationInfluence();
   }
