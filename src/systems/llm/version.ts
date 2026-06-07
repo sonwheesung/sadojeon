@@ -4,6 +4,6 @@
 //
 // 형식: 'YYYY-MM-DD.n' (같은 날 여러 번 바꾸면 n 증가).
 
-export const LLM_MODEL_ID = 'llama-3.2-3b-spinquant-q4';
+export const LLM_MODEL_ID = 'qwen3-1.7b-quantized';
 
-export const LLM_TUNING_VERSION = '2026-05-31.1';
+export const LLM_TUNING_VERSION = '2026-06-07.1';

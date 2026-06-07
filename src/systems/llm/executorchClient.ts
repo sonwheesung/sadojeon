@@ -1,9 +1,10 @@
-// react-native-executorch wrapper — Llama 3.2 3B SpinQuant 호출.
+// react-native-executorch wrapper — Qwen3 1.7B(양자화) 호출.
 //
 // 실제 API:
-//   import { LLMModule, LLAMA3_2_3B_SPINQUANT, isAvailable } from 'react-native-executorch';
-//   const llm = await LLMModule.fromModelName(LLAMA3_2_3B_SPINQUANT, onProgress);
+//   import { LLMModule, QWEN3_1_7B_QUANTIZED, isAvailable } from 'react-native-executorch';
+//   const llm = await LLMModule.fromModelName(QWEN3_1_7B_QUANTIZED, onProgress);
 //   const out = await llm.generate([{role:'user', content: prompt}]);
+// 모델 교체(Llama3.2 3B → Qwen3 1.7B): 한국어·JSON 준수 우수 + 폰 부담↓. 런타임 다운로드라 재빌드 불필요.
 //
 // 안전 정책:
 //   - 라이브러리는 dynamic require — 미설치/Web 환경에서도 앱이 죽지 않음
@@ -20,6 +21,7 @@ const TIMEOUT_MS = 30_000; // 첫 generate 는 모델 워밍업으로 더 걸릴
 // 시스템 프롬프트 — 매 generate 첫 메시지로 직접 주입.
 // configure({chatConfig}) 는 0.8.x 에서 적용 안 됨(executorch WARN) → role:'system' 메시지로 전달.
 const SYSTEM_PROMPT = [
+  '/no_think', // Qwen3 추론(thinking) 비활성 — <think> 출력 없이 바로 JSON.
   '너는 무협 양육 시뮬레이션의 효과 산출기다.',
   '사부의 선택이 제자·사문에 미친 효과를 부호 있는 정수 변동값으로 평가한다.',
   '반드시 effects 래퍼를 포함한 JSON 한 줄만 출력한다 — 예: {"effects":{"trust":-3}}.',
@@ -40,11 +42,12 @@ interface ExecutorchAPI {
       onDownloadProgress?: (p: number) => void,
     ) => Promise<LlmInstance>;
   };
-  LLAMA3_2_3B_SPINQUANT?: {
+  QWEN3_1_7B_QUANTIZED?: {
     modelName: string;
     modelSource: unknown;
     tokenizerSource: unknown;
     tokenizerConfigSource: unknown;
+    generationConfig?: unknown;
   };
   isAvailable?: boolean;
 }
@@ -73,7 +76,7 @@ const api: ExecutorchAPI | null = (() => {
     const m = require('react-native-executorch') as ExecutorchAPI;
     void m.isAvailable; // proxy getter 가 native 미링크 시 throw — 여기서 잡힘
     void m.LLMModule;
-    void m.LLAMA3_2_3B_SPINQUANT;
+    void m.QWEN3_1_7B_QUANTIZED;
     return m;
   } catch {
     if (typeof console !== 'undefined') {
@@ -95,7 +98,7 @@ export function currentModelId(): string {
 }
 
 export function isLlmAvailable(): boolean {
-  return Boolean(api?.isAvailable && api.LLMModule && api.LLAMA3_2_3B_SPINQUANT);
+  return Boolean(api?.isAvailable && api.LLMModule && api.QWEN3_1_7B_QUANTIZED);
 }
 
 export function isReady(): boolean {
@@ -136,7 +139,7 @@ export async function ensureLoaded(): Promise<boolean> {
   if (!settings.enabled) return false;
 
   const m = tryRequire();
-  if (!m?.LLMModule || !m.LLAMA3_2_3B_SPINQUANT) {
+  if (!m?.LLMModule || !m.QWEN3_1_7B_QUANTIZED) {
     settings.setLoadStatus('error', 'react-native-executorch 미설치 또는 네이티브 미빌드');
     return false;
   }
@@ -150,13 +153,13 @@ export async function ensureLoaded(): Promise<boolean> {
   loadingPromise = (async () => {
     try {
       const llm = await m.LLMModule!.fromModelName(
-        m.LLAMA3_2_3B_SPINQUANT!,
+        m.QWEN3_1_7B_QUANTIZED!,
         (progress: number) => {
           useLlmSettingsStore.getState().setDownloadProgress(progress);
         },
       );
       instance = llm;
-      loadedModelName = (m.LLAMA3_2_3B_SPINQUANT?.modelName as string) ?? LLM_MODEL_ID;
+      loadedModelName = (m.QWEN3_1_7B_QUANTIZED?.modelName as string) ?? LLM_MODEL_ID;
       useLlmSettingsStore.getState().setLoadStatus('ready');
       return true;
     } catch (e) {
