@@ -47,10 +47,13 @@ export const ONE_LINERS: OneLinerTemplate[] = [
 
   // 고민
   { id: 'w1', category: 'worry', body: '제 길이 정녕 이쪽인지 가끔 묻게 됩니다.', when: { ageMin: 12 } },
-  { id: 'w2', category: 'worry', body: '강호 소문을 듣다 보면 마음이 흔들립니다.', when: { ageMin: 12 } },
+  { id: 'w2', category: 'worry', body: '강호엔 제 또래가 벌써 이름을 냈다더군요. 저는 아직 산문 안인데...', when: { ageMin: 12 } },
   { id: 'w3', category: 'worry', body: '... 별것 아닙니다. 신경 쓰지 마십시오.', when: { trustMax: 40 } },
   { id: 'w4', category: 'worry', body: '사부님은 제 재능을 어떻게 보십니까.' },
-  { id: 'w5', category: 'worry', body: '... 가끔, 어두운 생각이 듭니다.', when: { darknessRiskMin: 'medium' } },
+  // 흑화 기미 — '어둠'을 라벨하지 않고 관찰 가능한 말·태도로만(feedback_hidden_game_state)
+  { id: 'w5', category: 'worry', body: '사부님... 강한 자가 약한 자를 누르는 것이, 정녕 그른 일입니까.', when: { darknessRiskMin: 'medium' } },
+  { id: 'w6', category: 'worry', body: '요즘은 검을 쥐면, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
+  { id: 'w7', category: 'worry', body: '... 그날 그자의 눈을, 아직도 잊지 못합니다.', when: { darknessRiskMin: 'high', hasEnemy: true } },
 ];
 
 // 한 마디 발화 컨텍스트 — 제자 현재 상태 스냅샷(oneLinerSystem 에서 산출).
