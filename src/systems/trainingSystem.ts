@@ -16,7 +16,8 @@ import {
   seongToStage,
 } from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
-import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { EFFICIENCY_MULTIPLIER, BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { currentAge } from './discipleCtx';
 import {
   BASE_MAX_STAMINA,
   findTrainingOption,
@@ -78,9 +79,27 @@ function learnMultiplier(art: MartialArt, d: Disciple): number {
   return EFFICIENCY_MULTIPLIER[d.efficiency?.[art.school] ?? '보통'];
 }
 
+// 외공(근골) 능력치 — 근력(외공 기둥)·체력(최대 체력). docs/28 §5-1.
+const BODY_STATS: readonly StatId[] = ['strength', 'endurance'];
+
+// 외공 나이 보정 — "근골은 어릴 때 다진다". 7~12세 폭발, 17세부터 급감. docs/28 §5-1.
+// → 어릴 때 몸 만들고(절정~초절정 외공), 자라선 무공 성·내공·깨달음 천착하는 양육 결.
+export function bodyAgeMultiplier(age: number): number {
+  if (age <= 12) return 6.0; // 각인기 — 근골 폭발
+  if (age <= 14) return 4.0;
+  if (age <= 16) return 2.4;
+  if (age <= 18) return 1.1; // 출도기 — 둔화
+  return 0.55; // 장성 후 — 근골은 거의 굳음
+}
+
 // 단련/비무공 능력치 학습 효율 — 영역 효율맵. 미기재 영역 = '보통'. docs/28 §2.
+// 외공(근력·체력)은 무공보다 노력 의존(압축 효율) + 어릴 때 강함(나이 보정). docs/28 §5-1.
 function aptitudeMultiplier(d: Disciple, statId: StatId): number {
-  return EFFICIENCY_MULTIPLIER[d.efficiency?.[statId] ?? '보통'];
+  const tier = d.efficiency?.[statId] ?? '보통';
+  if (BODY_STATS.includes(statId)) {
+    return BODY_EFFICIENCY_MULTIPLIER[tier] * bodyAgeMultiplier(currentAge(d));
+  }
+  return EFFICIENCY_MULTIPLIER[tier];
 }
 
 // 무공 카테고리에서 진행할 무공 — 일일 선택 > 메인 > 첫 무공.

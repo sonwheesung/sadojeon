@@ -12,6 +12,17 @@ export const EFFICIENCY_MULTIPLIER: Record<EfficiencyTier, number> = {
   상극: 0.04,
 };
 
+// 외공(근골 — 근력·체력) 전용 압축 효율. docs/28 §2·§5-1.
+// 외공은 무공 갈래보다 "노력(어릴 때 단련)"에 좌우 — 재능 페널티를 완만히(상극도 0 아님).
+// → 보통 재능도 어릴 때 몸에 투자하면 절정~초절정 외공(근력 50~65)에 닿는다.
+export const BODY_EFFICIENCY_MULTIPLIER: Record<EfficiencyTier, number> = {
+  특화: 1.0,
+  상성: 0.8,
+  보통: 0.62,
+  미숙: 0.35,
+  상극: 0.18,
+};
+
 export const EFFICIENCY_ORDER: readonly EfficiencyTier[] = [
   '특화',
   '상성',

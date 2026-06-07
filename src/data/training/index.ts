@@ -49,7 +49,7 @@ export const TRAINING_OPTIONS: readonly TrainingOption[] = [
     staminaDelta: -22,
     stressDelta: 10,
     grantsStat: 'endurance',
-    expBase: 16,
+    expBase: 18, // 외공(체력) — 어릴 때 단련 효과 큼(나이 보정, trainingSystem). docs/28 §5-1
     lingering: 0.3,
   },
   {
@@ -59,7 +59,7 @@ export const TRAINING_OPTIONS: readonly TrainingOption[] = [
     staminaDelta: -14,
     stressDelta: 7,
     grantsStat: 'strength',
-    expBase: 12,
+    expBase: 14, // 외공(근력) — 어릴 때 단련 효과 큼(나이 보정). docs/28 §5-1
     lingering: 0.1,
   },
 
