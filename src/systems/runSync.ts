@@ -54,7 +54,12 @@ function snapshot(): { payload: RunWrite; disciples: RunDiscipleRecord[] } {
 }
 
 // 현재 회차를 현재 슬롯에 저장 (upsert). 진행·시작 시 호출.
-export async function saveCurrentRun(): Promise<void> {
+// saveSlot 은 SELECT→INSERT 라 원자적이지 않고, 자식 슬라이스 저장은 delete+insert 라
+// 동시 호출이 겹치면 충돌(unique 위반·부분쓰기)이 난다. 빠른 진행(advanceTurn)과
+// 서신함 해소가 autosave 를 연달아 부르므로, 모든 저장을 모듈 전역 큐로 직렬화한다.
+let saveQueue: Promise<void> = Promise.resolve();
+
+async function doSaveCurrentRun(): Promise<void> {
   if (!useMasterStore.getState().master) return; // 미시작
   const { payload, disciples } = snapshot();
   const runId = await runs.saveSlot(payload, disciples);
@@ -63,8 +68,24 @@ export async function saveCurrentRun(): Promise<void> {
   }
 }
 
+export function saveCurrentRun(): Promise<void> {
+  // 이전 저장의 성공·실패와 무관하게 이어 붙인다(체인이 끊기지 않게).
+  const next = saveQueue.then(doSaveCurrentRun, doSaveCurrentRun);
+  // 큐 자체는 다음 호출이 이어받도록 보관하되, 거부는 삼켜 unhandled rejection 을 막는다.
+  saveQueue = next.catch(() => {});
+  return next;
+}
+
+// 자동(silent) 저장 on/off — 헤드리스 고속 진행에서 매일 저장이 쌓이는 쓰기 증폭을
+// 막기 위한 게이트. 앱 기본 ON. 명시적 saveCurrentRun() 에는 영향 없다.
+let autoSaveEnabled = true;
+export function setAutoSaveEnabled(enabled: boolean): void {
+  autoSaveEnabled = enabled;
+}
+
 // 진행 중 fire-and-forget 저장 — 실패해도 게임 흐름 안 막음.
 export function saveCurrentRunSilently(): void {
+  if (!autoSaveEnabled) return;
   saveCurrentRun().catch((e) => {
     if (typeof console !== 'undefined') console.warn('[runSync] 저장 실패', e);
   });

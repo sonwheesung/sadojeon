@@ -11,7 +11,7 @@ import { useGameStore } from '@/stores/gameStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, Milestone } from '@/types';
+import type { Disciple, DiscipleStatus, Milestone } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 
 // 적합도 확률 → 관찰 풍경(숨겨진 변수 직접 노출 X, feedback_hidden_game_state).
@@ -144,11 +144,16 @@ export function checkGraduations(): void {
     usePendingStore.getState().pushMilestones(newMilestones);
   }
 
-  // 모든 제자가 활동 종료(graduated/departed/...) 면 회차 종결.
-  const stillActive = ds.order
-    .map((id) => ds.disciples[id])
-    .some((d) => d && d.status === 'training');
-  if (!stillActive && ds.order.length > 0) {
+  // 회차 종결 = 모든 제자가 **영구히** 사문을 떠났을 때(졸업/하산).
+  // questing·injured·resting·meditating 은 회복 가능한 상태라 종결 사유가 아니다.
+  // (하루 전원이 의뢰·요양 중이라고 회차가 끝나면 안 됨.)
+  const TERMINAL_STATUSES: DiscipleStatus[] = ['graduated', 'departed'];
+  const allGone =
+    ds.order.length > 0 &&
+    ds.order
+      .map((id) => ds.disciples[id])
+      .every((d) => d != null && TERMINAL_STATUSES.includes(d.status));
+  if (allGone) {
     useGameStore.getState().setPhase('ended');
   }
 }
