@@ -3,6 +3,7 @@
 // 위험도(risk)는 매주 갱신(흑화 면담·이벤트 게이트 구동), 단계(level)는 압력 높을 때만 천천히.
 // 노출은 라벨이 아니라 관찰 가능한 풍문으로(feedback_hidden_game_state).
 
+import { findMartialArt } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
@@ -20,6 +21,10 @@ export function darknessScore(d: Disciple, righteousness: number): number {
   s += Math.max(0, -righteousness) * 1.2; // 사문이 무도(−)할수록
   s += d.darknessLevel * 8; // 이미 어두우면 가속
   s += Math.max(0, d.personality.ambition - 70) * 0.3; // 과한 야망
+  // 마공의 대가 — 마도 무공을 익히고 깊을수록 마음이 물든다(주화입마·흑화). docs/26 §5-3.
+  for (const a of d.martialArts) {
+    if (findMartialArt(a.artId)?.path === 'ma') s += 10 + a.seong;
+  }
   return clamp(Math.round(s), 0, 100);
 }
 
