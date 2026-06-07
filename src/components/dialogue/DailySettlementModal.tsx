@@ -1,6 +1,8 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import type { LlmDebugEntry } from '@/stores/pendingStore';
 import { triggerPostSettlement } from '@/systems/timeSystem';
@@ -36,6 +38,10 @@ export function DailySettlementModal() {
   const onClose = () => {
     clearStore();
     triggerPostSettlement();
+    // 진행 결과 사문함에 응답 필수(이벤트·면담·의뢰제안) 항목이 생겼으면 바로 사문함으로 이동.
+    if (useInboxStore.getState().decisionPendingCount() > 0) {
+      router.push('/inbox');
+    }
   };
 
   // 정산 표시 시 최소 시간 후 타이머 완료.

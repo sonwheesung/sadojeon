@@ -59,7 +59,6 @@ export default function InboxScreen() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
   const markRead = useInboxStore((s) => s.markRead);
-  const reset = useInboxStore((s) => s.reset);
   const confirm = useConfirm();
   const [filter, setFilter] = useState<FilterKey>('all');
 
@@ -95,16 +94,6 @@ export default function InboxScreen() {
     unread.forEach((it) => markRead(it.id));
   };
 
-  const onClearAll = async () => {
-    const ok = await confirm({
-      title: '전체 삭제',
-      message: '모든 서신을 삭제합니다. 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
-      tone: 'danger',
-    });
-    if (ok) reset();
-  };
-
   const onPressItem = (it: InboxItem) => {
     if (!it.read) markRead(it.id);
     router.push(`/inbox/${encodeURIComponent(it.id)}` as Href);
@@ -113,7 +102,7 @@ export default function InboxScreen() {
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
-        <Header onMarkAllRead={onMarkAllRead} onClearAll={onClearAll} />
+        <Header onMarkAllRead={onMarkAllRead} />
         <FilterTabs current={filter} onChange={setFilter} decisionCount={decisionCount} />
         <ScrollView
           style={styles.body}
@@ -140,13 +129,7 @@ export default function InboxScreen() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function Header({
-  onMarkAllRead,
-  onClearAll,
-}: {
-  onMarkAllRead: () => void;
-  onClearAll: () => void;
-}) {
+function Header({ onMarkAllRead }: { onMarkAllRead: () => void }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -176,14 +159,6 @@ function Header({
           style={styles.headerAction}
         >
           <Text style={styles.headerActionLabel}>모두 읽음</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="전체 삭제"
-          onPress={onClearAll}
-          style={styles.headerAction}
-        >
-          <Text style={styles.headerActionLabel}>전체 삭제</Text>
         </Pressable>
       </View>
     </View>

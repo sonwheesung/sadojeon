@@ -88,7 +88,7 @@ const PRIORITY_LABEL: Record<InboxItem['priority'], string> = {
 export default function InboxDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useInboxStore((s) => s.items.find((it) => it.id === id));
-  const markRead = useInboxStore((s) => s.markRead);
+  const remove = useInboxStore((s) => s.remove);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -112,8 +112,8 @@ export default function InboxDetailScreen() {
   const onRespond = async () => {
     if (busy) return;
     if (!respondable) {
-      // 읽기 전용 항목 — 확인만.
-      markRead(item.id);
+      // 읽기 전용 항목 — 확인 = 처리 = 삭제(삭제 버튼 없음, 적체 방지).
+      remove(item.id);
       router.back();
       return;
     }
