@@ -6,8 +6,9 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, DarknessLevel, PersonalityTraits } from '@/types';
+import type { Disciple, DarknessLevel } from '@/types';
 import { buildDiscipleCtx } from './discipleCtx';
+import { shiftPersona } from './personaShift';
 import { applyAlignmentReputation } from './reputationSystem';
 
 // 면담은 한 마디보다 무겁다 — 낮은 확률. (상황 매칭까지 통과해야 실제 발동)
@@ -27,7 +28,7 @@ export function triggerDailyMeeting(): void {
   const disciple = active[Math.floor(Math.random() * active.length)];
   const others = active.filter((d) => d.id !== disciple.id);
   const ctx = buildDiscipleCtx(disciple, others);
-  const tmpl = pickContextualMeeting(ctx);
+  const tmpl = pickContextualMeeting(ctx, disciple.id); // 제자 전용 + 범용
   if (!tmpl) return; // 지금 상태에 맞는 면담 없음
 
   const body = fillMeetingBody(tmpl.body, ctx);
@@ -54,11 +55,8 @@ export function applyMeetingChoice(discipleId: string, eff: MeetingEffect): void
   if (!d) return;
 
   if (eff.persona) {
-    const persona: PersonalityTraits = { ...d.personality };
-    for (const k of Object.keys(eff.persona) as (keyof PersonalityTraits)[]) {
-      persona[k] = Math.max(1, Math.min(100, persona[k] + (eff.persona[k] ?? 0)));
-    }
-    ds.update(discipleId, { personality: persona });
+    // 나이·관성 반영(평면 X). docs/28 §6.
+    ds.update(discipleId, { personality: shiftPersona(d, eff.persona) });
   }
   if (eff.trust) ds.adjustTrust(discipleId, eff.trust);
   if (eff.darkness) {

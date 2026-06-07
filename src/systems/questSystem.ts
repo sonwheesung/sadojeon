@@ -25,6 +25,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
+import { shiftPersona } from './personaShift';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -317,12 +318,7 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
       const d = ds.disciples[id];
       if (!d) continue;
       if (e.persona) {
-        const persona: PersonalityTraits = { ...d.personality };
-        for (const k of Object.keys(e.persona)) {
-          const kk = k as keyof PersonalityTraits;
-          persona[kk] = Math.max(1, Math.min(100, persona[kk] + (e.persona[k] ?? 0)));
-        }
-        ds.update(id, { personality: persona });
+        ds.update(id, { personality: shiftPersona(d, e.persona as Partial<PersonalityTraits>) });
       }
       if (e.stressDelta) ds.adjustStress(id, e.stressDelta);
     }
@@ -551,15 +547,10 @@ function resolveQuest(active: ActiveQuest): Milestone {
       if (stat) ds.addStatExp(id, stat, Math.max(1, Math.round(35 * scale.growth)));
       else if (isMartial) gainMainSeongExp(d, Math.max(1, Math.round(60 * scale.growth)));
     }
-    // 인격 변화.
-    const deltas = personaDeltas(q, outcome);
-    const persona: PersonalityTraits = { ...d.personality };
-    for (const k of Object.keys(deltas) as (keyof PersonalityTraits)[]) {
-      persona[k] = Math.max(1, Math.min(100, persona[k] + (deltas[k] ?? 0)));
-    }
+    // 인격 변화 — 나이·관성 반영. docs/28 §6.
     const patch: Partial<Disciple> = {
       fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame * mult),
-      personality: persona,
+      personality: shiftPersona(d, personaDeltas(q, outcome)),
     };
     // 상태 — 재난 희생자=상실, 재난 생존/위기 희생자=부상, 그 외 복귀.
     if (outcome === 'disaster' && i === victimIdx) {

@@ -16,6 +16,7 @@ import type {
 } from '@/types';
 import { applyLegacyShift, legacyAxisValue } from './personalityCompat';
 import { applyAlignmentReputation } from '../reputationSystem';
+import { shiftPersona } from '../personaShift';
 
 const DARKNESS_RISK_ORDER: readonly Disciple['darknessRisk'][] = [
   'low',
@@ -103,13 +104,19 @@ function applyPerpetratorEffect(
     patch.darknessRisk = bumpDarknessRisk(d.darknessRisk, eff.darknessRiskBump);
   }
   if (eff.personalityShift) {
-    const next: PersonalityTraits = { ...d.personality };
+    // 구 5축 조건 → 6축 매핑(브릿지)으로 raw 6축 델타 산출 후, 나이·관성 반영(shiftPersona). docs/28 §6.
+    const tmp: PersonalityTraits = { ...d.personality };
     for (const k of Object.keys(eff.personalityShift) as LegacyPersonalityAxis[]) {
       const delta = eff.personalityShift[k];
       if (delta == null) continue;
-      applyLegacyShift(next, k, delta); // 구 5축 조건 → 6축 모델 매핑 적용
+      applyLegacyShift(tmp, k, delta);
     }
-    patch.personality = next;
+    const raw: Partial<Record<keyof PersonalityTraits, number>> = {};
+    for (const ax of Object.keys(tmp) as (keyof PersonalityTraits)[]) {
+      const diff = tmp[ax] - d.personality[ax];
+      if (diff) raw[ax] = diff;
+    }
+    patch.personality = shiftPersona(d, raw);
   }
   if (eff.noteAppend) {
     patch.notes = [...d.notes, interpolate(eff.noteAppend, perpName, siblingName)];
