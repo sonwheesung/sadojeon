@@ -1,5 +1,6 @@
 // 도덕적 갈등 이벤트 — 유형 풀 (archetype tier).
-// 가해자 성격 5축(diligence·pride·loyalty·curiosity·empathy)에 따라 발화.
+// 가해자 인격 6축(integrity·freedom·warmth·prudence·mercy·ambition)에 따라 발화. docs/28 §6.
+//   (구 5축 loyalty=의무는 freedom 반대극으로 표현: 의리↑ = freedom↓.)
 // 같은 카테고리(occult, defiance 등)지만 그 성격이라야 자연스러운 결의 사건.
 //
 // 조건은 PersonalityTraits 1~100 스케일. requirePersonality 의 각 축은 "≥ 임계".
@@ -16,7 +17,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 6,
       minYearInSect: 3,
-      requirePersonality: { pride: 70, curiosity: 50 },
+      requirePersonality: { ambition: 70, freedom: 50 },
     },
     scenario:
       '{sibling}을 위한 직강 시간이 시작되려는 참,\n' +
@@ -30,7 +31,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'punish',
         label: '"순서를 어긴다. 한 달 직강 권리 박탈."',
-        perpetrator: { trustDelta: -4, personalityShift: { pride: -6 } },
+        perpetrator: { trustDelta: -4, personalityShift: { ambition: -6 } },
         atmosphere: { righteousnessDelta: 1, unityDelta: 1 },
       },
       {
@@ -43,7 +44,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"{sibling}의 직강이 끝난 후 너도 와라. 순서를 지키며 묻자."',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { loyalty: 4 },
+          personalityShift: { freedom: -4 },
         },
         master: { insightDelta: 1 },
         atmosphere: { unityDelta: 2 },
@@ -51,12 +52,12 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '(둘 다 함께 가르친다. 사부가 두 배로 바빠진다.)',
-        perpetrator: { trustDelta: 2, personalityShift: { pride: 6 } },
+        perpetrator: { trustDelta: 2, personalityShift: { ambition: 6 } },
         atmosphere: { unityDelta: -2 },
         cascade: [
           {
             kind: 'shaken',
-            triggerCondition: { personality: { loyalty: 70 } },
+            triggerCondition: { forbidPersonality: { freedom: 30 } },
             trustDelta: -1,
             noteAppend: '사부가 순서를 지키지 않는 듯 보였다.',
           },
@@ -65,7 +66,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     ],
   },
 
-  // ── 외로움형 (empathy↓ + loyalty↓) ───────────────────────────
+  // ── 외로움형 (자비↓ + 자유↑) ───────────────────────────
   // 마을 차방에서 낯선 사파 인물과 차 한 잔.
   {
     id: 'a-lonely-tea',
@@ -74,7 +75,8 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 5,
       minYearInSect: 4,
-      forbidPersonality: { loyalty: 50, empathy: 50 },
+      requirePersonality: { freedom: 50 },
+      forbidPersonality: { mercy: 50 },
     },
     scenario:
       '마을 차방에서 동문이 {name}을 보았다.\n' +
@@ -101,7 +103,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"왜 그 자리에 앉았느냐. 사문 안에서 결을 나눌 자가 없느냐."',
         perpetrator: {
           trustDelta: 4,
-          personalityShift: { loyalty: 6, empathy: 4 },
+          personalityShift: { freedom: -6, mercy: 4 },
           darknessRiskBump: -3,
           noteAppend: '사부가 외로움을 들어주었다.',
         },
@@ -127,7 +129,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 5,
       minYearInSect: 4,
-      requirePersonality: { pride: 90 },
+      requirePersonality: { ambition: 90 },
     },
     scenario:
       '"사부의 가르침은 한 결이 너무 느립니다."\n' +
@@ -141,7 +143,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'punish',
         label: '"사부를 두 명 두는 자는 사문에 둘 수 없다. 한 계절 무공 정지."',
-        perpetrator: { trustDelta: -5, personalityShift: { pride: -6 } },
+        perpetrator: { trustDelta: -5, personalityShift: { ambition: -6 } },
         master: { authorityDelta: 1 },
         atmosphere: { righteousnessDelta: 1 },
       },
@@ -155,7 +157,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"빠른 길을 원하느냐. 너만의 직강을 마련해 주마."',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
         },
         master: { insightDelta: 1, authorityDelta: -1 },
         atmosphere: { unityDelta: 2 },
@@ -163,7 +165,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '(못 본 척한다. 사부의 자리가 흔들린다.)',
-        perpetrator: { trustDelta: 1, personalityShift: { pride: 6 } },
+        perpetrator: { trustDelta: 1, personalityShift: { ambition: 6 } },
         master: { authorityDelta: -2, reputationDelta: -1 },
         atmosphere: { unityDelta: -2, righteousnessDelta: -1 },
       },
@@ -179,8 +181,8 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 4,
       minYearInSect: 4,
-      requirePersonality: { diligence: 70 },
-      forbidPersonality: { curiosity: 50 },
+      requirePersonality: { integrity: 70 },
+      forbidPersonality: { freedom: 50 },
     },
     scenario:
       '사부가 새 결의 응용 수련을 가르치자 {name}이 단호히 답했다.\n' +
@@ -206,7 +208,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"옛 결을 버리라는 게 아니다. 결 위에 결을 쌓아라."',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { curiosity: 4 },
+          personalityShift: { freedom: 4 },
           noteAppend: '사부의 한 마디로 결의 폭이 한 결 넓어졌다.',
         },
         master: { insightDelta: 1 },
@@ -215,7 +217,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '"네 결대로 가라." (가르침을 멈춘다.)',
-        perpetrator: { trustDelta: 2, personalityShift: { diligence: 4 } },
+        perpetrator: { trustDelta: 2, personalityShift: { integrity: 4 } },
         atmosphere: { unityDelta: -1 },
       },
     ],
@@ -230,7 +232,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 5,
       minYearInSect: 3,
-      requirePersonality: { curiosity: 70 },
+      requirePersonality: { freedom: 70 },
     },
     scenario:
       '{name}의 침소 베개 밑에서 낯선 비급이 나왔다.\n' +
@@ -257,7 +259,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"호기심은 잘못이 아니다. 다음엔 내게 먼저 보여라." 함께 비급을 펼친다.',
         perpetrator: {
           trustDelta: 4,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
           darknessRiskBump: -3,
         },
         master: { insightDelta: 2 },
@@ -282,7 +284,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: {
       weight: 4,
       minYearInSect: 2,
-      forbidPersonality: { empathy: 30 },
+      forbidPersonality: { mercy: 30 },
     },
     scenario:
       '훈련장에서 {sibling}이 발을 헛디뎌 갈빗대를 다쳤다.\n' +
@@ -295,20 +297,20 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'punish',
         label: '"동문의 결을 외면한 자는 사문에 둘 수 없다." 책망과 처분.',
-        perpetrator: { trustDelta: -4, personalityShift: { empathy: 4 } },
+        perpetrator: { trustDelta: -4, personalityShift: { mercy: 4 } },
         atmosphere: { righteousnessDelta: 2, unityDelta: -1 },
       },
       {
         tone: 'seclusion',
         label: '"폐관에서 사람의 결을 다시 보아라."',
-        perpetrator: { trustDelta: -2, personalityShift: { empathy: 4 } },
+        perpetrator: { trustDelta: -2, personalityShift: { mercy: 4 } },
       },
       {
         tone: 'admonish',
         label: '"{sibling} 앞에서 사과해라. 그리고 며칠 그를 돌봐라."',
         perpetrator: {
           trustDelta: 2,
-          personalityShift: { empathy: 8 },
+          personalityShift: { mercy: 8 },
           noteAppend: '{sibling}을 직접 돌보았다.',
         },
         master: { insightDelta: 1 },
@@ -317,7 +319,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '(다친 사람만 따로 챙긴다. {name}에게는 말하지 않는다.)',
-        perpetrator: { trustDelta: 1, personalityShift: { empathy: -6 } },
+        perpetrator: { trustDelta: 1, personalityShift: { mercy: -6 } },
         atmosphere: { righteousnessDelta: -2, unityDelta: -2 },
       },
     ],

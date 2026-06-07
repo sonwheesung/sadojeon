@@ -10,12 +10,12 @@
 import type { MoralEventTemplate } from '@/types';
 
 export const EARLY_MORAL_EVENTS: MoralEventTemplate[] = [
-  // 1. 꾀병 — 성실한 아이는 제외(forbid diligence>50). 게으른 결의 아이가 수련을 회피.
+  // 1. 꾀병 — 성실한 아이는 제외(forbid integrity>50). 게으른 결의 아이가 수련을 회피.
   {
     id: 'early-feign-sick',
     tier: 'archetype',
     category: 'idleness',
-    trigger: { weight: 9, maxYearInSect: 3, forbidPersonality: { diligence: 50 } },
+    trigger: { weight: 9, maxYearInSect: 3, forbidPersonality: { integrity: 50 } },
     scenario:
       '아침 수련 시간, {name}이 배를 움켜쥐고 이불 속에서 나오지 않는다.\n' +
       '"배가… 너무 아파요. 오늘은 도저히…"\n' +
@@ -30,12 +30,12 @@ export const EARLY_MORAL_EVENTS: MoralEventTemplate[] = [
   // ── 고자질 3종 — 같은 "일러바치기"라도 심리가 다르다. 각 축 단독 게이트.
   //    {sibling} = 일러바침 당한 동문(엔진이 채움).
 
-  // 2-A. 배신형 — 의리 낮은 아이(forbid loyalty>50). 같이 어울리다가 제 자리만 챙겨 동문을 판다.
+  // 2-A. 배신형 — 의리 낮은(=자유 높은) 아이(require freedom≥50). 같이 어울리다가 제 자리만 챙겨 동문을 판다.
   {
     id: 'early-tattle-betray',
     tier: 'archetype',
     category: 'tattle',
-    trigger: { weight: 7, maxYearInSect: 3, forbidPersonality: { loyalty: 50 } },
+    trigger: { weight: 7, maxYearInSect: 3, requirePersonality: { freedom: 50 } },
     scenario:
       '조금 전까지 {sibling}과 어울려 마당을 뛰놀던 {name}이, 사부가 들어서자 쪼르르 달려왔다.\n' +
       '"사부님, {sibling}이 아까 수련을 빼먹고 놀았어요. 저는 시키는 대로 했고요."\n' +
@@ -47,12 +47,12 @@ export const EARLY_MORAL_EVENTS: MoralEventTemplate[] = [
     choices: [], // TODO(사용자): 4선택
   },
 
-  // 2-B. 냉담형 — 공감 낮은 아이(forbid empathy>50). 동문이 곤란한데 사정 헤아림 없이 사실대로 고한다.
+  // 2-B. 냉담형 — 공감 낮은 아이(forbid mercy>50). 동문이 곤란한데 사정 헤아림 없이 사실대로 고한다.
   {
     id: 'early-tattle-cold',
     tier: 'archetype',
     category: 'tattle',
-    trigger: { weight: 7, maxYearInSect: 3, forbidPersonality: { empathy: 50 } },
+    trigger: { weight: 7, maxYearInSect: 3, forbidPersonality: { mercy: 50 } },
     scenario:
       '{sibling}이 깨진 항아리 앞에서 어쩔 줄 몰라 발을 동동 구르고 있을 때,\n' +
       '{name}은 곁에서 가만히 지켜보다 사부에게 곧장 걸어왔다.\n' +
@@ -64,12 +64,12 @@ export const EARLY_MORAL_EVENTS: MoralEventTemplate[] = [
     choices: [], // TODO(사용자): 4선택
   },
 
-  // 2-C. 과시형 — 자존 높은 아이(require pride>50). 묻지도 않았는데 잘잘못을 읊으며 제 행실을 돋보이려 한다.
+  // 2-C. 과시형 — 자존 높은 아이(require ambition>50). 묻지도 않았는데 잘잘못을 읊으며 제 행실을 돋보이려 한다.
   {
     id: 'early-tattle-show',
     tier: 'archetype',
     category: 'tattle',
-    trigger: { weight: 7, maxYearInSect: 3, requirePersonality: { pride: 50 } },
+    trigger: { weight: 7, maxYearInSect: 3, requirePersonality: { ambition: 50 } },
     scenario:
       '묻지도 않았는데 {name}이 사부 앞에 서서 또박또박 고한다.\n' +
       '"{sibling}은 늦잠을 잤고, 누구는 청소를 빼먹었어요. 저는 다 지켰고요."\n' +

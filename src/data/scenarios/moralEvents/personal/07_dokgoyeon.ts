@@ -59,7 +59,7 @@ export const DOKGOYEON_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 5,
           darknessRiskBump: -5,
-          personalityShift: { loyalty: 6, empathy: 4 },
+          personalityShift: { freedom: -6, mercy: 4 },
           noteAppend: '사부가 가문 사연을 들어주었다 — 복수의 무게가 한 결 풀렸다.',
         },
         master: { insightDelta: 2 },
@@ -105,7 +105,7 @@ export const DOKGOYEON_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: -4,
           darknessRiskBump: -3,
-          personalityShift: { pride: -4 },
+          personalityShift: { ambition: -4 },
           noteAppend: '가문의 명예를 들먹인 사부의 한 마디에 깊이 흔들렸다.',
         },
         atmosphere: { righteousnessDelta: 2 },
@@ -123,7 +123,7 @@ export const DOKGOYEON_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 5,
           darknessRiskBump: -4,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
           noteAppend: '사부가 함께 사과하고 정보를 짚어주었다.',
         },
         master: { insightDelta: 2, reputationDelta: 1 },
@@ -186,7 +186,7 @@ export const DOKGOYEON_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 6,
           darknessRiskBump: -7,
-          personalityShift: { loyalty: 8, pride: -4 },
+          personalityShift: { freedom: -8, ambition: -4 },
           noteAppend: '사부가 가전 검법 복원을 직접 약속했다 — 결의 길이 다시 정의로 향했다.',
         },
         master: { insightDelta: 3, reputationDelta: 1 },

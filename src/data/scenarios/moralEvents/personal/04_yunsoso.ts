@@ -60,7 +60,7 @@ export const YUNSOSO_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 6,
           darknessRiskBump: -5,
-          personalityShift: { empathy: 6, loyalty: 4 },
+          personalityShift: { mercy: 6, freedom: -4 },
           noteAppend: '사부가 트라우마를 들어주었다 — 의심의 무게가 한 결 가벼워졌다.',
         },
         master: { insightDelta: 3 },
@@ -133,7 +133,7 @@ export const YUNSOSO_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 5,
           darknessRiskBump: -6,
-          personalityShift: { empathy: 8 },
+          personalityShift: { mercy: 8 },
           noteAppend: '사부의 중재로 두 사람의 결이 처음으로 마주섰다.',
         },
         master: { insightDelta: 3, reputationDelta: 1 },
@@ -201,7 +201,7 @@ export const YUNSOSO_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 5,
           darknessRiskBump: -5,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
           noteAppend: '사부가 살수조직 정보를 함께 모으겠다 약속했다 — 결의 길이 정의로 향했다.',
         },
         master: { insightDelta: 2, reputationDelta: 1 },

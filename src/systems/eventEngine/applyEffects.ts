@@ -8,13 +8,11 @@ import type {
   CascadeEffect,
   Disciple,
   EventEffects,
-  LegacyPersonalityAxis,
-  LegacyPersonalityMap,
   MasterEffect,
   PerpetratorEffect,
+  PersonaMap,
   PersonalityTraits,
 } from '@/types';
-import { applyLegacyShift, legacyAxisValue } from './personalityCompat';
 import { applyAlignmentReputation } from '../reputationSystem';
 import { shiftPersona } from '../personaShift';
 
@@ -45,22 +43,22 @@ function isActive(d: Disciple): boolean {
   return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
 }
 
-function meetsFloor(d: Disciple, req?: LegacyPersonalityMap): boolean {
+function meetsFloor(d: Disciple, req?: PersonaMap): boolean {
   if (!req) return true;
-  for (const k of Object.keys(req) as LegacyPersonalityAxis[]) {
+  for (const k of Object.keys(req) as (keyof PersonalityTraits)[]) {
     const v = req[k];
     if (v == null) continue;
-    if (legacyAxisValue(d.personality, k) < v) return false;
+    if (d.personality[k] < v) return false;
   }
   return true;
 }
 
-function meetsCeiling(d: Disciple, forb?: LegacyPersonalityMap): boolean {
+function meetsCeiling(d: Disciple, forb?: PersonaMap): boolean {
   if (!forb) return true;
-  for (const k of Object.keys(forb) as LegacyPersonalityAxis[]) {
+  for (const k of Object.keys(forb) as (keyof PersonalityTraits)[]) {
     const v = forb[k];
     if (v == null) continue;
-    if (legacyAxisValue(d.personality, k) > v) return false;
+    if (d.personality[k] > v) return false;
   }
   return true;
 }
@@ -104,19 +102,8 @@ function applyPerpetratorEffect(
     patch.darknessRisk = bumpDarknessRisk(d.darknessRisk, eff.darknessRiskBump);
   }
   if (eff.personalityShift) {
-    // 구 5축 조건 → 6축 매핑(브릿지)으로 raw 6축 델타 산출 후, 나이·관성 반영(shiftPersona). docs/28 §6.
-    const tmp: PersonalityTraits = { ...d.personality };
-    for (const k of Object.keys(eff.personalityShift) as LegacyPersonalityAxis[]) {
-      const delta = eff.personalityShift[k];
-      if (delta == null) continue;
-      applyLegacyShift(tmp, k, delta);
-    }
-    const raw: Partial<Record<keyof PersonalityTraits, number>> = {};
-    for (const ax of Object.keys(tmp) as (keyof PersonalityTraits)[]) {
-      const diff = tmp[ax] - d.personality[ax];
-      if (diff) raw[ax] = diff;
-    }
-    patch.personality = shiftPersona(d, raw);
+    // 6축 raw 델타에 나이·관성 반영(shiftPersona). docs/28 §6.
+    patch.personality = shiftPersona(d, eff.personalityShift);
   }
   if (eff.noteAppend) {
     patch.notes = [...d.notes, interpolate(eff.noteAppend, perpName, siblingName)];

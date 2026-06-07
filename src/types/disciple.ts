@@ -42,10 +42,9 @@ export interface PersonalityTraits {
   ambition: number; // 야망 (↔평온)
 }
 
-// 구 5축 시나리오 조건 호환 — moralEvent 데이터가 아직 이 이름을 쓴다.
-// 평가기가 6축 값으로 매핑(personalityCompat). 추후 시나리오 6축 재작성 시 제거.
-export type LegacyPersonalityAxis = 'diligence' | 'pride' | 'loyalty' | 'curiosity' | 'empathy';
-export type LegacyPersonalityMap = Partial<Record<LegacyPersonalityAxis, number>>;
+// 인격 6축 부분 맵 — 시나리오 트리거 조건(require/forbid)·인격 변동(personalityShift)에 쓰임. docs/28 §6.
+// (구 5축 LegacyPersonality* 는 시나리오 6축 재작성으로 폐기. 옛 세이브 하이드레이트는 discipleStore.migratePersonality 가 문자열 키로 직접 처리.)
+export type PersonaMap = Partial<Record<keyof PersonalityTraits, number>>;
 
 // 한 마디 응답 톤별 신뢰 변동 가중치 — docs/12.
 // 디폴트는 personality 에서 자동 산출되지만, 특수 캐릭터는 수동 오버라이드 가능.

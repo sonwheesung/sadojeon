@@ -2,7 +2,7 @@
 // 3-Tier 풀 구조: 공통(universal) · 유형(archetype) · 개인(personal).
 // 4선택(엄벌·폐관·훈계·묵인) → 4층 효과(가해자 / 사부 / 사문 분위기 / 타 제자).
 
-import type { LegacyPersonalityMap } from './disciple';
+import type { PersonaMap } from './disciple';
 
 export type MoralEventTier = 'universal' | 'archetype' | 'personal';
 
@@ -31,7 +31,7 @@ export interface PerpetratorEffect {
   staminaDelta?: number;                          // 체력
   darknessRiskBump?: number;                      // 흑화 위험도 (그레이박스: 메모로만)
   darknessLevelBump?: number;                     // 흑화 단계 직접 +N
-  personalityShift?: LegacyPersonalityMap;  // 성격 미세 조정
+  personalityShift?: PersonaMap;  // 성격 미세 조정
   noteAppend?: string;                            // 제자 메모에 한 줄
 }
 
@@ -57,8 +57,8 @@ export interface CascadeEffect {
   kind: CascadeKind;
   triggerCondition?: {
     relation?: 'friend' | 'enemy';                   // 가해자와의 관계
-    personality?: LegacyPersonalityMap;        // 성격 조건 (각 축 ≥ 임계)
-    forbidPersonality?: LegacyPersonalityMap;  // 각 축 ≤ 임계
+    personality?: PersonaMap;        // 성격 조건 (각 축 ≥ 임계)
+    forbidPersonality?: PersonaMap;  // 각 축 ≤ 임계
   };
   trustDelta?: number;                               // 사부신뢰도 변동
   noteAppend?: string;
@@ -83,8 +83,8 @@ export interface MoralEventTrigger {
   weight: number;                                   // 기본 가중치 (확률 비중)
   minYearInSect?: number;                           // 입문 N년차 이상
   maxYearInSect?: number;
-  requirePersonality?: LegacyPersonalityMap;  // 각 축 ≥ 임계
-  forbidPersonality?: LegacyPersonalityMap;   // 각 축 ≤ 임계
+  requirePersonality?: PersonaMap;  // 각 축 ≥ 임계
+  forbidPersonality?: PersonaMap;   // 각 축 ≤ 임계
   requireMinDarkness?: 0 | 1 | 2 | 3;               // 이 단계 이상에서만 발화
   onlyForDiscipleId?: string;                       // personal 풀
   requireSiblingId?: string;                        // 특정 동문 동시 영입 시

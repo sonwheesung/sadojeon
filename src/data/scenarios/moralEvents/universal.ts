@@ -57,7 +57,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 1,
           darknessRiskBump: -1,
-          personalityShift: { empathy: 4 },
+          personalityShift: { mercy: 4 },
           noteAppend: '직접 노인 앞에 사과했다.',
         },
         master: { insightDelta: 1 },
@@ -76,7 +76,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         cascade: [
           {
             kind: 'mimic',
-            triggerCondition: { personality: { pride: 50 } },
+            triggerCondition: { personality: { ambition: 50 } },
             noteAppend: '{name}이 그래도 되는 모양이라 여겼다.',
           },
         ],
@@ -118,7 +118,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 3,
           darknessRiskBump: -2,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
           noteAppend: '사부의 직강 약속을 받았다.',
         },
         master: { insightDelta: 1, reputationDelta: 1 },
@@ -133,7 +133,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         cascade: [
           {
             kind: 'mimic',
-            triggerCondition: { personality: { curiosity: 70 } },
+            triggerCondition: { personality: { freedom: 70 } },
             noteAppend: '서고가 가까워졌다 — {name}이 그랬다면 자기도 가능할 듯하다.',
           },
         ],
@@ -180,7 +180,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 4,
           darknessRiskBump: -2,
-          personalityShift: { pride: -4, empathy: 4 },
+          personalityShift: { ambition: -4, mercy: 4 },
           noteAppend: '사부와 길에 대해 이야기 나눴다.',
         },
         master: { insightDelta: 2 },
@@ -194,7 +194,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         cascade: [
           {
             kind: 'shaken',
-            triggerCondition: { personality: { empathy: 70 } },
+            triggerCondition: { personality: { mercy: 70 } },
             trustDelta: -1,
             noteAppend: '사부가 사문 분위기에 관심이 없는 듯 느껴졌다.',
           },
@@ -233,7 +233,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"왜 거짓이었느냐. 무공이 손에 안 잡히면 와서 말해라."',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { diligence: 4 },
+          personalityShift: { integrity: 4 },
           noteAppend: '사부가 묻고 듣는 자임을 다시 느꼈다.',
         },
         master: { insightDelta: 1 },
@@ -268,7 +268,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"무공은 사람을 위한 것이다. 마을로 돌아가 노인을 찾아 돌봐라."',
         perpetrator: {
           trustDelta: -2,
-          personalityShift: { empathy: 6 },
+          personalityShift: { mercy: 6 },
           darknessRiskBump: -2,
           noteAppend: '마을로 돌아가 약자를 찾아갔다.',
         },
@@ -284,7 +284,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"바쁘다는 핑계는 다른 곳에서 써라. 다음엔 손 한 번 내밀어라."',
         perpetrator: {
           trustDelta: 2,
-          personalityShift: { empathy: 4 },
+          personalityShift: { mercy: 4 },
           darknessRiskBump: -1,
         },
         master: { insightDelta: 1 },
@@ -293,7 +293,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '(별 말 하지 않고 보고서에 도장만 찍는다.)',
-        perpetrator: { trustDelta: 1, darknessRiskBump: 3, personalityShift: { empathy: -6 } },
+        perpetrator: { trustDelta: 1, darknessRiskBump: 3, personalityShift: { mercy: -6 } },
         master: { reputationDelta: -1 },
         atmosphere: { righteousnessDelta: -2 },
       },
@@ -334,7 +334,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         perpetrator: {
           trustDelta: 4,
           darknessRiskBump: -3,
-          personalityShift: { loyalty: 6 },
+          personalityShift: { freedom: -6 },
           noteAppend: '사부가 직접 어둠을 짚어 보여줬다.',
         },
         master: { insightDelta: 2 },
@@ -381,7 +381,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"무엇을 찾고 있느냐. 솔직히 말해라." 자유 시간을 늘려준다.',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { loyalty: 4 },
+          personalityShift: { freedom: -4 },
           noteAppend: '사부가 답답함을 들어주었다.',
         },
         master: { insightDelta: 1 },
@@ -413,7 +413,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'punish',
         label: '"무공은 자랑이 아니다. 한 달 무공 정지."',
-        perpetrator: { trustDelta: -3, personalityShift: { pride: -6 }, darknessRiskBump: -1 },
+        perpetrator: { trustDelta: -3, personalityShift: { ambition: -6 }, darknessRiskBump: -1 },
         atmosphere: { righteousnessDelta: 1 },
       },
       {
@@ -426,7 +426,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"다친 아이의 부모에게 가서 사과해라. 그 뒤에 너 자신을 보아라."',
         perpetrator: {
           trustDelta: 2,
-          personalityShift: { pride: -4, empathy: 4 },
+          personalityShift: { ambition: -4, mercy: 4 },
           noteAppend: '사과의 길에서 결을 짚었다.',
         },
         master: { insightDelta: 1 },
@@ -435,7 +435,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
       {
         tone: 'overlook',
         label: '"무공이 보여지는 것은 자연스러운 일이다." (가볍게 넘긴다.)',
-        perpetrator: { trustDelta: 1, personalityShift: { pride: 6 }, darknessRiskBump: 2 },
+        perpetrator: { trustDelta: 1, personalityShift: { ambition: 6 }, darknessRiskBump: 2 },
         atmosphere: { righteousnessDelta: -1 },
       },
     ],
@@ -474,7 +474,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '둘을 함께 불러 앉히고 묵은 감정을 풀게 한다. 사부가 자리 지킨다.',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { empathy: 4 },
+          personalityShift: { mercy: 4 },
           darknessRiskBump: -2,
         },
         master: { insightDelta: 2 },
@@ -521,7 +521,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
         label: '"조급함은 너의 결을 망친다." {sibling}에게 사과시키고 새 단약을 따로 마련해준다.',
         perpetrator: {
           trustDelta: 3,
-          personalityShift: { diligence: 4 },
+          personalityShift: { integrity: 4 },
           darknessRiskBump: -2,
           noteAppend: '동문 앞에서 직접 사과했다.',
         },
