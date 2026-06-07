@@ -10,7 +10,7 @@
 // 톤별 신뢰 변동의 기본값은 제자 personality 에서 자동 산출되는 가중치를 사용.
 // 시드에 tonePreferences 가 직접 정의되어 있으면 그 값 우선.
 
-import { pickRandomOneLiner, pickResponse } from '@/data/scenarios/oneLiners';
+import { pickContextualOneLiner, pickResponse, type OneLinerCtx } from '@/data/scenarios/oneLiners';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -81,7 +81,24 @@ export function triggerDailyOneLiner(): void {
   if (candidates.length === 0) return;
 
   const disciple = candidates[Math.floor(Math.random() * candidates.length)];
-  const template = pickRandomOneLiner();
+
+  // 상황 컨텍스트 — 현재 상태에 맞는 한 마디만 발화(무작위 X). docs/12.
+  const maxSt = disciple.maxStamina || 1;
+  const mainId = disciple.mainMartialArtId ?? disciple.martialArts[0]?.artId;
+  const mainSeong = mainId
+    ? (disciple.martialArts.find((a) => a.artId === mainId)?.seong ?? 0)
+    : 0;
+  const ctx: OneLinerCtx = {
+    stress: disciple.stress ?? 0,
+    staminaPct: Math.round((disciple.stamina / maxSt) * 100),
+    trust: disciple.trustToMaster ?? 0,
+    darknessRisk: disciple.darknessRisk,
+    hasEnemy: Object.values(disciple.relationships).some((v) => v === 'enemy'),
+    age: disciple.age ?? 10,
+    mainSeong,
+  };
+  const template = pickContextualOneLiner(ctx);
+  if (!template) return; // 지금 상태에 맞는 한 마디 없음 — 그 날은 발화 X
   const day = useTimeStore.getState().totalDay;
 
   const responses = {
