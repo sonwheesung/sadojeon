@@ -80,6 +80,8 @@ export interface MartialArt {
   isSectArt: boolean;
   // 스킬트리 선행조건 — 미충족 시 학습 불가(경지 게이트와 함께). 없으면 선행 없음. docs/28 §5-2.
   prerequisites?: ArtPrerequisite[];
+  // 문파·계보 — 무공 계보 화면에서 같은 lineage 끼리 한 트리로 묶음(화산·소림·사문…). docs/26 §5-4.
+  lineage?: string;
 }
 
 // 제자가 익히고 있는 무공의 진행 상태. docs/26_무공_숙련도.md.

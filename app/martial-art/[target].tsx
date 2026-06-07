@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
@@ -99,7 +99,17 @@ export default function MartialArtScreen() {
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
-        <Header onBack={() => router.back()} />
+        <Header
+          onBack={() => router.back()}
+          onTree={
+            art && mainInstance
+              ? () =>
+                  router.push(
+                    `/martial-codex?discipleId=${target}&focus=${mainInstance.artId}` as Href,
+                  )
+              : undefined
+          }
+        />
         {art && mainInstance ? (
           <View style={styles.body}>
             <MartialArtHeader
@@ -126,7 +136,7 @@ export default function MartialArtScreen() {
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({ onBack, onTree }: { onBack: () => void; onTree?: () => void }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -141,7 +151,18 @@ function Header({ onBack }: { onBack: () => void }) {
       <View style={styles.titleWrap}>
         <Text style={styles.title}>무공 수련</Text>
       </View>
-      <View style={{ width: 32 }} />
+      {onTree ? (
+        <Pressable
+          style={styles.treeButton}
+          onPress={onTree}
+          accessibilityRole="button"
+          accessibilityLabel="무공 계보"
+        >
+          <Text style={styles.treeLabel}>계보 ▶</Text>
+        </Pressable>
+      ) : (
+        <View style={{ width: 32 }} />
+      )}
     </View>
   );
 }
@@ -177,6 +198,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   backButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  treeButton: {
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.seal,
+    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  treeLabel: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+  },
   backIcon: {
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.lg,

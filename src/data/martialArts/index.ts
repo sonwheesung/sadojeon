@@ -27,6 +27,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'body', minimum: 2 }],
     preferredTalents: ['body', 'agility'],
     isSectArt: true,
+    lineage: 'sect',
   },
   {
     id: 'baekun-fist',
@@ -39,6 +40,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'body', minimum: 2 }],
     preferredTalents: ['body', 'qi'],
     isSectArt: true,
+    lineage: 'sect',
   },
   {
     id: 'unbo',
@@ -51,6 +53,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'agility', minimum: 2 }],
     preferredTalents: ['agility', 'mind'],
     isSectArt: true,
+    lineage: 'sect',
   },
   {
     id: 'cheongsim-gigong',
@@ -63,8 +66,82 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'mind', minimum: 2 }],
     preferredTalents: ['mind', 'insight'],
     isSectArt: true,
+    lineage: 'sect',
   },
-  // ── 충돌 테스트용 예시 (사문 기본 외 — 향후 의뢰·발견으로 입수). docs/04 §무공 색깔 ──
+  // ── 화산파 검 계보 (분기·합류 스킬트리 예시). docs/26 §5-4 ──
+  {
+    id: 'hwasan-gicho-sword',
+    name: '화산기초검',
+    hanjaName: '華山基礎劍',
+    description: '화산 입문제자가 처음 잡는 검. 모든 화산 검의 뿌리.',
+    school: 'sword',
+    grade: 'novice',
+    path: 'jeong',
+    requirements: [{ axis: 'body', minimum: 1 }],
+    preferredTalents: ['body', 'agility'],
+    isSectArt: false,
+    lineage: 'hwasan',
+  },
+  {
+    id: 'yukhap-sword',
+    name: '육합검',
+    hanjaName: '六合劍',
+    description: '천지사방을 하나로 베는 화산 중급 검. 여러 절기의 갈림목.',
+    school: 'sword',
+    grade: 'apprentice',
+    path: 'jeong',
+    requirements: [{ axis: 'body', minimum: 2 }],
+    preferredTalents: ['body', 'agility'],
+    isSectArt: false,
+    lineage: 'hwasan',
+    prerequisites: [{ artId: 'hwasan-gicho-sword', minSeong: 3 }],
+  },
+  {
+    id: 'maehwa-sword',
+    name: '매화검법',
+    hanjaName: '梅花劍法',
+    description: '매화가 흩날리듯 현란한 화산 검. 육합검에서 갈라진 한 길.',
+    school: 'sword',
+    grade: 'master',
+    path: 'jeong',
+    requirements: [{ axis: 'agility', minimum: 3 }],
+    preferredTalents: ['agility', 'mind'],
+    isSectArt: false,
+    lineage: 'hwasan',
+    prerequisites: [{ artId: 'yukhap-sword', minSeong: 5 }],
+  },
+  {
+    id: 'jaha-sword',
+    name: '자하검법',
+    hanjaName: '紫霞劍法',
+    description: '보랏빛 노을의 기운을 두른 화산 검. 육합검에서 갈라진 또 한 길.',
+    school: 'sword',
+    grade: 'master',
+    path: 'jeong',
+    requirements: [{ axis: 'qi', minimum: 3 }],
+    preferredTalents: ['qi', 'mind'],
+    isSectArt: false,
+    lineage: 'hwasan',
+    prerequisites: [{ artId: 'yukhap-sword', minSeong: 5 }],
+  },
+  {
+    id: 'isipsa-maehwa-sword',
+    name: '이십사수매화검',
+    hanjaName: '二十四手梅花劍',
+    description: '매화와 자하의 묘리를 한데 모은 화산 비전. 두 길이 다시 만나는 정점.',
+    school: 'sword',
+    grade: 'grandmaster',
+    path: 'jeong',
+    requirements: [{ axis: 'agility', minimum: 4 }],
+    preferredTalents: ['agility', 'mind'],
+    isSectArt: false,
+    lineage: 'hwasan',
+    prerequisites: [
+      { artId: 'maehwa-sword', minSeong: 6 },
+      { artId: 'jaha-sword', minSeong: 4 },
+    ],
+  },
+  // ── 사파·마교 (사문 기본 외 — 의뢰·발견으로 입수). docs/04 §무공 색깔 ──
   {
     id: 'heukpung-fist',
     name: '흑풍권',
@@ -76,6 +153,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'body', minimum: 2 }],
     preferredTalents: ['body', 'agility'],
     isSectArt: false,
+    lineage: 'sapa',
   },
   {
     id: 'hyeolma-gong',
@@ -88,10 +166,33 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'qi', minimum: 3 }],
     preferredTalents: ['qi', 'mind'],
     isSectArt: false,
+    lineage: 'magyo',
     // 스킬트리 — 사파 무공을 깊이(흑풍권 5성) 익힌 자라야 마공을 감당. docs/28 §5-2 천마신공류 게이트 예시.
     prerequisites: [{ artId: 'heukpung-fist', minSeong: 5 }],
   },
 ];
+
+// 문파·계보 라벨 + 표시 순서. lineage 미지정 무공은 '기타'.
+export const LINEAGE_LABEL: Record<string, string> = {
+  sect: '본문(무명산문)',
+  hwasan: '화산파',
+  sapa: '사파',
+  magyo: '마교',
+};
+
+export const LINEAGE_ORDER: readonly string[] = ['sect', 'hwasan', 'sapa', 'magyo'];
+
+export function artsByLineage(lineage: string): MartialArt[] {
+  return MARTIAL_ARTS.filter((m) => (m.lineage ?? 'sect') === lineage);
+}
+
+export function allLineageIds(): string[] {
+  const seen = new Set<string>();
+  for (const m of MARTIAL_ARTS) seen.add(m.lineage ?? 'sect');
+  return LINEAGE_ORDER.filter((l) => seen.has(l)).concat(
+    [...seen].filter((l) => !LINEAGE_ORDER.includes(l)),
+  );
+}
 
 export function findMartialArt(id: string): MartialArt | undefined {
   return MARTIAL_ARTS.find((m) => m.id === id);
