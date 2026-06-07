@@ -1,4 +1,5 @@
 import type {
+  ArtPrerequisite,
   Disciple,
   MartialArt,
   MartialArtGrade,
@@ -87,6 +88,8 @@ export const MARTIAL_ARTS: MartialArt[] = [
     requirements: [{ axis: 'qi', minimum: 3 }],
     preferredTalents: ['qi', 'mind'],
     isSectArt: false,
+    // 스킬트리 — 사파 무공을 깊이(흑풍권 5성) 익힌 자라야 마공을 감당. docs/28 §5-2 천마신공류 게이트 예시.
+    prerequisites: [{ artId: 'heukpung-fist', minSeong: 5 }],
   },
 ];
 
@@ -94,10 +97,20 @@ export function findMartialArt(id: string): MartialArt | undefined {
   return MARTIAL_ARTS.find((m) => m.id === id);
 }
 
-// 무공 학습 자격 — 경지 게이트만(어려운 비급은 경지 올라야 입문). docs/26 §5-1.
-// 재능 게이트 폐기: 누구든 학습 가능, 효율(상극이면 ×0.04)이 성장 속도로 차등. docs/28 §2·§5.
+// 미충족 선행 무공서 목록 — 스킬트리 게이트. 충족이면 빈 배열. docs/28 §5-2.
+export function unmetPrerequisites(disciple: Disciple, art: MartialArt): ArtPrerequisite[] {
+  if (!art.prerequisites?.length) return [];
+  return art.prerequisites.filter((p) => {
+    const inst = disciple.martialArts.find((a) => a.artId === p.artId);
+    return !inst || inst.seong < p.minSeong;
+  });
+}
+
+// 무공 학습 자격 — 경지 게이트 + 무공서 선행조건(스킬트리). docs/26 §5-1 · docs/28 §5-2.
+// 재능 게이트 폐기: 효율(상극이면 ×0.04)은 성장 속도로만 차등(학습은 막지 않음).
 export function canLearnArt(disciple: Disciple, art: MartialArt): boolean {
-  return realmIndex(disciple.realm) >= realmIndex(artGradeLearnRealm(art.grade));
+  if (realmIndex(disciple.realm) < realmIndex(artGradeLearnRealm(art.grade))) return false;
+  return unmetPrerequisites(disciple, art).length === 0;
 }
 
 // 그 갈래에 재능(효율)이 있나 — 상극이면 false('어색함' 힌트용, 학습 자체는 막지 않음).

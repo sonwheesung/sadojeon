@@ -61,6 +61,12 @@ export interface TalentRequirement {
   minimum: number;
 }
 
+// 무공서 스킬트리 선행조건 — 선행 무공서를 최소 성까지 익혀야 학습 가능. docs/28 §5-2.
+export interface ArtPrerequisite {
+  artId: string;
+  minSeong: number; // 1~10
+}
+
 export interface MartialArt {
   id: string;
   name: string;
@@ -72,6 +78,8 @@ export interface MartialArt {
   requirements: TalentRequirement[];
   preferredTalents: TalentAxis[];
   isSectArt: boolean;
+  // 스킬트리 선행조건 — 미충족 시 학습 불가(경지 게이트와 함께). 없으면 선행 없음. docs/28 §5-2.
+  prerequisites?: ArtPrerequisite[];
 }
 
 // 제자가 익히고 있는 무공의 진행 상태. docs/26_무공_숙련도.md.

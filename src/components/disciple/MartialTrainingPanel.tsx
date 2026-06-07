@@ -11,6 +11,7 @@ import {
   seongCap,
   seongToStage,
   talentMet,
+  unmetPrerequisites,
 } from '@/data/martialArts';
 import { artGradeLearnRealm, artGradeRealmCeiling, realmIndex } from '@/data/realm';
 import { useCodexStore } from '@/stores/codexStore';
@@ -122,6 +123,11 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
               const ceiling = REALM_LABEL[artGradeRealmCeiling(art.grade)];
               const needRealm = artGradeLearnRealm(art.grade);
               const realmOk = realmIndex(disciple.realm) >= realmIndex(needRealm);
+              const unmet = unmetPrerequisites(disciple, art);
+              const prereqLabel =
+                unmet.length > 0
+                  ? `${findMartialArt(unmet[0].artId)?.name ?? '선행 무공'} ${unmet[0].minSeong}성 필요`
+                  : null;
               const disabled = isMain || (!learnable && !has);
               const stateLabel = isMain
                 ? '주력'
@@ -131,9 +137,11 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
                     ? '전수 ▶'
                     : !realmOk
                       ? `${REALM_LABEL[needRealm]} 필요`
-                      : !talentMet(disciple, art)
-                        ? '재능 부족'
-                        : '—';
+                      : prereqLabel
+                        ? prereqLabel
+                        : !talentMet(disciple, art)
+                          ? '재능 부족'
+                          : '—';
               return (
                 <Pressable
                   key={sc.artId}
