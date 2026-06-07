@@ -16,7 +16,7 @@ import { triggerDailyMoralEvent } from './moralEventSystem';
 import { tickOverrideExpiry } from './overrideSystem';
 import { captureSnapshot } from './reportSystem';
 import { tickDailyTraining } from './trainingSystem';
-import { tickQuests } from './questSystem';
+import { generateBoard, tickQuests } from './questSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
@@ -61,6 +61,8 @@ export function advanceTurn() {
   }
 
   if (isMonthStart(time)) {
+    // 게시판 월간 갱신 — 현재 평판 반영(우호 문파 후원 의뢰 포함). docs/29·30.
+    generateBoard();
     const sched = useScheduleStore.getState();
     if (sched.lastSnapshot) sched.openMonthlyReport();
     sched.setSnapshot(captureSnapshot());

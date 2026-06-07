@@ -4,11 +4,14 @@
 
 import {
   ROUTE_DANGER,
+  ROUTE_FACTION,
   ROUTE_LABEL,
   ROUTE_LADDER,
   careerStartFromJob,
   type RouteId,
 } from '@/data/careers';
+import { findFaction } from '@/data/factions';
+import { adjustDiscipleRep, adjustSectRep } from './reputationSystem';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -57,6 +60,15 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     graduatedYear: year,
   });
   pushNews(`${d.name} — 강호로`, `${d.name}이 ${ROUTE_LABEL[route]} ${title}(으)로 강호에 첫발을 디뎠다.`);
+
+  // 노선 → 연관 문파 평판↑. 제자가 그 길에 드니 사문·본인과 그 문파의 인연이 깊어진다. docs/30.
+  const factionId = ROUTE_FACTION[route];
+  if (factionId) {
+    adjustSectRep(factionId, 12);
+    adjustDiscipleRep(d.id, factionId, 25);
+    const fname = findFaction(factionId)?.name ?? '';
+    if (fname) pushNews(`${d.name} — ${fname}`, `${d.name}이 ${ROUTE_LABEL[route]}의 길에 드니, ${fname}과 사문의 인연이 깊어졌다.`);
+  }
 }
 
 function deathLine(g: GraduateRecord, status: GraduateStatus): string {

@@ -28,6 +28,7 @@ export interface Quest {
   recommended: number; // 추천 인원
   minStat: number; // 관련 역량 최소 조건(극험은 하드 게이트, 그 외 소프트)
   gray?: boolean; // 도덕 회색 의뢰
+  faction?: string; // 후원 문파 id(있으면 우호 문파 후원 의뢰) — 완수 시 그 문파 평판↑. docs/30
 }
 
 export interface ActiveQuest {

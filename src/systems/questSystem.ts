@@ -22,7 +22,8 @@ import { useQuestStore } from '@/stores/questStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
-import { FACTIONS } from '@/data/factions';
+import { FACTIONS, repTier } from '@/data/factions';
+import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyQuestReputation } from './reputationSystem';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
@@ -72,7 +73,45 @@ export function canDispatch(d: Disciple, q: Quest): boolean {
 
 // ─── 게시판 ───────────────────────────────────────────────────────────────
 
-// 사문 명성 구간 ≤ 등급 의뢰 중 최대 6개 랜덤. 활성 의뢰는 제외.
+// 우호(≥우호) 문파 후원 의뢰 — 상위 2개 문파가 더 좋은(보상↑) 의뢰를 사문에 맡긴다. docs/30.
+// 정파 문파=정도 의뢰, 사파 문파=회색 의뢰 템플릿. 완수 시 그 문파 평판 강화(settle).
+function sponsoredQuests(maxIdx: number, activeIds: Set<string>): Quest[] {
+  const repMap = useReputationStore.getState().sect;
+  const allies = FACTIONS.filter((f) => {
+    const t = repTier(repMap[f.id] ?? 0);
+    return t === 'friendly' || t === 'ally';
+  })
+    .sort((a, b) => (repMap[b.id] ?? 0) - (repMap[a.id] ?? 0))
+    .slice(0, 2);
+  const out: Quest[] = [];
+  for (const f of allies) {
+    const id = `spon-${f.id}`;
+    if (activeIds.has(id)) continue;
+    const sapa = f.alignment === 'sapa' || f.alignment === 'magyo';
+    const cand = QUEST_POOL.filter(
+      (q) =>
+        QUEST_GRADE_ORDER.indexOf(q.grade) <= maxIdx &&
+        q.grade !== 'menial' &&
+        (sapa ? !!q.gray : !q.gray),
+    );
+    if (cand.length === 0) continue;
+    const tmpl = cand[Math.floor(Math.random() * cand.length)];
+    out.push({
+      ...tmpl,
+      id,
+      client: f.name,
+      title: `${f.name} 후원 — ${tmpl.title}`,
+      reward: {
+        money: Math.round(tmpl.reward.money * 1.4),
+        fame: Math.round(tmpl.reward.fame * 1.4),
+      },
+      faction: f.id,
+    });
+  }
+  return out;
+}
+
+// 사문 명성 구간 ≤ 등급 의뢰 중 최대 6개 랜덤 + 우호 문파 후원 의뢰. 활성 의뢰는 제외.
 export function generateBoard(): void {
   const rep = useSectStore.getState().sect?.reputation ?? 10;
   const maxIdx = QUEST_GRADE_ORDER.indexOf(maxGradeForReputation(rep));
@@ -80,8 +119,9 @@ export function generateBoard(): void {
   const pool = QUEST_POOL.filter(
     (q) => QUEST_GRADE_ORDER.indexOf(q.grade) <= maxIdx && !activeIds.has(q.id),
   );
-  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 6);
-  useQuestStore.getState().setBoard(shuffled);
+  const base = [...pool].sort(() => Math.random() - 0.5).slice(0, 6);
+  const sponsored = sponsoredQuests(maxIdx, activeIds);
+  useQuestStore.getState().setBoard([...sponsored, ...base]);
 }
 
 // ─── 파견 ─────────────────────────────────────────────────────────────────
@@ -492,6 +532,11 @@ function resolveQuest(active: ActiveQuest): Milestone {
     });
     // 문파 평판 — 같은 사상색으로 정파↑·사파↓(동행 제자는 개인 인연도). docs/30.
     applyQuestReputation(righteousness, scale.growth || 0.5, present);
+    // 후원 의뢰 완수 → 그 문파 평판 직접 강화(동행 제자 인연도).
+    if (q.faction) {
+      adjustSectRep(q.faction, 6);
+      for (const id of present) adjustDiscipleRep(id, q.faction, 3);
+    }
   }
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;

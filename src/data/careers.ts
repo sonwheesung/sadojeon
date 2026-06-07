@@ -75,6 +75,15 @@ export const JOB_ROUTE: Record<string, RouteId> = {
   'town-idler': 'commoner',
 };
 
+// 노선 → 연관 문파 id(factions.ts). 졸업 시 그 문파 평판↑(제자가 그 길에 든다). docs/30.
+// 깔끔히 대응되는 노선만 — 호위·떠돌이·의원·야인·의적은 특정 문파 없음(매핑 X).
+export const ROUTE_FACTION: Partial<Record<RouteId, string>> = {
+  righteous: 'murimmaeng', // 정파 → 무림맹
+  daoist: 'mudang', //        도가 → 무당
+  assassin: 'nokrim', //      살수 → 녹림(사파)
+  shadow: 'haomun', //        정탐 → 하오문(정보)
+};
+
 // 직업 tier → 시작 직책 레벨(0~3). 잘 키울수록(정점 직업) 높은 자리에서 출발.
 export const TIER_TO_LEVEL: Record<JobTier, number> = {
   peak: 3,
