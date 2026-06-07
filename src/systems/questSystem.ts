@@ -120,7 +120,13 @@ export function generateBoard(): void {
   const pool = QUEST_POOL.filter(
     (q) => QUEST_GRADE_ORDER.indexOf(q.grade) <= maxIdx && !activeIds.has(q.id),
   );
-  const base = [...pool].sort(() => Math.random() - 0.5).slice(0, 6);
+  // 적대 문파 의뢰 차단 — 정파와 척질수록 들어오는 일감이 준다(최소 2). docs/30.
+  const repMap = useReputationStore.getState().sect;
+  const hostileRight = FACTIONS.filter(
+    (f) => f.alignment === 'right' && repTier(repMap[f.id] ?? 0) === 'hostile',
+  ).length;
+  const baseCount = Math.max(2, 6 - Math.min(3, hostileRight));
+  const base = [...pool].sort(() => Math.random() - 0.5).slice(0, baseCount);
   const sponsored = sponsoredQuests(maxIdx, activeIds);
   useQuestStore.getState().setBoard([...sponsored, ...base]);
 }
