@@ -47,6 +47,8 @@ async function runPolicy(policy: PlayPolicy, slot: number, years: number): Promi
   setAutoSaveEnabled(false);
   useGameStore.getState().setSaveSlot(slot);
   seedNewRun(['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon']);
+  // 직전 정책 회차가 종결(phase='ended')됐을 수 있으니 새 회차는 진행 상태로 리셋.
+  useGameStore.getState().setPhase('playing');
 
   const events: AutoPlayEvent[] = [];
   let saveErr: string | null = null;
