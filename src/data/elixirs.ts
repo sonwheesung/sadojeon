@@ -57,7 +57,7 @@ export const ELIXIR_RECIPES: readonly ElixirRecipe[] = [
   // ── 심마 ──
   { id: 'ansin', name: '안신단', category: 'mind', alchemyReq: 40, craftDays: 8, materials: [{ id: 'herb-rare', qty: 2 }], effect: '심마·주화입마를 가라앉힌다(흑화·발작 완화).' },
   // ── 최상급(화경) ──
-  { id: 'guzeon-daehwandan', name: '구전대환단', category: 'utility', alchemyReq: 65, craftDays: 30, materials: [{ id: 'herb-divine', qty: 3 }, { id: 'herb-rare', qty: 3 }], effect: '화경의 벽을 넘는 신품 영약(최상급). 제조 30일.' },
+  { id: 'guzeon-daehwandan', name: '구전대환단', category: 'utility', alchemyReq: 58, craftDays: 30, materials: [{ id: 'herb-divine', qty: 3 }, { id: 'herb-rare', qty: 3 }], effect: '화경의 벽을 넘는 신품 영약(최상급). 영약제조 특화 제자라야 닿는 경지. 제조 30일.' },
 ];
 
 export function findElixirRecipe(id: string): ElixirRecipe | undefined {

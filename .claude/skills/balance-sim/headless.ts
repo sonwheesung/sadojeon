@@ -17,6 +17,9 @@ import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget } from '@/systems/questSystem';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
+import { buildAlchemyLab, learnRecipe, addMaterial, startCraft } from '@/systems/alchemySystem';
+import { ELIXIR_RECIPES } from '@/data/elixirs';
+import { useItemStore } from '@/stores/itemStore';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
@@ -452,9 +455,81 @@ async function runPartySweep(): Promise<void> {
   }
 }
 
+// ── 영약제조 적성(특화/상극/보통) × 15년 연단 생산량 ──
+// 영단서 다 배운 가정 + 무한 재료 + 연단실. 매일 공부(alchemy)로 레벨↑, Lv 닿으면 해당 영단 연단(점유).
+async function runAlchemySweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const days = years * 336;
+  // 특화=진소화, 상극=장철, 보통=윤소소.
+  seedNewRun(['jin-sohwa', 'jang-cheol', 'yun-soso']);
+  useGameStore.getState().setPhase('playing');
+  buildAlchemyLab();
+  for (const r of ELIXIR_RECIPES) learnRecipe(r.id); // 영단서 다 있음
+  for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) {
+    addMaterial(m, 9_999_999); // 무한 재료 가정
+  }
+  // 전원 약초학(alchemy) 공부 패턴.
+  const sched = useScheduleStore.getState();
+  sched.setSchedule({ weeklyPattern: ['study', 'study', 'study', 'study', 'study', 'study', 'rest'], monthlyQuests: 0 });
+  for (const id of useDiscipleStore.getState().order) sched.setDailyChoice(id, 'study', 'study_alchemy');
+
+  // 제조 가능한 최고 등급 레시피(요구 alchemy Lv ≤ 현재). 무한 재료라 Lv만 본다.
+  const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
+  const craftedBy: Record<string, Record<string, number>> = {};
+  const reach65: Record<string, number> = {};
+
+  for (let d = 0; d < days; d += 1) {
+    const ds = useDiscipleStore.getState();
+    for (const id of ds.order) {
+      const disc = ds.disciples[id];
+      if (!disc || disc.status !== 'training') continue;
+      const lv = disc.stats?.alchemy?.level ?? 0;
+      if (lv >= 65 && reach65[id] === undefined) reach65[id] = Math.floor(d / 336) + 1;
+      // 만들 수 있는 최고 등급 영단 1개 연단(점유). 레벨이 낮으면 계속 공부.
+      const best = byReqDesc.find((r) => r.alchemyReq <= lv);
+      if (best && startCraft(id, best.id)) {
+        craftedBy[id] = craftedBy[id] ?? {};
+        craftedBy[id][best.id] = (craftedBy[id][best.id] ?? 0) + 1;
+      }
+    }
+    advanceTurn();
+    const s = useScheduleStore.getState();
+    if (s.pendingReport) s.resolveMonthlyReport();
+    if (s.pendingSetup) s.resolveMonthlySetup();
+    if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+    useInboxStore.getState().reset();
+    for (const id of useDiscipleStore.getState().order) {
+      useScheduleStore.getState().setDailyChoice(id, 'study', 'study_alchemy');
+    }
+  }
+
+  console.log(`=== 영약제조 적성별 ${years}년 연단 (영단서 다 배움·무한 재료·연단실) ===`);
+  const ds = useDiscipleStore.getState();
+  for (const id of ds.order) {
+    const disc = ds.disciples[id];
+    if (!disc) continue;
+    const apt = (disc.efficiency as Record<string, string> | undefined)?.alchemy ?? '보통';
+    const lv = disc.stats?.alchemy?.level ?? 0;
+    const made = craftedBy[id] ?? {};
+    const total = Object.values(made).reduce((a, b) => a + b, 0);
+    const divine = made['guzeon-daehwandan'] ?? 0;
+    const r65 = reach65[id] ? `${reach65[id]}년차` : '미달';
+    const breakdown = Object.entries(made)
+      .map(([rid, n]) => `${ELIXIR_RECIPES.find((r) => r.id === rid)?.name ?? rid} ${n}`)
+      .join(', ');
+    console.log(`\n[${disc.name} · 적성 ${apt}] 최종 alchemy Lv ${lv} · 연단실Lv65도달 ${r65}`);
+    console.log(`  총 연단 ${total}과 (구전대환단 ${divine}과) — ${breakdown || '없음'}`);
+  }
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
+  if (process.argv[2] === 'alchemysweep') {
+    await runAlchemySweep();
     return;
   }
   if (process.argv[2] === 'partysweep') {

@@ -6,6 +6,7 @@
 // Phase 2: 재료 의뢰 연계 + 속성 상처 매칭 + store/DB 영속.
 
 import { findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
+import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -42,9 +43,14 @@ export function tickFacilityUpkeep(): void {
 const learnedRecipes = new Set<string>();
 const materials: Record<string, number> = {};
 const activeCrafts: Record<string, { recipeId: string; until: number }> = {};
+const firstCrafted = new Set<string>(); // "discipleId:recipeId" — 처음 제조 보너스 1회용
+
+// 처음 제조 시 경험치 보너스 계수 — recipe.alchemyReq × 이 값 × 적성. 첫 제조가 큰 깨우침.
+const FIRST_CRAFT_XP_K = 30;
 
 export function resetAlchemy(): void {
   learnedRecipes.clear();
+  firstCrafted.clear();
   for (const k of Object.keys(materials)) delete materials[k];
   for (const k of Object.keys(activeCrafts)) delete activeCrafts[k];
 }
@@ -125,7 +131,16 @@ export function tickCraft(): void {
       count: 1,
       effects: recipe.effect,
     });
-    ds.addStatExp(crafterId, 'alchemy', Math.max(2, recipe.craftDays));
+    // 제조 경험 — 적성 반영(특화 1.0 ~ 상극 0.04). **처음 만든 영단은 큰 보너스**(깨우침).
+    const apt =
+      EFFICIENCY_MULTIPLIER[(crafter?.efficiency as Record<string, never> | undefined)?.alchemy ?? '보통'] ?? 0.35;
+    const key = `${crafterId}:${recipe.id}`;
+    let xp = Math.max(2, recipe.craftDays) * apt; // 반복 제조 — 적성 반영
+    if (!firstCrafted.has(key)) {
+      firstCrafted.add(key);
+      xp += recipe.alchemyReq * FIRST_CRAFT_XP_K * apt; // 처음 제조 보너스(등급↑·적성↑일수록 큼)
+    }
+    ds.addStatExp(crafterId, 'alchemy', Math.max(1, Math.round(xp)));
   }
 }
 
