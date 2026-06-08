@@ -22,8 +22,8 @@ import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
 import { tickDarkness } from './darknessSystem';
-import { tickElixirCraft } from './elixirSystem';
-import { tickCraft, tickElixirAbsorb, tickFacilityUpkeep } from './alchemySystem';
+import { tickCraft, tickElixirAbsorb } from './alchemySystem';
+import { tickMonthlyEconomy } from './economySystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 
@@ -42,7 +42,6 @@ export function advanceTurn() {
   tickOverrideExpiry();
   tickCraft(); // 연단 완료 처리(제조 기간 도래)
   tickElixirAbsorb(); // 내공단 흡수 진행(매일 perDay 내공)
-  tickFacilityUpkeep(); // 연단실 유지비 차감(열려 있으면)
 
   const time = useTimeStore.getState().current;
 
@@ -61,8 +60,7 @@ export function advanceTurn() {
     runYoungTalentsTournament();
     // 문파 평판 영향 — 맹우 후의·적대 자객. docs/30.
     tickReputationInfluence();
-    // 신품 영약 제련 — 영약제조 특화 제자가 격년으로 구전대환단을 빚는다(무과금 화경 경로). docs/28 §5-1.
-    tickElixirCraft();
+    // (옛 자동 영약 제련 제거 — 이제 연단은 alchemySystem(연단실·레시피·재료·경제)으로만.)
   }
 
   // 회차 종결 — 사부 수명 도달 시 phase='ended' (그레이박스 99 = 비활성).
@@ -74,6 +72,8 @@ export function advanceTurn() {
   }
 
   if (isMonthStart(time)) {
+    // 월간 수지 — 식비·후원금·연단실 유지비(미납 시 가동중지). docs/11.
+    tickMonthlyEconomy();
     // 게시판 월간 갱신 — 현재 평판 반영(우호 문파 후원 의뢰 포함). docs/29·30.
     generateBoard();
     const sched = useScheduleStore.getState();

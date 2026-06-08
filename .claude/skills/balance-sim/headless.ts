@@ -555,19 +555,16 @@ async function runFactorySweep(): Promise<void> {
     let divine = 0;
     let internalDan = 0;
 
+    // 역할 — 카리1 + 서폿3 전원 영약제조('alchemy'役: 공부+연단).
+    const roleMap: Record<string, string> = { [carryId]: 'carry' };
+    for (const sid of supportIds) roleMap[sid] = 'alchemy';
+
     for (let d = 0; d < days; d += 1) {
-      const sched = useScheduleStore.getState();
-      sched.setSchedule({ weeklyPattern: ['martial', 'physical', 'martial', 'rest', 'martial', 'physical', 'rest'], monthlyQuests: 0 });
-      // 카리 — 전투 화경 훈련 + 내공단 흡수(있고 흡수 중 아니면).
+      // 카리=전투 화경 훈련, 서폿=alchemy 공부 패턴(연단공장).
+      configurePartyDay(roleMap);
       const dsNow = useDiscipleStore.getState();
-      const carry = dsNow.disciples[carryId];
-      if (carry && carry.status === 'training') {
-        // configureCarryTraining 는 sect 패턴 따름 — 여기선 직접 호출 대신 partyDay 로직 재사용.
-      }
-      // 서폿 — 연단공장: 공부(alchemy) 패턴 + 제조.
+      // 서폿 연단 — 가용(training)일 때 만들 수 있는 최고 등급 영단 제조(연단실 가동 시).
       for (const sid of supportIds) {
-        sched.setIndividualPattern(sid, ['study', 'study', 'rest', 'study', 'study', 'study', 'rest']);
-        sched.setDailyChoice(sid, 'study', 'study_alchemy');
         const sd = dsNow.disciples[sid];
         if (sd && sd.status === 'training') {
           const lv = sd.stats?.alchemy?.level ?? 0;
@@ -578,12 +575,13 @@ async function runFactorySweep(): Promise<void> {
           }
         }
       }
-      // 카리 내공단 흡수 — 양화/현음내단 있으면 복용(흡수 중 아니면 consumeInternalElixir 가 알아서 거름).
-      if (carry && !carry.elixirAbsorb) {
+      // 카리 의뢰 — 자금·명성·경험(연단실 유지비를 벌어야 공장이 돈다).
+      partyDispatch(carryId, roleMap, 0.12, 13);
+      // 카리 내공단 흡수(있고 흡수 중 아니면).
+      const carry = dsNow.disciples[carryId];
+      if (carry && carry.status === 'training' && !carry.elixirAbsorb) {
         consumeInternalElixir(carryId, 'naegong-fire') || consumeInternalElixir(carryId, 'naegong-water');
       }
-      // 카리 전투 훈련 세팅.
-      configurePartyDay({ [carryId]: 'carry' });
 
       advanceTurn();
       const s = useScheduleStore.getState();

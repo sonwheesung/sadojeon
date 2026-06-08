@@ -18,7 +18,16 @@ import type { QiAttribute } from '@/types/disciple';
 // (추후: 대장간 등 다른 공방도 같은 틀로.)
 export const ALCHEMY_LAB_ID = 'alchemy-lab';
 export const ALCHEMY_LAB_BUILD_COST = 3000;
-export const ALCHEMY_LAB_UPKEEP = 5; // 일일 유지비(자금)
+export const ALCHEMY_LAB_UPKEEP_MONTHLY = 200; // 월 유지비(자금) — 미납 시 가동중지
+
+// 유지비 납부 여부 — 미납이면 연단실 비가동(낼 때까지 제조 불가). economySystem 이 매월 갱신.
+let labOperational = true;
+export function setLabOperational(on: boolean): void {
+  labOperational = on;
+}
+export function isLabOperational(): boolean {
+  return labOperational;
+}
 
 export function hasAlchemyLab(): boolean {
   return (useSectStore.getState().sect?.facilities ?? []).some((f) => f.id === ALCHEMY_LAB_ID);
@@ -34,10 +43,6 @@ export function buildAlchemyLab(): boolean {
   });
   return true;
 }
-// 매일 — 연단실 유지비 차감(열려 있으면). timeSystem 연결.
-export function tickFacilityUpkeep(): void {
-  if (hasAlchemyLab()) useSectStore.getState().adjustResources(-ALCHEMY_LAB_UPKEEP);
-}
 
 // 회차 스코프 상태 — 학습 레시피 / 재료 / 진행 중 제조(제조자별).
 const learnedRecipes = new Set<string>();
@@ -51,8 +56,22 @@ const FIRST_CRAFT_XP_K = 30;
 export function resetAlchemy(): void {
   learnedRecipes.clear();
   firstCrafted.clear();
+  labOperational = true;
   for (const k of Object.keys(materials)) delete materials[k];
   for (const k of Object.keys(activeCrafts)) delete activeCrafts[k];
+}
+
+// 영단 판매 — 자금 수입. 등급(req)·효과에 비례. (이번 밸런스 테스트에선 미사용.)
+export function sellElixir(recipeId: string, qty: number): number {
+  const recipe = findElixirRecipe(recipeId);
+  const items = useItemStore.getState();
+  const owned = items.items.find((i) => i.id === recipeId);
+  if (!recipe || !owned || owned.count < qty) return 0;
+  const unit = Math.max(5, Math.round(recipe.alchemyReq * 1.5 + recipe.craftDays * 2));
+  items.adjustCount(recipeId, -qty);
+  const gain = unit * qty;
+  useSectStore.getState().adjustResources(gain);
+  return gain;
 }
 
 export function learnRecipe(id: string): void {
@@ -96,7 +115,7 @@ function hasMaterials(recipe: ElixirRecipe): boolean {
 // 제조 시작 — 조건: 연단실 + 배운 레시피(책) + alchemy 스탯 ≥ 요구 + 재료. 제자는 가용(training).
 // 재료 소모, 효과별 제조기간 설정, 제자는 제조 기간 동안 'crafting'으로 점유(다른 작업 불가).
 export function startCraft(discipleId: string, recipeId: string): boolean {
-  if (!hasAlchemyLab()) return false; // 연단실이 있어야 연단 가능
+  if (!hasAlchemyLab() || !labOperational) return false; // 연단실 + 유지비 납부(가동) 필요
   const recipe = findElixirRecipe(recipeId);
   if (!recipe || !learnedRecipes.has(recipeId)) return false; // 책에 배운 레시피만
   if (activeCrafts[discipleId]) return false; // 이미 연단 중
