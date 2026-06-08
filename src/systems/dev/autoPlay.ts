@@ -91,15 +91,16 @@ function logPassiveInbox(before: string[], emit: (e: AutoPlayEvent) => void): vo
   }
 }
 
-// 서신함의 모든 강제선택 항목을 랜덤 해소 — LLM await. 발동·선택·LLM 디버그 로그.
-async function resolveAllRandom(emit: (e: AutoPlayEvent) => void): Promise<void> {
+// 서신함의 모든 강제선택 항목을 정책대로 해소 — LLM await. 발동·선택·LLM 디버그 로그.
+async function resolveAll(emit: (e: AutoPlayEvent) => void, policy: PlayPolicy): Promise<void> {
   // 항목 스냅샷(해소가 목록을 바꾼다).
   const items = [...useInboxStore.getState().items];
   for (const item of items) {
     if (!isRespondable(item)) continue;
     const opts = responseOptionsFor(item).filter((o) => !o.disabled);
     if (opts.length === 0) continue;
-    const pick = opts[Math.floor(rand() * opts.length)];
+    const key = policy.pickInboxKey(item, opts);
+    const pick = opts.find((o) => o.key === key) ?? opts[0];
     const ctx = ctxOf(item);
     const p = (item.payload ?? {}) as Record<string, unknown>;
     const before = usePendingStore.getState().llmDebugBuffer.length;
@@ -125,7 +126,7 @@ async function resolveAllRandom(emit: (e: AutoPlayEvent) => void): Promise<void>
 
 // 유휴 제자를 게시판 의뢰에 랜덤 파견. 낮은 확률 — 의뢰가 일상 이벤트(면담·한마디)를
 // 과하게 밀어내지 않게(파견 중엔 일과 이벤트 미발동). 한 번에 한 명만.
-function maybeDispatch(): void {
+function randomDispatch(): void {
   if (rand() > 0.08) return;
   const board = useQuestStore.getState().board;
   if (board.length === 0) return;
@@ -139,14 +140,40 @@ function maybeDispatch(): void {
   if (d && q && canDispatch(d, q)) dispatchQuest(q.id, [d.id]);
 }
 
-// 한 턴 자동 진행. 'ended' = 회차 종결.
-export async function autoPlayDay(emit: (e: AutoPlayEvent) => void): Promise<'continue' | 'ended'> {
+// ── 플레이 정책(전략) ─────────────────────────────────────────────────────
+// 자동 진행 시 "어떻게 플레이할지"를 갈아끼운다(SOLID — autoPlay 루프 본문은 안 바뀜).
+//  - RandomPolicy: 전 선택 랜덤(이벤트·면담 발동 상황 QA용). in-app 기본.
+//  - GrowthPolicy(dev/growthPolicy.ts): 일정·무공축·종목을 합리적으로 운용해 경지 성장 검증.
+export interface PlayPolicy {
+  label: string;
+  // 그날 advanceTurn **직전** — 일정·일일선택·명령 세팅(훈련 정책). 랜덤은 미구현(기본 일정).
+  configureBeforeDay?: () => void;
+  // 서신함 강제선택 해소 시 어떤 선택지를 고를지(키 반환).
+  pickInboxKey: (item: InboxItem, options: { key: string; label: string }[]) => string;
+  // 의뢰 파견 정책.
+  dispatch: () => void;
+}
+
+export const RandomPolicy: PlayPolicy = {
+  label: 'random',
+  pickInboxKey: (_item, options) => options[Math.floor(rand() * options.length)].key,
+  dispatch: randomDispatch,
+};
+
+// 한 턴 자동 진행. 'ended' = 회차 종결. policy 미지정 시 랜덤.
+export async function autoPlayDay(
+  emit: (e: AutoPlayEvent) => void,
+  policy: PlayPolicy = RandomPolicy,
+): Promise<'continue' | 'ended'> {
   if (useGameStore.getState().phase === 'ended') return 'ended';
+
+  // 정책 훈련 세팅 — advanceTurn(tickDailyTraining) 전에 일정·일일선택 주입.
+  policy.configureBeforeDay?.();
 
   const beforeIds = useInboxStore.getState().items.map((i) => i.id);
   advanceTurn();
 
-  // 월간 보고/설정 모달 — 기본 사문 일정 유지하고 닫는다.
+  // 월간 보고/설정 모달 — 현재 일정 유지하고 닫는다.
   const sched = useScheduleStore.getState();
   if (sched.pendingReport) sched.resolveMonthlyReport();
   if (sched.pendingSetup) sched.resolveMonthlySetup();
@@ -162,10 +189,10 @@ export async function autoPlayDay(emit: (e: AutoPlayEvent) => void): Promise<'co
 
   // 새로 뜬 비응답 항목(사문이벤트·풍문·영약제련·졸업소식 등) 로그.
   logPassiveInbox(beforeIds, emit);
-  // 강제선택 항목 랜덤 해소(+LLM).
-  await resolveAllRandom(emit);
-  // 의뢰 랜덤 파견.
-  maybeDispatch();
+  // 강제선택 항목 정책대로 해소(+LLM).
+  await resolveAll(emit, policy);
+  // 의뢰 파견(정책).
+  policy.dispatch();
 
   return 'continue';
 }
@@ -176,16 +203,18 @@ export interface AutoPlayResult {
 }
 
 // N일 자동 진행. onProgress(진행일, 총일) 주기 호출. 회차 종결 시 조기 종료.
+// policy 미지정 시 랜덤(in-app QA 기본). 헤드리스는 GrowthPolicy 주입 가능.
 export async function autoPlayRun(
   days: number,
   emit: (e: AutoPlayEvent) => void,
   onProgress?: (done: number, total: number) => void,
   shouldStop?: () => boolean,
+  policy: PlayPolicy = RandomPolicy,
 ): Promise<AutoPlayResult> {
   let done = 0;
   for (let i = 0; i < days; i += 1) {
     if (shouldStop?.()) break;
-    const r = await autoPlayDay(emit);
+    const r = await autoPlayDay(emit, policy);
     done += 1;
     if (onProgress && i % 7 === 0) {
       onProgress(done, days);

@@ -16,11 +16,15 @@ description: Run headless 15-year growth/balance simulations for Shidao — veri
 - `sim_training.cjs` — 순수 수련 궤적. `sim_combos.cjs` — 조합별 의뢰 병행 상세.
 - 실행: `node .claude/skills/balance-sim/sim.cjs`. (게임 공식을 손으로 복제 — 근사. 스케줄 가정·이벤트/LLM 미포함.)
 
-**B. 실코드 헤드리스(진짜 게임 로직)** — 이벤트·면담·사문이벤트가 *맞는 상황에 발동하고 규칙 해소가 도는지* 검증:
+**B. 실코드 헤드리스(진짜 게임 로직 + 실제 Supabase 영속)** — 이벤트·면담·사문이벤트가 *맞는 상황에 발동하고 규칙 해소가 도는지* + *실제 DB에 영속되는지* 검증:
 - `headless.ts` — 실제 TS(`seedNewRun`+`autoPlayRun`)를 자동 랜덤 플레이로 N년 구동, 발동 이벤트+트리거 컨텍스트 로그.
-- `run-headless.cjs` — esbuild로 번들(RN·AsyncStorage·runSync·supabase·expo-fs 스텁 + executorch external + `__DEV__` define) 후 Node 실행.
+  **실제 runSync 경로로 Supabase에 저장** — 전용 시뮬 계정 `simbot@shidao.app`(실유저 슬롯과 격리, slot 1)로 로그인(없으면 가입) 후, 연 단위 + 최종 저장 → DB 되읽기 검증까지.
+- `run-headless.cjs` — `.env(.development)` 를 process.env 에 주입한 뒤 esbuild 번들(RN·AsyncStorage·expo-fs 스텁 + url-polyfill no-op + executorch external + `__DEV__` define) 후 Node 실행. **supabase·runSync 는 실번들(스텁 아님).**
 - `_stubs/` — 헤드리스용 스텁. 실행: `node .claude/skills/balance-sim/run-headless.cjs [years]`.
+- **고속 진행 쓰기증폭 차단:** 게임 내부 매일 autosave 는 `setAutoSaveEnabled(false)` 로 끄고 하네스가 연 단위로만 명시 저장. (앱은 기본 ON.)
+- **랜덤 플레이라 제자는 정체한다(의도된 결과).** 일정·무공축이 랜덤이라 심법(내공) 단련이 안 들어가 경지 게이트가 안 열리고, 과훈련으로 injured 누적 → 15년에도 삼류·seong 3 수준. "수동/방치 플레이 → 삼류 정체"를 확인하는 용도. **성장·밸런스(절정/초절정/화경 도달) 검증은 A(공식 복제 sim)** 로. 헤드리스는 성장 최적화가 아니라 이벤트 발동·영속 검증용.
 - **한계: LLM(executorch) 미동작 → 규칙 폴백.** LLM 실제 출력은 **in-app 하네스**(`app/dev/autoplay`, 실기기)에서만.
+- DB 확인: `select * from runs join auth.users u on u.id=user_id where u.email='simbot@shidao.app'` (Supabase MCP `execute_sql` 는 RLS 우회).
 
 **C. in-app 자동플레이(실제 LLM)** — `app/dev/autoplay.tsx` + `src/systems/dev/autoPlay.ts`. 실기기에서 랜덤 진행 + 온디바이스 Qwen3 실제 호출, prompt/raw/effects 로그. "LLM 응답 정당성"은 여기서만 검증 가능.
 
