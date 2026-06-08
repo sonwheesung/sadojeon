@@ -77,7 +77,15 @@ async function runPolicy(policy: PlayPolicy, slot: number, years: number): Promi
     policy,
   );
 
-  await queueSave(); // 최종 저장(큐 비우고 await).
+  // 최종 저장 — 장시간 구동 중 세션이 흔들렸을 수 있으니 재인증 후 저장(최대 3회 재시도).
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    saveErr = null;
+    await ensureAuth();
+    saveChain = Promise.resolve();
+    await queueSave();
+    if (!saveErr) break;
+    process.stderr.write(`  ⚠ 최종 저장 재시도 ${attempt + 1}/3: ${saveErr}\n`);
+  }
   if (saveErr) process.stderr.write(`  ⚠ 저장 경고(마지막): ${saveErr}\n`);
 
   // DB 읽기 검증.
