@@ -14,6 +14,8 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { currentAge } from '@/systems/discipleCtx';
+import { findMartialArt } from '@/data/martialArts';
+import { effectiveRealmCeiling } from '@/data/realm';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -96,10 +98,12 @@ async function runPolicy(policy: PlayPolicy, slot: number, years: number): Promi
   console.log(`DB 영속(slot ${slot}): runId=${mine?.id ?? '없음'} · status=${mine?.status ?? '?'} · DB시점=${dbTime ? `${dbTime.year}년차 ${dbTime.season}` : '없음'}`);
   for (const d of disc) {
     if (!d) continue;
-    const main = d.martialArts?.[0];
+    const inst = d.martialArts.find((a) => a.artId === d.mainMartialArtId) ?? d.martialArts[0];
+    const art = inst ? findMartialArt(inst.artId) : undefined;
+    const ceiling = art ? REALM_LABEL[effectiveRealmCeiling(art.grade)] : '-';
     console.log(
       `  ${d.name}: ${currentAge(d)}세 · ${REALM_LABEL[d.realm]} · 내공${d.realmProgress?.internal ?? 0} · ` +
-        `주력 ${main?.seong ?? '-'}성 · 근력Lv${d.stats?.strength?.level ?? '-'} · 상태 ${d.status}`,
+        `주력 ${art?.name ?? '?'}(${inst?.seong ?? '-'}성·천장${ceiling}) · 근력Lv${d.stats?.strength?.level ?? '-'} · 상태 ${d.status}`,
     );
   }
 }

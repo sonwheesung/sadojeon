@@ -20,6 +20,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { REALM_LABEL } from '@/types/realm';
+import { configureRandom } from './policyHelpers';
 import type { InboxItem } from '@/types';
 
 export interface AutoPlayEvent {
@@ -156,6 +157,7 @@ export interface PlayPolicy {
 
 export const RandomPolicy: PlayPolicy = {
   label: 'random',
+  configureBeforeDay: configureRandom, // 훈련 카테고리·종목·무공축·무공서·영약 전부 랜덤.
   pickInboxKey: (_item, options) => options[Math.floor(rand() * options.length)].key,
   dispatch: randomDispatch,
 };
