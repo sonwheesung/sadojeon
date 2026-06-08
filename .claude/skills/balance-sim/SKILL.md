@@ -22,10 +22,10 @@ description: Run headless 15-year growth/balance simulations for Shidao — veri
 - `run-headless.cjs` — `.env(.development)` 를 process.env 에 주입한 뒤 esbuild 번들(RN·AsyncStorage·expo-fs 스텁 + url-polyfill no-op + executorch external + `__DEV__` define) 후 Node 실행. **supabase·runSync 는 실번들(스텁 아님).**
 - `_stubs/` — 헤드리스용 스텁. 실행: `node .claude/skills/balance-sim/run-headless.cjs [years]`.
 - **고속 진행 쓰기증폭 차단:** 게임 내부 매일 autosave 는 `setAutoSaveEnabled(false)` 로 끄고 하네스가 연 단위로만 명시 저장. (앱은 기본 ON.)
-- **플레이 정책 2종 (인자 `[growth|random|both]`, 기본 both):** `autoPlay` 가 `PlayPolicy` 주입식이라 갈아끼운다(in-app QA 는 항상 random).
-  - **growth** (`growthPolicy.ts`, → slot 1): 주간패턴 무공3·체력2·휴식2 + 무공축 need기반(내공 미달→심법, 충족→초식) + 체력 기마자세(외공). 파견 X. **경지 성장이 실제 엔진으로 설계대로 되는지 검증.** 실코드 기준 절정/초절정/화경 도달성 = 공식 복제 sim.cjs(A) 와 교차검증.
-  - **random** (→ slot 2): 전 선택 랜덤(이벤트·면담 발동 상황 QA). 일정·무공축 랜덤이라 심법 단련이 안 들어가 경지 게이트가 안 열리고 과훈련 injured 누적 → 15년에도 삼류 정체. "방치 플레이 → 삼류"의 베이스라인.
-  - **관찰(2026-06-08 15년 both):** growth=4년차에 전원 졸업(장철 절정·나머지 일류, 13세) / random=16년차 삼류 정체. → **최적 플레이 시 절정 도달이 13세로 너무 빠르고 졸업이 일찍 끊긴다**(무공서 등급 천장+졸업 trust게이트). 양육기 길이(LIFETIME_YEARS=99 grayboxed)와 졸업 타이밍 재조정 후보.
+- **플레이 정책 2종 (인자 `[growth|random|both]`, 기본 both):** `autoPlay` 가 `PlayPolicy` 주입식(`policyHelpers.ts`)이라 갈아끼운다(in-app QA 는 항상 random). **두 정책 모두 게임의 전 결정표면을 다룬다:** 훈련 카테고리·세부종목, 무공축(심법/초식/경공), **무공서 변경**(assignMainMartialArt), **영약 복용**(grantDivineElixir), 의뢰 파견, 4지선다.
+  - **growth=optimal** (→ slot 1, `configureOptimal`): 등급천장 높은 무공서로 갈아탐(화경=절품 grandmaster 필요라 필요시 타계열) → 성게이트→내공→외공 균형 무공축 + 기마자세 → 초절정서 신품 영약 확보. 파견 X. 4지선다는 랜덤. **절정/초절정/화경 도달성 검증.**
+  - **random** (→ slot 2, `configureRandom`): 매일 무작위 주간패턴·무공축·종목 + 가끔 무공서/영약. 전 선택 랜덤 → 심법 일관훈련 안 돼 경지 게이트 안 열리고 injured 누적 → 삼류 정체. "방치 플레이" 베이스라인.
+  - **관찰(2026-06-08 15년 both):** **growth=25세에 3/4 화경 도달**(이십사수매화검 7성·내공1300·근력62·신품 영약 복용 → 화경+영약 경로 실코드 작동 확인), 1/4 일류(절정 깨달음 벽 RNG) / random=삼류 정체. → **화경은 절품(grandmaster) 무공서로만 가능**(현 데이터 이십사수매화검·혈마공 2종뿐, 신품=legendary 미존재; novice 무공서 성캡6<7로 화경 게이트 불가). **초절정까지 진행이 빨라 무공서만 맞으면 화경도 양육기 내 도달**(밸런스: 무공서 등급 분포·졸업 타이밍·신품 무공서 부재 점검 후보).
 - **한계: LLM(executorch) 미동작 → 규칙 폴백.** LLM 실제 출력은 **in-app 하네스**(`app/dev/autoplay`, 실기기)에서만.
 - DB 확인: `select r.slot, r.game_time->'current', d.name, d.state->>'realm' from runs r join run_disciples d on d.run_id=r.id join auth.users u on u.id=r.user_id where u.email='simbot@shidao.app'` (Supabase MCP `execute_sql` 는 RLS 우회).
 
