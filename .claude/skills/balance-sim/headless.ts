@@ -17,7 +17,7 @@ import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget } from '@/systems/questSystem';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
-import { buildAlchemyLab, learnRecipe, addMaterial, startCraft } from '@/systems/alchemySystem';
+import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir } from '@/systems/alchemySystem';
 import { ELIXIR_RECIPES } from '@/data/elixirs';
 import { useItemStore } from '@/stores/itemStore';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
@@ -527,9 +527,95 @@ async function runAlchemySweep(): Promise<void> {
   }
 }
 
+// ── 1 무공 카리 + 3 서폿 연단공장 통합 — 서폿이 영단 양산, 카리가 받아 화경 가나 ──
+async function runFactorySweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 8);
+  const days = years * 336;
+  const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
+  const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
+  console.log(`=== 1무공+3서폿(연단공장) · ${years}년 · ${iters}회 평균 (무과금·무한재료) ===`);
+  console.log('카리=yun-soso(검·화경 빌드). 서폿 3명=연단공장(공부+제조). 카리는 내공단 흡수+화경 벽서 구전대환단 복용.\n');
+
+  let carryHwa = 0;
+  const realmTally: Record<string, number> = {};
+  let sumDivine = 0;
+  let sumInternalDan = 0;
+  for (let it = 0; it < iters; it += 1) {
+    seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
+    useGameStore.getState().setPhase('playing');
+    setElixirBudget(0); // 무과금 — 화경 영약은 오직 서폿 연단으로
+    setByeokgokdanBudget(Infinity);
+    buildAlchemyLab();
+    for (const id of RECIPE_IDS) learnRecipe(id);
+    for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
+    const carryId = 'yun-soso';
+    const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId);
+    let divine = 0;
+    let internalDan = 0;
+
+    for (let d = 0; d < days; d += 1) {
+      const sched = useScheduleStore.getState();
+      sched.setSchedule({ weeklyPattern: ['martial', 'physical', 'martial', 'rest', 'martial', 'physical', 'rest'], monthlyQuests: 0 });
+      // 카리 — 전투 화경 훈련 + 내공단 흡수(있고 흡수 중 아니면).
+      const dsNow = useDiscipleStore.getState();
+      const carry = dsNow.disciples[carryId];
+      if (carry && carry.status === 'training') {
+        // configureCarryTraining 는 sect 패턴 따름 — 여기선 직접 호출 대신 partyDay 로직 재사용.
+      }
+      // 서폿 — 연단공장: 공부(alchemy) 패턴 + 제조.
+      for (const sid of supportIds) {
+        sched.setIndividualPattern(sid, ['study', 'study', 'rest', 'study', 'study', 'study', 'rest']);
+        sched.setDailyChoice(sid, 'study', 'study_alchemy');
+        const sd = dsNow.disciples[sid];
+        if (sd && sd.status === 'training') {
+          const lv = sd.stats?.alchemy?.level ?? 0;
+          const best = byReqDesc.find((r) => r.alchemyReq <= lv);
+          if (best && startCraft(sid, best.id)) {
+            if (best.id === 'guzeon-daehwandan') divine += 1;
+            if (best.category === 'internal') internalDan += 1;
+          }
+        }
+      }
+      // 카리 내공단 흡수 — 양화/현음내단 있으면 복용(흡수 중 아니면 consumeInternalElixir 가 알아서 거름).
+      if (carry && !carry.elixirAbsorb) {
+        consumeInternalElixir(carryId, 'naegong-fire') || consumeInternalElixir(carryId, 'naegong-water');
+      }
+      // 카리 전투 훈련 세팅.
+      configurePartyDay({ [carryId]: 'carry' });
+
+      advanceTurn();
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      const inbox = useInboxStore.getState();
+      for (const item of [...inbox.items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+      }
+      useInboxStore.getState().reset();
+    }
+    const carry = useDiscipleStore.getState().disciples[carryId];
+    const realm = carry?.realm ?? 'samryu';
+    realmTally[realm] = (realmTally[realm] ?? 0) + 1;
+    if (realm === 'hwagyeong') carryHwa += 1;
+    sumDivine += divine;
+    sumInternalDan += internalDan;
+  }
+  const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
+  console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 카리 최종경지 분포: ${dist}`);
+  console.log(`서폿 연단공장 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과 · 내공단 ${(sumInternalDan / iters).toFixed(1)}과`);
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
+  if (process.argv[2] === 'factorysweep') {
+    await runFactorySweep();
     return;
   }
   if (process.argv[2] === 'alchemysweep') {
