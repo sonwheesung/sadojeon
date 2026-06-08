@@ -107,6 +107,30 @@ export function buyMaterial(id: string, qty: number): boolean {
 export function isCrafting(discipleId: string): boolean {
   return Boolean(activeCrafts[discipleId]);
 }
+// UI 표시용 목록 게터(모듈 상태 — 변경 후 수동 새로고침 필요).
+export function listLearned(): string[] {
+  return [...learnedRecipes];
+}
+export function listMaterials(): { id: string; qty: number }[] {
+  return Object.entries(materials)
+    .filter(([, q]) => q > 0)
+    .map(([id, qty]) => ({ id, qty }));
+}
+export function listActiveCrafts(): { discipleId: string; recipeId: string; until: number }[] {
+  return Object.entries(activeCrafts).map(([discipleId, j]) => ({
+    discipleId,
+    recipeId: j.recipeId,
+    until: j.until,
+  }));
+}
+export function canCraft(discipleId: string, recipeId: string): boolean {
+  const recipe = findElixirRecipe(recipeId);
+  if (!recipe || !hasAlchemyLab() || !labOperational || !learnedRecipes.has(recipeId)) return false;
+  if (activeCrafts[discipleId]) return false;
+  const d = useDiscipleStore.getState().disciples[discipleId];
+  if (!d || d.status !== 'training' || (d.stats?.alchemy?.level ?? 0) < recipe.alchemyReq) return false;
+  return hasMaterials(recipe);
+}
 
 function hasMaterials(recipe: ElixirRecipe): boolean {
   return recipe.materials.every((m) => (materials[m.id] ?? 0) >= m.qty);

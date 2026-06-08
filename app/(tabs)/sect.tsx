@@ -79,6 +79,19 @@ export default function SectScreen() {
           </View>
 
           <View style={styles.section}>
+            <SectionLabel>사문 시설</SectionLabel>
+            <Pressable
+              style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+              onPress={() => router.push('/alchemy' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="연단실"
+            >
+              <Text style={styles.settingLabel}>연단실 — 영약 제조</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.section}>
             <SectionLabel>실험 기능</SectionLabel>
             <LlmToggleCard />
           </View>
