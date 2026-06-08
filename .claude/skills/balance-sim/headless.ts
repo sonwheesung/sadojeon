@@ -11,16 +11,24 @@
 import { supabase } from '@/lib/supabase';
 import { seedNewRun } from '@/systems/newRun';
 import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
+import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
+import { configureOptimal, setElixirBudget } from '@/systems/dev/policyHelpers';
+import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
+import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
 import { findMartialArt } from '@/data/martialArts';
-import { effectiveRealmCeiling } from '@/data/realm';
+import { effectiveRealmCeiling, realmIndex } from '@/data/realm';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
 import { runs as runsRepo } from '@/data/repositories';
+
+const SEED_POOL = ['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon'];
 
 const SIM_ID = 'simbot';
 const SIM_PW = 'simbot-260608-headless';
@@ -116,7 +124,83 @@ async function runPolicy(policy: PlayPolicy, slot: number, years: number): Promi
   }
 }
 
+// ── 과금 등급별 평균 경지 sweep — 이벤트·졸업·DB 없이 순수 성장 궤적만 빠르게 다회 반복 ──
+const REALM_ORDER = ['none', 'samryu', 'iryu', 'ilryu', 'jeoljeong', 'chojeoljeong', 'hwagyeong'] as const;
+
+const SPEND_TIERS = [
+  { name: '무과금', budget: 0 },
+  { name: '소과금', budget: 1 },
+  { name: '중과금', budget: 2 },
+  { name: '핵과금', budget: 4 },
+];
+
+async function fastDay(): Promise<void> {
+  if (useGameStore.getState().phase === 'ended') return;
+  configureOptimal(); // 최적 훈련·무공서·영약 세팅(advanceTurn 전).
+  advanceTurn(); // 훈련·경지 진행(+폐관 시 깨달음 굴림·화경 영약 소모, 벽서 폐관 청원 적재).
+  const sched = useScheduleStore.getState();
+  if (sched.pendingReport) sched.resolveMonthlyReport();
+  if (sched.pendingSetup) sched.resolveMonthlySetup();
+  if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+
+  // 깨달음 벽 돌파엔 폐관(seclusion override)이 필요 → 폐관 청원만 '허락'으로 해소.
+  // (나머지 이벤트·면담은 성장에 부차적이라 생략하고 인박스를 비워 빠르게 유지.)
+  const inbox = useInboxStore.getState();
+  for (const item of [...inbox.items]) {
+    const domain = (item.payload as { domain?: string } | undefined)?.domain;
+    if (domain === 'seclusion_petition' && isRespondable(item)) {
+      await resolveInboxItem(item, 'allow');
+    }
+  }
+  useInboxStore.getState().reset();
+}
+
+async function runSweep(): Promise<void> {
+  setAutoSaveEnabled(false); // 순수 인메모리 — 내부 autosave(서신함 해소 등) 차단(인증 없음).
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 20);
+  const days = years * 336;
+  console.log(`=== 과금 등급별 평균 경지 — 최적 플레이 ${years}년 · ${iters}회 평균 (제자 4명/회) ===`);
+  console.log('모델: 과금 = 회차당 신품 영약 확보 수(화경 벽 1개 소모). 무과금=0(영약제조 연단 경로 제외).');
+  console.log('     이벤트·면담·졸업 생략한 순수 성장 궤적. 경지 idx: 삼류1·이류2·일류3·절정4·초절정5·화경6.\n');
+  for (const tier of SPEND_TIERS) {
+    const counts: Record<string, number> = {};
+    let sumIdx = 0;
+    let n = 0;
+    let hwa = 0;
+    let choUp = 0;
+    for (let it = 0; it < iters; it += 1) {
+      seedNewRun(SEED_POOL);
+      useGameStore.getState().setPhase('playing');
+      setElixirBudget(tier.budget);
+      for (let d = 0; d < days; d += 1) await fastDay();
+      const ds = useDiscipleStore.getState();
+      for (const id of ds.order) {
+        const disc = ds.disciples[id];
+        if (!disc) continue;
+        const idx = realmIndex(disc.realm);
+        sumIdx += idx;
+        n += 1;
+        counts[disc.realm] = (counts[disc.realm] ?? 0) + 1;
+        if (disc.realm === 'hwagyeong') hwa += 1;
+        if (idx >= realmIndex('chojeoljeong')) choUp += 1;
+      }
+    }
+    const meanIdx = sumIdx / n;
+    const meanLabel = REALM_LABEL[REALM_ORDER[Math.round(meanIdx)]];
+    const dist = REALM_ORDER.filter((r) => counts[r])
+      .map((r) => `${REALM_LABEL[r]} ${Math.round((counts[r] / n) * 100)}%`)
+      .join(' / ');
+    console.log(`[${tier.name}] 영약 ${tier.budget}개 — 평균경지 ≈ ${meanLabel} (idx ${meanIdx.toFixed(2)}) · 화경 ${Math.round((hwa / n) * 100)}% · 초절정↑ ${Math.round((choUp / n) * 100)}%`);
+    console.log(`           분포: ${dist}`);
+  }
+}
+
 async function main() {
+  if (process.argv[2] === 'sweep') {
+    await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
   const years = Number(process.argv[2] ?? 15);
   const which = (process.argv[3] ?? 'both').toLowerCase();
   const policies: PlayPolicy[] =

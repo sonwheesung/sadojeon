@@ -23,10 +23,19 @@ import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, MartialArt, TrainingCategory } from '@/types';
+import type { Disciple, InboxItem, MartialArt, TrainingCategory } from '@/types';
 
 const rand = () => Math.random();
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
+
+// 과금 등급 = 회차당 확보 가능한 신품 영약 수(화경 벽 1개 소모). 0=무과금.
+// setElixirBudget 로 회차 시작 때 설정(grant 카운트 리셋).
+let elixirBudget = 0;
+let elixirGranted = 0;
+export function setElixirBudget(n: number): void {
+  elixirBudget = n;
+  elixirGranted = 0;
+}
 
 const CATEGORIES: TrainingCategory[] = ['martial', 'physical', 'study', 'rest'];
 const MARTIAL_AXES = ['simbeop', 'chosik', 'gyeonggong'] as const;
@@ -136,8 +145,26 @@ export function configureOptimal(): void {
     if (realmIndex(d.realm) >= realmIndex('chojeoljeong')) nearHwagyeong = true;
   }
 
-  // 4) 영약 — 초절정 도달 제자가 있으면 신품 영약 확보(화경 벽 통과 열쇠).
-  if (nearHwagyeong && !hasDivineElixir()) grantDivineElixir();
+  // 4) 영약 — 초절정 도달 제자가 있고 과금 예산이 남았으면 신품 영약 확보(화경 벽 통과 열쇠).
+  //    무과금(budget 0)은 여기서 지급 안 함 → 화경 벽에서 막힌다(영약제조 제자 연단 경로는 별도).
+  if (nearHwagyeong && !hasDivineElixir() && elixirGranted < elixirBudget) {
+    grantDivineElixir();
+    elixirGranted += 1;
+  }
+}
+
+// 최적 4지선다 — 폐관 청원은 **항상 허락**(깨달음 벽 돌파 기회를 놓치지 않음). 그 외는 랜덤
+// (이벤트 효과가 정량 노출 안 돼 일반적 정답을 못 고름). 경지 성장의 핵심 레버는 폐관 허락.
+export function pickOptimalInboxKey(
+  item: InboxItem,
+  options: { key: string; label: string }[],
+): string {
+  const domain = (item.payload as { domain?: string } | undefined)?.domain;
+  if (domain === 'seclusion_petition') {
+    const allow = options.find((o) => o.key === 'allow');
+    if (allow) return allow.key;
+  }
+  return options[Math.floor(rand() * options.length)].key;
 }
 
 // ── 올랜덤 플레이: 매일 호출 ──────────────────────────────────────────────

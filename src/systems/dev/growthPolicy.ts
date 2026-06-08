@@ -7,12 +7,12 @@
 //  - 파견: 안 함(훈련 시간 최대화). 4지선다: 랜덤(이벤트 효과는 부차적·정량비교 불가).
 // 랜덤(RandomPolicy) 정체와 대조 → 실코드 기준 절정/초절정/화경 도달성 검증(공식 sim.cjs 와 교차).
 
-import { RandomPolicy, type PlayPolicy } from './autoPlay';
-import { configureOptimal } from './policyHelpers';
+import { type PlayPolicy } from './autoPlay';
+import { configureOptimal, pickOptimalInboxKey } from './policyHelpers';
 
 export const GrowthPolicy: PlayPolicy = {
   label: 'growth',
   configureBeforeDay: configureOptimal,
-  pickInboxKey: RandomPolicy.pickInboxKey, // 이벤트 응답은 랜덤(훈련·무공서가 성장 주레버).
+  pickInboxKey: pickOptimalInboxKey, // 폐관 청원은 항상 허락(벽 돌파), 그 외 랜덤.
   dispatch: () => {}, // 파견 안 함 — 훈련 시간 최대화.
 };
