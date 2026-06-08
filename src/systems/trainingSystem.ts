@@ -366,17 +366,19 @@ function applyRealmTick(
 
   if (atWall && wallTarget) {
     if (isSeclusion) {
-      if (wallTarget === 'hwagyeong') {
-        // 화경 벽 — 신품 영약이 깨달음의 열쇠. 보유 시 소모하고 돌파, 없으면 못 넘는다(오성·pity 무관). docs/28 §5-1.
+      // 폐관엔 **벽곡단**(곡기 끊는 단약)이 필수 — 2개/일. 없으면 그날 폐관 수행 불가(깨달음 굴림 X).
+      if (!consumeByeokgokdan(BYEOKGOKDAN_PER_DAY)) {
+        // 벽곡단 부족 — 폐관을 버티지 못해 그날 진척 없음(다음에 벽곡단 갖춰 재도전).
+      } else if (wallTarget === 'hwagyeong') {
+        // 화경 벽 — 신품 영약이 깨달음의 열쇠. 보유 시 소모하고 돌파, 없으면 못 넘는다. docs/28 §5-1.
         if (consumeDivineElixir()) {
           realm = wallTarget;
           pity = 0;
           petitioned = false;
           cancelOverride(discipleId);
         }
-        // 영약 없으면 벽 앞에 머문다 — 다음 폐관에 영약 갖춰 재도전.
       } else {
-        // 절정·초절정 벽 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공).
+        // 절정·초절정 벽 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공). 폐관은 확률 낮고 느리다.
         const insight = d.insight;
         const chance = enlightenmentChance(insight, wallTarget) + pity * ENLIGHTENMENT_PITY_STEP;
         const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
@@ -406,6 +408,70 @@ function applyRealmTick(
   });
 
   if (realm !== startRealm) realmUpToInbox(d, realm);
+}
+
+// ─── 벽곡단(폐관 소모재) ─────────────────────────────────────────────────────
+// 폐관 1일당 벽곡단 소모(2개). 현질·제작·상점(게임머니)으로 확보. 없으면 폐관 못 버틴다.
+// 기본 Infinity(실 게임 — 아이템 연동 전). 시뮬은 setByeokgokdanBudget 으로 과금 등급 모델링.
+export const BYEOKGOKDAN_PER_DAY = 2;
+let byeokgokdanBudget = Infinity;
+let byeokgokdanUsed = 0;
+export function setByeokgokdanBudget(n: number): void {
+  byeokgokdanBudget = n;
+  byeokgokdanUsed = 0;
+}
+function consumeByeokgokdan(n: number): boolean {
+  if (byeokgokdanUsed + n > byeokgokdanBudget) return false;
+  byeokgokdanUsed += n;
+  return true;
+}
+
+// ─── 의뢰(실전) 깨달음 — 폐관보다 높은 확률로 벽 돌파 ───────────────────────────
+// 결투·큰의뢰 성공 후 호출. 세 기둥(내공·외공·성)을 채웠고 벽(절정/초절정/화경) 앞이면,
+// 실전 깨달음을 굴린다. 폐관 대비 chanceBonus 만큼 높다(실전이 더 잘 뚫림 — docs/28 §5).
+// 화경 벽은 신품 영약 필수(보유 시 소모). 성공 시 경지 상승. 반환: 돌파한 경지 or null.
+export function attemptQuestEnlightenment(discipleId: string, chanceBonus: number): Realm | null {
+  const store = useDiscipleStore.getState();
+  const d = store.disciples[discipleId];
+  if (!d) return null;
+  const realm = d.realm ?? 'samryu';
+  const wallTarget = nextRealm(realm);
+  if (!wallTarget || !isWallTransition(wallTarget)) return null;
+
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  const mainGrade = mainId ? findMartialArt(mainId)?.grade : undefined;
+  const ceiling = mainGrade ? effectiveRealmCeiling(mainGrade) : realmCeiling();
+  if (realmIndex(wallTarget) > realmIndex(ceiling)) return null;
+
+  const internal = d.realmProgress?.internal ?? 0;
+  const external = d.stats?.strength?.level ?? 0;
+  const mainSeong = mainId ? (d.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
+  if (
+    internal < REALM_INTERNAL_REQ[wallTarget] ||
+    external < REALM_EXTERNAL_REQ[wallTarget] ||
+    mainSeong < REALM_SEONG_GATE[wallTarget]
+  ) {
+    return null; // 세 기둥 미충족 — 아직 벽 앞이 아님
+  }
+
+  const pity = d.realmProgress?.pity ?? 0;
+  if (wallTarget === 'hwagyeong') {
+    if (!consumeDivineElixir()) return null; // 화경은 신품 영약 필수
+    store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });
+    realmUpToInbox(d, wallTarget);
+    return wallTarget;
+  }
+  const chance = enlightenmentChance(d.insight, wallTarget) + pity * ENLIGHTENMENT_PITY_STEP + chanceBonus;
+  const guaranteed = pity + 1 >= ENLIGHTENMENT_PITY_GUARANTEE;
+  if (guaranteed || Math.random() < chance) {
+    store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });
+    realmUpToInbox(d, wallTarget);
+    return wallTarget;
+  }
+  store.update(discipleId, {
+    realmProgress: { internal, pity: pity + 1, petitioned: d.realmProgress?.petitioned ?? false },
+  });
+  return null;
 }
 
 export function tickDailyTraining(): DiscipleTickReport[] {

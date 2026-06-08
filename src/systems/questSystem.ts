@@ -14,7 +14,7 @@ import {
 } from '@/data/quests';
 import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
 import { findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
-import { REALM_SEONG_CAP } from '@/data/realm';
+import { REALM_SEONG_CAP, realmIndex } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
@@ -30,7 +30,7 @@ import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
 import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
-import { bodyAgeMultiplier } from './trainingSystem';
+import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
 import { currentAge } from './discipleCtx';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
@@ -44,6 +44,7 @@ import type {
   QuestEventChoice,
   QuestEventEffect,
   QuestEventRoll,
+  QuestGrade,
   QuestOutcome,
   RelationLevel,
 } from '@/types';
@@ -379,9 +380,60 @@ const OUTCOME_SCALE: Record<QuestOutcome, { money: number; fame: number; growth:
 // 극험 의뢰를 반복해도 한 번의 운으로 핵심 제자를 잃는 빈도를 낮춘다(극험만 양육 시 회당 ~20% 사망).
 const QUEST_DISASTER_FATALITY = 0.2;
 
-// 결투·큰의뢰(실전)는 무공 성뿐 아니라 외공(근골)도 단련. 외공 효율 × 나이 보정(실전도 어릴 때 더). docs/28 §5-1·docs/29.
-// → 의뢰 병행 양육이 경지를 잠식하지 않게(실전이 외공·성을 함께 키움).
-const QUEST_COMBAT_BODY = 20;
+// 실전 의뢰 경험 — **위험 등급 × 기간**에 비례. 위험(부상·사망)을 감수하는 경험 의뢰는 같은 기간
+// 훈련보다 값지게(주력 성·외공 프리미엄). 쉬운(잡일·소무) 의뢰는 거의 경험 안 됨. docs/28 §5-1·docs/29.
+// **단 내공(內功)은 의뢰로 오르지 않는다 — 훈련(심법) 전용.** 의뢰는 무공 성·외공·금전·명성만 준다.
+const QUEST_SEONG_EXP_PER_WEEK = 55; // 주력 무공 성 EXP/주 (훈련 초식 ~56/주 대비, 등급배수로 우위)
+const QUEST_BODY_EXP_PER_WEEK = 45; //  외공(근력) EXP/주 (효율·나이 보정 별도)
+const QUEST_STAT_EXP_PER_WEEK = 28; //  비전투(호위·정탐·의술) 능력치 EXP/주
+const QUEST_GRADE_GROWTH: Record<QuestGrade, number> = {
+  menial: 0.2, //   잡일 — 경험 거의 없음(쉬운 의뢰)
+  minor: 0.5, //    소무
+  normal: 1.0, //   보통
+  dangerous: 1.7, // 위험(중상 가능) — 경험 프리미엄
+  extreme: 2.6, //  극험(사망 가능) — 최고 프리미엄
+};
+
+// 실전 깨달음 가산 — 의뢰(실전)는 폐관보다 +30%p 높은 확률로 벽을 뚫는다(강호 경험의 묘리). docs/28 §5.
+const QUEST_ENLIGHTENMENT_BONUS = 0.3;
+
+// ─── 의뢰 치명상 생존 체인 (즉사 없음) ──────────────────────────────────────
+// 신의급(만렙) 의술 임계 — 동행 의원이 이 이상이면 치명상 동문을 살린다(본인은 못 살림).
+const DIVINE_DOCTOR_MEDICINE = 40;
+
+// 구급 영약(금창약) — 치명상 1회 회복. 현질·제작·상점. 기본 0(무과금), 시뮬은 setGeumchangBudget.
+let geumchangBudget = 0;
+let geumchangUsed = 0;
+export function setGeumchangBudget(n: number): void {
+  geumchangBudget = n;
+  geumchangUsed = 0;
+}
+function consumeGeumchang(): boolean {
+  if (geumchangUsed >= geumchangBudget) return false;
+  geumchangUsed += 1;
+  return true;
+}
+
+// 자력 생존 — 경지 높을수록 ↑, 화경이라도 ~50%. 내실(경지)이 목숨을 부지한다.
+function selfSurviveChance(realm: Disciple['realm']): number {
+  return Math.min(0.5, realmIndex(realm) * 0.085);
+}
+
+// 치명상에서 살아남는가 — ① 구급영약 → ② 신의급 의원 동행(본인 제외) → ③ 자력 생존(경지별). 다 실패 시 사망.
+function survivesFatalBlow(
+  victim: Disciple,
+  partyIds: string[],
+  ds: ReturnType<typeof useDiscipleStore.getState>,
+): boolean {
+  if (consumeGeumchang()) return true;
+  const hasDivineDoctor = partyIds.some((pid) => {
+    if (pid === victim.id) return false; // 의원 본인이 치명상이면 자기 못 살림
+    const m = ds.disciples[pid];
+    return Boolean(m && m.status !== 'departed' && (m.stats?.medicine?.level ?? 0) >= DIVINE_DOCTOR_MEDICINE);
+  });
+  if (hasDivineDoctor) return true;
+  return Math.random() < selfSurviveChance(victim.realm);
+}
 
 function rollOutcome(active: ActiveQuest): QuestOutcome {
   const q = active.quest;
@@ -587,13 +639,16 @@ function resolveQuest(active: ActiveQuest): Milestone {
     if (!d) continue;
     // 성장 — 능력치(호위·정탐·의술) 또는 무공 성(결투·큰의뢰).
     if (scale.growth > 0) {
-      if (stat) ds.addStatExp(id, stat, Math.max(1, Math.round(35 * scale.growth)));
-      else if (isMartial) {
-        gainMainSeongExp(d, Math.max(1, Math.round(60 * scale.growth)));
-        // 실전 단련 — 결투·큰의뢰는 외공(근골)도 키운다(외공 효율 × 나이 보정).
+      // 경험치 = 기간(주) × 위험등급 배수 × 성과. 위험·장기 의뢰일수록 훈련 대비 값지다.
+      const expFactor = (q.weeks ?? 1) * (QUEST_GRADE_GROWTH[q.grade] ?? 1) * scale.growth;
+      if (stat) {
+        ds.addStatExp(id, stat, Math.max(1, Math.round(QUEST_STAT_EXP_PER_WEEK * expFactor)));
+      } else if (isMartial) {
+        // 결투·큰의뢰 — 주력 무공 성(실전 깨우침) + 외공(근골). 내공은 적립 X(훈련 전용).
+        gainMainSeongExp(d, Math.max(1, Math.round(QUEST_SEONG_EXP_PER_WEEK * expFactor)));
         const bodyTier = d.efficiency?.strength ?? '보통';
         const bodyExp = Math.round(
-          QUEST_COMBAT_BODY * scale.growth * BODY_EFFICIENCY_MULTIPLIER[bodyTier] * bodyAgeMultiplier(currentAge(d)),
+          QUEST_BODY_EXP_PER_WEEK * expFactor * BODY_EFFICIENCY_MULTIPLIER[bodyTier] * bodyAgeMultiplier(currentAge(d)),
         );
         if (bodyExp > 0) ds.addStatExp(id, 'strength', bodyExp);
       }
@@ -603,14 +658,21 @@ function resolveQuest(active: ActiveQuest): Milestone {
       fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame * mult),
       personality: shiftPersona(d, personaDeltas(q, outcome)),
     };
-    // 상태 — 재난 희생자=생존 굴림(QUEST_DISASTER_FATALITY 확률 사망, 아니면 중상 28일). 그 외 부상/복귀.
+    // 상태 — 재난 희생자=치명상. **즉사 없음** — 생존 체인(구급영약→신의급 의원→자력)으로 살리고,
+    // 다 실패하면 그때 사망. 그 외 부상/복귀.
     if (outcome === 'disaster' && i === victimIdx) {
       if (Math.random() < QUEST_DISASTER_FATALITY) {
-        patch.status = 'departed';
-        lostName = d.name;
+        if (survivesFatalBlow(d, present, ds)) {
+          patch.status = 'injured';
+          patch.injuryDaysRemaining = 28; // 치명상에서 살아남아 오래 몸져눕는다
+          gravelyHurtName = d.name;
+        } else {
+          patch.status = 'departed'; // 생존 수단이 없어 끝내 쓰러진다
+          lostName = d.name;
+        }
       } else {
         patch.status = 'injured';
-        patch.injuryDaysRemaining = 28; // 즉사는 면했으나 중상
+        patch.injuryDaysRemaining = 28;
         gravelyHurtName = d.name;
       }
     } else if (outcome === 'disaster') {
@@ -623,6 +685,10 @@ function resolveQuest(active: ActiveQuest): Milestone {
       patch.status = 'training';
     }
     ds.update(id, patch);
+    // 실전 깨달음 — 결투·큰의뢰 생존 시 벽 돌파 시도(폐관보다 높은 확률). 세 기둥 충족 시만.
+    if (isMartial && patch.status !== 'departed' && scale.growth > 0) {
+      attemptQuestEnlightenment(id, QUEST_ENLIGHTENMENT_BONUS);
+    }
   }
 
   // 친밀도 — 함께 살아 돌아온 동문은 가까워진다.

@@ -15,6 +15,8 @@ import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
+import { setGeumchangBudget } from '@/systems/questSystem';
+import { setByeokgokdanBudget } from '@/systems/trainingSystem';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
@@ -266,6 +268,95 @@ async function runQuestSweep(): Promise<void> {
   }
 }
 
+// ── 빌드 비교 sweep — 유년기 훈련 → 청소년기(13세) 의뢰, 3경로 × 과금 ──
+// 메커니즘: 의뢰=실전 깨달음(폐관보다 높은 확률로 벽 돌파)+무공·외공·금전·명성, 내공은 훈련 전용.
+// 폐관=벽곡단 2/일·28일(느림·확실). 의뢰 치명상=생존체인(구급영약/신의의원/자력) 실패 시만 사망.
+// 부상은 자연 회복(injuryDaysRemaining 차감 — 그 기간 훈련·의뢰 못 함).
+function tickInjuryRecovery(): void {
+  const ds = useDiscipleStore.getState();
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (d?.status !== 'injured') continue;
+    const rem = (d.injuryDaysRemaining ?? 0) - 1;
+    if (rem <= 0) ds.update(id, { status: 'training', injuryDaysRemaining: 0 });
+    else ds.update(id, { injuryDaysRemaining: rem });
+  }
+}
+
+async function fastDayBuild(rate: number, minAge: number): Promise<void> {
+  if (useGameStore.getState().phase === 'ended') return;
+  configureOptimal();
+  if (rate > 0) optimalDispatch(rate, minAge);
+  advanceTurn();
+  const sched = useScheduleStore.getState();
+  if (sched.pendingReport) sched.resolveMonthlyReport();
+  if (sched.pendingSetup) sched.resolveMonthlySetup();
+  if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+  const inbox = useInboxStore.getState();
+  for (const item of [...inbox.items]) {
+    const domain = (item.payload as { domain?: string } | undefined)?.domain;
+    if (domain === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+  }
+  tickInjuryRecovery(); // 부상 자연 회복(기간 차감). 사망은 의뢰 생존체인이 이미 결정.
+  useInboxStore.getState().reset();
+}
+
+async function runBuildSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 16);
+  const days = years * 336;
+  // geum=구급영약(치명상 생존), byeok=벽곡단(폐관), elixir=화경 신품영약. 벽곡단은 게임머니로 산다 가정(∞).
+  const BUILDS = [
+    { name: '훈련만·무과금', rate: 0, minAge: 0, geum: 0, byeok: Infinity, elixir: 0 },
+    { name: '훈련만·핵과금', rate: 0, minAge: 0, geum: 0, byeok: Infinity, elixir: 9 },
+    { name: '훈련후의뢰·무과금', rate: 0.12, minAge: 13, geum: 0, byeok: Infinity, elixir: 0 },
+    { name: '훈련후의뢰·핵과금', rate: 0.12, minAge: 13, geum: 99, byeok: Infinity, elixir: 9 },
+    { name: '의뢰위주·핵과금', rate: 0.3, minAge: 13, geum: 99, byeok: Infinity, elixir: 9 },
+  ];
+  console.log(`=== 빌드 비교 — 유년기 훈련→청소년기(13세) 의뢰 · ${years}년 · ${iters}회 평균 (제자 4명/회) ===`);
+  console.log('의뢰=실전 깨달음(폐관>↑확률 벽돌파)+무공·외공, 내공은 훈련전용. 폐관=벽곡단2/일·28일. 치명상=생존체인 실패시만 사망.');
+  console.log('경지 idx: 삼류1·이류2·일류3·절정4·초절정5·화경6.\n');
+  for (const b of BUILDS) {
+    const counts: Record<string, number> = {};
+    let sumIdx = 0;
+    let n = 0;
+    let deaths = 0;
+    for (let it = 0; it < iters; it += 1) {
+      seedNewRun(SEED_POOL);
+      useGameStore.getState().setPhase('playing');
+      setElixirBudget(b.elixir);
+      setGeumchangBudget(b.geum);
+      setByeokgokdanBudget(b.byeok);
+      for (let d = 0; d < days; d += 1) await fastDayBuild(b.rate, b.minAge);
+      const ds = useDiscipleStore.getState();
+      for (const id of ds.order) {
+        const disc = ds.disciples[id];
+        if (!disc) continue;
+        n += 1;
+        if (disc.status === 'departed') {
+          deaths += 1;
+          counts['사망'] = (counts['사망'] ?? 0) + 1;
+          continue;
+        }
+        sumIdx += realmIndex(disc.realm);
+        counts[disc.realm] = (counts[disc.realm] ?? 0) + 1;
+      }
+    }
+    const alive = n - deaths;
+    const meanIdx = alive > 0 ? sumIdx / alive : 0;
+    const meanLabel = REALM_LABEL[REALM_ORDER[Math.round(meanIdx)]];
+    const hwa = counts['hwagyeong'] ?? 0;
+    const dist = [...REALM_ORDER, 'hwagyeong']
+      .filter((r, i, a) => a.indexOf(r) === i)
+      .filter((r) => counts[r])
+      .map((r) => `${REALM_LABEL[r] ?? r} ${Math.round((counts[r] / n) * 100)}%`)
+      .join(' / ');
+    console.log(`[${b.name}] 평균경지(생존) ≈ ${meanLabel} (idx ${meanIdx.toFixed(2)}) · 화경 ${Math.round((hwa / n) * 100)}% · 사망 ${Math.round((deaths / n) * 100)}%`);
+    console.log(`           분포: ${dist}${counts['사망'] ? ` / 사망 ${Math.round((counts['사망'] / n) * 100)}%` : ''}`);
+  }
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
@@ -273,6 +364,10 @@ async function main() {
   }
   if (process.argv[2] === 'questsweep') {
     await runQuestSweep();
+    return;
+  }
+  if (process.argv[2] === 'buildsweep') {
+    await runBuildSweep();
     return;
   }
   const years = Number(process.argv[2] ?? 15);

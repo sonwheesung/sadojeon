@@ -21,6 +21,8 @@ import {
 import { TRAINING_OPTIONS } from '@/data/training';
 import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
 import { canDispatch, dispatchQuest } from '@/systems/questSystem';
+import { currentAge } from '@/systems/discipleCtx';
+import { QUEST_GRADE_ORDER } from '@/data/quests';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -157,16 +159,23 @@ export function configureOptimal(): void {
 
 // 의뢰 파견(최적) — 유휴 제자를 역량 맞는 의뢰에 보내 경험치(주력 성·외공·명성)를 먹인다.
 // rate 로 빈도 조절(훈련과 병행). 파견 중엔 일과 훈련 미발동(경지 진행 멈춤) → 트레이드오프.
-export function optimalDispatch(rate = 0.15): void {
+const gradeRank = (g: string): number => QUEST_GRADE_ORDER.indexOf(g as never);
+
+export function optimalDispatch(rate = 0.15, minAge = 0): void {
   const board = useQuestStore.getState().board;
   if (board.length === 0) return;
   const ds = useDiscipleStore.getState();
   for (const id of ds.order) {
     const d = ds.disciples[id];
     if (!d || d.status !== 'training') continue;
+    if (currentAge(d) < minAge) continue; // 유년기 제외 — 청소년기(minAge)부터 의뢰.
     if (rand() > rate) continue;
-    const fit = board.find((q) => canDispatch(d, q));
-    if (fit) dispatchQuest(fit.id, [d.id]);
+    // 역량 되는 의뢰 중 **가장 높은 등급**(경험 프리미엄). 쉬운(잡일·소무)은 제외 — 경험 의뢰만 보낸다.
+    // 역량 안 되는 어린 제자는 보낼 의뢰가 없어 자연히 훈련(유년기). 청소년기부터 위험 의뢰 가능.
+    const fits = board.filter((q) => canDispatch(d, q) && gradeRank(q.grade) >= gradeRank('normal'));
+    if (fits.length === 0) continue;
+    fits.sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade));
+    dispatchQuest(fits[0].id, [d.id]);
   }
 }
 

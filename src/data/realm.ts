@@ -152,5 +152,6 @@ export function enlightenmentChance(insight: number, target: Realm): number {
 export const ENLIGHTENMENT_PITY_STEP = 0.05; // 실패 1회당 +5%p
 export const ENLIGHTENMENT_PITY_GUARANTEE = 12; // 누적 12회 실패 → 다음은 보장
 
-// 폐관 청원 허락 시 기본 폐관 일수.
-export const SECLUSION_PETITION_DAYS = 14;
+// 폐관 청원 허락 시 기본 폐관 일수. 위험 의뢰(3주=21일)보다 길게 — 폐관은 느리지만 확실, 의뢰는
+// 빠르되 부상 위험. 28일 = 4주(극험 의뢰와 동급 기간) + 벽곡단 2/일 = 56개 소모(무거운 사슬). docs/28 §5.
+export const SECLUSION_PETITION_DAYS = 28;
