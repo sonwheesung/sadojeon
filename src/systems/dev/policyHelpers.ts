@@ -246,6 +246,21 @@ export function partyDispatch(carryId: string, roleMap: Record<string, string>, 
   dispatchQuest(q.id, party);
 }
 
+// 자금 목적 파견 — 역량 되는 의뢰 중 **보상 큰 것 아무거나**(잡일·소무 포함). 청소년기부터.
+// (optimalDispatch 는 보통↑ 경험 의뢰만 — 자금 벌이엔 저급도 받아야 하므로 별도.)
+export function incomeDispatch(rate = 0.05, minAge = 13): void {
+  const board = useQuestStore.getState().board;
+  if (board.length === 0) return;
+  const ds = useDiscipleStore.getState();
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (!d || d.status !== 'training' || currentAge(d) < minAge) continue;
+    if (rand() > rate) continue;
+    const fits = board.filter((q) => canDispatch(d, q)).sort((a, b) => b.reward.money - a.reward.money);
+    if (fits.length) dispatchQuest(fits[0].id, [d.id]);
+  }
+}
+
 // 금창약 — 치명상(중상·부상) 회복. includeDeath 면 의뢰 재난 사망(departed)도 살린다는 가정.
 // (sweep 맥락은 졸업·전직 없음 → departed=의뢰 사망이라 안전.)
 export function healWithSalve(includeDeath: boolean): { healed: number; saved: number } {

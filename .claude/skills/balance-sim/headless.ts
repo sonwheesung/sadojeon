@@ -14,12 +14,15 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
-import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
+import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget } from '@/systems/questSystem';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
-import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir } from '@/systems/alchemySystem';
+import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir, isLabOperational } from '@/systems/alchemySystem';
+import { setFoodCost, setLabUpkeep, setPatronageMult } from '@/systems/economySystem';
+import { setQuestRewardMult } from '@/systems/questSystem';
 import { ELIXIR_RECIPES } from '@/data/elixirs';
 import { useItemStore } from '@/stores/itemStore';
+import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
@@ -607,9 +610,120 @@ async function runFactorySweep(): Promise<void> {
   console.log(`서폿 연단공장 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과 · 내공단 ${(sumInternalDan / iters).toFixed(1)}과`);
 }
 
+// 동(銅) → 금/은/동 표기. 1금=1000동, 1은=100동 (docs/09).
+function coinStr(copper: number): string {
+  const safe = Math.max(0, Math.round(copper));
+  const g = Math.floor(safe / 1000);
+  const r = safe - g * 1000;
+  const s = Math.floor(r / 100);
+  const c = r - s * 100;
+  const parts: string[] = [];
+  if (g) parts.push(`${g}금`);
+  if (s) parts.push(`${s}은`);
+  if (c || parts.length === 0) parts.push(`${c}동`);
+  return parts.join(' ');
+}
+
+// ── 자금 소진율 — 의뢰·판매 없이 그냥 진행 시 며칠 만에 파산하나(식비+유지비 vs 후원) ──
+async function runBurnSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 30);
+  const days = years * 336;
+  console.log(`=== 자금 추이 — 의뢰 빈도별 (제자 4명·연단실 ON·시작 ${coinStr(12345)}) ===`);
+  console.log('지출: 식비 60동/제자·월 + 연단실 유지비 2은/월. 수입: 후원금(명성) + 의뢰 보상.\n');
+  for (const cfg of [
+    { name: '의뢰 없음', rate: 0 },
+    { name: '의뢰 가끔(5%)', rate: 0.05 },
+    { name: '의뢰 자주(15%)', rate: 0.15 },
+  ]) {
+    seedNewRun(SEED_POOL);
+    useGameStore.getState().setPhase('playing');
+    buildAlchemyLab();
+    const yearly: number[] = [];
+    for (let d = 0; d < days; d += 1) {
+      configureOptimal(); // 제자 훈련·성장(역량↑ → 더 좋은 의뢰 가능)
+      if (cfg.rate > 0) incomeDispatch(cfg.rate, 13); // 청소년기부터 가끔 의뢰(잡일 포함) → 수입
+      advanceTurn();
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      const inbox = useInboxStore.getState();
+      for (const item of [...inbox.items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+      }
+      healWithSalve(false); // 부상 회복(의뢰 계속 가게)
+      useInboxStore.getState().reset();
+      if ((d + 1) % 336 === 0) yearly.push(useSectStore.getState().sect?.resources ?? 0);
+    }
+    const fin = yearly[yearly.length - 1] ?? 0;
+    console.log(`[${cfg.name}] 연도별 잔액: ${yearly.slice(0, 8).map((v) => coinStr(v)).join(' / ')}`);
+    console.log(`  ${years}년 최종 ${coinStr(fin)}\n`);
+  }
+}
+
+// ── 경제 전 조합 그리드 — 식비·유지비·시작자금·의뢰보상 변주 × 가끔 의뢰(10%) ──
+async function runEconomySweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const days = years * 336;
+  const FOODS = [10, 20, 40];
+  const UPKEEPS = [100, 200];
+  const STARTS = [12345, 30000];
+  const REWARDS = [1, 3];
+  console.log(`=== 경제 그리드 — 연단실 ON · 가끔 의뢰(10%) · ${years}년 (제자 4명) ===`);
+  console.log('각 조합 최종 자금 + 연단실 가동(O=유지비 납부중) + 최저점. 단위 금/은/동.\n');
+  console.log('식비 | 유지비 | 시작 | 보상× → 최종자금 | 가동 | 최저');
+  for (const food of FOODS)
+    for (const up of UPKEEPS)
+      for (const start of STARTS)
+        for (const rw of REWARDS) {
+          seedNewRun(SEED_POOL);
+          useGameStore.getState().setPhase('playing');
+          setFoodCost(food);
+          setLabUpkeep(up);
+          setQuestRewardMult(rw);
+          setPatronageMult(1);
+          const sect = useSectStore.getState();
+          if (sect.sect) sect.setSect({ ...sect.sect, resources: start });
+          buildAlchemyLab();
+          let minRes = start;
+          for (let d = 0; d < days; d += 1) {
+            configureOptimal();
+            incomeDispatch(0.1, 13);
+            advanceTurn();
+            const s = useScheduleStore.getState();
+            if (s.pendingReport) s.resolveMonthlyReport();
+            if (s.pendingSetup) s.resolveMonthlySetup();
+            if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+            const inbox = useInboxStore.getState();
+            for (const item of [...inbox.items]) {
+              const dom = (item.payload as { domain?: string } | undefined)?.domain;
+              if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+            }
+            healWithSalve(false);
+            useInboxStore.getState().reset();
+            const r = useSectStore.getState().sect?.resources ?? 0;
+            if (r < minRes) minRes = r;
+          }
+          const fin = useSectStore.getState().sect?.resources ?? 0;
+          const op = isLabOperational() ? 'O' : 'X';
+          console.log(`식비${food} | 유지${up} | ${coinStr(start)} | ×${rw} → ${coinStr(fin)} | ${op} | 최저 ${coinStr(minRes)}`);
+        }
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
+  if (process.argv[2] === 'economysweep') {
+    await runEconomySweep();
+    return;
+  }
+  if (process.argv[2] === 'burnsweep') {
+    await runBurnSweep();
     return;
   }
   if (process.argv[2] === 'factorysweep') {

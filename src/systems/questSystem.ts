@@ -404,6 +404,12 @@ const QUEST_GRADE_GROWTH: Record<QuestGrade, number> = {
 // 실전 깨달음 가산 — 의뢰(실전)는 폐관보다 +30%p 높은 확률로 벽을 뚫는다(강호 경험의 묘리). docs/28 §5.
 const QUEST_ENLIGHTENMENT_BONUS = 0.3;
 
+// 의뢰 보상(자금) 배수 — 밸런스 레버(런타임 조정). 기본 1.
+let questRewardMult = 1;
+export function setQuestRewardMult(n: number): void {
+  questRewardMult = n;
+}
+
 // 의뢰 도메인 → 길에서 알아볼 특수 약초(연단 재료). 약초 지식 있는 동문이 채집.
 const QUEST_HERB: Partial<Record<QuestDomain, string>> = {
   medicine: 'herb-poison', // 의술 의뢰 — 독초·해독초
@@ -619,7 +625,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   const mult = (active.rewardMult ?? 1) * (active.rewardFlag === 'noble' ? 1.5 : 1);
 
   if (scale.money > 0) {
-    useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money * mult));
+    useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money * mult * questRewardMult));
   }
   if (scale.fame > 0) {
     useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * mult * 0.3));

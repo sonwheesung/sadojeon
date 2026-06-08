@@ -18,7 +18,7 @@ import type { QiAttribute } from '@/types/disciple';
 // (추후: 대장간 등 다른 공방도 같은 틀로.)
 export const ALCHEMY_LAB_ID = 'alchemy-lab';
 export const ALCHEMY_LAB_BUILD_COST = 3000;
-export const ALCHEMY_LAB_UPKEEP_MONTHLY = 200; // 월 유지비(자금) — 미납 시 가동중지
+export const ALCHEMY_LAB_UPKEEP_MONTHLY = 100; // 월 유지비(자금) — 미납 시 가동중지(economySystem 이 실제 사용)
 
 // 유지비 납부 여부 — 미납이면 연단실 비가동(낼 때까지 제조 불가). economySystem 이 매월 갱신.
 let labOperational = true;

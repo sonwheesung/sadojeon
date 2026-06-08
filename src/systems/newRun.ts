@@ -68,7 +68,7 @@ function defaultSect(): SectState {
     name: '무명산문',
     hanjaName: '無名山門',
     reputation: 10,
-    resources: 12345, // 동화 단위. 금/은/동 환산은 AppHeader 에서.
+    resources: 30000, // 30금. 동화 단위(1금=1000동), 금/은/동 환산은 AppHeader. 무과금 자립 가능 시작값.
     facilities: [],
   };
 }
