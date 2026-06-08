@@ -8,6 +8,7 @@
 import { findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
+import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { QiAttribute } from '@/types/disciple';
 
@@ -33,6 +34,24 @@ export function addMaterial(id: string, qty: number): void {
 }
 export function materialCount(id: string): number {
   return materials[id] ?? 0;
+}
+
+// 마을 구매 — 약초를 게임머니(사문 자금)로 산다. 진귀할수록 비쌈. 자금 부족이면 false.
+const HERB_PRICE: Record<string, number> = {
+  'herb-common': 3,
+  'herb-fire': 9,
+  'herb-poison': 9,
+  'herb-cold': 9,
+  'herb-rare': 28,
+  'herb-divine': 130,
+};
+export function buyMaterial(id: string, qty: number): boolean {
+  const cost = (HERB_PRICE[id] ?? Infinity) * qty;
+  const sect = useSectStore.getState();
+  if (!sect.sect || sect.sect.resources < cost) return false;
+  sect.adjustResources(-cost);
+  addMaterial(id, qty);
+  return true;
 }
 export function isCrafting(discipleId: string): boolean {
   return Boolean(activeCrafts[discipleId]);

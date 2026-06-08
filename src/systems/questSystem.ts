@@ -31,6 +31,7 @@ import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
 import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
+import { addMaterial } from './alchemySystem';
 import { currentAge } from './discipleCtx';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
@@ -403,6 +404,28 @@ const QUEST_GRADE_GROWTH: Record<QuestGrade, number> = {
 // 실전 깨달음 가산 — 의뢰(실전)는 폐관보다 +30%p 높은 확률로 벽을 뚫는다(강호 경험의 묘리). docs/28 §5.
 const QUEST_ENLIGHTENMENT_BONUS = 0.3;
 
+// 의뢰 도메인 → 길에서 알아볼 특수 약초(연단 재료). 약초 지식 있는 동문이 채집.
+const QUEST_HERB: Partial<Record<QuestDomain, string>> = {
+  medicine: 'herb-poison', // 의술 의뢰 — 독초·해독초
+  scout: 'herb-cold', //     정탐(원행) — 한설초
+  duel: 'herb-fire', //      결투(격전지) — 화속 영초
+  grand: 'herb-rare', //     큰의뢰(원지) — 진귀 영초
+};
+
+// 약초 채집 — alchemy/medicine 소양 있는 동문은 의뢰 중 약초를 알아보고 캔다(연단 재료 수급).
+// 지식↑·기간↑일수록 多. 등급 높은 의뢰일수록 진귀 약초 기회. → 의원 동행 = 재료 수급 시너지.
+function gatherHerbs(d: Disciple, q: Quest): void {
+  const lore = Math.max(d.stats?.alchemy?.level ?? 0, d.stats?.medicine?.level ?? 0);
+  if (lore < 10) return;
+  const weeks = q.days ? q.days / 7 : q.weeks;
+  addMaterial('herb-common', Math.max(1, Math.round((lore / 15) * Math.max(0.5, weeks))));
+  const gradeIdx = QUEST_GRADE_ORDER.indexOf(q.grade);
+  const special = QUEST_HERB[q.domain];
+  if (special && Math.random() < 0.5) addMaterial(special, 1);
+  if (gradeIdx >= 3 && Math.random() < 0.4) addMaterial('herb-rare', 1); // 위험·극험 — 진귀
+  if (gradeIdx >= 4 && Math.random() < 0.15) addMaterial('herb-divine', 1); // 극험 — 드물게 신품 영초
+}
+
 // ─── 의뢰 치명상 생존 체인 (즉사 없음) ──────────────────────────────────────
 // 신의급(만렙) 의술 임계 — 동행 의원이 이 이상이면 치명상 동문을 살린다(본인은 못 살림).
 const DIVINE_DOCTOR_MEDICINE = 40;
@@ -699,6 +722,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
     if (isMartial && patch.status !== 'departed' && scale.growth > 0) {
       attemptQuestEnlightenment(id, QUEST_ENLIGHTENMENT_BONUS);
     }
+    // 약초 채집 — 생존자 중 약초 지식 있는 동문이 길에서 연단 재료를 캔다(의원 동행 = 재료 수급).
+    if (patch.status !== 'departed') gatherHerbs(d, q);
   }
 
   // 친밀도 — 함께 살아 돌아온 동문은 가까워진다.
