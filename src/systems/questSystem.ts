@@ -150,7 +150,8 @@ export function dispatchQuest(questId: string, discipleIds: string[]): boolean {
     if (!d || !canDispatch(d, quest)) return false;
   }
   const today = useTimeStore.getState().totalDay;
-  qs.addActive({ quest, discipleIds, startedDay: today, dueDay: today + quest.weeks * 7 });
+  const durationDays = quest.days ?? quest.weeks * 7; // 잡일류는 days(1~3일)로 단기.
+  qs.addActive({ quest, discipleIds, startedDay: today, dueDay: today + durationDays });
   qs.removeFromBoard(questId);
   for (const id of discipleIds) ds.update(id, { status: 'questing' });
   return true;

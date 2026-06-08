@@ -23,7 +23,8 @@ export interface Quest {
   title: string;
   client: string; // 의뢰인
   preview: string; // 한 줄 배경
-  weeks: number; // 예상 소요(파견 기간)
+  weeks: number; // 예상 소요(주). 일 단위 단기 의뢰는 days 로 덮어쓴다(잡일=청소 등 1~3일).
+  days?: number; // 있으면 파견 기간을 일 단위로(weeks 무시). 잡일류 단기 심부름.
   reward: QuestReward; // 미리보기 = 완전성공 기대치
   recommended: number; // 추천 인원
   minStat: number; // 관련 역량 최소 조건(극험은 하드 게이트, 그 외 소프트)
