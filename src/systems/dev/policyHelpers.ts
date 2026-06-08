@@ -2,15 +2,19 @@
 // 결정 표면: 훈련 카테고리·세부종목, 무공축(심법/초식/경공), 무공서 변경, 영약 복용, 의뢰 파견, 4지선다.
 //
 // random  = 모든 결정을 무작위로.
-// optimal = 경지 상승(궁극 화경)을 향해 합리적으로: 등급천장 높은 무공서로 갈아타고,
-//           내공/외공/성 게이트를 채우고, 초절정에서 신품 영약을 확보한다.
+// optimal = 경지 상승(궁극 화경)을 향해 합리적으로. 무공서는 **계보 트리를 합법적으로 타고 올라간다**:
+//           한번 정한 무공 계열의 선행조건(prerequisites)을 차례로 충족하며 상위 무공으로 갈아탄다
+//           (텔레포트 X). 정점(절품 무공서) + 내공/외공/성 게이트 + 신품 영약 → 화경.
 
-import { MARTIAL_ARTS, findMartialArt } from '@/data/martialArts';
+import {
+  MARTIAL_ARTS,
+  canLearnArt,
+  findMartialArt,
+} from '@/data/martialArts';
 import {
   REALM_EXTERNAL_REQ,
   REALM_INTERNAL_REQ,
   REALM_SEONG_GATE,
-  artGradeLearnRealm,
   nextRealm,
   realmIndex,
 } from '@/data/realm';
@@ -18,48 +22,67 @@ import { TRAINING_OPTIONS } from '@/data/training';
 import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
-import type { Disciple, MartialArtGrade, TrainingCategory } from '@/types';
+import { useTimeStore } from '@/stores/timeStore';
+import type { Disciple, MartialArt, TrainingCategory } from '@/types';
 
 const rand = () => Math.random();
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
 
-const GRADE_RANK: Record<MartialArtGrade, number> = {
-  novice: 0,
-  apprentice: 1,
-  master: 2,
-  grandmaster: 3,
-  legendary: 4,
-};
-
 const CATEGORIES: TrainingCategory[] = ['martial', 'physical', 'study', 'rest'];
 const MARTIAL_AXES = ['simbeop', 'chosik', 'gyeonggong'] as const;
 
-function mainArtOf(d: Disciple) {
+function mainArtOf(d: Disciple): MartialArt | undefined {
   return findMartialArt(d.mainMartialArtId ?? d.martialArts[0]?.artId ?? '');
 }
-
-// 현재 경지에서 익힐 수 있는 무공(학습 경지 게이트 통과). 사문은 전 비급 보유(newRun).
-function learnableArts(d: Disciple) {
-  const ri = realmIndex(d.realm);
-  return MARTIAL_ARTS.filter((a) => ri >= realmIndex(artGradeLearnRealm(a.grade)));
+function owns(d: Disciple, artId: string): boolean {
+  return d.martialArts.some((a) => a.artId === artId);
+}
+function seongOf(d: Disciple, artId: string): number {
+  return d.martialArts.find((a) => a.artId === artId)?.seong ?? 0;
 }
 
-// 최적 무공서 — 학습가능한 **최고 등급**(등급천장=화경 확보가 최우선). 동급이면 같은 계열 우선
-// (효율 보존). 현 무공보다 등급이 높을 때만 갈아탄다. 화경은 절품(grandmaster)↑ 무공서로만 가능
-// (현 데이터: 이십사수매화검/혈마공 2종) — 그래서 필요하면 타 계열로도 갈아탄다.
-export function bestArtFor(d: Disciple): string | null {
-  const main = mainArtOf(d);
-  const arts = learnableArts(d);
-  if (arts.length === 0) return main?.id ?? null;
-  const mainSchool = main?.school;
-  arts.sort((a, b) => {
-    const g = GRADE_RANK[b.grade] - GRADE_RANK[a.grade];
-    if (g !== 0) return g;
-    return (a.school === mainSchool ? 0 : 1) - (b.school === mainSchool ? 0 : 1);
-  });
-  const best = arts[0];
-  if (!main) return best.id;
-  return GRADE_RANK[best.grade] > GRADE_RANK[main.grade] ? best.id : main.id;
+// 현 경지에서 합법적으로 배울 수 있는 무공(경지 게이트 + 선행조건 충족).
+function learnableArts(d: Disciple): MartialArt[] {
+  return MARTIAL_ARTS.filter((a) => !owns(d, a.id) && canLearnArt(d, a));
+}
+
+// ── 계보 트리 climbing ─────────────────────────────────────────────────────
+// 제자의 최종 목표 무공(그 계열의 화경급 정점). 화경 트리는 현 데이터에 2개:
+//  - 화산 검: …→이십사수매화검(grandmaster)   - 사파→마교: 흑풍권@5성→혈마공(grandmaster)
+function goalArtFor(d: Disciple): MartialArt | null {
+  // 이미 사파 권(흑풍권)을 든 제자는 그 트리(→혈마공)를 탄다.
+  if (owns(d, 'heukpung-fist')) return findMartialArt('hyeolma-gong') ?? null;
+  const school = mainArtOf(d)?.school;
+  if (school === 'fist' || school === 'darkArts') return findMartialArt('hyeolma-gong') ?? null;
+  // 그 외(검·내공·보법 등)는 가장 일반적인 화경 트리(화산 검)로.
+  return findMartialArt('isipsa-maehwa-sword') ?? null;
+}
+
+// 목표를 향해 "오늘 주력으로 삼아 키울 무공" — 선행조건을 합법적으로 한 단계씩 밟는다.
+// 반환: 학습/육성할 artId, 또는 null(지금은 진척 불가 → 현 주력 유지하며 경지만 올림).
+function planArtToward(d: Disciple, goal: MartialArt, depth = 0): string | null {
+  if (depth > 8) return null;
+  if (canLearnArt(d, goal)) return goal.id; // 선행·경지 충족 → 배운다(또는 보유 중이면 키운다).
+  // 못 배움 — 미충족 선행을 향해 내려간다.
+  for (const p of goal.prerequisites ?? []) {
+    const pre = findMartialArt(p.artId);
+    if (!pre) continue;
+    if (!owns(d, p.artId)) {
+      const r = planArtToward(d, pre, depth + 1);
+      if (r) return r; // 선행(또는 그 선행)을 먼저 배운다.
+    } else if (seongOf(d, p.artId) < p.minSeong) {
+      return p.artId; // 선행 보유했으나 성 부족 → 그 선행을 키워 다음을 연다.
+    }
+  }
+  return null; // 경지 게이트만 미달 → 현 주력 유지(내공/외공으로 경지부터 올림).
+}
+
+// 어떤 무공의 성을 어디까지 올려야 다음 단계가 열리나(상위 무공 선행 요구 최대치).
+function consumerMinSeong(artId: string): number {
+  let m = 0;
+  for (const a of MARTIAL_ARTS)
+    for (const p of a.prerequisites ?? []) if (p.artId === artId) m = Math.max(m, p.minSeong);
+  return m;
 }
 
 // ── 최적 플레이: 매일 호출 ────────────────────────────────────────────────
@@ -77,23 +100,35 @@ export function configureOptimal(): void {
     const d = ds.disciples[id];
     if (!d || d.status !== 'training') continue;
 
-    // 1) 무공서 변경 — 등급천장 높은 같은계열 무공으로 갈아탄다(화경 천장 확보).
-    const best = bestArtFor(d);
-    if (best && best !== d.mainMartialArtId) ds.assignMainMartialArt(id, best);
+    // 1) 무공서 — 계보 트리를 합법적으로 타고 올라간다(선행조건 충족 후 상위 무공 학습/육성).
+    const goal = goalArtFor(d);
+    let trainId = d.mainMartialArtId ?? d.martialArts[0]?.artId ?? '';
+    if (goal) {
+      const planned = canLearnArt(d, goal) || owns(d, goal.id) ? goal.id : planArtToward(d, goal);
+      if (planned) trainId = planned;
+    }
+    if (trainId && trainId !== d.mainMartialArtId) ds.assignMainMartialArt(id, trainId);
 
-    // 2) 무공축 — 다음 경지 게이트를 균형있게 채운다: 성 게이트 미달이면 초식(성), 아니면
-    //    내공 미달이면 심법(내공), 둘 다 충족이면 초식(다음 경지 성 선행 적립).
-    //    (내공만 파면 성이 안 올라 화경 7성 게이트를 영영 못 넘는다.)
+    // 2) 무공축 — 경지(내공)와 무공 성을 **병행**한다. 상위 무공은 경지 게이트(예: 매화검=이류,
+    //    이십사수매화검=절정)와 선행 성을 둘 다 요구하므로, 둘 다 부족하면 하루씩 번갈아 올린다.
+    //    한쪽만 부족하면 그쪽을, 둘 다 충족이면 초식(다음 단계 성 선행).
     const next = nextRealm(d.realm);
     const internal = d.realmProgress?.internal ?? 0;
-    const mainInst = d.martialArts.find((a) => a.artId === d.mainMartialArtId) ?? d.martialArts[0];
-    const seong = mainInst?.seong ?? 1;
-    const seongGate = next ? (REALM_SEONG_GATE[next] ?? 0) : 0;
     const internalReq = next ? (REALM_INTERNAL_REQ[next] ?? 0) : 0;
-    const axis = seong < seongGate ? 'chosik' : internal < internalReq ? 'simbeop' : 'chosik';
+    const seongTarget = Math.max(
+      consumerMinSeong(trainId),
+      goal && trainId === goal.id && next ? (REALM_SEONG_GATE[next] ?? 0) : 0,
+    );
+    const needSeong = seongOf(d, trainId) < seongTarget;
+    const needInternal = internal < internalReq;
+    const parity = useTimeStore.getState().totalDay % 2 === 0;
+    const axis = needSeong && needInternal ? (parity ? 'chosik' : 'simbeop')
+      : needSeong ? 'chosik'
+      : needInternal ? 'simbeop'
+      : 'chosik';
     sched.setDailyChoice(id, 'martial', axis);
 
-    // 3) 체력 — 외공(근력) 요건 채울 때까지 기마자세, 채우면 암벽(체력Lv→스태미나).
+    // 3) 체력 — 외공(근력) 요건 채울 때까지 기마자세, 채우면 암벽(체력Lv).
     const strengthLv = d.stats?.strength?.level ?? 0;
     const extReq = next ? (REALM_EXTERNAL_REQ[next] ?? 0) : 0;
     sched.setDailyChoice(id, 'physical', strengthLv < extReq ? 'phys_horse' : 'phys_climb');
@@ -101,14 +136,13 @@ export function configureOptimal(): void {
     if (realmIndex(d.realm) >= realmIndex('chojeoljeong')) nearHwagyeong = true;
   }
 
-  // 4) 영약 — 초절정 도달 제자가 있으면 신품 영약 확보(화경 벽 통과 열쇠). 없으면 지급.
+  // 4) 영약 — 초절정 도달 제자가 있으면 신품 영약 확보(화경 벽 통과 열쇠).
   if (nearHwagyeong && !hasDivineElixir()) grantDivineElixir();
 }
 
 // ── 올랜덤 플레이: 매일 호출 ──────────────────────────────────────────────
 export function configureRandom(): void {
   const sched = useScheduleStore.getState();
-  // 매일 무작위 주간 패턴 → 그날 카테고리도 사실상 랜덤.
   sched.setSchedule({
     weeklyPattern: Array.from({ length: 7 }, () => pick(CATEGORIES)),
     monthlyQuests: 0,
@@ -119,15 +153,11 @@ export function configureRandom(): void {
     const d = ds.disciples[id];
     if (!d || d.status !== 'training') continue;
 
-    // 무공축 랜덤.
     sched.setDailyChoice(id, 'martial', pick(MARTIAL_AXES));
-    // 체력·공부 종목 랜덤.
-    const physOpts = TRAINING_OPTIONS.filter((o) => o.category === 'physical');
-    const studyOpts = TRAINING_OPTIONS.filter((o) => o.category === 'study');
-    sched.setDailyChoice(id, 'physical', pick(physOpts).id);
-    sched.setDailyChoice(id, 'study', pick(studyOpts).id);
+    sched.setDailyChoice(id, 'physical', pick(TRAINING_OPTIONS.filter((o) => o.category === 'physical')).id);
+    sched.setDailyChoice(id, 'study', pick(TRAINING_OPTIONS.filter((o) => o.category === 'study')).id);
 
-    // 가끔 무공서 무작위 변경.
+    // 가끔 무공서 무작위 변경(합법 학습가능 범위 내 — 선행조건 존중).
     if (rand() < 0.004) {
       const arts = learnableArts(d);
       if (arts.length) ds.assignMainMartialArt(id, pick(arts).id);
