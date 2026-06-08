@@ -483,7 +483,13 @@ export function tickDailyTraining(): DiscipleTickReport[] {
     const d = store.disciples[id];
     if (!d) continue;
     // 졸업·하산·파견(의뢰) 제자는 사문 일과에 포함되지 않는다.
-    if (d.status === 'graduated' || d.status === 'departed' || d.status === 'questing') continue;
+    if (
+      d.status === 'graduated' ||
+      d.status === 'departed' ||
+      d.status === 'questing' ||
+      d.status === 'crafting'
+    )
+      continue;
 
     const plan = resolveDayPlan(d, day);
 

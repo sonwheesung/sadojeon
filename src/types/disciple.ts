@@ -11,6 +11,7 @@ export type DiscipleStatus =
   | 'injured'
   | 'meditating'
   | 'questing'
+  | 'crafting' // 연단 중 — 제조 기간 동안 다른 작업(훈련·의뢰) 불가
   | 'graduated'
   | 'departed';
 

@@ -23,7 +23,7 @@ import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
 import { tickDarkness } from './darknessSystem';
 import { tickElixirCraft } from './elixirSystem';
-import { tickCraft, tickElixirAbsorb } from './alchemySystem';
+import { tickCraft, tickElixirAbsorb, tickFacilityUpkeep } from './alchemySystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 
@@ -42,6 +42,7 @@ export function advanceTurn() {
   tickOverrideExpiry();
   tickCraft(); // 연단 완료 처리(제조 기간 도래)
   tickElixirAbsorb(); // 내공단 흡수 진행(매일 perDay 내공)
+  tickFacilityUpkeep(); // 연단실 유지비 차감(열려 있으면)
 
   const time = useTimeStore.getState().current;
 

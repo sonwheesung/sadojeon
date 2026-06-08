@@ -12,6 +12,32 @@ import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { QiAttribute } from '@/types/disciple';
 
+// ─── 연단실(사문 시설) ──────────────────────────────────────────────────────
+// 연단을 하려면 사문에 연단실을 열어야 한다(건설비) + 유지비가 매일 자금에서 빠진다.
+// (추후: 대장간 등 다른 공방도 같은 틀로.)
+export const ALCHEMY_LAB_ID = 'alchemy-lab';
+export const ALCHEMY_LAB_BUILD_COST = 3000;
+export const ALCHEMY_LAB_UPKEEP = 5; // 일일 유지비(자금)
+
+export function hasAlchemyLab(): boolean {
+  return (useSectStore.getState().sect?.facilities ?? []).some((f) => f.id === ALCHEMY_LAB_ID);
+}
+export function buildAlchemyLab(): boolean {
+  const sect = useSectStore.getState();
+  const s = sect.sect;
+  if (!s || hasAlchemyLab() || s.resources < ALCHEMY_LAB_BUILD_COST) return false;
+  sect.setSect({
+    ...s,
+    resources: s.resources - ALCHEMY_LAB_BUILD_COST,
+    facilities: [...s.facilities, { id: ALCHEMY_LAB_ID, name: '연단실', level: 1, inUse: false }],
+  });
+  return true;
+}
+// 매일 — 연단실 유지비 차감(열려 있으면). timeSystem 연결.
+export function tickFacilityUpkeep(): void {
+  if (hasAlchemyLab()) useSectStore.getState().adjustResources(-ALCHEMY_LAB_UPKEEP);
+}
+
 // 회차 스코프 상태 — 학습 레시피 / 재료 / 진행 중 제조(제조자별).
 const learnedRecipes = new Set<string>();
 const materials: Record<string, number> = {};
@@ -61,17 +87,22 @@ function hasMaterials(recipe: ElixirRecipe): boolean {
   return recipe.materials.every((m) => (materials[m.id] ?? 0) >= m.qty);
 }
 
-// 제조 시작 — 배운 레시피 + alchemy Lv + 재료 + 제조중 아님. 재료 소모, 효과별 제조기간 설정.
+// 제조 시작 — 조건: 연단실 + 배운 레시피(책) + alchemy 스탯 ≥ 요구 + 재료. 제자는 가용(training).
+// 재료 소모, 효과별 제조기간 설정, 제자는 제조 기간 동안 'crafting'으로 점유(다른 작업 불가).
 export function startCraft(discipleId: string, recipeId: string): boolean {
+  if (!hasAlchemyLab()) return false; // 연단실이 있어야 연단 가능
   const recipe = findElixirRecipe(recipeId);
-  if (!recipe || !learnedRecipes.has(recipeId)) return false;
+  if (!recipe || !learnedRecipes.has(recipeId)) return false; // 책에 배운 레시피만
   if (activeCrafts[discipleId]) return false; // 이미 연단 중
-  const d = useDiscipleStore.getState().disciples[discipleId];
-  if (!d || (d.stats?.alchemy?.level ?? 0) < recipe.alchemyReq) return false;
-  if (!hasMaterials(recipe)) return false;
+  const ds = useDiscipleStore.getState();
+  const d = ds.disciples[discipleId];
+  if (!d || d.status !== 'training') return false; // 가용한 제자만
+  if ((d.stats?.alchemy?.level ?? 0) < recipe.alchemyReq) return false; // 스탯 제한
+  if (!hasMaterials(recipe)) return false; // 재료
   for (const m of recipe.materials) materials[m.id] -= m.qty;
   const today = useTimeStore.getState().totalDay;
   activeCrafts[discipleId] = { recipeId, until: today + recipe.craftDays };
+  ds.update(discipleId, { status: 'crafting' }); // 제조 기간 동안 점유
   return true;
 }
 
@@ -83,6 +114,8 @@ export function tickCraft(): void {
     if (today < job.until) continue;
     const recipe = findElixirRecipe(job.recipeId);
     delete activeCrafts[crafterId];
+    const crafter = ds.disciples[crafterId];
+    if (crafter && crafter.status === 'crafting') ds.update(crafterId, { status: 'training' }); // 점유 해제
     if (!recipe) continue;
     useItemStore.getState().add({
       id: recipe.id,

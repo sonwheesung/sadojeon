@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   injured: '치료중',
   meditating: '폐관중',
   questing: '파견중',
+  crafting: '연단중',
   graduated: '졸업',
   departed: '하산',
 };
