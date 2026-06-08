@@ -219,6 +219,40 @@ export function talentMet(disciple: Disciple, art: MartialArt): boolean {
   return disciple.efficiency?.[art.school] !== '상극';
 }
 
+const GRADE_RANK: Record<MartialArtGrade, number> = {
+  novice: 0,
+  apprentice: 1,
+  master: 2,
+  grandmaster: 3,
+  legendary: 4,
+};
+
+// 제자가 **계보 트리에서 도달 가능한 최고 무공 등급** — 졸업 천장 판정용. docs/26 §5-4 · docs/28 §5-2.
+// 보유 무공에서 선행조건(prerequisites) 그래프를 위로 따라가, 선행을 모두 갖출 수 있는 상위 무공까지
+// 닿는다(경지·성은 성장으로 채워지므로 잠재 도달성만 본다). 졸업은 이 정점 천장에서만 허용 → 중간
+// 무공 천장에서 하산해 정점 무공(예: 혈마공·이십사수매화검)에 못 닿는 일을 막는다.
+export function reachableApexGrade(disciple: Disciple): MartialArtGrade {
+  const reachable = new Set(disciple.martialArts.map((a) => a.artId));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const art of MARTIAL_ARTS) {
+      if (reachable.has(art.id)) continue;
+      const prereqs = art.prerequisites ?? [];
+      if (prereqs.length > 0 && prereqs.every((p) => reachable.has(p.artId))) {
+        reachable.add(art.id);
+        changed = true;
+      }
+    }
+  }
+  let best: MartialArtGrade = 'novice';
+  for (const id of reachable) {
+    const g = findMartialArt(id)?.grade;
+    if (g && GRADE_RANK[g] > GRADE_RANK[best]) best = g;
+  }
+  return best;
+}
+
 // 새 무공을 익힐 때 시작 성 — 경지가 받침이 되어 기초를 건너뛴다. docs/26 §5-2.
 export function initialSeong(disciple: Disciple, art: MartialArt): number {
   const floor = REALM_LEARN_FLOOR[disciple.realm];

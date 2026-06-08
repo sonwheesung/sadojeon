@@ -2,9 +2,9 @@
 // 그레이박스 단순화: 무공 단계 + 신뢰 두 축 기반.
 // 추후 명성·노선 안정성 도입 시 종합 평가로 확장.
 
-import { findMartialArt, seongToStage } from '@/data/martialArts';
+import { findMartialArt, reachableApexGrade, seongToStage } from '@/data/martialArts';
 import { JOB_TIER_LABEL } from '@/data/jobs';
-import { effectiveRealmCeiling, realmCeiling, realmIndex } from '@/data/realm';
+import { effectiveRealmCeiling, realmIndex } from '@/data/realm';
 import { evaluateJobs, type JobChance } from './jobSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
@@ -106,13 +106,11 @@ export function mainArtSummary(disciple: Disciple): string {
 // 후속: 의뢰 횟수·노선 확정·사부 인정 이벤트.
 export function isGraduationEligible(d: Disciple): boolean {
   if (d.status !== 'training') return false;
-  const main = d.mainMartialArtId
-    ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
-    : d.martialArts[0];
-  if (!main) return false;
-  // "더 가르칠 게 없다" = 제 천장(무공서 등급)에 닿고 신뢰 ≥ 60. docs/23 · docs/26.
-  const art = findMartialArt(main.artId);
-  const ceiling = art ? effectiveRealmCeiling(art.grade) : realmCeiling();
+  if (d.martialArts.length === 0) return false;
+  // "더 가르칠 게 없다" = **계보에서 도달 가능한 정점 무공서 등급** 천장에 닿고 신뢰 ≥ 60.
+  // 현 주력이 아니라 정점 기준 — 중간 무공 천장에서 하산해 정점(혈마공·이십사수매화검 등)에
+  // 못 닿는 일을 막는다. docs/23 · docs/26 §5-4.
+  const ceiling = effectiveRealmCeiling(reachableApexGrade(d));
   return realmIndex(d.realm) >= realmIndex(ceiling) && d.trustToMaster >= 60;
 }
 
