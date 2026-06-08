@@ -5,7 +5,7 @@ import { slotAwareStorage } from './persistStorage';
 
 // 연단 상태 — 회차별. 학습 레시피(배운 비급)·진행 중 제조·첫 제조 보너스 이력·연단실 가동 여부.
 // 재료/영단은 itemStore, 연단실 시설은 sect 에 있다(둘 다 DB 영속). 여기는 그 외 연단 상태.
-// slotAwareStorage 로 슬롯별 로컬 영속(앱 재시작 유지). (DB 동기화는 후속 runSlice 작업.)
+// DB 영속은 alchemySlice(alchemy_state 테이블)로 회차마다 load/save. slotAwareStorage 는 오프라인 캐시.
 
 export interface CraftJob {
   recipeId: string;
@@ -23,6 +23,7 @@ interface AlchemyStore {
   clearCraft: (discipleId: string) => void;
   markFirst: (key: string) => void;
   setLabOp: (on: boolean) => void;
+  hydrate: (state: Partial<Pick<AlchemyStore, 'learnedRecipes' | 'activeCrafts' | 'firstCrafted' | 'labOperational'>>) => void;
   reset: () => void;
 }
 
@@ -46,6 +47,13 @@ export const useAlchemyStore = create<AlchemyStore>()(
       markFirst: (key) =>
         set((s) => (s.firstCrafted.includes(key) ? s : { firstCrafted: [...s.firstCrafted, key] })),
       setLabOp: (on) => set({ labOperational: on }),
+      hydrate: (state) =>
+        set({
+          learnedRecipes: state.learnedRecipes ?? [],
+          activeCrafts: state.activeCrafts ?? {},
+          firstCrafted: state.firstCrafted ?? [],
+          labOperational: state.labOperational ?? true,
+        }),
       reset: () => set({ learnedRecipes: [], activeCrafts: {}, firstCrafted: [], labOperational: true }),
     }),
     {

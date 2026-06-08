@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type {
+  AlchemyState,
   InboxRecord,
   ItemRecord,
   JianghuState,
@@ -115,6 +116,23 @@ export class SupabaseRunRepo implements RunRepository {
       .maybeSingle();
     if (error) throw error;
     return data ? { factions: data.factions, events: data.events } : null;
+  }
+
+  async getAlchemy(runId: string): Promise<AlchemyState | null> {
+    const { data, error } = await supabase
+      .from('alchemy_state')
+      .select('learned_recipes, active_crafts, first_crafted, lab_operational')
+      .eq('run_id', runId)
+      .maybeSingle();
+    if (error) throw error;
+    return data
+      ? {
+          learnedRecipes: data.learned_recipes,
+          activeCrafts: data.active_crafts,
+          firstCrafted: data.first_crafted,
+          labOperational: data.lab_operational ?? true,
+        }
+      : null;
   }
 
   async getItems(runId: string): Promise<Record<string, unknown>[]> {
@@ -243,6 +261,22 @@ export class SupabaseRunRepo implements RunRepository {
         user_id: uid,
         factions: state.factions ?? {},
         events: state.events ?? [],
+      },
+      { onConflict: 'run_id' },
+    );
+    if (error) throw error;
+  }
+
+  async saveAlchemy(runId: string, state: AlchemyState): Promise<void> {
+    const uid = await requireUserId();
+    const { error } = await supabase.from('alchemy_state').upsert(
+      {
+        run_id: runId,
+        user_id: uid,
+        learned_recipes: state.learnedRecipes ?? [],
+        active_crafts: state.activeCrafts ?? {},
+        first_crafted: state.firstCrafted ?? [],
+        lab_operational: state.labOperational,
       },
       { onConflict: 'run_id' },
     );

@@ -1,3 +1,4 @@
+import { alchemySlice } from './alchemySlice';
 import { inboxSlice } from './inboxSlice';
 import { itemsSlice } from './itemsSlice';
 import { jianghuSlice } from './jianghuSlice';
@@ -9,6 +10,7 @@ import type { RunChildSlice } from './types';
 export const RUN_CHILD_SLICES: readonly RunChildSlice[] = [
   inboxSlice,
   jianghuSlice,
+  alchemySlice,
   itemsSlice,
   npcSlice,
 ];

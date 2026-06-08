@@ -90,6 +90,14 @@ export interface JianghuState {
   events: unknown;
 }
 
+// 연단 상태 — 회차당 1행(학습 레시피·진행 중 제조·첫 제조 이력·연단실 가동).
+export interface AlchemyState {
+  learnedRecipes: unknown;
+  activeCrafts: unknown;
+  firstCrafted: unknown;
+  labOperational: boolean;
+}
+
 // 물품 — 조회용 컬럼 + 전체 StoredItem 블롭(item).
 export interface ItemRecord {
   category: string;
@@ -127,6 +135,8 @@ export interface RunRepository {
   saveInbox(runId: string, items: InboxRecord[]): Promise<void>;
   getJianghu(runId: string): Promise<JianghuState | null>;
   saveJianghu(runId: string, state: JianghuState): Promise<void>;
+  getAlchemy(runId: string): Promise<AlchemyState | null>;
+  saveAlchemy(runId: string, state: AlchemyState): Promise<void>;
   getItems(runId: string): Promise<Record<string, unknown>[]>; // 전체 StoredItem 배열
   saveItems(runId: string, items: ItemRecord[]): Promise<void>;
   getNpcs(runId: string): Promise<RunNpcRecord[]>;
