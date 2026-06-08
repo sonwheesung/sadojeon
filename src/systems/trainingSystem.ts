@@ -61,6 +61,7 @@ import {
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir } from './elixirSystem';
+import { consumeElixirItem, elixirItemCount } from './alchemySystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
 
 // 무공 카테고리 1일치 체력·스트레스 (종목 데이터엔 없으므로 상수).
@@ -421,6 +422,12 @@ export function setByeokgokdanBudget(n: number): void {
   byeokgokdanUsed = 0;
 }
 function consumeByeokgokdan(n: number): boolean {
+  // 실제 크래프트한 벽곡단 아이템 우선 소모.
+  if (elixirItemCount('byeokgokdan') >= n) {
+    consumeElixirItem('byeokgokdan', n);
+    return true;
+  }
+  // 없으면 시뮬/과금 예산(budget) 폴백.
   if (byeokgokdanUsed + n > byeokgokdanBudget) return false;
   byeokgokdanUsed += n;
   return true;

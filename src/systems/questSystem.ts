@@ -31,7 +31,7 @@ import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
 import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
-import { addMaterial } from './alchemySystem';
+import { addMaterial, consumeElixirItem } from './alchemySystem';
 import { currentAge } from './discipleCtx';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
@@ -444,6 +444,9 @@ export function setGeumchangBudget(n: number): void {
   geumchangUsed = 0;
 }
 function consumeGeumchang(): boolean {
+  // 실제 크래프트한 구급 영약(생사인=외상1등급·치명상약) 우선 소모.
+  if (consumeElixirItem('saengsa-1')) return true;
+  // 없으면 시뮬/과금 예산(budget) 폴백.
   if (geumchangUsed >= geumchangBudget) return false;
   geumchangUsed += 1;
   return true;

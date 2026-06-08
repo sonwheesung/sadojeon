@@ -87,6 +87,17 @@ export function materialCount(id: string): number {
   return materials[id] ?? 0;
 }
 
+// itemStore 의 영단(아이템) 보유/소모 — 크래프트한 영단을 실제 게임에서 쓴다(생존·폐관 등).
+export function elixirItemCount(id: string): number {
+  return useItemStore.getState().items.find((i) => i.id === id)?.count ?? 0;
+}
+export function consumeElixirItem(id: string, n = 1): boolean {
+  const items = useItemStore.getState();
+  if ((items.items.find((i) => i.id === id)?.count ?? 0) < n) return false;
+  items.adjustCount(id, -n);
+  return true;
+}
+
 // 마을 구매 — 약초를 게임머니(사문 자금)로 산다. 진귀할수록 비쌈. 자금 부족이면 false.
 const HERB_PRICE: Record<string, number> = {
   'herb-common': 3,
