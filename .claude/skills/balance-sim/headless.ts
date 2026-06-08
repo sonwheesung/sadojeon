@@ -14,7 +14,7 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
-import { configureOptimal, configurePartyDay, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
+import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget } from '@/systems/questSystem';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
@@ -381,9 +381,14 @@ function assignRoles(comp: string[]): Record<string, string> {
 
 async function fastDayParty(mode: string, roleMap: Record<string, string>): Promise<void> {
   if (useGameStore.getState().phase === 'ended') return;
-  if (mode === 'party') configurePartyDay(roleMap);
-  else configureOptimal();
-  optimalDispatch(0.12, 13); // 청소년기 캐리 의뢰(서포트는 전투역량 낮아 자연 제외).
+  if (mode === 'party') {
+    configurePartyDay(roleMap);
+    const carryId = Object.keys(roleMap).find((id) => roleMap[id] === 'carry');
+    if (carryId) partyDispatch(carryId, roleMap, 0.12, 13); // 캐리+서포트 동행 파견.
+  } else {
+    configureOptimal();
+    optimalDispatch(0.12, 13); // 독립캐리 — 각자 의뢰.
+  }
   advanceTurn();
   const sched = useScheduleStore.getState();
   if (sched.pendingReport) sched.resolveMonthlyReport();

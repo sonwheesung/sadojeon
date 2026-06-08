@@ -220,6 +220,32 @@ export function optimalDispatch(rate = 0.15, minAge = 0): void {
   }
 }
 
+// 파티 의뢰 파견 — 캐리를 서포트와 함께 보낸다(의원=생존, 진법=성공률). 리더(캐리)만 역량 필요.
+// 영약제조 서포트는 동행 X(집에서 연단). roleMap 없으면 의술 우선으로 동행.
+export function partyDispatch(carryId: string, roleMap: Record<string, string>, rate = 0.12, minAge = 13): void {
+  const board = useQuestStore.getState().board;
+  if (board.length === 0) return;
+  const ds = useDiscipleStore.getState();
+  const carry = ds.disciples[carryId];
+  if (!carry || carry.status !== 'training' || currentAge(carry) < minAge) return;
+  if (rand() > rate) return;
+  const fits = board.filter((q) => canDispatch(carry, q) && gradeRank(q.grade) >= gradeRank('normal'));
+  if (fits.length === 0) return;
+  fits.sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade));
+  const q = fits[0];
+  // 동행 후보 — 유휴 서포트 중 영약제조(연단)는 제외, 의술(의원) 우선.
+  const helpers = ds.order
+    .map((id) => ds.disciples[id])
+    .filter((m): m is Disciple => Boolean(m && m.id !== carryId && m.status === 'training' && roleMap[m.id] !== 'alchemy'))
+    .sort((a, b) => (b.stats?.medicine?.level ?? 0) - (a.stats?.medicine?.level ?? 0));
+  const party = [carryId];
+  for (const h of helpers) {
+    if (party.length >= Math.max(2, q.recommended)) break;
+    party.push(h.id);
+  }
+  dispatchQuest(q.id, party);
+}
+
 // 금창약 — 치명상(중상·부상) 회복. includeDeath 면 의뢰 재난 사망(departed)도 살린다는 가정.
 // (sweep 맥락은 졸업·전직 없음 → departed=의뢰 사망이라 안전.)
 export function healWithSalve(includeDeath: boolean): { healed: number; saved: number } {

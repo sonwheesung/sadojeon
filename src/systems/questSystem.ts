@@ -145,9 +145,14 @@ export function dispatchQuest(questId: string, discipleIds: string[]): boolean {
   const quest = qs.board.find((q) => q.id === questId);
   if (!quest || discipleIds.length === 0) return false;
   const ds = useDiscipleStore.getState();
-  for (const id of discipleIds) {
-    const d = ds.disciples[id];
-    if (!d || !canDispatch(d, quest)) return false;
+  // 리더(첫 제자=캐리)만 역량 게이트 통과하면 된다. 동행 서포트(의원·진법 등)는 역량 미달이어도
+  // 따라갈 수 있다 — 캐리가 의뢰를 이끌고 서포트는 보조(생존·성공률). 가용(training)만 확인.
+  const leadId = discipleIds[0];
+  const leadD = ds.disciples[leadId];
+  if (!leadD || !canDispatch(leadD, quest)) return false;
+  for (const id of discipleIds.slice(1)) {
+    const m = ds.disciples[id];
+    if (!m || m.status !== 'training') return false;
   }
   const today = useTimeStore.getState().totalDay;
   const durationDays = quest.days ?? quest.weeks * 7; // 잡일류는 days(1~3일)로 단기.
@@ -439,16 +444,20 @@ function survivesFatalBlow(
 function rollOutcome(active: ActiveQuest): QuestOutcome {
   const q = active.quest;
   const ds = useDiscipleStore.getState();
-  const caps = active.discipleIds
+  const party = active.discipleIds
     .map((id) => ds.disciples[id])
-    .filter((d): d is Disciple => d != null)
-    .map((d) => capability(d, q.domain));
-  const avg = caps.length ? caps.reduce((a, b) => a + b, 0) / caps.length : 0;
+    .filter((d): d is Disciple => d != null);
+  const caps = party.map((d) => capability(d, q.domain));
+  // **캐리 주도** — 의뢰 성패는 가장 강한 동문(캐리)이 이끈다. 약한 서포트가 평균을 깎지 않는다.
+  const lead = caps.length ? Math.max(...caps) : 0;
   const headFactor = active.discipleIds.length / Math.max(1, q.recommended);
-  let s = (avg - q.minStat) / Math.max(20, q.minStat) + (headFactor - 1) * 0.4;
-  // 조합 시너지 — 자격 있는 동행이 둘 이상이면 합공·정탐 더블 보너스. docs/28 §7.
+  let s = (lead - q.minStat) / Math.max(20, q.minStat) + (headFactor - 1) * 0.2;
+  // 조합 시너지 — 역량 있는 동행이 둘 이상이면 합공 보너스. docs/28 §7.
   const capable = caps.filter((c) => c >= q.minStat).length;
   s += Math.max(0, capable - 1) * 0.12;
+  // 진법 서포트 — 동행 중 진법(formation) 숙련자가 있으면 기관·진세 간파로 성공률↑.
+  const bestFormation = Math.max(0, ...party.map((d) => d.stats?.formation?.level ?? 0));
+  if (bestFormation >= 20) s += 0.15;
   s += active.successDelta ?? 0; // 돌발 이벤트 선택 보정
   s = Math.max(-1, Math.min(1.5, s));
   const r = Math.random();
