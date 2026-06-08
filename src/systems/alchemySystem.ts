@@ -5,8 +5,9 @@
 // Phase 1: 코어 프레임워크(레시피·재료·제조기간·XP·내공단 흡수). 상태는 회차 스코프 모듈 상태.
 // Phase 2: 재료 의뢰 연계 + 속성 상처 매칭 + store/DB 영속.
 
-import { findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
+import { findElixirRecipe, MATERIAL_LABEL, type ElixirRecipe } from '@/data/elixirs';
 import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { useAlchemyStore } from '@/stores/alchemyStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -21,12 +22,11 @@ export const ALCHEMY_LAB_BUILD_COST = 3000;
 export const ALCHEMY_LAB_UPKEEP_MONTHLY = 100; // 월 유지비(자금) — 미납 시 가동중지(economySystem 이 실제 사용)
 
 // 유지비 납부 여부 — 미납이면 연단실 비가동(낼 때까지 제조 불가). economySystem 이 매월 갱신.
-let labOperational = true;
 export function setLabOperational(on: boolean): void {
-  labOperational = on;
+  useAlchemyStore.getState().setLabOp(on);
 }
 export function isLabOperational(): boolean {
-  return labOperational;
+  return useAlchemyStore.getState().labOperational;
 }
 
 export function hasAlchemyLab(): boolean {
@@ -44,21 +44,15 @@ export function buildAlchemyLab(): boolean {
   return true;
 }
 
-// 회차 스코프 상태 — 학습 레시피 / 재료 / 진행 중 제조(제조자별).
-const learnedRecipes = new Set<string>();
-const materials: Record<string, number> = {};
-const activeCrafts: Record<string, { recipeId: string; until: number }> = {};
-const firstCrafted = new Set<string>(); // "discipleId:recipeId" — 처음 제조 보너스 1회용
+// 연단 상태(학습 레시피·진행 중 제조·첫 제조 이력·가동)는 useAlchemyStore(슬롯별 로컬 영속).
+// 재료/영단은 itemStore, 연단실 시설은 sect — 모두 영속.
 
 // 처음 제조 시 경험치 보너스 계수 — recipe.alchemyReq × 이 값 × 적성. 첫 제조가 큰 깨우침.
 const FIRST_CRAFT_XP_K = 30;
 
 export function resetAlchemy(): void {
-  learnedRecipes.clear();
-  firstCrafted.clear();
-  labOperational = true;
-  for (const k of Object.keys(materials)) delete materials[k];
-  for (const k of Object.keys(activeCrafts)) delete activeCrafts[k];
+  useAlchemyStore.getState().reset();
+  // 재료/영단은 itemStore(아이템 슬라이스)가 회차 초기화.
 }
 
 // 영단 판매 — 자금 수입. 등급(req)·효과에 비례. (이번 밸런스 테스트에선 미사용.)
@@ -75,16 +69,23 @@ export function sellElixir(recipeId: string, qty: number): number {
 }
 
 export function learnRecipe(id: string): void {
-  if (findElixirRecipe(id)) learnedRecipes.add(id);
+  if (findElixirRecipe(id)) useAlchemyStore.getState().learn(id);
 }
 export function hasLearned(id: string): boolean {
-  return learnedRecipes.has(id);
+  return useAlchemyStore.getState().learnedRecipes.includes(id);
 }
 export function addMaterial(id: string, qty: number): void {
-  materials[id] = (materials[id] ?? 0) + qty;
+  useItemStore.getState().add({
+    id,
+    category: 'material',
+    name: MATERIAL_LABEL[id] ?? id,
+    grade: 0,
+    count: qty,
+    effects: '연단 재료(약초)',
+  });
 }
 export function materialCount(id: string): number {
-  return materials[id] ?? 0;
+  return useItemStore.getState().items.find((i) => i.id === id)?.count ?? 0;
 }
 
 // itemStore 의 영단(아이템) 보유/소모 — 크래프트한 영단을 실제 게임에서 쓴다(생존·폐관 등).
@@ -116,19 +117,19 @@ export function buyMaterial(id: string, qty: number): boolean {
   return true;
 }
 export function isCrafting(discipleId: string): boolean {
-  return Boolean(activeCrafts[discipleId]);
+  return Boolean(useAlchemyStore.getState().activeCrafts[discipleId]);
 }
-// UI 표시용 목록 게터(모듈 상태 — 변경 후 수동 새로고침 필요).
 export function listLearned(): string[] {
-  return [...learnedRecipes];
+  return useAlchemyStore.getState().learnedRecipes;
 }
 export function listMaterials(): { id: string; qty: number }[] {
-  return Object.entries(materials)
-    .filter(([, q]) => q > 0)
-    .map(([id, qty]) => ({ id, qty }));
+  return useItemStore
+    .getState()
+    .items.filter((i) => i.category === 'material')
+    .map((i) => ({ id: i.id, qty: i.count }));
 }
 export function listActiveCrafts(): { discipleId: string; recipeId: string; until: number }[] {
-  return Object.entries(activeCrafts).map(([discipleId, j]) => ({
+  return Object.entries(useAlchemyStore.getState().activeCrafts).map(([discipleId, j]) => ({
     discipleId,
     recipeId: j.recipeId,
     until: j.until,
@@ -136,32 +137,34 @@ export function listActiveCrafts(): { discipleId: string; recipeId: string; unti
 }
 export function canCraft(discipleId: string, recipeId: string): boolean {
   const recipe = findElixirRecipe(recipeId);
-  if (!recipe || !hasAlchemyLab() || !labOperational || !learnedRecipes.has(recipeId)) return false;
-  if (activeCrafts[discipleId]) return false;
+  const a = useAlchemyStore.getState();
+  if (!recipe || !hasAlchemyLab() || !a.labOperational || !a.learnedRecipes.includes(recipeId)) return false;
+  if (a.activeCrafts[discipleId]) return false;
   const d = useDiscipleStore.getState().disciples[discipleId];
   if (!d || d.status !== 'training' || (d.stats?.alchemy?.level ?? 0) < recipe.alchemyReq) return false;
   return hasMaterials(recipe);
 }
 
 function hasMaterials(recipe: ElixirRecipe): boolean {
-  return recipe.materials.every((m) => (materials[m.id] ?? 0) >= m.qty);
+  return recipe.materials.every((m) => materialCount(m.id) >= m.qty);
 }
 
 // 제조 시작 — 조건: 연단실 + 배운 레시피(책) + alchemy 스탯 ≥ 요구 + 재료. 제자는 가용(training).
 // 재료 소모, 효과별 제조기간 설정, 제자는 제조 기간 동안 'crafting'으로 점유(다른 작업 불가).
 export function startCraft(discipleId: string, recipeId: string): boolean {
-  if (!hasAlchemyLab() || !labOperational) return false; // 연단실 + 유지비 납부(가동) 필요
+  const a = useAlchemyStore.getState();
+  if (!hasAlchemyLab() || !a.labOperational) return false; // 연단실 + 유지비 납부(가동) 필요
   const recipe = findElixirRecipe(recipeId);
-  if (!recipe || !learnedRecipes.has(recipeId)) return false; // 책에 배운 레시피만
-  if (activeCrafts[discipleId]) return false; // 이미 연단 중
+  if (!recipe || !a.learnedRecipes.includes(recipeId)) return false; // 책에 배운 레시피만
+  if (a.activeCrafts[discipleId]) return false; // 이미 연단 중
   const ds = useDiscipleStore.getState();
   const d = ds.disciples[discipleId];
   if (!d || d.status !== 'training') return false; // 가용한 제자만
   if ((d.stats?.alchemy?.level ?? 0) < recipe.alchemyReq) return false; // 스탯 제한
   if (!hasMaterials(recipe)) return false; // 재료
-  for (const m of recipe.materials) materials[m.id] -= m.qty;
+  for (const m of recipe.materials) useItemStore.getState().adjustCount(m.id, -m.qty);
   const today = useTimeStore.getState().totalDay;
-  activeCrafts[discipleId] = { recipeId, until: today + recipe.craftDays };
+  a.setCraft(discipleId, { recipeId, until: today + recipe.craftDays });
   ds.update(discipleId, { status: 'crafting' }); // 제조 기간 동안 점유
   return true;
 }
@@ -170,10 +173,11 @@ export function startCraft(discipleId: string, recipeId: string): boolean {
 export function tickCraft(): void {
   const today = useTimeStore.getState().totalDay;
   const ds = useDiscipleStore.getState();
-  for (const [crafterId, job] of Object.entries(activeCrafts)) {
+  const a = useAlchemyStore.getState();
+  for (const [crafterId, job] of Object.entries(a.activeCrafts)) {
     if (today < job.until) continue;
     const recipe = findElixirRecipe(job.recipeId);
-    delete activeCrafts[crafterId];
+    a.clearCraft(crafterId);
     const crafter = ds.disciples[crafterId];
     if (crafter && crafter.status === 'crafting') ds.update(crafterId, { status: 'training' }); // 점유 해제
     if (!recipe) continue;
@@ -190,8 +194,8 @@ export function tickCraft(): void {
       EFFICIENCY_MULTIPLIER[(crafter?.efficiency as Record<string, never> | undefined)?.alchemy ?? '보통'] ?? 0.35;
     const key = `${crafterId}:${recipe.id}`;
     let xp = Math.max(2, recipe.craftDays) * apt; // 반복 제조 — 적성 반영
-    if (!firstCrafted.has(key)) {
-      firstCrafted.add(key);
+    if (!a.firstCrafted.includes(key)) {
+      a.markFirst(key);
       xp += recipe.alchemyReq * FIRST_CRAFT_XP_K * apt; // 처음 제조 보너스(등급↑·적성↑일수록 큼)
     }
     ds.addStatExp(crafterId, 'alchemy', Math.max(1, Math.round(xp)));
