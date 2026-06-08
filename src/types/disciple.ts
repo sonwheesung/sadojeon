@@ -2,6 +2,9 @@ import type { MartialArtInstance, MartialArtSchool } from './martialArt';
 import type { Realm, RealmProgress } from './realm';
 import type { StatId, StatTrack } from './training';
 
+// 내공·영단 속성 — 오행. 같은 속성 영단이 잘 흡수되고, 상극이면 흡수 저하·심마 위험.
+export type QiAttribute = 'metal' | 'wood' | 'water' | 'fire' | 'earth';
+
 export type DiscipleStatus =
   | 'training'
   | 'resting'
@@ -98,6 +101,11 @@ export interface Disciple {
   status: DiscipleStatus;
   currentActivity?: DailyActivity;
   injuryDaysRemaining?: number;
+
+  // 내공 속성(오행) — 내공단 흡수 매칭. 영단 속성과 같으면 흡수 효율↑(상극이면↓). 미지정=무속성.
+  qiAttribute?: QiAttribute;
+  // 영단 흡수 상태 — 내공단 복용 시 until(totalDay)까지 매일 perDay 내공 흡수. 흡수 중엔 다른 영단 복용 불가.
+  elixirAbsorb?: { until: number; perDay: number; attribute?: QiAttribute };
 
   // 하산 시 사부가 권한 강호 행로(직업 id, jobSystem). 졸업 후 평생 직책 궤적의 출발점. docs/28 §3·§4.
   graduatedJob?: string;

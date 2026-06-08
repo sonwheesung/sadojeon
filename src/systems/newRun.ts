@@ -22,6 +22,7 @@ import {
   useTimeStore,
 } from '@/stores';
 import { captureSnapshot } from './reportSystem';
+import { resetAlchemy } from './alchemySystem';
 import { generateBoard } from './questSystem';
 import { RUN_CHILD_SLICES } from './runSlices';
 import type {
@@ -165,6 +166,7 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   }
   // 회차 격리 store 리셋 — docs/16 회차 누적 정책 + project_run_loop_carryover.
   useSectAtmosphereStore.getState().reset();
+  resetAlchemy(); // 연단 상태(학습 레시피·재료·진행 중 제조) 회차 초기화
   useEventHistoryStore.getState().reset();
   useLlmSettingsStore.getState().resetCounter();
   // 자식 도메인(서신함·강호·물품·NPC) 회차 초기 상태로 — 각 슬라이스가 알아서 비우거나 시드.
