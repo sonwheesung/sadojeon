@@ -22,6 +22,7 @@ import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
 import { tickDarkness } from './darknessSystem';
+import { tickSimma } from './simmaSystem';
 import { tickCraft, tickElixirAbsorb } from './alchemySystem';
 import { tickWoundRecovery } from './woundSystem';
 import { tickMonthlyEconomy } from './economySystem';
@@ -124,6 +125,7 @@ export function triggerPostSettlement(): void {
   triggerDailyMeeting();
   triggerDailySpar(); // 동문 비무 — 전투력 양육기 노출(저확률). docs/27 §5
   tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
+  tickSimma(); // 심마 누적·진정 + 주화입마 발작 굴림. docs/13·26
 
   // 변곡점(승급/탈진/졸업) — 모달 대신 서신함 알림으로. pending 큐 비움.
   const milestones = usePendingStore.getState().milestones;

@@ -129,6 +129,10 @@ export interface Disciple {
   darknessLevel: DarknessLevel;
   darknessRisk: 'low' | 'medium' | 'high';
 
+  // 심마(心魔) — 숨은 정신압 게이지 0~100. 무리한 돌파 실패·상극 내공 흡수·마공 깊이·지속 고스트레스로
+  // 누적, 임계 넘으면 주화입마 발작(내상·내공 흩어짐). 안신단으로 가라앉힘. UI 비노출(흑화·스트레스처럼). docs/13·26.
+  simma?: number;
+
   personality: PersonalityTraits;
 
   // 옵셔널. 비어 있으면 personality 에서 자동 산출 (deriveTonePreferences).

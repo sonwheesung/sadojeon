@@ -202,7 +202,8 @@ export function tickCraft(): void {
   }
 }
 
-// 속성 흡수 효율 — 같은 속성(또는 무속성)=완전, 불일치=저하. (Phase 2: 오행 상생상극·심마 위험)
+// 속성 흡수 효율 — 같은 속성(또는 무속성)=완전, 불일치=저하. 상극 흡수 중 심마 누적은 simmaSystem.tickSimma 가
+// elixirAbsorb.attribute≠qiAttribute 로 매일 가산(이질적 진기 강제 → 주화입마 위험). docs/13 §심마.
 function absorbFactor(disciple: QiAttribute | undefined, elixir: QiAttribute | undefined): number {
   if (!elixir) return 1;
   if (!disciple || disciple === elixir) return 1;

@@ -62,6 +62,7 @@ import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir } from './elixirSystem';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
+import { addSimma, onForcedBreakthroughFail } from './simmaSystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
 
 // 무공 카테고리 1일치 체력·스트레스 (종목 데이터엔 없으므로 상수).
@@ -365,6 +366,7 @@ function applyRealmTick(
     mainSeong >= REALM_SEONG_GATE[wallTarget] &&
     isWallTransition(wallTarget);
 
+  let forcedFail = false;
   if (atWall && wallTarget) {
     if (isSeclusion) {
       // 폐관엔 **벽곡단**(곡기 끊는 단약)이 필수 — 2개/일. 없으면 그날 폐관 수행 불가(깨달음 굴림 X).
@@ -390,6 +392,7 @@ function applyRealmTick(
           cancelOverride(discipleId); // 폐관 해제 — 벽 넘음
         } else {
           pity += 1;
+          forcedFail = true; // 무리한 강행 실패 → 진기 흩어짐(심마·주화입마 위험)
         }
       }
     } else if (!petitioned) {
@@ -409,6 +412,10 @@ function applyRealmTick(
   });
 
   if (realm !== startRealm) realmUpToInbox(d, realm);
+
+  // 무리한 폐관 돌파 실패 — 진기 강행의 대가(심마 급증 + 주화입마 즉석 굴림). 최종 store.update 뒤에 적용
+  // (발작이 내공·상태를 다시 쓰므로 순서 중요). docs/13·26.
+  if (forcedFail) onForcedBreakthroughFail(discipleId);
 }
 
 // ─── 벽곡단(폐관 소모재) ─────────────────────────────────────────────────────
@@ -478,6 +485,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   store.update(discipleId, {
     realmProgress: { internal, pity: pity + 1, petitioned: d.realmProgress?.petitioned ?? false },
   });
+  addSimma(discipleId, 6); // 실전 돌파 실패 — 폐관 강행보단 약하나 마음에 응어리(심마). 즉석 발작은 일일 tick에 맡김
   return null;
 }
 

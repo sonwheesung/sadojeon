@@ -62,6 +62,15 @@ function pickBucket(d: Disciple, activeCommand?: string | null): string[] {
     ];
   }
 
+  // 2-1. 심마 깊음 (숨김 → 불안정 신호. 주화입마 발작 직전 경고) -------------
+  if ((d.simma ?? 0) >= 55) {
+    return [
+      '기혈이 들끓는지 안색이 자주 변한다',
+      '운기 중 진기가 흔들리는 듯 호흡이 고르지 못하다',
+      '무언가에 쫓기듯 마음을 가라앉히지 못한다',
+    ];
+  }
+
   const sIdx = staminaLevelIndex(d.stamina, d.maxStamina); // 0~4
 
   // 3. 체력 바닥 ------------------------------------------------------------

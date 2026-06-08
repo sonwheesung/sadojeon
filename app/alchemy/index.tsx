@@ -27,6 +27,7 @@ import {
   startCraft,
 } from '@/systems/alchemySystem';
 import { healWound, listWounded, treatableElixirsFor, woundLabel } from '@/systems/woundSystem';
+import { consumeAnsinElixir, hasAnsinElixir } from '@/systems/simmaSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -123,6 +124,15 @@ export default function AlchemyScreen() {
     if (ok && healWound(discipleId, recipeId)) force();
   };
 
+  const onCalm = (discipleId: string, name: string) => async () => {
+    const ok = await confirm({
+      title: '심신 안정',
+      message: `${name}에게 안신단을 써 심마를 가라앉히고 내상을 다스립니다.`,
+      confirmLabel: '복용',
+    });
+    if (ok && consumeAnsinElixir(discipleId)) force();
+  };
+
   const onConsume = (recipeId: string, name: string) => async () => {
     // 내공단 — 흡수 중 아닌 제자 중 경지 낮은 순(가장 도움 필요)으로 복용.
     const target = roster
@@ -188,7 +198,11 @@ export default function AlchemyScreen() {
               <View style={styles.panel}>
                 {wounded.map((d) => {
                   const wound = d.wound!;
-                  const salves = treatableElixirsFor(wound);
+                  // 내상(주화입마 후유)은 안신단(심신 안정)으로만 다스린다. 그 외 속성 상처는 매칭 치료약.
+                  const isInner = wound.type === 'inner';
+                  const salves = isInner ? [] : treatableElixirsFor(wound);
+                  const ansin = isInner && hasAnsinElixir();
+                  const noCure = salves.length === 0 && !ansin;
                   return (
                     <View key={d.id} style={styles.woundRow}>
                       <View style={styles.woundInfo}>
@@ -197,7 +211,7 @@ export default function AlchemyScreen() {
                         </Text>
                         <Text style={styles.recipeMeta}>
                           자연 치유 {wound.daysRemaining}일 남음
-                          {salves.length === 0 ? ' · 맞는 영약 없음(자연 치유 대기)' : ''}
+                          {noCure ? ' · 맞는 영약 없음(자연 치유 대기)' : ''}
                         </Text>
                       </View>
                       <View style={styles.elixirBtns}>
@@ -210,6 +224,14 @@ export default function AlchemyScreen() {
                             <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>{r.name}</Text>
                           </Pressable>
                         ))}
+                        {ansin && (
+                          <Pressable
+                            onPress={onCalm(d.id, d.name)}
+                            style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
+                          >
+                            <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>안신단</Text>
+                          </Pressable>
+                        )}
                       </View>
                     </View>
                   );
