@@ -22,9 +22,12 @@ description: Run headless 15-year growth/balance simulations for Shidao — veri
 - `run-headless.cjs` — `.env(.development)` 를 process.env 에 주입한 뒤 esbuild 번들(RN·AsyncStorage·expo-fs 스텁 + url-polyfill no-op + executorch external + `__DEV__` define) 후 Node 실행. **supabase·runSync 는 실번들(스텁 아님).**
 - `_stubs/` — 헤드리스용 스텁. 실행: `node .claude/skills/balance-sim/run-headless.cjs [years]`.
 - **고속 진행 쓰기증폭 차단:** 게임 내부 매일 autosave 는 `setAutoSaveEnabled(false)` 로 끄고 하네스가 연 단위로만 명시 저장. (앱은 기본 ON.)
-- **랜덤 플레이라 제자는 정체한다(의도된 결과).** 일정·무공축이 랜덤이라 심법(내공) 단련이 안 들어가 경지 게이트가 안 열리고, 과훈련으로 injured 누적 → 15년에도 삼류·seong 3 수준. "수동/방치 플레이 → 삼류 정체"를 확인하는 용도. **성장·밸런스(절정/초절정/화경 도달) 검증은 A(공식 복제 sim)** 로. 헤드리스는 성장 최적화가 아니라 이벤트 발동·영속 검증용.
+- **플레이 정책 2종 (인자 `[growth|random|both]`, 기본 both):** `autoPlay` 가 `PlayPolicy` 주입식이라 갈아끼운다(in-app QA 는 항상 random).
+  - **growth** (`growthPolicy.ts`, → slot 1): 주간패턴 무공3·체력2·휴식2 + 무공축 need기반(내공 미달→심법, 충족→초식) + 체력 기마자세(외공). 파견 X. **경지 성장이 실제 엔진으로 설계대로 되는지 검증.** 실코드 기준 절정/초절정/화경 도달성 = 공식 복제 sim.cjs(A) 와 교차검증.
+  - **random** (→ slot 2): 전 선택 랜덤(이벤트·면담 발동 상황 QA). 일정·무공축 랜덤이라 심법 단련이 안 들어가 경지 게이트가 안 열리고 과훈련 injured 누적 → 15년에도 삼류 정체. "방치 플레이 → 삼류"의 베이스라인.
+  - **관찰(2026-06-08 15년 both):** growth=4년차에 전원 졸업(장철 절정·나머지 일류, 13세) / random=16년차 삼류 정체. → **최적 플레이 시 절정 도달이 13세로 너무 빠르고 졸업이 일찍 끊긴다**(무공서 등급 천장+졸업 trust게이트). 양육기 길이(LIFETIME_YEARS=99 grayboxed)와 졸업 타이밍 재조정 후보.
 - **한계: LLM(executorch) 미동작 → 규칙 폴백.** LLM 실제 출력은 **in-app 하네스**(`app/dev/autoplay`, 실기기)에서만.
-- DB 확인: `select * from runs join auth.users u on u.id=user_id where u.email='simbot@shidao.app'` (Supabase MCP `execute_sql` 는 RLS 우회).
+- DB 확인: `select r.slot, r.game_time->'current', d.name, d.state->>'realm' from runs r join run_disciples d on d.run_id=r.id join auth.users u on u.id=r.user_id where u.email='simbot@shidao.app'` (Supabase MCP `execute_sql` 는 RLS 우회).
 
 **C. in-app 자동플레이(실제 LLM)** — `app/dev/autoplay.tsx` + `src/systems/dev/autoPlay.ts`. 실기기에서 랜덤 진행 + 온디바이스 Qwen3 실제 호출, prompt/raw/effects 로그. "LLM 응답 정당성"은 여기서만 검증 가능.
 
