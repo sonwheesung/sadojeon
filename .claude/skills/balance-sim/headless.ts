@@ -14,7 +14,7 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
-import { configureOptimal, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
+import { configureOptimal, configurePartyDay, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget } from '@/systems/questSystem';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
@@ -357,9 +357,103 @@ async function runBuildSweep(): Promise<void> {
   }
 }
 
+// ── 1캐리+3서포트 파티 vs 독립캐리 비교 (적성 자동 배정, 전부 무과금) ──
+const EFF_RANK: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
+
+function assignRoles(comp: string[]): Record<string, string> {
+  const ds = useDiscipleStore.getState();
+  const ids = [...ds.order];
+  const eff = (id: string, k: string): number =>
+    EFF_RANK[(ds.disciples[id]?.efficiency as Record<string, string> | undefined)?.[k] ?? '보통'] ?? 2;
+  const combatScore = (id: string) => Math.max(eff(id, 'sword'), eff(id, 'fist'), eff(id, 'darkArts'), eff(id, 'staff'));
+  ids.sort((a, b) => combatScore(b) - combatScore(a)); // 캐리 = 전투 적성 최고
+  const carry = ids[0];
+  const roleMap: Record<string, string> = { [carry]: 'carry' };
+  const remaining = ids.slice(1);
+  for (const role of comp) {
+    const key = role === 'combat' ? 'fist' : role; // combat 서포트는 전투 적성 기준
+    remaining.sort((a, b) => eff(b, key) - eff(a, key));
+    const pickId = remaining.shift();
+    if (pickId) roleMap[pickId] = role;
+  }
+  return roleMap;
+}
+
+async function fastDayParty(mode: string, roleMap: Record<string, string>): Promise<void> {
+  if (useGameStore.getState().phase === 'ended') return;
+  if (mode === 'party') configurePartyDay(roleMap);
+  else configureOptimal();
+  optimalDispatch(0.12, 13); // 청소년기 캐리 의뢰(서포트는 전투역량 낮아 자연 제외).
+  advanceTurn();
+  const sched = useScheduleStore.getState();
+  if (sched.pendingReport) sched.resolveMonthlyReport();
+  if (sched.pendingSetup) sched.resolveMonthlySetup();
+  if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+  const inbox = useInboxStore.getState();
+  for (const item of [...inbox.items]) {
+    const domain = (item.payload as { domain?: string } | undefined)?.domain;
+    if (domain === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+  }
+  tickInjuryRecovery();
+  useInboxStore.getState().reset();
+}
+
+async function runPartySweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 16);
+  const days = years * 336;
+  // 전부 무과금(과금 영약 0) — 영약제조 서포트의 연단이 캐리를 화경에 올리나 검증.
+  const CONFIGS: { name: string; seed: number; mode: string; comp?: string[] }[] = [
+    { name: '4명 독립캐리', seed: 4, mode: 'optimal' },
+    { name: '파티: 영약제조+의술+전투', seed: 4, mode: 'party', comp: ['alchemy', 'medicine', 'combat'] },
+    { name: '파티: 영약제조+의술+진법', seed: 4, mode: 'party', comp: ['alchemy', 'medicine', 'formation'] },
+    { name: '파티: 의술2+영약제조', seed: 4, mode: 'party', comp: ['medicine', 'medicine', 'alchemy'] },
+    { name: '2명 독립캐리', seed: 2, mode: 'optimal' },
+  ];
+  console.log(`=== 1캐리+3서포트 파티 vs 독립 — 무과금 · ${years}년 · ${iters}회 평균 ===`);
+  console.log('적성 자동 배정. 영약제조 서포트=연단으로 신품영약 공급(무과금 캐리 화경 가능?). 의술=의뢰동행 생존(역량 제약).');
+  console.log('경지 idx: 삼류1·이류2·일류3·절정4·초절정5·화경6. (캐리 = 최고경지 제자)\n');
+  for (const cfg of CONFIGS) {
+    const seedIds = SEED_POOL.slice(0, cfg.seed);
+    let sumCarry = 0;
+    let carryHwa = 0;
+    let anyHwa = 0;
+    let deaths = 0;
+    for (let it = 0; it < iters; it += 1) {
+      seedNewRun(seedIds);
+      useGameStore.getState().setPhase('playing');
+      setElixirBudget(0);
+      setGeumchangBudget(0);
+      setByeokgokdanBudget(Infinity);
+      const roleMap = cfg.mode === 'party' && cfg.comp ? assignRoles(cfg.comp) : {};
+      for (let d = 0; d < days; d += 1) await fastDayParty(cfg.mode, roleMap);
+      const ds = useDiscipleStore.getState();
+      let best = -1;
+      for (const id of ds.order) {
+        const disc = ds.disciples[id];
+        if (!disc) continue;
+        if (disc.status === 'departed') deaths += 1;
+        const idx = realmIndex(disc.realm);
+        if (idx > best) best = idx;
+        if (disc.realm === 'hwagyeong') anyHwa += 1;
+      }
+      sumCarry += best;
+      if (best >= realmIndex('hwagyeong')) carryHwa += 1;
+    }
+    const meanCarry = sumCarry / iters;
+    const meanLabel = REALM_LABEL[REALM_ORDER[Math.round(meanCarry)]];
+    console.log(`[${cfg.name}] 최고제자 평균경지 ≈ ${meanLabel} (idx ${meanCarry.toFixed(2)}) · 회차당 화경달성 ${Math.round((carryHwa / iters) * 100)}% · 총화경 ${(anyHwa / iters).toFixed(2)}명/회 · 사망 ${(deaths / iters).toFixed(2)}/회`);
+  }
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
+  if (process.argv[2] === 'partysweep') {
+    await runPartySweep();
     return;
   }
   if (process.argv[2] === 'questsweep') {

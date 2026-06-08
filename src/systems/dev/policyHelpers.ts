@@ -103,58 +103,99 @@ const OPTIMAL_PATTERN: TrainingCategory[] = [
   'martial', 'physical', 'martial', 'rest', 'martial', 'physical', 'rest',
 ];
 
-export function configureOptimal(): void {
+// 한 제자의 전투 캐리 훈련(무공서 트리 climbing + 내공·성·외공 균형). 반환: 초절정↑(화경 임박).
+function configureCarryTraining(id: string): boolean {
   const sched = useScheduleStore.getState();
-  sched.setSchedule({ weeklyPattern: [...OPTIMAL_PATTERN], monthlyQuests: 0 });
-
   const ds = useDiscipleStore.getState();
-  let nearHwagyeong = false;
-  for (const id of ds.order) {
-    const d = ds.disciples[id];
-    if (!d || d.status !== 'training') continue;
+  const d = ds.disciples[id];
+  if (!d || d.status !== 'training') return false;
 
-    // 1) 무공서 — 계보 트리를 합법적으로 타고 올라간다(선행조건 충족 후 상위 무공 학습/육성).
-    const goal = goalArtFor(d);
-    let trainId = d.mainMartialArtId ?? d.martialArts[0]?.artId ?? '';
-    if (goal) {
-      const planned = canLearnArt(d, goal) || owns(d, goal.id) ? goal.id : planArtToward(d, goal);
-      if (planned) trainId = planned;
-    }
-    if (trainId && trainId !== d.mainMartialArtId) ds.assignMainMartialArt(id, trainId);
-
-    // 2) 무공축 — 경지(내공)와 무공 성을 **병행**한다. 상위 무공은 경지 게이트(예: 매화검=이류,
-    //    이십사수매화검=절정)와 선행 성을 둘 다 요구하므로, 둘 다 부족하면 하루씩 번갈아 올린다.
-    //    한쪽만 부족하면 그쪽을, 둘 다 충족이면 초식(다음 단계 성 선행).
-    const next = nextRealm(d.realm);
-    const internal = d.realmProgress?.internal ?? 0;
-    const internalReq = next ? (REALM_INTERNAL_REQ[next] ?? 0) : 0;
-    const seongTarget = Math.max(
-      consumerMinSeong(trainId),
-      goal && trainId === goal.id && next ? (REALM_SEONG_GATE[next] ?? 0) : 0,
-    );
-    const needSeong = seongOf(d, trainId) < seongTarget;
-    const needInternal = internal < internalReq;
-    const parity = useTimeStore.getState().totalDay % 2 === 0;
-    const axis = needSeong && needInternal ? (parity ? 'chosik' : 'simbeop')
-      : needSeong ? 'chosik'
-      : needInternal ? 'simbeop'
-      : 'chosik';
-    sched.setDailyChoice(id, 'martial', axis);
-
-    // 3) 체력 — 외공(근력) 요건 채울 때까지 기마자세, 채우면 암벽(체력Lv).
-    const strengthLv = d.stats?.strength?.level ?? 0;
-    const extReq = next ? (REALM_EXTERNAL_REQ[next] ?? 0) : 0;
-    sched.setDailyChoice(id, 'physical', strengthLv < extReq ? 'phys_horse' : 'phys_climb');
-
-    if (realmIndex(d.realm) >= realmIndex('chojeoljeong')) nearHwagyeong = true;
+  // 1) 무공서 — 계보 트리를 합법적으로 타고 올라간다(선행조건 충족 후 상위 무공 학습/육성).
+  const goal = goalArtFor(d);
+  let trainId = d.mainMartialArtId ?? d.martialArts[0]?.artId ?? '';
+  if (goal) {
+    const planned = canLearnArt(d, goal) || owns(d, goal.id) ? goal.id : planArtToward(d, goal);
+    if (planned) trainId = planned;
   }
+  if (trainId && trainId !== d.mainMartialArtId) ds.assignMainMartialArt(id, trainId);
 
-  // 4) 영약 — 초절정 도달 제자가 있고 과금 예산이 남았으면 신품 영약 확보(화경 벽 통과 열쇠).
-  //    무과금(budget 0)은 여기서 지급 안 함 → 화경 벽에서 막힌다(영약제조 제자 연단 경로는 별도).
-  if (nearHwagyeong && !hasDivineElixir() && elixirGranted < elixirBudget) {
+  // 2) 무공축 — 경지(내공)와 무공 성 병행. 둘 다 부족하면 하루씩 번갈아, 한쪽만 부족하면 그쪽.
+  const next = nextRealm(d.realm);
+  const internal = d.realmProgress?.internal ?? 0;
+  const internalReq = next ? (REALM_INTERNAL_REQ[next] ?? 0) : 0;
+  const seongTarget = Math.max(
+    consumerMinSeong(trainId),
+    goal && trainId === goal.id && next ? (REALM_SEONG_GATE[next] ?? 0) : 0,
+  );
+  const needSeong = seongOf(d, trainId) < seongTarget;
+  const needInternal = internal < internalReq;
+  const parity = useTimeStore.getState().totalDay % 2 === 0;
+  const axis = needSeong && needInternal ? (parity ? 'chosik' : 'simbeop')
+    : needSeong ? 'chosik'
+    : needInternal ? 'simbeop'
+    : 'chosik';
+  sched.setDailyChoice(id, 'martial', axis);
+
+  // 3) 체력 — 외공 요건 채울 때까지 기마자세, 채우면 암벽.
+  const strengthLv = d.stats?.strength?.level ?? 0;
+  const extReq = next ? (REALM_EXTERNAL_REQ[next] ?? 0) : 0;
+  sched.setDailyChoice(id, 'physical', strengthLv < extReq ? 'phys_horse' : 'phys_climb');
+
+  return realmIndex(d.realm) >= realmIndex('chojeoljeong');
+}
+
+function maybeGrantElixir(near: boolean): void {
+  if (near && !hasDivineElixir() && elixirGranted < elixirBudget) {
     grantDivineElixir();
     elixirGranted += 1;
   }
+}
+
+export function configureOptimal(): void {
+  useScheduleStore.getState().setSchedule({ weeklyPattern: [...OPTIMAL_PATTERN], monthlyQuests: 0 });
+  const ds = useDiscipleStore.getState();
+  let near = false;
+  for (const id of ds.order) if (configureCarryTraining(id)) near = true;
+  maybeGrantElixir(near);
+}
+
+// ── 1 캐리 + 3 서포트 파티 빌드 ─────────────────────────────────────────────
+// 서포트 역할 → 집중 공부 종목. alchemy = 영약제조(신품영약 연단 → 무과금 캐리 화경).
+const SUPPORT_OPTION: Record<string, string> = {
+  medicine: 'study_medicine', // 신의급 의원 — 의뢰 동행 시 캐리 치명상 구원
+  alchemy: 'study_alchemy', //   영약제조 — 신품영약 연단(tickElixirCraft) → 무과금 화경
+  formation: 'study_formation', // 진법 — 의뢰 돌발 진법 굴림 유리
+};
+const SUPPORT_PATTERN: TrainingCategory[] = ['study', 'study', 'rest', 'study', 'study', 'study', 'rest'];
+
+function configureSupportTraining(id: string, role: string): void {
+  if (role === 'combat' || role === 'carry') {
+    configureCarryTraining(id);
+    return;
+  }
+  const sched = useScheduleStore.getState();
+  sched.setIndividualPattern(id, [...SUPPORT_PATTERN]);
+  const opt = SUPPORT_OPTION[role];
+  if (opt) sched.setDailyChoice(id, 'study', opt);
+}
+
+// 파티 하루 세팅 — roleMap: discipleId → 'carry'|'medicine'|'alchemy'|'formation'|'combat'.
+// 캐리는 전투 화경 푸시, 서포트는 자기 역할 공부. 영약제조 서포트는 연단으로 캐리에게 신품영약 공급.
+export function configurePartyDay(roleMap: Record<string, string>): void {
+  useScheduleStore.getState().setSchedule({ weeklyPattern: [...OPTIMAL_PATTERN], monthlyQuests: 0 });
+  const ds = useDiscipleStore.getState();
+  let near = false;
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (!d || d.status !== 'training') continue;
+    const role = roleMap[id] ?? 'carry';
+    if (role === 'carry') {
+      if (configureCarryTraining(id)) near = true;
+    } else {
+      configureSupportTraining(id, role);
+    }
+  }
+  maybeGrantElixir(near);
 }
 
 // 의뢰 파견(최적) — 유휴 제자를 역량 맞는 의뢰에 보내 경험치(주력 성·외공·명성)를 먹인다.
