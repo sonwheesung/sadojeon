@@ -477,7 +477,8 @@ async function runAlchemySweep(): Promise<void> {
   // 제조 가능한 최고 등급 레시피(요구 alchemy Lv ≤ 현재). 무한 재료라 Lv만 본다.
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
   const craftedBy: Record<string, Record<string, number>> = {};
-  const reach65: Record<string, number> = {};
+  const reach58: Record<string, number> = {}; // 구전대환단 요구 Lv 도달 연차
+  const firstDivine: Record<string, number> = {}; // 첫 구전대환단 제조 연차
 
   for (let d = 0; d < days; d += 1) {
     const ds = useDiscipleStore.getState();
@@ -485,12 +486,14 @@ async function runAlchemySweep(): Promise<void> {
       const disc = ds.disciples[id];
       if (!disc || disc.status !== 'training') continue;
       const lv = disc.stats?.alchemy?.level ?? 0;
-      if (lv >= 65 && reach65[id] === undefined) reach65[id] = Math.floor(d / 336) + 1;
+      const yr = Math.floor(d / 336) + 1;
+      if (lv >= 58 && reach58[id] === undefined) reach58[id] = yr;
       // 만들 수 있는 최고 등급 영단 1개 연단(점유). 레벨이 낮으면 계속 공부.
       const best = byReqDesc.find((r) => r.alchemyReq <= lv);
       if (best && startCraft(id, best.id)) {
         craftedBy[id] = craftedBy[id] ?? {};
         craftedBy[id][best.id] = (craftedBy[id][best.id] ?? 0) + 1;
+        if (best.id === 'guzeon-daehwandan' && firstDivine[id] === undefined) firstDivine[id] = yr;
       }
     }
     advanceTurn();
@@ -514,11 +517,12 @@ async function runAlchemySweep(): Promise<void> {
     const made = craftedBy[id] ?? {};
     const total = Object.values(made).reduce((a, b) => a + b, 0);
     const divine = made['guzeon-daehwandan'] ?? 0;
-    const r65 = reach65[id] ? `${reach65[id]}년차` : '미달';
+    const r58 = reach58[id] ? `${reach58[id]}년차(${10 + reach58[id] - 1}세)` : '미달';
+    const fd = firstDivine[id] ? `${firstDivine[id]}년차(${10 + firstDivine[id] - 1}세)` : '없음';
     const breakdown = Object.entries(made)
       .map(([rid, n]) => `${ELIXIR_RECIPES.find((r) => r.id === rid)?.name ?? rid} ${n}`)
       .join(', ');
-    console.log(`\n[${disc.name} · 적성 ${apt}] 최종 alchemy Lv ${lv} · 연단실Lv65도달 ${r65}`);
+    console.log(`\n[${disc.name} · 적성 ${apt}] 최종 alchemy Lv ${lv} · Lv58(구전대환단 가능) 도달 ${r58} · 첫 구전대환단 ${fd}`);
     console.log(`  총 연단 ${total}과 (구전대환단 ${divine}과) — ${breakdown || '없음'}`);
   }
 }
