@@ -5,6 +5,19 @@ import type { StatId, StatTrack } from './training';
 // 내공·영단 속성 — 오행. 같은 속성 영단이 잘 흡수되고, 상극이면 흡수 저하·심마 위험.
 export type QiAttribute = 'metal' | 'wood' | 'water' | 'fire' | 'earth';
 
+// 상처 속성 — 외상·화상·중독·동상·내상. 치료엔 같은 속성 + 충분한 등급(심도 이하) 영약 필요.
+export type WoundType = 'wound' | 'burn' | 'poison' | 'frost' | 'inner';
+
+// 제자가 입은 상처 — 속성 + 심도 + 자연치유 잔여일.
+// severity: 1=치명상(가장 깊음) ~ 5=경미. 치료 영약은 grade ≤ severity 라야 낫는다(낮은 등급=강한 약).
+// 즉, 깊은 상처(severity 1)는 최상급(grade 1) 영약만 듣고, 경미(severity 5)는 아무 등급이나 듣는다.
+// 영약이 없으면 daysRemaining 동안 자연 치유(매일 1 감소, 0 시 회복).
+export interface Wound {
+  type: WoundType;
+  severity: number;
+  daysRemaining: number;
+}
+
 export type DiscipleStatus =
   | 'training'
   | 'resting'
@@ -101,7 +114,9 @@ export interface Disciple {
 
   status: DiscipleStatus;
   currentActivity?: DailyActivity;
-  injuryDaysRemaining?: number;
+  injuryDaysRemaining?: number; // (레거시) 잔여일 — 이제 wound.daysRemaining 이 정본. 호환 위해 같이 채움.
+  // 입은 상처 — 속성·심도. status==='injured' 일 때 존재. 영약(속성·등급 매칭)으로 치료 or 자연 치유.
+  wound?: Wound;
 
   // 내공 속성(오행) — 내공단 흡수 매칭. 영단 속성과 같으면 흡수 효율↑(상극이면↓). 미지정=무속성.
   qiAttribute?: QiAttribute;

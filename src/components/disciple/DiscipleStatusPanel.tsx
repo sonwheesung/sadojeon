@@ -14,6 +14,7 @@ import { OVERRIDE_LABEL } from '@/systems/overrideSystem';
 import { staminaSceneLabel } from '@/systems/staminaSystem';
 import { trustSceneLabel } from '@/systems/trustSystem';
 import { combatRumor } from '@/systems/combatPower';
+import { woundLabel } from '@/systems/woundSystem';
 import type { Disciple, DiscipleStatus } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 import { REALM_LABEL } from '@/types/realm';
@@ -105,7 +106,13 @@ export function DiscipleStatusPanel({ disciple }: Props) {
         <Row label="입문" value={`${yearsIn}년차`} />
         <Row
           label="상태"
-          value={onLeave ? `${OVERRIDE_LABEL[override!.command]} 중` : STATUS_LABEL[disciple.status]}
+          value={
+            onLeave
+              ? `${OVERRIDE_LABEL[override!.command]} 중`
+              : disciple.status === 'injured' && disciple.wound
+                ? `치료 중 (${woundLabel(disciple.wound)})`
+                : STATUS_LABEL[disciple.status]
+          }
           valueStyle={onLeave ? styles.rowValueHeavy : undefined}
         />
         <Row label="명령" value={orderLine} valueStyle={onLeave ? styles.rowValueHeavy : undefined} />

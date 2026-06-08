@@ -26,6 +26,7 @@ import {
   sellElixir,
   startCraft,
 } from '@/systems/alchemySystem';
+import { healWound, listWounded, treatableElixirsFor, woundLabel } from '@/systems/woundSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -70,6 +71,7 @@ export default function AlchemyScreen() {
     .filter((d) => d.status === 'training')
     .sort((a, b) => (b.stats?.alchemy?.level ?? 0) - (a.stats?.alchemy?.level ?? 0));
   const elixirs = items.filter((i) => i.category === 'elixir');
+  const wounded = listWounded();
 
   const onBuild = async () => {
     if (resources < ALCHEMY_LAB_BUILD_COST) return;
@@ -110,6 +112,15 @@ export default function AlchemyScreen() {
       sellElixir(recipeId, 1);
       force();
     }
+  };
+
+  const onTreat = (discipleId: string, name: string, recipeId: string, elixirName: string) => async () => {
+    const ok = await confirm({
+      title: '상처 치료',
+      message: `${name}의 상처에 ${elixirName}을(를) 씁니다.`,
+      confirmLabel: '치료',
+    });
+    if (ok && healWound(discipleId, recipeId)) force();
   };
 
   const onConsume = (recipeId: string, name: string) => async () => {
@@ -164,6 +175,43 @@ export default function AlchemyScreen() {
                     <Text key={c.discipleId} style={styles.line}>
                       {disciples[c.discipleId]?.name ?? '?'} — {r?.name ?? c.recipeId} (남은 {left}일)
                     </Text>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {/* 상처 치료 — 다친 제자 + 매칭 영약(속성·등급)으로 치료 */}
+          {wounded.length > 0 && (
+            <>
+              <SectionLabel>상처 치료</SectionLabel>
+              <View style={styles.panel}>
+                {wounded.map((d) => {
+                  const wound = d.wound!;
+                  const salves = treatableElixirsFor(wound);
+                  return (
+                    <View key={d.id} style={styles.woundRow}>
+                      <View style={styles.woundInfo}>
+                        <Text style={styles.line}>
+                          {d.name} — <Text style={styles.woundTag}>{woundLabel(wound)}</Text>
+                        </Text>
+                        <Text style={styles.recipeMeta}>
+                          자연 치유 {wound.daysRemaining}일 남음
+                          {salves.length === 0 ? ' · 맞는 영약 없음(자연 치유 대기)' : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.elixirBtns}>
+                        {salves.map((r) => (
+                          <Pressable
+                            key={r.id}
+                            onPress={onTreat(d.id, d.name, r.id, r.name)}
+                            style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
+                          >
+                            <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>{r.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
                   );
                 })}
               </View>
@@ -297,7 +345,10 @@ const styles = StyleSheet.create({
   recipeMeta: { fontFamily: typography.serif, fontSize: 10, color: colors.inkSoft },
   recipeEffect: { fontFamily: typography.serif, fontSize: 10, color: colors.inkLight },
   elixirRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  elixirBtns: { flexDirection: 'row', gap: spacing.xs },
+  elixirBtns: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  woundRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  woundInfo: { flex: 1, gap: 2 },
+  woundTag: { fontFamily: typography.serifBold, color: colors.seal },
   btn: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,

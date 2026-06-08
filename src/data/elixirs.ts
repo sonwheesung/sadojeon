@@ -3,13 +3,14 @@
 // (하품~절품은 후속 — 내공·외공 도약 보조용.)
 
 import type { StoredItem } from '@/stores/itemStore';
-import type { QiAttribute } from '@/types/disciple';
+import type { QiAttribute, WoundType } from '@/types/disciple';
+
+// 상처 속성(WoundType)은 types/disciple 에 정의. 영약·상처가 같은 타입을 공유하도록 재노출.
+export type { WoundType };
 
 // ─── 연단(영단 제조) 데이터 모델 ─────────────────────────────────────────────
 // 영단 분류: heal(상처 치료·속성×등급) / internal(내공단·속성·흡수기간) / mind(심마) / utility(벽곡단·화경).
 export type ElixirCategory = 'heal' | 'internal' | 'mind' | 'utility';
-// 상처 속성 — 외상·화상·독·동상·내상. 치료엔 같은 속성 + 충분한 등급 영단 필요.
-export type WoundType = 'wound' | 'burn' | 'poison' | 'frost' | 'inner';
 
 export interface ElixirRecipe {
   id: string;

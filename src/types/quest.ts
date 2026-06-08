@@ -1,6 +1,8 @@
 // 의뢰(依賴) — 강호 파견. docs/28 §4 경로 B. 비무공 능력치(정탐·호위) 성장 + 명성 + 자금.
 // 제자를 1~N명 파견 → 주(일) 단위 진행 → 결산 outcome 5분기.
 
+import type { WoundType } from './disciple';
+
 export type QuestDomain = 'guard' | 'scout' | 'duel' | 'medicine' | 'assassin' | 'grand';
 //                         호위    정탐     결투    의술      살수        큰의뢰(복합)
 
@@ -30,6 +32,7 @@ export interface Quest {
   minStat: number; // 관련 역량 최소 조건(극험은 하드 게이트, 그 외 소프트)
   gray?: boolean; // 도덕 회색 의뢰
   faction?: string; // 후원 문파 id(있으면 우호 문파 후원 의뢰) — 완수 시 그 문파 평판↑. docs/30
+  woundType?: WoundType; // 환경 위험 상처 속성(화공·설산·맹독 등). 없으면 도메인 기본(대개 외상). docs/04
 }
 
 export interface ActiveQuest {

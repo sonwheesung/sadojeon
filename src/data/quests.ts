@@ -84,9 +84,9 @@ export const QUEST_POOL: readonly Quest[] = [
   { id: 'q-clinic', domain: 'medicine', grade: 'normal', title: '마을 역병 진료', client: '관아', preview: '역병이 도는 마을에 의원이 필요하다.', weeks: 2, reward: { money: 17, fame: 5 }, recommended: 1, minStat: 25 },
   { id: 'q-duel-challenge', domain: 'duel', grade: 'normal', title: '비무 도전', client: '지방 무관', preview: '문파 간 비무에 나설 무인을 청한다.', weeks: 1, reward: { money: 15, fame: 6 }, recommended: 1, minStat: 25 },
   // ── 위험 ──
-  { id: 'q-bandit', domain: 'duel', grade: 'dangerous', title: '산적 토벌', client: '강북 마을 연합', preview: '산길을 막은 산적 무리를 친다.', weeks: 3, reward: { money: 35, fame: 8 }, recommended: 2, minStat: 40 },
+  { id: 'q-bandit', domain: 'duel', grade: 'dangerous', title: '산적 토벌', client: '강북 마을 연합', preview: '산채를 불 지르고 친다. 불길에 데기 쉽다.', weeks: 3, reward: { money: 35, fame: 8 }, recommended: 2, minStat: 40, woundType: 'burn' },
   { id: 'q-heuksa-scout', domain: 'scout', grade: 'dangerous', title: '흑사파 거점 정찰', client: '익명', preview: '강남 봉기 정보. 정탐만 가능.', weeks: 3, reward: { money: 30, fame: 9 }, recommended: 2, minStat: 40 },
-  { id: 'q-protect-caravan', domain: 'guard', grade: 'dangerous', title: '대상단 호행', client: '대상단주', preview: '먼 길, 노리는 자가 많다.', weeks: 3, reward: { money: 38, fame: 8 }, recommended: 2, minStat: 40 },
+  { id: 'q-protect-caravan', domain: 'guard', grade: 'dangerous', title: '설산 대상단 호행', client: '대상단주', preview: '혹한의 설산 길, 노리는 자도 많다. 동상을 조심하라.', weeks: 3, reward: { money: 38, fame: 8 }, recommended: 2, minStat: 40, woundType: 'frost' },
   { id: 'q-secret', domain: 'scout', grade: 'dangerous', title: '은밀한 처리', client: '도시 권력자', preview: '조용히 처리해 주시면 후사하겠소.', weeks: 2, reward: { money: 45, fame: 6 }, recommended: 1, minStat: 35, gray: true },
   // ── 극험 ──
   { id: 'q-grand-meng', domain: 'grand', grade: 'extreme', title: '무림맹 밀명', client: '무림맹', preview: '강호의 명운이 걸린 일이오.', weeks: 4, reward: { money: 70, fame: 15 }, recommended: 3, minStat: 65 },
@@ -95,7 +95,7 @@ export const QUEST_POOL: readonly Quest[] = [
   { id: 'q-defend-sect', domain: 'guard', grade: 'normal', title: '사문 보호', client: '사문', preview: '사문을 노리는 무리가 있다.', weeks: 2, reward: { money: 16, fame: 4 }, recommended: 1, minStat: 20 },
   // ── 의술 보강 ──
   { id: 'q-treat-wound', domain: 'medicine', grade: 'normal', title: '큰 부상 치료', client: '지방 부호', preview: '중상을 입은 자를 살려달라.', weeks: 2, reward: { money: 18, fame: 4 }, recommended: 1, minStat: 25 },
-  { id: 'q-antidote', domain: 'medicine', grade: 'dangerous', title: '해독 의뢰', client: '중독된 가문', preview: '맹독에 당한 일가를 구하라.', weeks: 3, reward: { money: 30, fame: 7 }, recommended: 1, minStat: 40 },
+  { id: 'q-antidote', domain: 'medicine', grade: 'dangerous', title: '해독 의뢰', client: '중독된 가문', preview: '맹독에 당한 일가를 구하라. 독기에 함께 노출된다.', weeks: 3, reward: { money: 30, fame: 7 }, recommended: 1, minStat: 40, woundType: 'poison' },
   // ── 결투 보강 ──
   { id: 'q-duel-master', domain: 'duel', grade: 'dangerous', title: '정파 명사 도전', client: '지방 무관', preview: '이름난 무인과의 비무에 나선다.', weeks: 2, reward: { money: 32, fame: 9 }, recommended: 1, minStat: 45 },
   // ── 살수(청부·어둠) ──

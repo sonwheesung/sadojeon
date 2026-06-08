@@ -32,7 +32,9 @@ import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
 import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
 import { addMaterial, consumeElixirItem } from './alchemySystem';
+import { inflictWound } from './woundSystem';
 import { currentAge } from './discipleCtx';
+import type { WoundType } from '@/types/disciple';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -505,6 +507,20 @@ function rollOutcome(active: ActiveQuest): QuestOutcome {
 // 무공 도메인(결투·큰의뢰) — 주력 무공 성 EXP 적립(상한 = min(등급, 경지)).
 const MARTIAL_DOMAINS: readonly QuestDomain[] = ['duel', 'grand'];
 
+// 도메인 기본 상처 속성 — 의뢰가 woundType 을 명시하면 그쪽 우선(환경 위험: 화공·설산·맹독 등).
+const DOMAIN_WOUND: Record<QuestDomain, WoundType> = {
+  guard: 'wound',
+  duel: 'wound',
+  grand: 'wound',
+  scout: 'wound',
+  assassin: 'poison', // 암기·독
+  medicine: 'wound',
+};
+
+function questWoundType(q: Quest): WoundType {
+  return q.woundType ?? DOMAIN_WOUND[q.domain];
+}
+
 function gainMainSeongExp(d: Disciple, exp: number): void {
   const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
   if (!mainId || exp <= 0) return;
@@ -701,32 +717,38 @@ function resolveQuest(active: ActiveQuest): Milestone {
       personality: shiftPersona(d, personaDeltas(q, outcome)),
     };
     // 상태 — 재난 희생자=치명상. **즉사 없음** — 생존 체인(구급영약→신의급 의원→자력)으로 살리고,
-    // 다 실패하면 그때 사망. 그 외 부상/복귀.
+    // 다 실패하면 그때 사망. 그 외 속성 상처(외상·화상·중독·동상)로 몸져눕는다. 심도는 결과에 비례.
+    // (영약 속성·등급 매칭 또는 자연치유로 회복. inflictWound 가 status='injured'+wound 세팅.)
+    const wtype = questWoundType(q);
+    let inflicted: { severity: number; days: number } | null = null;
     if (outcome === 'disaster' && i === victimIdx) {
       if (Math.random() < QUEST_DISASTER_FATALITY) {
         if (survivesFatalBlow(d, present, ds)) {
-          patch.status = 'injured';
-          patch.injuryDaysRemaining = 28; // 치명상에서 살아남아 오래 몸져눕는다
+          inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다
           gravelyHurtName = d.name;
         } else {
           patch.status = 'departed'; // 생존 수단이 없어 끝내 쓰러진다
           lostName = d.name;
         }
       } else {
-        patch.status = 'injured';
-        patch.injuryDaysRemaining = 28;
+        inflicted = { severity: 2, days: 28 }; // 중상
         gravelyHurtName = d.name;
       }
     } else if (outcome === 'disaster') {
-      patch.status = 'injured';
-      patch.injuryDaysRemaining = 21;
+      inflicted = { severity: 3, days: 21 }; // 부상
     } else if (outcome === 'crisis' && i === victimIdx) {
-      patch.status = 'injured';
-      patch.injuryDaysRemaining = 14;
+      inflicted = { severity: 4, days: 14 }; // 경상
+    } else if (
+      outcome === 'partial' &&
+      i === victimIdx &&
+      (q.grade === 'dangerous' || q.grade === 'extreme')
+    ) {
+      inflicted = { severity: 5, days: 5 }; // 위험·극험은 이겨도 찰과상 정도는 남는다(금창약으로 즉시 처치 가능)
     } else {
       patch.status = 'training';
     }
     ds.update(id, patch);
+    if (inflicted) inflictWound(id, wtype, inflicted.severity, inflicted.days);
     // 실전 깨달음 — 결투·큰의뢰 생존 시 벽 돌파 시도(폐관보다 높은 확률). 세 기둥 충족 시만.
     if (isMartial && patch.status !== 'departed' && scale.growth > 0) {
       attemptQuestEnlightenment(id, QUEST_ENLIGHTENMENT_BONUS);
