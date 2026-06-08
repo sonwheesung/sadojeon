@@ -20,7 +20,9 @@ import {
 } from '@/data/realm';
 import { TRAINING_OPTIONS } from '@/data/training';
 import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
+import { canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useQuestStore } from '@/stores/questStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, InboxItem, MartialArt, TrainingCategory } from '@/types';
@@ -151,6 +153,41 @@ export function configureOptimal(): void {
     grantDivineElixir();
     elixirGranted += 1;
   }
+}
+
+// 의뢰 파견(최적) — 유휴 제자를 역량 맞는 의뢰에 보내 경험치(주력 성·외공·명성)를 먹인다.
+// rate 로 빈도 조절(훈련과 병행). 파견 중엔 일과 훈련 미발동(경지 진행 멈춤) → 트레이드오프.
+export function optimalDispatch(rate = 0.15): void {
+  const board = useQuestStore.getState().board;
+  if (board.length === 0) return;
+  const ds = useDiscipleStore.getState();
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (!d || d.status !== 'training') continue;
+    if (rand() > rate) continue;
+    const fit = board.find((q) => canDispatch(d, q));
+    if (fit) dispatchQuest(fit.id, [d.id]);
+  }
+}
+
+// 금창약 — 치명상(중상·부상) 회복. includeDeath 면 의뢰 재난 사망(departed)도 살린다는 가정.
+// (sweep 맥락은 졸업·전직 없음 → departed=의뢰 사망이라 안전.)
+export function healWithSalve(includeDeath: boolean): { healed: number; saved: number } {
+  const ds = useDiscipleStore.getState();
+  let healed = 0;
+  let saved = 0;
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (!d) continue;
+    if (d.status === 'injured') {
+      ds.update(id, { status: 'training', injuryDaysRemaining: 0 });
+      healed += 1;
+    } else if (includeDeath && d.status === 'departed') {
+      ds.update(id, { status: 'training', injuryDaysRemaining: 0 });
+      saved += 1;
+    }
+  }
+  return { healed, saved };
 }
 
 // 최적 4지선다 — 폐관 청원은 **항상 허락**(깨달음 벽 돌파 기회를 놓치지 않음). 그 외는 랜덤

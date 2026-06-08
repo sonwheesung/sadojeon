@@ -14,7 +14,7 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
-import { configureOptimal, setElixirBudget } from '@/systems/dev/policyHelpers';
+import { configureOptimal, setElixirBudget, optimalDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
@@ -196,9 +196,83 @@ async function runSweep(): Promise<void> {
   }
 }
 
+// ── 훈련+의뢰 모델 sweep — 화경 신품영약 미사용(budget 0), 금창약으로 치명상 회복 가정 ──
+// 의뢰는 경험(주력 성·외공·명성)을 주지만 파견 중엔 경지 훈련이 멈춘다(트레이드오프) → 순효과 측정.
+async function fastDayQuest(rate: number): Promise<{ saved: number }> {
+  if (useGameStore.getState().phase === 'ended') return { saved: 0 };
+  configureOptimal(); // budget 0 으로 호출됨 → 화경 영약 지급 안 함.
+  if (rate > 0) optimalDispatch(rate); // 유휴 제자 일부를 의뢰 파견(빈도 rate).
+  advanceTurn(); // 훈련(잔류)·tickQuests(의뢰 결산: 경험·부상·사망)·경지 진행.
+  const sched = useScheduleStore.getState();
+  if (sched.pendingReport) sched.resolveMonthlyReport();
+  if (sched.pendingSetup) sched.resolveMonthlySetup();
+  if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+  const inbox = useInboxStore.getState();
+  for (const item of [...inbox.items]) {
+    const domain = (item.payload as { domain?: string } | undefined)?.domain;
+    if (domain === 'seclusion_petition' && isRespondable(item)) {
+      await resolveInboxItem(item, 'allow');
+    }
+  }
+  // 금창약 — 의뢰서 입은 치명상(중상·사망)을 회복(살린다). 화경 신품영약은 안 씀.
+  const { saved } = healWithSalve(true);
+  useInboxStore.getState().reset();
+  return { saved };
+}
+
+async function runQuestSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 20);
+  const days = years * 336;
+  console.log(`=== 훈련 vs 훈련+의뢰 — 최적 플레이 ${years}년 · ${iters}회 평균 (제자 4명/회) ===`);
+  console.log('모델: 화경 신품영약 미사용(budget 0) · 금창약으로 의뢰 치명상(중상·사망) 회복 가정.');
+  console.log('     의뢰=경험(주력 성·외공·명성) 먹이되 파견 중 경지 훈련 멈춤. 경지 idx: 삼류1·이류2·일류3·절정4·초절정5·화경6.\n');
+  for (const mode of [
+    { name: '훈련만(의뢰0)', rate: 0 },
+    { name: '의뢰 드물게(3%)', rate: 0.03 },
+    { name: '의뢰 적당히(8%)', rate: 0.08 },
+    { name: '의뢰 잦게(20%)', rate: 0.2 },
+  ]) {
+    const counts: Record<string, number> = {};
+    let sumIdx = 0;
+    let n = 0;
+    let sumStr = 0;
+    let sumFame = 0;
+    let totalSaved = 0;
+    for (let it = 0; it < iters; it += 1) {
+      seedNewRun(SEED_POOL);
+      useGameStore.getState().setPhase('playing');
+      setElixirBudget(0);
+      for (let d = 0; d < days; d += 1) totalSaved += (await fastDayQuest(mode.rate)).saved;
+      const ds = useDiscipleStore.getState();
+      for (const id of ds.order) {
+        const disc = ds.disciples[id];
+        if (!disc) continue;
+        sumIdx += realmIndex(disc.realm);
+        n += 1;
+        counts[disc.realm] = (counts[disc.realm] ?? 0) + 1;
+        sumStr += disc.stats?.strength?.level ?? 0;
+        sumFame += disc.fame ?? 0;
+      }
+    }
+    const meanIdx = sumIdx / n;
+    const meanLabel = REALM_LABEL[REALM_ORDER[Math.round(meanIdx)]];
+    const dist = REALM_ORDER.filter((r) => counts[r])
+      .map((r) => `${REALM_LABEL[r]} ${Math.round((counts[r] / n) * 100)}%`)
+      .join(' / ');
+    console.log(`[${mode.name}] 평균경지 ≈ ${meanLabel} (idx ${meanIdx.toFixed(2)}) · 평균 근력Lv ${(sumStr / n).toFixed(0)} · 평균 명성 ${(sumFame / n).toFixed(0)} · 금창약 회복 ${(totalSaved / iters).toFixed(1)}건/회`);
+    console.log(`           분포: ${dist}`);
+  }
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
+    return;
+  }
+  if (process.argv[2] === 'questsweep') {
+    await runQuestSweep();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
