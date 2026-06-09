@@ -19,13 +19,25 @@ import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/st
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple } from '@/types';
+import type { StatId } from '@/types/training';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const randInt = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const statLv = (d: Disciple, id: StatId): number => d.stats?.[id]?.level ?? 0;
 
-// 졸업 스냅샷 역량 0~100 — 전투력 무위(combatRating: 주력 성×10 앵커 + 익힌 무공 깊이·경지). docs/27 §5.
-function powerOf(d: Disciple): number {
-  return clamp(combatRating(d));
+// 졸업 스냅샷 "역량" 0~100 — 그 노선에서 직책이 오르는 능력 축. docs/28 §4.
+// 무공 계열 = 전투력(combatRating: 주력 성×10 앵커 + 무공 깊이·경지, docs/27 §5).
+// 비전투 계열은 해당 적성으로 — 의원=의술·영약, 정탐=정탐술. "강해야 정점"이 아니라
+// "그 직업을 잘해야 정점"이 되도록(직업 종류에 맞는 정점 기준).
+function routeCompetence(route: RouteId, d: Disciple): number {
+  switch (route) {
+    case 'healer': // 의원 — 의술·영약이 신의(神醫)를 가른다. 전투력 아님.
+      return clamp(statLv(d, 'medicine') + statLv(d, 'alchemy') * 0.5);
+    case 'shadow': // 정탐 — 정탐술 위주 + 약간의 무위.
+      return clamp(statLv(d, 'scouting') * 0.7 + combatRating(d) * 0.3);
+    default: // 무공 계열(정파·의적·호위·떠돌이·살수·도가·야인) — 전투력.
+      return clamp(combatRating(d));
+  }
 }
 
 function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'normal'): void {
@@ -54,7 +66,7 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     route,
     level,
     title,
-    power: powerOf(d),
+    power: routeCompetence(route, d), // 노선 적합 역량(무공계열=전투력 / 의원=의술·약 / 정탐=정탐)
     fame: d.fame ?? 0,
     status: 'active',
     graduatedYear: year,
@@ -108,7 +120,7 @@ export function tickCareers(): void {
       continue;
     }
 
-    // 2) 직책 굴림 — 능력·명성이 높을수록 오름, 낮을수록 밀림.
+    // 2) 직책 굴림 — 노선 역량(무공계열=전투력/의원=의술·정탐=정탐술)·명성이 높을수록 오름, 낮을수록 밀림.
     const perf = (power / 100) * 0.5 + (fame / 100) * 0.5; // 0~1
     const up = 0.15 + perf * 0.45; // 0.15~0.6
     const down = 0.12 * (1 - perf); // 0~0.12
