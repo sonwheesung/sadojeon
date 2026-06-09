@@ -39,7 +39,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     poolId: 'jang-cheol',
     artId: 'baekun-fist',
     efficiency: { fist: '상성', staff: '상성', medical: '상극', darkArts: '상극', strength: '특화', guarding: '특화', medicine: '미숙', scouting: '상극', alchemy: '상극' },
-    insight: 2,
+    insight: 1, // 오성 ★ — docs/disciples/01_장철.md (깨달음 낮음, 고경지 벽에서 더딤)
     personality: { integrity: 60, freedom: 30, warmth: 55, prudence: 60, mercy: 60, ambition: 20 },
     storyLine: '농촌에서 자란 우직한 아이. 평범하나 손이 묵직하다.',
     childhood: {
@@ -108,7 +108,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     poolId: 'gang-muyeol',
     artId: 'baekun-fist',
     efficiency: { staff: '특화', fist: '상성', guarding: '상성' },
-    insight: 2,
+    insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
     personality: { integrity: 60, freedom: 30, warmth: 45, prudence: 55, mercy: 45, ambition: 55 },
     storyLine:
       '지방 무관에서 한 청년을 보냈다. 이력서에 적히지 않은 사연이 묻어 있었다.',
@@ -144,7 +144,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     poolId: 'dokgo-yeon',
     artId: 'cheongpung-swordplay',
     efficiency: { sword: '특화', qigong: '상성', knowledge: '상성' },
-    insight: 3,
+    insight: 5, // 오성 ★★★★★ — docs/disciples/07_독고연.md (천재형 통찰)
     personality: { integrity: 55, freedom: 40, warmth: 30, prudence: 55, mercy: 30, ambition: 75 },
     storyLine:
       '한 청년이 산문 앞에 서서 한참을 머뭇거렸다. 뒤를 자주 돌아보았다.',
@@ -162,7 +162,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     poolId: 'baek-yeon',
     artId: 'cheongsim-gigong',
     efficiency: { qigong: '특화', medical: '상성', staff: '미숙', fist: '미숙', darkArts: '상극', knowledge: '특화', formation: '특화', scouting: '상극', guarding: '상극' },
-    insight: 5,
+    insight: 4, // 오성 ★★★★ — docs/disciples/08_백연.md (깨달음 좋아 경지 잠재력 최상위권)
     personality: { integrity: 45, freedom: 55, warmth: 55, prudence: 80, mercy: 70, ambition: 10 },
     storyLine:
       '한 도인이 어린 딸을 산문 앞에 두고 떠났다. "저는 도를 가르쳤으나, 인간을 가르치지 못했습니다."',

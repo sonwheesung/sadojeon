@@ -3,7 +3,11 @@
 // 모든 시드값은 그레이박스용 디폴트. 추후 사부 작명·마을 영입 흐름으로 교체.
 
 import { RECRUIT_POOL, type RecruitCandidate } from '@/data/disciples/recruitPool';
-import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
+import {
+  STARTING_DISCIPLE_POOL,
+  STARTING_RIVALRIES,
+  STARTING_FRIENDSHIPS,
+} from '@/data/disciples/startingPool';
 import { MARTIAL_ARTS } from '@/data/martialArts';
 import { MASTER_STAT } from '@/data/constants';
 import { deriveMaxStamina, START_ENDURANCE_LEVEL } from '@/data/training';
@@ -76,7 +80,7 @@ function defaultSect(): SectState {
 // ─── Disciples ──────────────────────────────────────────────────────────────
 
 // 시작 제자 — 무공·재능·성격 셋업. docs/06 입문 단계 시작.
-// personality 5축 차등으로 톤 선호도 자동 산출 ([12](docs/12_인박스_면담.md)).
+// personality 6축 차등으로 톤 선호도 자동 산출 ([12](docs/12_인박스_면담.md)).
 //
 // 양육 슬롯 — docs/15. 최대 4명 최소 2명.
 // 회차 시작 시 사용자가 RECRUIT_POOL 8명 중 2~4명을 직접 선택. 회차 도중 영입 X.
@@ -144,6 +148,27 @@ function sectScrolls(): ScrollInventoryItem[] {
   }));
 }
 
+// 시작 관계 시드 — docs/15. 같은 회차에 거둔 제자 사이의 미리 정의된 적대·친밀을 붙인다.
+// 둘 다 거둔 페어에만 적용. 적대=양방 'enemy'(상대 반응 캐스케이드가 발화하려면 상대→가해 'enemy' 필요),
+// 친밀=양방 'friend'. 관계가 붙어야 개인 도덕 이벤트의 2차 효과(상대가 눈치채는 서사)가 작동한다.
+function seedStartingRelations(list: Disciple[]): void {
+  const byId = new Map(list.map((d) => [d.id, d]));
+  for (const r of STARTING_RIVALRIES) {
+    const a = byId.get(r.aware);
+    const b = byId.get(r.unaware);
+    if (!a || !b) continue;
+    a.relationships[b.id] = 'enemy';
+    b.relationships[a.id] = 'enemy';
+  }
+  for (const f of STARTING_FRIENDSHIPS) {
+    const a = byId.get(f.a);
+    const b = byId.get(f.b);
+    if (!a || !b) continue;
+    a.relationships[b.id] = 'friend';
+    b.relationships[a.id] = 'friend';
+  }
+}
+
 // ─── Entry ──────────────────────────────────────────────────────────────────
 
 // 회차 새 시작 — 사용자가 시작 선택 모달에서 고른 2~4명을 받는다.
@@ -156,6 +181,7 @@ export function seedNewRun(selectedPoolIds: string[]): void {
     .filter((c): c is RecruitCandidate => c != null)
     .map(discipleFromSeed)
     .filter((d): d is Disciple => d != null);
+  seedStartingRelations(list); // docs/15 시작 적대·친밀
   useDiscipleStore.getState().setAll(list);
   // 사문 비급 시드 — 기존 보유 비급은 회차 영속이지만 첫 회차이므로 추가.
   const codex = useCodexStore.getState();
