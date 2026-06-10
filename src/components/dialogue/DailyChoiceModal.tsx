@@ -11,6 +11,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { categoryFor, useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { activeOverrideOf } from '@/systems/overrideSystem';
+import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import type { Disciple, TrainingCategory } from '@/types';
 import { MARTIAL_AXES, MARTIAL_AXIS_LABEL, TRAINING_CATEGORY_LABEL } from '@/types/training';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -42,8 +43,13 @@ function upcomingDay(day: number): number {
   return (day % 7) + 1;
 }
 
-function martialOptions(): Option[] {
-  return MARTIAL_AXES.map((ax) => ({ id: ax, label: MARTIAL_AXIS_LABEL[ax] }));
+// 무공 축 3종 + 대련(그날 무공일·가용한 동문 상대마다 한 칸). docs/06 — 대련은 짝 수련.
+function martialOptions(selfId: string, partners: Disciple[]): Option[] {
+  const axes: Option[] = MARTIAL_AXES.map((ax) => ({ id: ax, label: MARTIAL_AXIS_LABEL[ax] }));
+  const spars: Option[] = partners
+    .filter((p) => p.id !== selfId)
+    .map((p) => ({ id: daeryeonChoiceValue(p.id), label: `대련 — ${p.name}` }));
+  return [...axes, ...spars];
 }
 
 function categoryOptions(cat: Exclude<TrainingCategory, 'rest' | 'martial'>): Option[] {
@@ -63,6 +69,18 @@ export function DailyChoiceModal({ visible, onCancel, onConfirm }: Props) {
     if (!visible) return [];
     const target = upcomingDay(day);
     const sched = useScheduleStore.getState();
+
+    // 그날 무공일·가용(임시명령 없음·수련 가능)인 제자 — 대련 상대 후보.
+    const martialMates: Disciple[] = order
+      .map((id) => disciples[id])
+      .filter((d): d is Disciple => {
+        if (!d) return false;
+        if (d.status !== 'training') return false;
+        const ov = activeOverrideOf(d.id);
+        if (ov && ov.command !== 'default') return false;
+        return categoryFor(sched, d.id, target) === 'martial';
+      });
+
     const out: ChoiceRow[] = [];
     for (const id of order) {
       const d = disciples[id];
@@ -76,10 +94,10 @@ export function DailyChoiceModal({ visible, onCancel, onConfirm }: Props) {
       let options: Option[];
       let defaultId: string;
       if (cat === 'martial') {
-        options = martialOptions();
+        options = martialOptions(id, martialMates);
         const chosen = dailyChoice[id]?.martial;
         defaultId =
-          chosen && (MARTIAL_AXES as readonly string[]).includes(chosen) ? chosen : 'chosik';
+          chosen && options.some((o) => o.id === chosen) ? chosen : 'chosik';
       } else {
         options = categoryOptions(cat);
         const chosen = dailyChoice[id]?.[cat];

@@ -92,6 +92,15 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       discipleName: name,
       text: `${name}은 폐관에 들어 안과 마주섰다 — ${phrase.text.replace(`${name}은 `, '').replace(`${name}이 `, '').replace(`${name}의 `, '')}`,
     });
+  } else if (report.sparNote) {
+    // 3-a) 대련 — 결과 풍경이 곧 신호(숫자 비노출). docs/06.
+    entries.push({
+      id: `${id}-spar`,
+      kind: 'training',
+      discipleId: id,
+      discipleName: name,
+      text: report.sparNote,
+    });
   } else {
     // 3) 사문/개인 패턴 카테고리 활동
     entries.push(categoryEntry(report, name));

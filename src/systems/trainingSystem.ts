@@ -63,6 +63,7 @@ import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
 import { attemptBoneRebirth } from './boneRebirthSystem';
+import { parseDaeryeonChoice, resolveDaeryeon } from './daeryeonSystem';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
 import { addSimma, onForcedBreakthroughFail } from './simmaSystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
@@ -137,6 +138,7 @@ interface DayPlan {
   grantStat?: StatId;
   expBase: number;
   artId?: string; // 진척시킬 무공 (무공/폐관)
+  sparPartnerId?: string; // 대련 상대 (daeryeonSystem 짝 해소)
 }
 
 function resolveDayPlan(d: Disciple, day: number): DayPlan {
@@ -183,9 +185,25 @@ function resolveDayPlan(d: Disciple, day: number): DayPlan {
   const category = categoryFor(useScheduleStore.getState(), d.id, day);
 
   if (category === 'martial') {
-    // 주력 무공은 그대로 진행하고, 무공 축(심법/경공/초식)은 일일 선택으로 기록.
+    // 주력 무공은 그대로 진행하고, 무공 축(심법/경공/초식/대련)은 일일 선택으로 기록.
     const artId = selectedArtId(d);
     const axisRaw = useScheduleStore.getState().dailyChoice[d.id]?.martial;
+    // 대련('daeryeon:<상대id>') — 짝 수련. 무공 진척은 짝 해소(daeryeonSystem)가 처리.
+    const sparPartnerId = parseDaeryeonChoice(axisRaw);
+    if (sparPartnerId) {
+      return {
+        category,
+        optionId: 'daeryeon',
+        optionLabel: '대련',
+        staminaDelta: MARTIAL_STAMINA_DELTA - 2, // 맞상대는 혼자 수련보다 고되다
+        stressDelta: MARTIAL_STRESS_DELTA,
+        intensity: 0, // 개별 초식 틱 없음 — 성장은 대련 해소에서
+        lingering: 0,
+        expBase: 0,
+        artId,
+        sparPartnerId,
+      };
+    }
     const axis: MartialAxis = (MARTIAL_AXES as readonly string[]).includes(axisRaw ?? '')
       ? (axisRaw as MartialAxis)
       : 'chosik';
@@ -239,6 +257,9 @@ function resolveDayPlan(d: Disciple, day: number): DayPlan {
 
 // ─── 진척 ────────────────────────────────────────────────────────────────────
 
+// 기초 수련(혼자 초식·폐관)의 대성(7성~) 구간 정체 배율 — "온실 수재는 6성까지". docs/26. 🔧
+const SOLO_GREAT_MULT = 0.15;
+
 export interface TickResult {
   artId: string;
   delta: number;
@@ -264,7 +285,10 @@ function tickDiscipleArt(
   const base = EXP_BASE_BY_STAGE[bandBefore];
   const tMul = learnMultiplier(art, d);
   const pMul = plateauMultiplier(instance.exp, instance.seong);
-  const delta = base * tMul * pMul * intensity * progressMul;
+  // 혼자 수련의 한계 — 대성(7성) 문턱부터는 "더 짜낼 형이 없다". 대련·의뢰(실전)가 주 통로. docs/26·06.
+  // (이 함수는 기초 수련·폐관 전용 — 의뢰는 gainMainSeongExp, 대련은 daeryeonSystem 별도 경로라 영향 없음.)
+  const soloMul = instance.seong + 1 >= 7 ? SOLO_GREAT_MULT : 1;
+  const delta = base * tMul * pMul * intensity * progressMul * soloMul;
 
   let seong = instance.seong;
   let exp = instance.exp + delta;
@@ -313,6 +337,8 @@ export interface DiscipleTickReport {
   collapsed: boolean;
   arts: TickResult[];
   statGains: StatGain[];
+  // 대련 결과 풍경 — 일지(dailyLog)에 그대로 실린다. 숫자 비노출 신호. docs/06.
+  sparNote?: string;
 }
 
 // 경지 갱신 + 자동 승급 — 세 기둥 게이트. docs/28 §5.
@@ -518,6 +544,7 @@ export function tickDailyTraining(): DiscipleTickReport[] {
   const store = useDiscipleStore.getState();
   const day = useTimeStore.getState().current.day; // 1~7
   const reports: DiscipleTickReport[] = [];
+  const sparRequests: SparRequest[] = [];
 
   for (const id of store.order) {
     const d = store.disciples[id];
@@ -630,7 +657,73 @@ export function tickDailyTraining(): DiscipleTickReport[] {
       arts,
       statGains,
     });
+
+    if (plan.sparPartnerId) sparRequests.push({ id, partnerId: plan.sparPartnerId });
   }
 
+  // ── 대련 짝 해소 — 개별 일과 처리 후, 유효한 짝만 한 판씩. docs/06·26.
+  // 상대 조건: 그날 무공일 + 가용(training) + 쓰러지지 않음. 무산되면 풍경 한 줄로 알린다.
+  resolveSparRequests(sparRequests, reports, day);
+
   return reports;
+}
+
+interface SparRequest {
+  id: string;
+  partnerId: string;
+}
+
+function resolveSparRequests(
+  requests: SparRequest[],
+  reports: DiscipleTickReport[],
+  day: number,
+): void {
+  if (requests.length === 0) return;
+  const store = useDiscipleStore.getState();
+  const reportOf = (id: string) => reports.find((r) => r.discipleId === id);
+  const sparred = new Set<string>();
+
+  for (const req of requests) {
+    if (sparred.has(req.id) || sparred.has(req.partnerId)) continue;
+    const me = store.disciples[req.id];
+    const partner = store.disciples[req.partnerId];
+    const myReport = reportOf(req.id);
+    if (!me || !myReport || myReport.collapsed) continue;
+
+    // 상대 가용성 — 무공일 + training + 미붕괴. 아니면 무산(혼자 형 연습으로 보냄).
+    const partnerReport = reportOf(req.partnerId);
+    const partnerAvailable =
+      partner != null &&
+      partner.status === 'training' &&
+      partnerReport != null &&
+      !partnerReport.collapsed &&
+      partnerReport.category === 'martial' &&
+      partnerReport.overrideCommand == null;
+    if (!partnerAvailable) {
+      myReport.sparNote = `${me.name}이(가) 대련 상대를 기다렸으나 ${partner?.name ?? '상대'}이(가) 응할 형편이 아니었다 — 홀로 형을 다듬었다.`;
+      continue;
+    }
+
+    const outcome = resolveDaeryeon(req.id, req.partnerId);
+    if (!outcome) continue;
+    sparred.add(req.id);
+    sparred.add(req.partnerId);
+
+    // 결과 풍경 + 성 변화를 양쪽 결산에 싣는다.
+    myReport.sparNote = outcome.note;
+    if (partnerReport) partnerReport.sparNote = outcome.note;
+    for (const [pid, g] of Object.entries(outcome.artDelta)) {
+      const rep = reportOf(pid);
+      if (rep) {
+        rep.arts.push({
+          artId: g.artId,
+          delta: g.delta,
+          seongBefore: g.seongBefore,
+          seong: g.seong,
+          promoted: undefined,
+        });
+      }
+    }
+  }
+  void day;
 }
