@@ -389,6 +389,14 @@ const OUTCOME_SCALE: Record<QuestOutcome, { money: number; fame: number; growth:
 // 극험 의뢰를 반복해도 한 번의 운으로 핵심 제자를 잃는 빈도를 낮춘다(극험만 양육 시 회당 ~20% 사망).
 const QUEST_DISASTER_FATALITY = 0.2;
 
+// 금강불괴 결 — 단단한 몸(외공)이 치명타를 받아낸다. 사망 굴림에 곱하는 감쇄: 외공 0이면 그대로,
+// 외공이 높을수록 치명상 확률↓ (외공 48 절정몸 ~13.6% · 70 환골탈태 ~10.7% · 100 ~6.7%).
+// 외공 양육·환골탈태의 실전 메리트 — "몸을 다시 빚은 제자는 사지에서 돌아온다". docs/23 §5·29 §5. 🔧
+function bodyToughnessMult(d: Disciple): number {
+  const strength = d.stats?.strength?.level ?? 0;
+  return 1 - Math.min(100, strength) / 150;
+}
+
 // 실전 의뢰 경험 — **위험 등급 × 기간**에 비례. 위험(부상·사망)을 감수하는 경험 의뢰는 같은 기간
 // 훈련보다 값지게(주력 성·외공 프리미엄). 쉬운(잡일·소무) 의뢰는 거의 경험 안 됨. docs/28 §5-1·docs/29.
 // **단 내공(內功)은 의뢰로 오르지 않는다 — 훈련(심법) 전용.** 의뢰는 무공 성·외공·금전·명성만 준다.
@@ -722,7 +730,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
     const wtype = questWoundType(q);
     let inflicted: { severity: number; days: number } | null = null;
     if (outcome === 'disaster' && i === victimIdx) {
-      if (Math.random() < QUEST_DISASTER_FATALITY) {
+      // 사망 굴림 — 외공(금강불괴)이 치명상 확률을 깎는다. bodyToughnessMult.
+      if (Math.random() < QUEST_DISASTER_FATALITY * bodyToughnessMult(d)) {
         if (survivesFatalBlow(d, present, ds)) {
           inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다
           gravelyHurtName = d.name;
