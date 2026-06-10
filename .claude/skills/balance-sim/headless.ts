@@ -550,6 +550,12 @@ async function runFactorySweep(): Promise<void> {
     useGameStore.getState().setPhase('playing');
     setElixirBudget(0); // 무과금 — 화경 영약은 오직 서폿 연단으로
     setByeokgokdanBudget(Infinity);
+    // 경제 분리 — 이 sweep 은 화경 게이트(외공70·성7·영약) 검증 전용. 자금 부족으로 연단실이
+    // 꺼지면 영약 0과로 게이트 검증 자체가 안 되므로 자금을 넉넉히(경제 생존은 economysweep 몫).
+    {
+      const sect = useSectStore.getState();
+      if (sect.sect) sect.setSect({ ...sect.sect, resources: 100_000 });
+    }
     buildAlchemyLab();
     for (const id of RECIPE_IDS) learnRecipe(id);
     for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
@@ -668,17 +674,21 @@ async function runEconomySweep(): Promise<void> {
   setAutoSaveEnabled(false);
   const years = Number(process.argv[3] ?? 15);
   const days = years * 336;
-  const FOODS = [10, 20, 40];
-  const UPKEEPS = [100, 200];
-  const STARTS = [12345, 30000];
-  const REWARDS = [1, 3];
-  console.log(`=== 경제 그리드 — 연단실 ON · 가끔 의뢰(10%) · ${years}년 (제자 4명) ===`);
+  // 2026-06-10 재조정: 시작자금 50은(5000동) 확정 + 의뢰 보수 ×2.3 상향 반영.
+  // 유지비 70 vs 100 비교(유지비 부담 논의), 보수 배율은 실데이터 그대로(×1).
+  const FOODS = [20];
+  const UPKEEPS = [70, 100];
+  const STARTS = [5000];
+  const REWARDS = [1];
+  const RATES = [0.1, 0.25, 0.5]; // 의뢰 가동률 — 가끔/보통/부지런
+  console.log(`=== 경제 그리드 — 연단실 ON · 의뢰 가동률 변주 · ${years}년 (제자 4명) ===`);
   console.log('각 조합 최종 자금 + 연단실 가동(O=유지비 납부중) + 최저점. 단위 금/은/동.\n');
-  console.log('식비 | 유지비 | 시작 | 보상× → 최종자금 | 가동 | 최저');
+  console.log('식비 | 유지비 | 시작 | 가동률 → 최종자금 | 가동 | 최저');
   for (const food of FOODS)
     for (const up of UPKEEPS)
       for (const start of STARTS)
-        for (const rw of REWARDS) {
+        for (const rate of RATES) {
+          const rw = REWARDS[0];
           seedNewRun(SEED_POOL);
           useGameStore.getState().setPhase('playing');
           setFoodCost(food);
@@ -691,7 +701,7 @@ async function runEconomySweep(): Promise<void> {
           let minRes = start;
           for (let d = 0; d < days; d += 1) {
             configureOptimal();
-            incomeDispatch(0.1, 13);
+            incomeDispatch(rate, 13);
             advanceTurn();
             const s = useScheduleStore.getState();
             if (s.pendingReport) s.resolveMonthlyReport();
@@ -709,7 +719,8 @@ async function runEconomySweep(): Promise<void> {
           }
           const fin = useSectStore.getState().sect?.resources ?? 0;
           const op = isLabOperational() ? 'O' : 'X';
-          console.log(`식비${food} | 유지${up} | ${coinStr(start)} | ×${rw} → ${coinStr(fin)} | ${op} | 최저 ${coinStr(minRes)}`);
+          void rw;
+          console.log(`식비${food} | 유지${up} | ${coinStr(start)} | ${Math.round(rate * 100)}% → ${coinStr(fin)} | ${op} | 최저 ${coinStr(minRes)}`);
         }
 }
 
