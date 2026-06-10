@@ -1,5 +1,6 @@
-// 시작 제자 명부 10명 — docs/15_시작_제자_풀.md
-// 시작 8명(장철·진소화·한바람·윤소소·강무열·이청하·독고연·백연) + 결제 2명(진백호·사천화, isPremium).
+// 시작 제자 명부 — docs/15_시작_제자_풀.md
+// 시작 8명 = 무료 6(장철·진소화·한바람·윤소소·이청하·백연) + 결제 2(진백호·사천화, isPremium).
+// 강무열·독고연은 출시 후 무료 추가 — 메타는 여기 유지하되 선택 풀(recruitPool.RECRUIT_POOL)엔 미포함.
 // 모두 7~10세, 무공 미입문 상태. 여기서는 id·이름·출신만; 효율·인격·오성은 recruitPool.ts.
 //
 // 효율·약점·적대는 만남 후 사부 통찰로 차등 노출(숨은 변수 룰).
@@ -22,7 +23,7 @@ export interface StartingDisciple {
 }
 
 export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
-  // 1성
+  // 무료 6 (별등급 폐기 — 효율은 recruitPool)
   {
     id: 'jang-cheol',
     name: '장철',
@@ -42,7 +43,6 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
     isPremium: false,
   },
 
-  // 2성
   {
     id: 'han-baram',
     name: '한바람',
@@ -62,7 +62,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
     isPremium: false,
   },
 
-  // 3성
+  // 출시 후 추가 (무료) — 선택 풀 미포함, 멸문 적대 시드용 메타만 보존
   {
     id: 'gang-muyeol',
     name: '강무열',
@@ -82,7 +82,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
     isPremium: false,
   },
 
-  // 4성
+  // 출시 후 추가 (무료) — 선택 풀 미포함, 멸문 적대·검 정점 야망 시드용 메타만 보존
   {
     id: 'dokgo-yeon',
     name: '독고연',
@@ -102,7 +102,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
     isPremium: false,
   },
 
-  // 5성 (결제 전용)
+  // 결제 전용 2 (IAP 해금, 미구현)
   {
     id: 'jin-baekho',
     name: '진백호',
@@ -142,6 +142,7 @@ export interface OneSidedRivalry {
 }
 
 export const STARTING_RIVALRIES: readonly OneSidedRivalry[] = [
+  // 휴면 — 강무열·독고연이 출시 후 추가 전까지 선택 풀에 없어 시드되지 않음(seedStartingRelations 가드).
   {
     aware: 'dokgo-yeon',
     unaware: 'gang-muyeol',

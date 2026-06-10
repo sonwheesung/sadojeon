@@ -1,6 +1,7 @@
 // 시작 선택 풀 — docs/15.
 // 회차 시작 시 사용자가 이 풀에서 2~4명을 골라 거둔다. 회차 도중 영입 X.
-// 풀에 8명 (1~4성 × 남녀). 5성은 DLC 별도.
+// 무료 풀 6명. 결제 2명(진백호·사천화)은 IAP 해금(Phase 3, 미구현). 시작 8명 = 6 무료 + 결제 2.
+// 강무열·독고연은 출시 후 무료 추가 — POST_LAUNCH_RECRUITS 에 보존(별등급 폐기로 "10명" 근거 소멸, docs/15).
 // 거두지 않은 후보는 강호로 흩어져 [docs/08 졸업후_강호] NPC 로 재등장 가능.
 //
 // 파일 이름은 과거 영입 시스템 잔존. 다음 정리 시 startingSeedPool 로 개칭 예정.
@@ -105,24 +106,6 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     },
   },
   {
-    poolId: 'gang-muyeol',
-    artId: 'baekun-fist',
-    efficiency: { staff: '특화', fist: '상성', guarding: '상성' },
-    insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
-    personality: { integrity: 60, freedom: 30, warmth: 45, prudence: 55, mercy: 45, ambition: 55 },
-    storyLine:
-      '지방 무관에서 한 청년을 보냈다. 이력서에 적히지 않은 사연이 묻어 있었다.',
-    childhood: {
-      house: '강북의 작은 무관 집안(강씨 무관), 셋째 아들',
-      family: '부모와 형 둘 — 형들은 무관 직을 잇기 위해 단련 중',
-      nature: '책임감이 깊고 진지하다. 가문의 이름을 늘 의식한다.',
-      upbringing: '무관 마당에서 형들 틈에 끼어 어려서부터 봉과 주먹을 익혔다.',
-      likes: '봉 휘두르기, 맞붙어 겨루기, 동료 지키기 — 균형 잡히고 끈기가 있다',
-      dislikes: '몰래 다니는 정탐 일, 약 짓는 잔손 일',
-      tell: '규율을 잘 따르고 약속을 어기지 않는다. 그른 무리와는 어울리려 하지 않는다.',
-    },
-  },
-  {
     poolId: 'i-cheongha',
     artId: 'unbo',
     efficiency: { sword: '특화', lightness: '특화', darkArts: '특화', staff: '상성', qigong: '상성', medical: '상극', scouting: '특화', guarding: '미숙', knowledge: '미숙', formation: '미숙', medicine: '상극', alchemy: '상극' },
@@ -141,24 +124,6 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     },
   },
   {
-    poolId: 'dokgo-yeon',
-    artId: 'cheongpung-swordplay',
-    efficiency: { sword: '특화', qigong: '상성', knowledge: '상성' },
-    insight: 5, // 오성 ★★★★★ — docs/disciples/07_독고연.md (천재형 통찰)
-    personality: { integrity: 55, freedom: 40, warmth: 30, prudence: 55, mercy: 30, ambition: 75 },
-    storyLine:
-      '한 청년이 산문 앞에 서서 한참을 머뭇거렸다. 뒤를 자주 돌아보았다.',
-    childhood: {
-      house: '멸문한 명문 독고세가의 마지막 후예',
-      family: '없음 — 일가 백여 명이 한날 몰살당했다',
-      nature: '여덟 살답지 않게 차갑고 깊다. 자존심이 곧고, 좀처럼 웃지 않는다.',
-      upbringing: '명문가 교육을 받다 모든 걸 잃고, 멸문 뒤 이태를 홀로 떠돌았다.',
-      likes: '검을 쥐고 베기, 글과 무리(武理) 파고들기 — 통찰이 비범하고 손이 빠르다',
-      dislikes: '몰래 던지는 암기, 약 짓는 잔손 일',
-      tell: '곧고 예를 지키나, 무언가를 되갚으려는 듯 검을 놓지 않는다.',
-    },
-  },
-  {
     poolId: 'baek-yeon',
     artId: 'cheongsim-gigong',
     efficiency: { qigong: '특화', medical: '상성', staff: '미숙', fist: '미숙', darkArts: '상극', knowledge: '특화', formation: '특화', scouting: '상극', guarding: '상극' },
@@ -174,6 +139,48 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
       likes: '가만히 앉아 호흡 고르기, 도가 경문 읽기 — 단전 자질이 비범하고 깨달음이 빠르다',
       dislikes: '거칠게 몸 부딪는 외공, 몰래 다니는 정탐 일',
       tell: '다툼을 보면 끼어들기보다 가만히 지켜본다. 욕심을 내지 않는다.',
+    },
+  },
+] as const;
+
+// 출시 후 무료 추가 — docs/15. 멸문 적대(독고연→강무열)·관계그룹C·진백호↔독고연 야망의 시드.
+// 라이브 선택 풀(RECRUIT_POOL)에는 미포함이라 현재 회차엔 안 뜨고, 적대/페어 시드도 휴면 상태.
+// 추가 시점에 이 두 객체를 RECRUIT_POOL 로 옮기면 STARTING_RIVALRIES/관계가 그대로 활성화된다.
+export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
+  {
+    poolId: 'gang-muyeol',
+    artId: 'baekun-fist',
+    efficiency: { staff: '특화', fist: '상성', guarding: '상성' },
+    insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
+    personality: { integrity: 60, freedom: 30, warmth: 45, prudence: 55, mercy: 45, ambition: 55 },
+    storyLine:
+      '지방 무관에서 한 청년을 보냈다. 이력서에 적히지 않은 사연이 묻어 있었다.',
+    childhood: {
+      house: '강북의 작은 무관 집안(강씨 무관), 셋째 아들',
+      family: '부모와 형 둘 — 형들은 무관 직을 잇기 위해 단련 중',
+      nature: '책임감이 깊고 진지하다. 가문의 이름을 늘 의식한다.',
+      upbringing: '무관 마당에서 형들 틈에 끼어 어려서부터 봉과 주먹을 익혔다.',
+      likes: '봉 휘두르기, 맞붙어 겨루기, 동료 지키기 — 균형 잡히고 끈기가 있다',
+      dislikes: '몰래 다니는 정탐 일, 약 짓는 잔손 일',
+      tell: '규율을 잘 따르고 약속을 어기지 않는다. 그른 무리와는 어울리려 하지 않는다.',
+    },
+  },
+  {
+    poolId: 'dokgo-yeon',
+    artId: 'cheongpung-swordplay',
+    efficiency: { sword: '특화', qigong: '상성', knowledge: '상성' },
+    insight: 5, // 오성 ★★★★★ — docs/disciples/07_독고연.md (천재형 통찰)
+    personality: { integrity: 55, freedom: 40, warmth: 30, prudence: 55, mercy: 30, ambition: 75 },
+    storyLine:
+      '한 청년이 산문 앞에 서서 한참을 머뭇거렸다. 뒤를 자주 돌아보았다.',
+    childhood: {
+      house: '멸문한 명문 독고세가의 마지막 후예',
+      family: '없음 — 일가 백여 명이 한날 몰살당했다',
+      nature: '여덟 살답지 않게 차갑고 깊다. 자존심이 곧고, 좀처럼 웃지 않는다.',
+      upbringing: '명문가 교육을 받다 모든 걸 잃고, 멸문 뒤 이태를 홀로 떠돌았다.',
+      likes: '검을 쥐고 베기, 글과 무리(武理) 파고들기 — 통찰이 비범하고 손이 빠르다',
+      dislikes: '몰래 던지는 암기, 약 짓는 잔손 일',
+      tell: '곧고 예를 지키나, 무언가를 되갚으려는 듯 검을 놓지 않는다.',
     },
   },
 ] as const;

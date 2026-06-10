@@ -55,7 +55,8 @@ export const REALM_INTERNAL_REQ: Record<Realm, number> = {
 // targetRealm 진입 외공(체력·근골 ≈ strength level 0~100) 요구. docs/28 §5-1. 세 기둥 중 하나.
 // "체력만으론 경지 X" — 내공·무공서와 함께 충족해야. 가장 약한 기둥이 경지를 잡아끈다.
 // 고경지 외공 — str보통 도달선으로 현실화(project_realm_balance 화경 경로).
-// 화경 외공(62)은 영약 복용(환골탈태)이 마지막 도약을 대신한다는 전제 — 외공 하드천장이 아니라 받침.
+// 화경 외공(70, 절충)은 영약 복용(환골탈태)이 마지막 도약을 대신한다는 전제 — 외공 하드천장이 아니라 받침.
+// 단 62→70 상향으로 "몸도 어느 정도 키운 빌드"라야 화경 — 외공도 화경의 받침 게이트로 작동.
 export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
   none: 0,
   samryu: 10,
@@ -63,7 +64,7 @@ export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
   ilryu: 35,
   jeoljeong: 48,
   chojeoljeong: 56,
-  hwagyeong: 62,
+  hwagyeong: 70,
 };
 
 // targetRealm 진입 주력 무공서 성 게이트. docs/28 §5: ~절정 등급무관(0), 초절정 5성, 화경 7성(대성).

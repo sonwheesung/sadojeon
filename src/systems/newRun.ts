@@ -72,7 +72,7 @@ function defaultSect(): SectState {
     name: '무명산문',
     hanjaName: '無名山門',
     reputation: 10,
-    resources: 30000, // 30금. 동화 단위(1금=1000동), 금/은/동 환산은 AppHeader. 무과금 자립 가능 시작값.
+    resources: 5000, // 50은(=5천 동). 1금=10은=1000동. 금/은/동 환산은 AppHeader. 고정·영구증가 X(업적은 다이아/칭호/콘텐츠만, docs/32). 30금→50은으로 하향(빠듯한 초반). 유지비 재고민 대상.
     facilities: [],
   };
 }
@@ -83,7 +83,8 @@ function defaultSect(): SectState {
 // personality 6축 차등으로 톤 선호도 자동 산출 ([12](docs/12_인박스_면담.md)).
 //
 // 양육 슬롯 — docs/15. 최대 4명 최소 2명.
-// 회차 시작 시 사용자가 RECRUIT_POOL 8명 중 2~4명을 직접 선택. 회차 도중 영입 X.
+// 회차 시작 시 사용자가 RECRUIT_POOL 6명(무료) 중 2~4명을 직접 선택. 회차 도중 영입 X.
+// 결제 2명은 IAP 해금(미구현), 강무열·독고연은 출시 후 추가(POST_LAUNCH_RECRUITS).
 export interface DiscipleSeed {
   poolId: string;
   artId: string;
