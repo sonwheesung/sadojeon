@@ -1,8 +1,6 @@
 import { router, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useConfirm } from '@/components/common/ConfirmDialog';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -12,6 +10,7 @@ import type { InboxItem, InboxKind } from '@/types';
 
 // 서신함 — 헤더 봉투 아이콘으로 진입하는 스택(모달) 라우트.
 // docs/12_인박스_면담.md "응답 필요 여부" 매핑.
+// (필터 탭·모두 읽음은 제거 — 전체 목록 단일 뷰, 2026-06-10.)
 const KIND_LABEL: Record<InboxKind, string> = {
   event: '이벤트',
   one_liner: '한마디',
@@ -39,14 +38,6 @@ const KIND_ACTION: Partial<Record<InboxKind, string>> = {
   quest_offer: '결정 필요',
 };
 
-type FilterKey = 'all' | 'decision' | 'unread';
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'decision', label: '결정 필요' },
-  { key: 'unread', label: '읽지 않음' },
-];
-const DECISION_ACTIONS = ['결정 필요', '응답 필요'] as const;
-
 function relativeDayLabel(diff: number): string {
   if (diff <= 0) return '오늘';
   if (diff === 1) return '어제';
@@ -59,40 +50,6 @@ export default function InboxScreen() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
   const markRead = useInboxStore((s) => s.markRead);
-  const confirm = useConfirm();
-  const [filter, setFilter] = useState<FilterKey>('all');
-
-  const filtered = useMemo(() => {
-    return items.filter((it) => {
-      if (filter === 'unread') return !it.read;
-      if (filter === 'decision') {
-        const action = KIND_ACTION[it.kind];
-        return action ? (DECISION_ACTIONS as readonly string[]).includes(action) : false;
-      }
-      return true;
-    });
-  }, [items, filter]);
-
-  const decisionCount = useMemo(
-    () =>
-      items.filter((it) => {
-        const action = KIND_ACTION[it.kind];
-        return action ? (DECISION_ACTIONS as readonly string[]).includes(action) : false;
-      }).length,
-    [items],
-  );
-
-  const onMarkAllRead = async () => {
-    const unread = items.filter((it) => !it.read);
-    if (unread.length === 0) return;
-    const ok = await confirm({
-      title: '모두 읽음 처리',
-      message: `읽지 않은 서신 ${unread.length}건을 모두 읽음으로 표시할까요?`,
-      confirmLabel: '모두 읽음',
-    });
-    if (!ok) return;
-    unread.forEach((it) => markRead(it.id));
-  };
 
   const onPressItem = (it: InboxItem) => {
     if (!it.read) markRead(it.id);
@@ -102,17 +59,16 @@ export default function InboxScreen() {
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
-        <Header onMarkAllRead={onMarkAllRead} />
-        <FilterTabs current={filter} onChange={setFilter} decisionCount={decisionCount} />
+        <Header />
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
-          {filtered.length === 0 ? (
-            <EmptyState filter={filter} />
+          {items.length === 0 ? (
+            <EmptyState />
           ) : (
-            filtered.map((it) => (
+            items.map((it) => (
               <InboxRow
                 key={it.id}
                 item={it}
@@ -129,7 +85,7 @@ export default function InboxScreen() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function Header({ onMarkAllRead }: { onMarkAllRead: () => void }) {
+function Header() {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -151,49 +107,7 @@ function Header({ onMarkAllRead }: { onMarkAllRead: () => void }) {
           書信函
         </Text>
       </View>
-      <View style={styles.headerRight}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="모두 읽음"
-          onPress={onMarkAllRead}
-          style={styles.headerAction}
-        >
-          <Text style={styles.headerActionLabel}>모두 읽음</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-function FilterTabs({
-  current,
-  onChange,
-  decisionCount,
-}: {
-  current: FilterKey;
-  onChange: (k: FilterKey) => void;
-  decisionCount: number;
-}) {
-  return (
-    <View style={styles.tabs}>
-      {FILTERS.map((f) => {
-        const active = f.key === current;
-        const showDot = f.key === 'decision' && decisionCount > 0;
-        return (
-          <Pressable
-            key={f.key}
-            accessibilityRole="button"
-            accessibilityLabel={f.label}
-            onPress={() => onChange(f.key)}
-            style={[styles.tab, active && styles.tabActive]}
-          >
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-              {f.label}
-            </Text>
-            {showDot && <View style={styles.tabDot} />}
-          </Pressable>
-        );
-      })}
+      <View style={styles.headerLeft} />
     </View>
   );
 }
@@ -259,16 +173,10 @@ function ActionBadge({ label }: { label: string }) {
   );
 }
 
-function EmptyState({ filter }: { filter: FilterKey }) {
-  const message =
-    filter === 'unread'
-      ? '읽지 않은 서신이 없습니다.'
-      : filter === 'decision'
-        ? '결정 필요한 서신이 없습니다.'
-        : '서신함이 비어 있습니다.';
+function EmptyState() {
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyLabel}>{message}</Text>
+      <Text style={styles.emptyLabel}>서신함이 비어 있습니다.</Text>
     </View>
   );
 }
@@ -314,55 +222,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.serifCN,
     fontSize: typography.sizes.sm,
     color: colors.inkSoft,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  headerAction: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.inkSoft,
-    borderRadius: 4,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 4,
-  },
-  headerActionLabel: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.ink,
-  },
-
-  // Filter tabs
-  tabs: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  tabActive: {
-    backgroundColor: colors.ink,
-  },
-  tabLabel: {
-    fontFamily: typography.serifMedium,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
-  },
-  tabLabelActive: {
-    color: colors.paperBright,
-  },
-  tabDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.seal,
   },
 
   // Body
