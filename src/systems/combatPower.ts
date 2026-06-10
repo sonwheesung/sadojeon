@@ -36,11 +36,16 @@ function pathsOppose(a: MartialPath, b: MartialPath): boolean {
   );
 }
 
+// 무공 한 벌(키트) — 전투력 산식의 순수 입력. 제자든 NPC든 같은 형태(전투 엔진 공용).
+export interface KitArt {
+  grade: MartialArtGrade;
+  path: MartialPath;
+  seong: number;
+}
+
 // 정 ↔ 사·마 동시 보유 — 주화입마 리스크로 위력 감점. 0(없음)~0.2(심함).
-function conflictPenalty(d: Disciple): number {
-  const paths = d.martialArts
-    .map((inst) => findMartialArt(inst.artId)?.path)
-    .filter((p): p is MartialPath => p != null);
+function kitConflictPenalty(arts: KitArt[]): number {
+  const paths = arts.map((a) => a.path);
   const hasJeong = paths.includes('jeong');
   const dark = paths.filter((p) => p === 'sa' || p === 'ma').length;
   if (!hasJeong || dark === 0) return 0;
@@ -48,15 +53,11 @@ function conflictPenalty(d: Disciple): number {
   return Math.min(0.2, 0.08 + dark * 0.04);
 }
 
-// 종합 전투력(0~ ). 무차원 점수 — 같은 또래·강호 상대와 *비교*용. docs/27 §5.
-export function combatPower(d: Disciple): number {
-  const contribs = d.martialArts
-    .map((inst) => {
-      const art = findMartialArt(inst.artId);
-      if (!art) return 0;
-      // (성−1) → 1성은 기여 ≈ 0, 깊이 익힐수록 묵직.
-      return GRADE_COEF[art.grade] * Math.max(0, inst.seong - 1);
-    })
+// 키트 전투력 — combatPower 의 순수 핵. 전투 엔진(combat/sheet)도 이 한 곳을 쓴다(단일 출처).
+export function kitPower(arts: KitArt[], realm: Realm): number {
+  const contribs = arts
+    // (성−1) → 1성은 기여 ≈ 0, 깊이 익힐수록 묵직.
+    .map((a) => GRADE_COEF[a.grade] * Math.max(0, a.seong - 1))
     .filter((c) => c > 0)
     .sort((a, b) => b - a);
 
@@ -64,9 +65,23 @@ export function combatPower(d: Disciple): number {
   for (let i = 0; i < contribs.length; i += 1) {
     sum += contribs[i] * (RANK_WEIGHT[i] ?? 0.05);
   }
-  const realm = REALM_WEIGHT[d.realm] ?? 1.0;
-  const power = realm * sum * (1 - conflictPenalty(d));
+  const realmW = REALM_WEIGHT[realm] ?? 1.0;
+  const power = realmW * sum * (1 - kitConflictPenalty(arts));
   return Math.round(power * 10);
+}
+
+function discipleKit(d: Disciple): KitArt[] {
+  return d.martialArts
+    .map((inst) => {
+      const art = findMartialArt(inst.artId);
+      return art ? { grade: art.grade, path: art.path, seong: inst.seong } : null;
+    })
+    .filter((a): a is KitArt => a != null);
+}
+
+// 종합 전투력(0~ ). 무차원 점수 — 같은 또래·강호 상대와 *비교*용. docs/27 §5.
+export function combatPower(d: Disciple): number {
+  return kitPower(discipleKit(d), d.realm);
 }
 
 // 의뢰 결투·큰의뢰 판정용 무위(0~100+). 주력 성×10 앵커(기존 minStat 밸런스 보존)

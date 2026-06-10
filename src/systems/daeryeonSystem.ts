@@ -6,12 +6,18 @@
 // 결과 4단계(박빙/우세/압도/사고)가 보상을 정한다 — 배움은 박빙에서 나오고, 압도전에선 아무도 못 배운다.
 // 숫자는 비노출 — 결과 풍경(일지 텍스트)으로만 인지(숨은 변수 룰).
 
-import { findMartialArt, seongCap, expToNextSeong, EXP_BASE_BY_STAGE } from '@/data/martialArts';
+import {
+  findMartialArt,
+  seongCap,
+  expToNextSeong,
+  EXP_BASE_BY_STAGE,
+  seongToStage,
+} from '@/data/martialArts';
 import { REALM_SEONG_CAP } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import type { Disciple, RelationLevel } from '@/types';
-import { seongToStage } from '@/data/martialArts';
-import { combatRating } from './combatPower';
+import type { CombatTier } from '@/types/combat';
+import { combatantFromDisciple, simulateCombat } from './combat';
 import { inflictWound } from './woundSystem';
 import { shiftPersona } from './personaShift';
 
@@ -28,10 +34,9 @@ export function parseDaeryeonChoice(value: string | undefined): string | null {
   return pid.length > 0 ? pid : null;
 }
 
-// ─── 결과 4단계 — 실력차(전투력)로 구간, 굴림으로 승패 🔧 그레이박스 ─────────────
-export type DaeryeonTier = 'close' | 'edge' | 'crush'; // 박빙 / 우세 / 압도
-const GAP_CLOSE = 14; // 전투력 차 ≤ → 박빙
-const GAP_EDGE = 38; //  전투력 차 ≤ → 우세 (그 위는 압도)
+// ─── 결과 4단계 — 전투 엔진(combat)이 한 판을 굴려 구간·승패를 정한다. docs/35.
+// 구간은 사전 실력차가 아니라 *실제 싸움의 내용*(잔존 전력차 margin)에서 나온다.
+export type DaeryeonTier = CombatTier; // 박빙(close) / 우세(edge) / 압도(crush)
 
 // 성 EXP 배율 — (승자, 패자). 배움은 박빙에서, 우세전은 패자에게.
 const TIER_EXP: Record<DaeryeonTier, { winner: number; loser: number }> = {
@@ -46,10 +51,9 @@ const NOVICE_SPAR_MULT = 0.3;
 const SPARK_CHANCE = 0.05;
 const SPARK_EXP_MULT = 3;
 
-// 부상(사고) 확률 가산 🔧
-const INJURY_BASE = 0.02;
+// 부상(사고) 확률 가산 🔧 — 기본율·현격차 몫은 엔진(combat/engine ACCIDENT_*)이 굴리고,
+// 여기선 *사람 사이의 사정*(감정·기질·살기)만 얹어서 넘긴다 — 엔진은 관계를 모른다.
 const INJURY_ENEMY = 0.1; //   적대 관계 — 감정이 실린 손속
-const INJURY_CRUSH = 0.05; //  현격 차 — 하수가 못 받아냄
 const INJURY_IMPULSIVE = 0.03; // 충동 인격(신중<35) 한쪽이라도
 const INJURY_DARK_ART = 0.03; // 마공 수련자 — 살기
 
@@ -125,35 +129,35 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
   const b = ds.disciples[bId];
   if (!a || !b) return null;
 
-  // 실력차 → 구간, 굴림 → 승패.
-  const ra = combatRating(a);
-  const rb = combatRating(b);
-  const gap = Math.abs(ra - rb);
-  const tier: DaeryeonTier = gap <= GAP_CLOSE ? 'close' : gap <= GAP_EDGE ? 'edge' : 'crush';
-  const strongFirst = ra >= rb;
-  const pStrongWins = clamp(0.5 + gap / 80, 0, 0.95);
-  const strongWins = Math.random() < pStrongWins;
-  const winner = strongFirst === strongWins ? a : b;
-  const loser = winner.id === a.id ? b : a;
-
-  // 사고 굴림 — 감정·차이·기질·살기.
+  // 한 판 굴림 — 전투 엔진(대련 모드). 사람 사이의 사정(감정·기질·살기)은 사고 가산으로 넘긴다.
   const enemyPair = a.relationships[b.id] === 'enemy' || b.relationships[a.id] === 'enemy';
   const impulsive = a.personality.prudence < 35 || b.personality.prudence < 35;
-  const injuryChance =
-    INJURY_BASE +
+  const extraAccidentChance =
     (enemyPair ? INJURY_ENEMY : 0) +
-    (tier === 'crush' ? INJURY_CRUSH : 0) +
     (impulsive ? INJURY_IMPULSIVE : 0) +
     (hasDarkArt(a) || hasDarkArt(b) ? INJURY_DARK_ART : 0);
-  const injured = Math.random() < injuryChance;
+
+  const result = simulateCombat(
+    [combatantFromDisciple(a)],
+    [combatantFromDisciple(b)],
+    { mode: 'spar', extraAccidentChance },
+  );
+
+  const tier: DaeryeonTier = result.tier;
+  // 무승부면 박빙 — 승자는 서사용으로만 갈라둔다.
+  const winner =
+    result.winner === 'A' ? a : result.winner === 'B' ? b : Math.random() < 0.5 ? a : b;
+  const loser = winner.id === a.id ? b : a;
+  const injured = result.accident != null;
 
   const artDelta: DaeryeonOutcome['artDelta'] = {};
 
-  if (injured) {
-    // 사고 — 약한 쪽이 다친다(경상). 때린 쪽은 죄책감. 배움 없이 끝.
-    const victim = strongFirst ? b : a;
+  if (injured && result.accident) {
+    // 사고 — 엔진이 지목한 피해자가 다친다(경상). 때린 쪽은 죄책감. 배움 없이 끝.
+    const victim = result.accident.victimId === a.id ? a : b;
     const striker = victim.id === a.id ? b : a;
-    inflictWound(victim.id, 'wound', 4, 10);
+    const suggested = result.combatants.find((c) => c.id === victim.id)?.wound;
+    inflictWound(victim.id, suggested?.type ?? 'wound', suggested?.severity ?? 4, suggested?.days ?? 10);
     ds.update(striker.id, { stress: clamp((striker.stress ?? 0) + 6) });
     // 관계 — 보통은 틀어진다. 적대 페어만 낮은 확률로 "치고받고 인정"(화해 불씨).
     const vRel = victim.relationships[striker.id] ?? 'neutral';

@@ -8,7 +8,9 @@ import { useTimeStore } from '@/stores/timeStore';
 import { realmIndex } from '@/data/realm';
 import type { Disciple, RelationLevel } from '@/types';
 import { combatPower } from './combatPower';
+import { combatantFromDisciple, simulateCombat } from './combat';
 import { currentAge } from './discipleCtx';
+import { inflictWound } from './woundSystem';
 import { shiftPersona } from './personaShift';
 
 const SPAR_DAILY_CHANCE = 0.06; // 자격 2인↑일 때 하루 발동 확률(≈수 주 1회)
@@ -72,12 +74,30 @@ export function triggerDailySpar(): void {
   if (!pair) return;
   const [x, y] = pair;
 
-  const luck = (p: number) => p + (Math.random() - 0.5) * (Math.max(20, p) * 0.4); // ±20% 운
-  const px = luck(combatPower(x));
-  const py = luck(combatPower(y));
-  const winner = px >= py ? x : y;
-  const loser = px >= py ? y : x;
-  const decisive = Math.abs(px - py) > Math.max(15, Math.min(px, py) * 0.4);
+  // 한 판은 전투 엔진(대련 모드)이 굴린다 — docs/35. 비무라 사람 사이 가산 없이 기본 사고율만.
+  const result = simulateCombat(
+    [combatantFromDisciple(x)],
+    [combatantFromDisciple(y)],
+    { mode: 'spar' },
+  );
+  const winner = result.winner === 'B' ? y : result.winner === 'A' ? x : Math.random() < 0.5 ? x : y;
+  const loser = winner.id === x.id ? y : x;
+  const decisive = result.tier !== 'close';
+
+  // 사고 — 비무가 과열돼 한쪽이 다쳤다. 배움 대신 풍경 한 줄.
+  if (result.accident) {
+    const victim = result.accident.victimId === x.id ? x : y;
+    const striker = victim.id === x.id ? y : x;
+    const suggested = result.combatants.find((c) => c.id === victim.id)?.wound;
+    inflictWound(victim.id, suggested?.type ?? 'wound', suggested?.severity ?? 4, suggested?.days ?? 10);
+    ds.update(striker.id, { stress: clamp((striker.stress ?? 0) + 6) });
+    pushReport(
+      `${victim.name} — 비무 중 부상`,
+      `${x.name}과(와) ${y.name}이(가) 손을 맞추다 과열됐다. ${striker.name}의 손속이 지나쳐 ${victim.name}이(가) 다쳤다.`,
+      victim.id,
+    );
+    return;
+  }
 
   // 승자 — 자신감·명성, 패자 — 분함·배움. 스태미나 소모 공통.
   ds.update(winner.id, {
