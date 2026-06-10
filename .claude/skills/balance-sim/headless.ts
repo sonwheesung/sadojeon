@@ -15,7 +15,10 @@ import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
-import { setGeumchangBudget } from '@/systems/questSystem';
+import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
+import { QUEST_GRADE_ORDER } from '@/data/quests';
+import { useQuestStore } from '@/stores/questStore';
+import { useCodexStore } from '@/stores/codexStore';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
 import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir, isLabOperational } from '@/systems/alchemySystem';
 import { setFoodCost, setLabUpkeep, setPatronageMult } from '@/systems/economySystem';
@@ -23,7 +26,7 @@ import { setQuestRewardMult } from '@/systems/questSystem';
 import { ELIXIR_RECIPES } from '@/data/elixirs';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
-import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
+import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
 import { findMartialArt } from '@/data/martialArts';
@@ -562,6 +565,8 @@ async function runFactorySweep(): Promise<void> {
     for (const id of RECIPE_IDS) learnRecipe(id);
     for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
     const carryId = 'yun-soso';
+    let questCount = 0; // 진단 — 카리 파견 횟수
+    let wasQuesting = false;
     // 쌍벽 빌드(2026-06-10) — 대성(7성)은 실전·대련만 여는 새 규칙에 맞춘 최적 조합:
     // 전투 2인(카리+대련 상대가 서로 박빙 유지)+연단 서폿 2인. 장철=권 상성(흑야 트리 동행).
     const sparPartnerId = 'jang-cheol';
@@ -600,6 +605,14 @@ async function runFactorySweep(): Promise<void> {
       }
       // 카리 의뢰 — 자금·명성·경험(연단실 유지비를 벌어야 공장이 돈다).
       partyDispatch(carryId, roleMap, 0.12, 13);
+      // 초반 램프업 — 보통급이 게시판에 뜨기 전(명성<25)엔 잡일·소무라도 뛰어 명성을 올린다.
+      // (실플레이어의 자연스러운 행동 — partyDispatch 는 보통급 이상만 보므로 보완.)
+      rampQuest(carryId, 0.12);
+      {
+        const nowQuesting = useDiscipleStore.getState().disciples[carryId]?.status === 'questing';
+        if (nowQuesting && !wasQuesting) questCount += 1;
+        wasQuesting = nowQuesting;
+      }
       // 카리 내공단 흡수(있고 흡수 중 아니면).
       const carry = dsNow.disciples[carryId];
       if (carry && carry.status === 'training' && !carry.elixirAbsorb) {
@@ -614,7 +627,11 @@ async function runFactorySweep(): Promise<void> {
       const inbox = useInboxStore.getState();
       for (const item of [...inbox.items]) {
         const dom = (item.payload as { domain?: string } | undefined)?.domain;
-        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+        if (isRespondable(item)) {
+          // 폐관 청원은 허락, 그 외(돌발 이벤트 등)는 첫 가용 선택 — 미응답 시 의뢰 결산이 영영 멈춘다.
+          const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
       }
       useInboxStore.getState().reset();
     }
@@ -629,14 +646,29 @@ async function runFactorySweep(): Promise<void> {
       const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
       const seong = mainId ? (carry?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
       const stock = useItemStore.getState().items.find((i) => i.id === 'guzeon-daehwandan')?.count ?? 0;
+      const scrollCount = useCodexStore.getState().scrolls.length;
+      const rep = useSectStore.getState().sect?.reputation ?? 0;
       console.log(
-        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
+        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 비급 ${scrollCount}권 · 명성 ${rep} · 의뢰 ${questCount}회 · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
       );
     }
   }
   const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
   console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 카리 최종경지 분포: ${dist}`);
   console.log(`서폿 연단공장 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과 · 내공단 ${(sumInternalDan / iters).toFixed(1)}과`);
+}
+
+// 명성 램프업 파견 — 등급 무관 역량 되는 최고 의뢰에 솔로 파견(잡일·소무 포함).
+function rampQuest(id: string, rate: number): void {
+  const ds = useDiscipleStore.getState();
+  const d = ds.disciples[id];
+  if (!d || d.status !== 'training' || currentAge(d) < 13) return;
+  if (Math.random() >= rate) return;
+  const board = useQuestStore.getState().board;
+  const fits = board.filter((q) => canDispatch(d, q));
+  if (!fits.length) return;
+  fits.sort((a, b) => QUEST_GRADE_ORDER.indexOf(b.grade) - QUEST_GRADE_ORDER.indexOf(a.grade));
+  dispatchQuest(fits[0].id, [id]);
 }
 
 // 동(銅) → 금/은/동 표기. 1금=1000동, 1은=100동 (docs/09).
@@ -680,7 +712,11 @@ async function runBurnSweep(): Promise<void> {
       const inbox = useInboxStore.getState();
       for (const item of [...inbox.items]) {
         const dom = (item.payload as { domain?: string } | undefined)?.domain;
-        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+        if (isRespondable(item)) {
+          // 폐관 청원은 허락, 그 외(돌발 이벤트 등)는 첫 가용 선택 — 미응답 시 의뢰 결산이 영영 멈춘다.
+          const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
       }
       healWithSalve(false); // 부상 회복(의뢰 계속 가게)
       useInboxStore.getState().reset();
@@ -733,7 +769,11 @@ async function runEconomySweep(): Promise<void> {
             const inbox = useInboxStore.getState();
             for (const item of [...inbox.items]) {
               const dom = (item.payload as { domain?: string } | undefined)?.domain;
-              if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+              if (isRespondable(item)) {
+          // 폐관 청원은 허락, 그 외(돌발 이벤트 등)는 첫 가용 선택 — 미응답 시 의뢰 결산이 영영 멈춘다.
+          const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
             }
             healWithSalve(false);
             useInboxStore.getState().reset();

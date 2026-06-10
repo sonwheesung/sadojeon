@@ -20,7 +20,7 @@ export { MARTIAL_ARTS };
 
 // 문파·계보 라벨 + 표시 순서. lineage 미지정 무공은 '기타'. (22계보 — catalog.ts)
 export const LINEAGE_LABEL: Record<string, string> = {
-  sect: '본문(무명산문)',
+  common: '공용·기초',
   hwasan: '화산파',
   mudang: '무당파',
   sorim: '소림사',
@@ -45,7 +45,7 @@ export const LINEAGE_LABEL: Record<string, string> = {
 };
 
 export const LINEAGE_ORDER: readonly string[] = [
-  'sect',
+  'common',
   'hwasan', 'mudang', 'sorim', 'gaebang', 'ami', 'jeomchang', 'gollyun', 'jongnam', 'cheongseong', 'gongdong',
   'namgung', 'dangga', 'paengga', 'moyong',
   'pyoguk', 'doga', 'uiga',
@@ -54,12 +54,12 @@ export const LINEAGE_ORDER: readonly string[] = [
 ];
 
 export function artsByLineage(lineage: string): MartialArt[] {
-  return MARTIAL_ARTS.filter((m) => (m.lineage ?? 'sect') === lineage);
+  return MARTIAL_ARTS.filter((m) => (m.lineage ?? 'common') === lineage);
 }
 
 export function allLineageIds(): string[] {
   const seen = new Set<string>();
-  for (const m of MARTIAL_ARTS) seen.add(m.lineage ?? 'sect');
+  for (const m of MARTIAL_ARTS) seen.add(m.lineage ?? 'common');
   return LINEAGE_ORDER.filter((l) => seen.has(l)).concat(
     [...seen].filter((l) => !LINEAGE_ORDER.includes(l)),
   );

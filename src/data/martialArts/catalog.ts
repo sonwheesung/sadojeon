@@ -7,55 +7,46 @@
 import type { MartialArt } from '@/types';
 
 export const MARTIAL_ARTS: MartialArt[] = [
-  // ═══ 본문(무명산문) — 시작 소장. 사부가 풀어둔 비급들 ═══════════════════════
+  // ═══ 공용·기초 — 천하에 흔히 도는 입문 비급(사문 소장, 시작부터). 사문 오리지널 없음 ═══
   {
-    id: 'unbo',
-    name: '운보',
-    hanjaName: '雲步',
-    description: '발끝이 땅에 거의 닿지 않는 기초 보법. 모든 보법·신법의 받침.',
+    id: 'chosangbi',
+    name: '초상비',
+    hanjaName: '草上飛',
+    description: '풀잎 위를 달리듯 가볍게 딛는 경공의 입문. 모든 보법·신법의 받침.',
     school: 'lightness', grade: 'novice', path: 'jung',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
+    isSectArt: true, lineage: 'common', acquisition: 'start',
   },
   {
-    id: 'cheongsim-gigong',
-    name: '청심기공',
-    hanjaName: '淸心氣功',
-    description: '마음을 맑게 다스리는 기초 내공. 잡념을 거두고 호흡을 고른다.',
+    id: 'tonap-beop',
+    name: '토납법',
+    hanjaName: '吐納法',
+    description: '묵은 숨을 뱉고 새 기운을 삼키는 가장 오래된 호흡법. 모든 내공의 첫걸음.',
     school: 'qigong', grade: 'novice', path: 'jeong',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
+    isSectArt: true, lineage: 'common', acquisition: 'start',
   },
   {
-    id: 'cheolsin-gong',
-    name: '철신공',
-    hanjaName: '鐵身功',
-    description: '몸을 쇠처럼 단련하는 기초 외공. 맞고 버티는 법부터 가르친다.',
+    id: 'geumjong-jo',
+    name: '금종조',
+    hanjaName: '金鐘罩',
+    description: '몸에 금빛 종을 두른 듯 단단해지는 정통 기초 외공. 맞고 버티는 법부터 가르친다.',
     school: 'external', grade: 'novice', path: 'jung',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
+    isSectArt: true, lineage: 'common', acquisition: 'start',
   },
   {
-    id: 'cheongpung-swordplay',
-    name: '청풍검법',
-    hanjaName: '靑風劍法',
-    description: '바람을 베듯 가볍고 정직한 검술. 초심자가 검의 결을 익히기 좋다.',
+    id: 'samjae-sword',
+    name: '삼재검법',
+    hanjaName: '三才劍法',
+    description: '천(天)·지(地)·인(人) 세 결로 이루어진 천하 공용의 입문 검법. 무관마다 가르친다.',
     school: 'sword', grade: 'apprentice', path: 'jeong',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
+    isSectArt: true, lineage: 'common', acquisition: 'start',
   },
   {
-    id: 'baekun-fist',
-    name: '백운권법',
-    hanjaName: '白雲拳法',
-    description: '구름이 흩어지듯 흐르는 권법. 강하지 않으나 결이 끊기지 않는다.',
+    id: 'taejo-janggwon',
+    name: '태조장권',
+    hanjaName: '太祖長拳',
+    description: '송 태조가 남겼다 전하는 천하 공용의 장권. 화려하지 않으나 빈틈이 없다.',
     school: 'fist', grade: 'apprentice', path: 'jeong',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
-  },
-  {
-    id: 'heugya-fist',
-    name: '흑야권법',
-    hanjaName: '黑夜拳法',
-    description: '어둠 속에서 위력이 배가되는 사부의 본전 비급. 백운권법의 결을 소성까지 다 익힌 자만이 이 어두운 정수를 받아낼 수 있다.',
-    school: 'fist', grade: 'legendary', path: 'sa',
-    isSectArt: true, lineage: 'sect', acquisition: 'start',
-    prerequisites: [{ artId: 'baekun-fist', minSeong: 6 }],
+    isSectArt: true, lineage: 'common', acquisition: 'start',
   },
 
   // ═══ 화산파 — 매화·자하 ═══════════════════════════════════════════════════
@@ -124,6 +115,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
     prerequisites: [{ artId: 'maehwa-gigong', minSeong: 6 }],
   },
 
+  {
+    id: 'amhyang-pyo',
+    name: '암향표',
+    hanjaName: '暗香飄',
+    description: '매화 향이 바람에 떠돌듯 종적 없이 흐르는 화산의 경공.',
+    school: 'lightness', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'hwasan', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 4 }],
+  },
+
   // ═══ 무당파 — 태극·순양 ═══════════════════════════════════════════════════
   {
     id: 'hyeonmun-gicho-sword',
@@ -187,7 +188,26 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '구름을 사다리 삼아 오르는 무당 경공. 허공을 두 번 밟는다.',
     school: 'lightness', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'mudang', acquisition: 'quest',
-    prerequisites: [{ artId: 'unbo', minSeong: 5 }],
+    prerequisites: [{ artId: 'chosangbi', minSeong: 5 }],
+  },
+
+  {
+    id: 'sipdan-geum',
+    name: '십단금',
+    hanjaName: '十段錦',
+    description: '열 단으로 끊어 치는 무당의 장법. 부드러운 겉에 끊는 힘을 숨겼다.',
+    school: 'fist', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'mudang', acquisition: 'quest',
+  },
+
+  {
+    id: 'taegeuk-gwon',
+    name: '태극권',
+    hanjaName: '太極拳',
+    description: '느린 원이 빠른 주먹을 이긴다 — 무당 권법의 정수.',
+    school: 'fist', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'mudang', acquisition: 'quest',
+    prerequisites: [{ artId: 'sipdan-geum', minSeong: 5 }, { artId: 'taehwa-simbeop', minSeong: 4 }],
   },
 
   // ═══ 소림사 — 나한·금강·역근 ══════════════════════════════════════════════
@@ -280,7 +300,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '취한 듯 비틀거리나 결코 잡히지 않는 개방의 보법.',
     school: 'lightness', grade: 'apprentice', path: 'jung',
     isSectArt: false, lineage: 'gaebang', acquisition: 'quest',
-    prerequisites: [{ artId: 'unbo', minSeong: 4 }],
+    prerequisites: [{ artId: 'chosangbi', minSeong: 4 }],
   },
   {
     id: 'gangnyong-gwon',
@@ -302,6 +322,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
       { artId: 'gangnyong-gwon', minSeong: 6 },
       { artId: 'chwipalseon-bo', minSeong: 4 },
     ],
+  },
+
+  {
+    id: 'chwi-gwon',
+    name: '취권',
+    hanjaName: '醉拳',
+    description: '취한 몸짓에 살수를 숨긴 거지들의 권법. 어디로 올지 모른다.',
+    school: 'fist', grade: 'apprentice', path: 'jung',
+    isSectArt: false, lineage: 'gaebang', acquisition: 'quest',
+    prerequisites: [{ artId: 'yugeol-gwon', minSeong: 3 }],
   },
 
   // ═══ 아미파 — 비구니의 검과 금정 ══════════════════════════════════════════
@@ -340,6 +370,26 @@ export const MARTIAL_ARTS: MartialArt[] = [
     prerequisites: [{ artId: 'ami-sibi-jang', minSeong: 6 }],
   },
 
+  {
+    id: 'bokho-geumgang-gwon',
+    name: '복호금강권',
+    hanjaName: '伏虎金剛拳',
+    description: '호랑이를 엎드리게 한다는 아미의 강맹한 권법.',
+    school: 'fist', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'ami', acquisition: 'quest',
+    prerequisites: [{ artId: 'ami-sibi-jang', minSeong: 5 }],
+  },
+
+  {
+    id: 'bisang-ryeonhwa',
+    name: '비상련화',
+    hanjaName: '飛翔蓮花',
+    description: '연꽃잎이 날아오르듯 가볍게 솟는 아미의 경공.',
+    school: 'lightness', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'ami', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 4 }],
+  },
+
   // ═══ 점창파 — 해를 쏘는 검 ════════════════════════════════════════════════
   {
     id: 'jeomchang-gicho-sword',
@@ -365,7 +415,20 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '해를 쏘아 떨어뜨린다는 점창 진산절기. 천하에서 가장 빠른 찌르기.',
     school: 'sword', grade: 'grandmaster', path: 'jeong',
     isSectArt: false, lineage: 'jeomchang', acquisition: 'quest',
-    prerequisites: [{ artId: 'hwaryong-sword', minSeong: 6 }],
+    prerequisites: [
+      { artId: 'hwaryong-sword', minSeong: 6 },
+      { artId: 'hoepung-sword', minSeong: 4 },
+    ],
+  },
+
+  {
+    id: 'hoepung-sword',
+    name: '회풍검',
+    hanjaName: '回風劍',
+    description: '되돌아치는 바람처럼 변화무쌍한 점창의 검.',
+    school: 'sword', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'jeomchang', acquisition: 'quest',
+    prerequisites: [{ artId: 'jeomchang-gicho-sword', minSeong: 3 }],
   },
 
   // ═══ 곤륜파 — 구름 위의 용 ════════════════════════════════════════════════
@@ -393,7 +456,10 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '허공의 용마저 벤다는 곤륜 상승 검.',
     school: 'sword', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'gollyun', acquisition: 'quest',
-    prerequisites: [{ artId: 'ullyong-sipsam-sword', minSeong: 5 }],
+    prerequisites: [
+      { artId: 'ullyong-sipsam-sword', minSeong: 5 },
+      { artId: 'ullyong-daepalsik', minSeong: 4 },
+    ],
   },
   {
     id: 'ullyong-daepalsik',
@@ -402,7 +468,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '허공에서 여덟 번 몸을 뒤집는 곤륜 경공의 정수.',
     school: 'lightness', grade: 'master', path: 'jung',
     isSectArt: false, lineage: 'gollyun', acquisition: 'quest',
-    prerequisites: [{ artId: 'unbo', minSeong: 5 }],
+    prerequisites: [{ artId: 'chosangbi', minSeong: 5 }],
   },
 
   // ═══ 종남파 — 진중한 검 ═══════════════════════════════════════════════════
@@ -432,6 +498,29 @@ export const MARTIAL_ARTS: MartialArt[] = [
     isSectArt: false, lineage: 'jongnam', acquisition: 'quest',
   },
 
+  {
+    id: 'wollyeo-sword',
+    name: '월녀검법',
+    hanjaName: '月女劍法',
+    description: '달빛 아래 춤추듯 유려한 종남의 검. 천하삼십육검에서 갈라진 다른 한 길.',
+    school: 'sword', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'jongnam', acquisition: 'quest',
+    prerequisites: [{ artId: 'cheonha-36-sword', minSeong: 5 }],
+  },
+
+  {
+    id: 'samrak-sword',
+    name: '삼락검',
+    hanjaName: '三樂劍',
+    description: '세 가지 즐거움을 담은 종남 절정의 검 — 부드러움과 달빛이 다시 만난다.',
+    school: 'sword', grade: 'grandmaster', path: 'jeong',
+    isSectArt: false, lineage: 'jongnam', acquisition: 'quest',
+    prerequisites: [
+      { artId: 'yuun-sword', minSeong: 6 },
+      { artId: 'wollyeo-sword', minSeong: 5 },
+    ],
+  },
+
   // ═══ 청성파 — 균형의 검과 심법 ════════════════════════════════════════════
   {
     id: 'cheongseong-gicho-sword',
@@ -448,7 +537,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '푸른 구름과 붉은 노을, 두 검결을 하나로 합친 청성 비전.',
     school: 'sword', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'cheongseong', acquisition: 'quest',
-    prerequisites: [{ artId: 'cheongseong-gicho-sword', minSeong: 5 }],
+    prerequisites: [{ artId: 'cheongpung-sword', minSeong: 5 }],
   },
   {
     id: 'daera-singong',
@@ -457,6 +546,26 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '하늘 그물처럼 넓고 고른 청성의 심법.',
     school: 'qigong', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'cheongseong', acquisition: 'quest',
+  },
+
+  {
+    id: 'cheongpung-sword',
+    name: '청풍검',
+    hanjaName: '淸風劍',
+    description: '맑은 바람처럼 군더더기 없는 청성의 중급 검.',
+    school: 'sword', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'cheongseong', acquisition: 'quest',
+    prerequisites: [{ artId: 'cheongseong-gicho-sword', minSeong: 3 }],
+  },
+
+  {
+    id: 'cheondun-sword',
+    name: '천둔검',
+    hanjaName: '天遁劍',
+    description: '한(狠)·준(俊)·첩(捷)·변(變) 네 결을 갖춘 청성의 종적 검.',
+    school: 'sword', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'cheongseong', acquisition: 'quest',
+    prerequisites: [{ artId: 'cheongpung-sword', minSeong: 5 }],
   },
 
   // ═══ 공동파 — 마를 엎드리게 하는 검 ═══════════════════════════════════════
@@ -475,7 +584,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '마교를 상대로 벼려온 공동 진산절기. 사악한 기운 앞에서 더 매섭다.',
     school: 'sword', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'gongdong', acquisition: 'quest',
-    prerequisites: [{ artId: 'bongma-gicho-sword', minSeong: 5 }],
+    prerequisites: [{ artId: 'gwangjin-sword', minSeong: 5 }],
   },
   {
     id: 'chilsang-gwon',
@@ -484,6 +593,26 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '일곱을 상하게 하는 권 — 적을 부수기 전에 제 몸도 갉는다.',
     school: 'fist', grade: 'master', path: 'jung',
     isSectArt: false, lineage: 'gongdong', acquisition: 'quest',
+    prerequisites: [{ artId: 'tongcheon-jang', minSeong: 5 }],
+  },
+
+  {
+    id: 'tongcheon-jang',
+    name: '통천장',
+    hanjaName: '通天掌',
+    description: '하늘에 닿는다는 공동의 장법. 손바닥에 우레를 싣는다.',
+    school: 'fist', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'gongdong', acquisition: 'quest',
+  },
+
+  {
+    id: 'gwangjin-sword',
+    name: '광진검',
+    hanjaName: '光眞劍',
+    description: '빛처럼 곧게 진(眞)을 꿰는 공동의 중급 검.',
+    school: 'sword', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'gongdong', acquisition: 'quest',
+    prerequisites: [{ artId: 'bongma-gicho-sword', minSeong: 3 }],
   },
 
   // ═══ 남궁세가 — 제왕의 검 ═════════════════════════════════════════════════
@@ -534,6 +663,15 @@ export const MARTIAL_ARTS: MartialArt[] = [
     isSectArt: false, lineage: 'namgung', acquisition: 'quest',
   },
 
+  {
+    id: 'cheonroe-samjang',
+    name: '천뢰삼장',
+    hanjaName: '天雷三掌',
+    description: '세 번의 우레가 연이어 떨어지는 남궁가의 장법.',
+    school: 'fist', grade: 'apprentice', path: 'jeong',
+    isSectArt: false, lineage: 'namgung', acquisition: 'quest',
+  },
+
   // ═══ 사천당가 — 독과 암기의 조종 ══════════════════════════════════════════
   {
     id: 'bipyo-sul',
@@ -568,7 +706,10 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '폭우처럼 쏟아지는 독침. 당가 비전의 독문 암기.',
     school: 'hidden', grade: 'grandmaster', path: 'jung',
     isSectArt: false, lineage: 'dangga', acquisition: 'quest',
-    prerequisites: [{ artId: 'mancheon-hwawu', minSeong: 6 }],
+    prerequisites: [
+      { artId: 'mancheon-hwawu', minSeong: 6 },
+      { artId: 'manryu-gwijong', minSeong: 4 },
+    ],
   },
   {
     id: 'doksa-jang',
@@ -577,6 +718,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '독 모래를 먹인 손으로 치는 당가의 장법.',
     school: 'fist', grade: 'apprentice', path: 'jung',
     isSectArt: false, lineage: 'dangga', acquisition: 'quest',
+  },
+
+  {
+    id: 'manryu-gwijong',
+    name: '만류귀종',
+    hanjaName: '萬流歸宗',
+    description: '흩어진 암기가 모두 손으로 돌아온다 — 당가 최고의 회수법.',
+    school: 'hidden', grade: 'master', path: 'jung',
+    isSectArt: false, lineage: 'dangga', acquisition: 'quest',
+    prerequisites: [{ artId: 'cheonnyeo-sanhwa', minSeong: 5 }],
   },
 
   // ═══ 하북팽가 — 도의 명가 ═════════════════════════════════════════════════
@@ -604,7 +755,10 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '벼락이 땅을 가르는 팽가 최고 비전. 한 칼에 모든 것을 싣는다.',
     school: 'saber', grade: 'grandmaster', path: 'jeong',
     isSectArt: false, lineage: 'paengga', acquisition: 'quest',
-    prerequisites: [{ artId: 'wangja-sado', minSeong: 6 }],
+    prerequisites: [
+      { artId: 'wangja-sado', minSeong: 6 },
+      { artId: 'cheolhyeol-jeokseong-do', minSeong: 4 },
+    ],
   },
   {
     id: 'geongon-sinjang',
@@ -613,6 +767,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '하늘과 땅을 가르듯 묵직한 팽가의 장법.',
     school: 'fist', grade: 'apprentice', path: 'jeong',
     isSectArt: false, lineage: 'paengga', acquisition: 'quest',
+  },
+
+  {
+    id: 'cheolhyeol-jeokseong-do',
+    name: '철혈적성도',
+    hanjaName: '鐵血摘星刀',
+    description: '별을 따듯 치솟는 팽가의 변칙 도법. 오호단문도에서 갈라진 다른 길.',
+    school: 'saber', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'paengga', acquisition: 'quest',
+    prerequisites: [{ artId: 'ohodanmun-do', minSeong: 5 }],
   },
 
   // ═══ 모용세가 — 되돌리는 검 ═══════════════════════════════════════════════
@@ -640,7 +804,20 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '별자리를 옮기듯 상대의 힘을 그대로 되돌리는 모용가의 가전 절기.',
     school: 'qigong', grade: 'grandmaster', path: 'jung',
     isSectArt: false, lineage: 'moyong', acquisition: 'quest',
-    prerequisites: [{ artId: 'geongon-paseom-sword', minSeong: 6 }],
+    prerequisites: [
+      { artId: 'geongon-paseom-sword', minSeong: 6 },
+      { artId: 'ssangyong-seonpung-sword', minSeong: 4 },
+    ],
+  },
+
+  {
+    id: 'ssangyong-seonpung-sword',
+    name: '쌍용선풍검',
+    hanjaName: '雙龍旋風劍',
+    description: '두 마리 용이 회오리를 일으키는 모용가의 쌍검.',
+    school: 'sword', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'moyong', acquisition: 'quest',
+    prerequisites: [{ artId: 'seomgwang-bunun-sword', minSeong: 5 }],
   },
 
   // ═══ 표국 — 길 위의 실전 ══════════════════════════════════════════════════
@@ -704,6 +881,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
     school: 'qigong', grade: 'master', path: 'jeong',
     isSectArt: false, lineage: 'doga', acquisition: 'quest',
     prerequisites: [{ artId: 'hyeonmun-jeongjong', minSeong: 5 }],
+  },
+
+  {
+    id: 'neungheo-eopung',
+    name: '능허어풍',
+    hanjaName: '凌虛御風',
+    description: '바람을 타고 허공을 거니는 도가의 경공.',
+    school: 'lightness', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'doga', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 5 }],
   },
 
   // ═══ 의가 — 살리는 무공 ═══════════════════════════════════════════════════
@@ -797,7 +984,10 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '열세 개의 침이 모두 절명의 혈을 노린다. 살수 비전의 정점.',
     school: 'hidden', grade: 'grandmaster', path: 'sa',
     isSectArt: false, lineage: 'salsu', acquisition: 'quest',
-    prerequisites: [{ artId: 'salsu-sippeop', minSeong: 6 }],
+    prerequisites: [
+      { artId: 'salsu-sippeop', minSeong: 6 },
+      { artId: 'muyeong-geom', minSeong: 4 },
+    ],
   },
 
   // ═══ 사파 — 거친 길의 무공 ════════════════════════════════════════════════
@@ -910,6 +1100,6 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '물결 위를 스치듯 걷는다는 전설의 보법. 육십사괘의 자리를 밟는다.',
     school: 'lightness', grade: 'grandmaster', path: 'jung',
     isSectArt: false, lineage: 'legend', acquisition: 'quest',
-    prerequisites: [{ artId: 'unbo', minSeong: 6 }],
+    prerequisites: [{ artId: 'chosangbi', minSeong: 6 }],
   },
 ];

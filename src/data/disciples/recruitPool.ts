@@ -38,7 +38,7 @@ export interface RecruitCandidate {
 export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'jang-cheol',
-    artId: 'baekun-fist',
+    artId: 'taejo-janggwon',
     // docs/28 §7: 특화 외공·호위 / 상성 도법·권법 / 미숙 의술·암기 / 상극 정탐·영약제조·의가무공·마공
     efficiency: { strength: '특화', guarding: '특화', saber: '상성', fist: '상성', medicine: '미숙', hidden: '미숙', scouting: '상극', alchemy: '상극', medical: '상극', darkArts: '상극' },
     insight: 1, // 오성 ★ — docs/disciples/01_장철.md (깨달음 낮음, 고경지 벽에서 더딤)
@@ -56,7 +56,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'jin-sohwa',
-    artId: 'cheongsim-gigong',
+    artId: 'tonap-beop',
     // docs/28 §7: 특화 의술·영약제조·의가무공 / 상성 학문 / 미숙 권법·정탐 / 상극 검법·도법·외공·암기·호위·마공
     efficiency: { medicine: '특화', alchemy: '특화', medical: '특화', knowledge: '상성', fist: '미숙', scouting: '미숙', sword: '상극', saber: '상극', strength: '상극', hidden: '상극', guarding: '상극', darkArts: '상극' },
     insight: 3,
@@ -74,7 +74,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'han-baram',
-    artId: 'cheongpung-swordplay',
+    artId: 'samjae-sword',
     // docs/28 §7: 특화 정탐·보법·암기 / 상성 검법·도법 / 미숙 학문·의술 / 상극 영약제조·의가무공 / 마공 보통(미기재)
     // (옛 시드의 darkArts 특화는 암기를 마공 키에 잘못 실은 것 — hidden 신설로 교정, 2026-06-10)
     efficiency: { scouting: '특화', lightness: '특화', hidden: '특화', sword: '상성', saber: '상성', knowledge: '미숙', formation: '미숙', medicine: '미숙', alchemy: '상극', medical: '상극' },
@@ -93,7 +93,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'yun-soso',
-    artId: 'unbo',
+    artId: 'chosangbi',
     // docs/28 §7: 특화 검법·학문 / 상성 보법·호위·내공·예절 / 미숙 정탐·의술 / 상극 암기·영약제조·마공
     efficiency: { sword: '특화', knowledge: '특화', formation: '특화', lightness: '상성', guarding: '상성', qigong: '상성', etiquette: '상성', scouting: '미숙', medicine: '미숙', hidden: '상극', alchemy: '상극', darkArts: '상극' },
     insight: 4,
@@ -112,7 +112,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'i-cheongha',
-    artId: 'unbo',
+    artId: 'chosangbi',
     // docs/28 §7: 특화 검법·정탐·보법·암기 / 상성 도법·내공 / 미숙 호위·학문 / 상극 의술·영약제조·의가무공 / 마공 보통(미기재)
     // (옛 시드의 darkArts 특화는 암기 오기재 — hidden 으로 교정. 마공 보통 = 살수 출신 거부감 적음, 흑화 경로는 열려 있되 천부는 아님)
     efficiency: { sword: '특화', scouting: '특화', lightness: '특화', hidden: '특화', saber: '상성', qigong: '상성', guarding: '미숙', knowledge: '미숙', formation: '미숙', medicine: '상극', alchemy: '상극', medical: '상극' },
@@ -132,7 +132,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'baek-yeon',
-    artId: 'cheongsim-gigong',
+    artId: 'tonap-beop',
     // docs/28 §7: 특화 내공·학문 / 상성 의가무공 / 미숙 도법·권법·외공 / 상극 암기·정탐·호위·마공
     efficiency: { qigong: '특화', knowledge: '특화', formation: '특화', medical: '상성', saber: '미숙', fist: '미숙', strength: '미숙', hidden: '상극', scouting: '상극', guarding: '상극', darkArts: '상극' },
     insight: 4, // 오성 ★★★★ — docs/disciples/08_백연.md (깨달음 좋아 경지 잠재력 최상위권)
@@ -157,7 +157,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
 export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
   {
     poolId: 'gang-muyeol',
-    artId: 'baekun-fist',
+    artId: 'taejo-janggwon',
     // docs/15·28: 도법(무관) 특화. (옛 staff 키 폐기 → saber)
     efficiency: { saber: '특화', fist: '상성', guarding: '상성' },
     insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
@@ -176,7 +176,7 @@ export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
   },
   {
     poolId: 'dokgo-yeon',
-    artId: 'cheongpung-swordplay',
+    artId: 'samjae-sword',
     efficiency: { sword: '특화', qigong: '상성', knowledge: '상성' },
     insight: 5, // 오성 ★★★★★ — docs/disciples/07_독고연.md (천재형 통찰)
     personality: { integrity: 55, freedom: 40, warmth: 30, prudence: 55, mercy: 30, ambition: 75 },

@@ -418,8 +418,15 @@ function maybeDropScroll(q: Quest): void {
   );
   if (pool.length === 0) return;
   const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
-  // 결 맞는 갈래 가중 ×3 — 풀을 가중 복제해 단순 추첨.
-  const weighted = pool.flatMap((a) => (affinity.includes(a.school) ? [a, a, a] : [a]));
+  // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×3**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
+  // 잘 나온다 — "한 문파의 비급은 함께 강호를 돈다". 트리가 자연히 완성되는 장치(보장 정점 폐기 보완).
+  const weighted = pool.flatMap((a) => {
+    let w = 1;
+    if (affinity.includes(a.school)) w *= 3;
+    const chainNext = (a.prerequisites ?? []).every((pr) => codex.hasScroll(pr.artId));
+    if (a.prerequisites?.length && chainNext) w *= 3;
+    return Array(w).fill(a) as typeof pool;
+  });
   const art = weighted[Math.floor(Math.random() * weighted.length)];
   const day = useTimeStore.getState().totalDay;
   codex.addScroll({
@@ -715,7 +722,9 @@ function resolveQuest(active: ActiveQuest): Milestone {
     useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money * mult * questRewardMult));
   }
   if (scale.fame > 0) {
-    useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * mult * 0.3));
+    // 사문 명성 적립 ×0.6 (🔧 2026-06-10 0.3→0.6): 0.3에선 잡일·소무 명성이 반올림 0으로 증발해
+    // 15년에도 보통급 게시판(명성 25)이 안 열리던 정체 해소 — 활발히 뛰면 ~1년 보통·~3년 위험·~5년 극험.
+    useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * mult * 0.6));
   }
   // 사문 분위기 — 의뢰 사상색(정파/사파·회색) 누적. docs/28 §7.
   if (outcome !== 'fail') {

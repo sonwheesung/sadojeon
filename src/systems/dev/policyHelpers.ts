@@ -82,21 +82,22 @@ function chainOwned(art: MartialArt, depth = 0): boolean {
 }
 
 function goalArtFor(d: Disciple): MartialArt | null {
-  const apexes = MARTIAL_ARTS.filter(
+  // 보유 비급 기준 **모든 등급** 후보 — 사문 오리지널 폐기 후 보장 정점이 없으므로,
+  // 드랍이 모이는 대로 더 높은 등급 트리로 동적으로 갈아탄다(초반엔 공용 중품이 목표).
+  const candidates = MARTIAL_ARTS.filter(
     (a) =>
-      (a.grade === 'grandmaster' || a.grade === 'legendary') &&
       a.minDarkness == null && // 마공 트리는 최적 정책에서 제외(흑화 대가)
       chainOwned(a),
   );
-  if (apexes.length === 0) return findMartialArt('heugya-fist') ?? null;
+  if (candidates.length === 0) return null;
   // 등급 우선, 같으면 제자 갈래 효율(특화>상성>보통>미숙>상극) 우선.
   const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
-  apexes.sort((a, b) => {
+  candidates.sort((a, b) => {
     const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
     if (g !== 0) return g;
     return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
   });
-  return apexes[0];
+  return candidates[0];
 }
 
 // 목표를 향해 "오늘 주력으로 삼아 키울 무공" — 선행조건을 합법적으로 한 단계씩 밟는다.

@@ -22,8 +22,8 @@ export default function MartialCodexScreen() {
     const all = allLineageIds();
     if (!disciple) return all;
     const mine = new Set<string>();
-    for (const inst of disciple.martialArts) mine.add(findMartialArt(inst.artId)?.lineage ?? 'sect');
-    if (focus) mine.add(findMartialArt(focus)?.lineage ?? 'sect');
+    for (const inst of disciple.martialArts) mine.add(findMartialArt(inst.artId)?.lineage ?? 'common');
+    if (focus) mine.add(findMartialArt(focus)?.lineage ?? 'common');
     const filtered = all.filter((l) => mine.has(l));
     return filtered.length ? filtered : all;
   })();
