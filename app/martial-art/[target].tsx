@@ -27,12 +27,13 @@ import type {
 
 const SCHOOL_LABEL: Record<MartialArtSchool, string> = {
   sword: '검법',
+  saber: '도법',
   fist: '권법',
-  palm: '장법',
-  staff: '봉술',
-  qigong: '내공',
   lightness: '보법',
-  medical: '의술',
+  hidden: '암기',
+  external: '외공',
+  qigong: '내공',
+  medical: '의가무공',
   darkArts: '마공',
 };
 

@@ -39,7 +39,8 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'jang-cheol',
     artId: 'baekun-fist',
-    efficiency: { fist: '상성', staff: '상성', medical: '상극', darkArts: '상극', strength: '특화', guarding: '특화', medicine: '미숙', scouting: '상극', alchemy: '상극' },
+    // docs/28 §7: 특화 외공·호위 / 상성 도법·권법 / 미숙 의술·암기 / 상극 정탐·영약제조·의가무공·마공
+    efficiency: { strength: '특화', guarding: '특화', saber: '상성', fist: '상성', medicine: '미숙', hidden: '미숙', scouting: '상극', alchemy: '상극', medical: '상극', darkArts: '상극' },
     insight: 1, // 오성 ★ — docs/disciples/01_장철.md (깨달음 낮음, 고경지 벽에서 더딤)
     personality: { integrity: 60, freedom: 30, warmth: 55, prudence: 60, mercy: 60, ambition: 20 },
     storyLine: '농촌에서 자란 우직한 아이. 평범하나 손이 묵직하다.',
@@ -56,7 +57,8 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'jin-sohwa',
     artId: 'cheongsim-gigong',
-    efficiency: { medical: '특화', fist: '미숙', sword: '상극', staff: '상극', darkArts: '상극', medicine: '특화', alchemy: '특화', scouting: '미숙', strength: '상극', guarding: '상극' },
+    // docs/28 §7: 특화 의술·영약제조·의가무공 / 상성 학문 / 미숙 권법·정탐 / 상극 검법·도법·외공·암기·호위·마공
+    efficiency: { medicine: '특화', alchemy: '특화', medical: '특화', knowledge: '상성', fist: '미숙', scouting: '미숙', sword: '상극', saber: '상극', strength: '상극', hidden: '상극', guarding: '상극', darkArts: '상극' },
     insight: 3,
     personality: { integrity: 50, freedom: 40, warmth: 70, prudence: 70, mercy: 80, ambition: 20 },
     storyLine: '마을 약방 집안의 다정한 아이. 약초를 능숙히 다룬다.',
@@ -73,7 +75,9 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'han-baram',
     artId: 'cheongpung-swordplay',
-    efficiency: { lightness: '특화', darkArts: '특화', sword: '상성', staff: '상성', medical: '상극', scouting: '특화', knowledge: '미숙', formation: '미숙', medicine: '미숙', alchemy: '상극' },
+    // docs/28 §7: 특화 정탐·보법·암기 / 상성 검법·도법 / 미숙 학문·의술 / 상극 영약제조·의가무공 / 마공 보통(미기재)
+    // (옛 시드의 darkArts 특화는 암기를 마공 키에 잘못 실은 것 — hidden 신설로 교정, 2026-06-10)
+    efficiency: { scouting: '특화', lightness: '특화', hidden: '특화', sword: '상성', saber: '상성', knowledge: '미숙', formation: '미숙', medicine: '미숙', alchemy: '상극', medical: '상극' },
     insight: 3,
     personality: { integrity: 50, freedom: 80, warmth: 60, prudence: 40, mercy: 50, ambition: 40 },
     storyLine: '산문 앞에 떠돌이 아이가 주저앉아 있었다. 갈 곳을 잊은 눈빛이었다.',
@@ -90,7 +94,8 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'yun-soso',
     artId: 'unbo',
-    efficiency: { sword: '특화', lightness: '상성', qigong: '상성', darkArts: '상극', medical: '미숙', knowledge: '특화', formation: '특화', guarding: '상성', scouting: '미숙', medicine: '미숙' },
+    // docs/28 §7: 특화 검법·학문 / 상성 보법·호위·내공·예절 / 미숙 정탐·의술 / 상극 암기·영약제조·마공
+    efficiency: { sword: '특화', knowledge: '특화', formation: '특화', lightness: '상성', guarding: '상성', qigong: '상성', etiquette: '상성', scouting: '미숙', medicine: '미숙', hidden: '상극', alchemy: '상극', darkArts: '상극' },
     insight: 4,
     personality: { integrity: 80, freedom: 30, warmth: 50, prudence: 60, mercy: 60, ambition: 60 },
     storyLine:
@@ -108,7 +113,9 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'i-cheongha',
     artId: 'unbo',
-    efficiency: { sword: '특화', lightness: '특화', darkArts: '특화', staff: '상성', qigong: '상성', medical: '상극', scouting: '특화', guarding: '미숙', knowledge: '미숙', formation: '미숙', medicine: '상극', alchemy: '상극' },
+    // docs/28 §7: 특화 검법·정탐·보법·암기 / 상성 도법·내공 / 미숙 호위·학문 / 상극 의술·영약제조·의가무공 / 마공 보통(미기재)
+    // (옛 시드의 darkArts 특화는 암기 오기재 — hidden 으로 교정. 마공 보통 = 살수 출신 거부감 적음, 흑화 경로는 열려 있되 천부는 아님)
+    efficiency: { sword: '특화', scouting: '특화', lightness: '특화', hidden: '특화', saber: '상성', qigong: '상성', guarding: '미숙', knowledge: '미숙', formation: '미숙', medicine: '상극', alchemy: '상극', medical: '상극' },
     insight: 4,
     personality: { integrity: 30, freedom: 60, warmth: 25, prudence: 70, mercy: 15, ambition: 45 },
     storyLine:
@@ -126,7 +133,8 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
   {
     poolId: 'baek-yeon',
     artId: 'cheongsim-gigong',
-    efficiency: { qigong: '특화', medical: '상성', staff: '미숙', fist: '미숙', darkArts: '상극', knowledge: '특화', formation: '특화', scouting: '상극', guarding: '상극' },
+    // docs/28 §7: 특화 내공·학문 / 상성 의가무공 / 미숙 도법·권법·외공 / 상극 암기·정탐·호위·마공
+    efficiency: { qigong: '특화', knowledge: '특화', formation: '특화', medical: '상성', saber: '미숙', fist: '미숙', strength: '미숙', hidden: '상극', scouting: '상극', guarding: '상극', darkArts: '상극' },
     insight: 4, // 오성 ★★★★ — docs/disciples/08_백연.md (깨달음 좋아 경지 잠재력 최상위권)
     personality: { integrity: 45, freedom: 55, warmth: 55, prudence: 80, mercy: 70, ambition: 10 },
     storyLine:
@@ -150,7 +158,8 @@ export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
   {
     poolId: 'gang-muyeol',
     artId: 'baekun-fist',
-    efficiency: { staff: '특화', fist: '상성', guarding: '상성' },
+    // docs/15·28: 도법(무관) 특화. (옛 staff 키 폐기 → saber)
+    efficiency: { saber: '특화', fist: '상성', guarding: '상성' },
     insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
     personality: { integrity: 60, freedom: 30, warmth: 45, prudence: 55, mercy: 45, ambition: 55 },
     storyLine:
@@ -159,8 +168,8 @@ export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
       house: '강북의 작은 무관 집안(강씨 무관), 셋째 아들',
       family: '부모와 형 둘 — 형들은 무관 직을 잇기 위해 단련 중',
       nature: '책임감이 깊고 진지하다. 가문의 이름을 늘 의식한다.',
-      upbringing: '무관 마당에서 형들 틈에 끼어 어려서부터 봉과 주먹을 익혔다.',
-      likes: '봉 휘두르기, 맞붙어 겨루기, 동료 지키기 — 균형 잡히고 끈기가 있다',
+      upbringing: '무관 마당에서 형들 틈에 끼어 어려서부터 도와 주먹을 익혔다.',
+      likes: '도 휘두르기, 맞붙어 겨루기, 동료 지키기 — 균형 잡히고 끈기가 있다',
       dislikes: '몰래 다니는 정탐 일, 약 짓는 잔손 일',
       tell: '규율을 잘 따르고 약속을 어기지 않는다. 그른 무리와는 어울리려 하지 않는다.',
     },

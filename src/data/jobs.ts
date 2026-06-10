@@ -23,13 +23,14 @@ export const JOB_TIER_STARS: Record<JobTier, number> = {
   limited: 1,
 };
 
-// 전투 갈래 묶음 — "검/도/권 등 아무 무공" 조건용.
+// 전투 갈래 묶음 — "검/도/권 등 아무 무공" 조건용. (갈래 8종 확정 — palm/staff 폐기)
 export const COMBAT_SCHOOLS: readonly MartialArtSchool[] = [
   'sword',
+  'saber',
   'fist',
-  'palm',
-  'staff',
   'lightness',
+  'hidden',
+  'external',
   'darkArts',
 ];
 
@@ -56,7 +57,7 @@ export const JOB_POOL: readonly Job[] = [
     tier: 'peak',
     desc: '정파의 정점. 강호를 호령한다.',
     statReq: { knowledge: 70, guarding: 60 },
-    martial: { schools: ['sword', 'fist', 'palm', 'staff'], minSeong: 8 },
+    martial: { schools: ['sword', 'saber', 'fist'], minSeong: 8 },
     personaMin: { integrity: 70, mercy: 55, ambition: 55 },
   },
   {
@@ -147,7 +148,7 @@ export const JOB_POOL: readonly Job[] = [
     name: '정파 호법',
     tier: 'upper',
     desc: '정파 문파의 수호.',
-    martial: { schools: ['sword', 'fist', 'palm', 'staff'], minSeong: 7 },
+    martial: { schools: ['sword', 'saber', 'fist'], minSeong: 7 },
     personaMin: { integrity: 60 },
   },
   {
@@ -276,7 +277,7 @@ export const JOB_POOL: readonly Job[] = [
     name: '정파 무사',
     tier: 'common',
     desc: '정파 문파에 몸담은 무사.',
-    martial: { schools: ['sword', 'fist', 'palm', 'staff'], minSeong: 4 },
+    martial: { schools: ['sword', 'saber', 'fist'], minSeong: 4 },
     personaMin: { integrity: 50 },
   },
   // ── 한계 ──────────────────────────────────────────────

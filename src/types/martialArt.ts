@@ -44,15 +44,20 @@ export const MARTIAL_PATH_LABEL: Record<MartialPath, string> = {
   ma: '마도',
 };
 
+// 무공 갈래 8종 + 마공 — docs/04·28 §1 확정(2026-06-10).
+// 검·도·권(장법 흡수)·보·암기·외공·내공·의가무공. 마공(darkArts)은 정식 갈래가 아니라
+// 숨은 별도 효율(흑화 전용) — 도감 카테고리에 노출하지 않는다.
+// (옛 'palm' 장법·'staff' 봉법 키는 폐기 — 권법/도법으로 흡수.)
 export type MartialArtSchool =
-  | 'sword'
-  | 'fist'
-  | 'palm'
-  | 'staff'
-  | 'qigong'
-  | 'lightness'
-  | 'medical'
-  | 'darkArts';
+  | 'sword' // 검법
+  | 'saber' // 도법
+  | 'fist' // 권법 (장법 포함)
+  | 'lightness' // 보법
+  | 'hidden' // 암기
+  | 'external' // 외공 (금강불괴류 외공서)
+  | 'qigong' // 내공 (심법서)
+  | 'medical' // 의가무공 (활인·해독)
+  | 'darkArts'; // 마공 (숨은 별도)
 
 export type TalentAxis = 'body' | 'qi' | 'agility' | 'insight' | 'mind';
 

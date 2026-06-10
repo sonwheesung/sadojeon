@@ -38,11 +38,11 @@ const ENTRIES_BY_CATEGORY: Partial<Record<CodexCategoryKey, readonly CodexEntry[
 };
 
 const FOUND_BY_CATEGORY: Record<CodexCategoryKey, number> = {
-  sword: 5, saber: 0, fist: 0, palm: 0, lightness: 0, internal: 0, external: 0, hidden: 0,
+  sword: 5, saber: 0, fist: 0, lightness: 0, hidden: 0, external: 0, qigong: 0, medical: 0,
 };
 
 const TOTAL_BY_CATEGORY: Record<CodexCategoryKey, number> = {
-  sword: 25, saber: 22, fist: 20, palm: 18, lightness: 15, internal: 28, external: 24, hidden: 20,
+  sword: 25, saber: 22, fist: 20, lightness: 15, hidden: 20, external: 24, qigong: 28, medical: 12,
 };
 
 function isCategoryKey(v: string | undefined): v is CodexCategoryKey {

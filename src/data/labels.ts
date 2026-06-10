@@ -103,9 +103,10 @@ export const INVENTORY_ACTION_LABEL: Record<InventoryActionKey, string> = {
   close: '닫기',
 };
 
-// 무공 도감 갈래 8종 — docs/04_무공_도감.md "8대 갈래"
+// 무공 도감 갈래 8종 — docs/04_무공_도감.md "8대 갈래" (2026-06-10 확정: 장법→권법 흡수, 의가무공 추가).
+// 키는 MartialArtSchool 과 동일(마공 darkArts 는 숨은 별도라 도감 비노출).
 export const CODEX_CATEGORIES = [
-  'sword', 'saber', 'fist', 'palm', 'lightness', 'internal', 'external', 'hidden',
+  'sword', 'saber', 'fist', 'lightness', 'hidden', 'external', 'qigong', 'medical',
 ] as const;
 export type CodexCategoryKey = (typeof CODEX_CATEGORIES)[number];
 
@@ -113,22 +114,22 @@ export const CODEX_CATEGORY_LABEL: Record<CodexCategoryKey, string> = {
   sword: '검법',
   saber: '도법',
   fist: '권법',
-  palm: '장법',
   lightness: '보법',
-  internal: '내공',
-  external: '외공',
   hidden: '암기',
+  external: '외공',
+  qigong: '내공',
+  medical: '의가무공',
 };
 
 export const CODEX_CATEGORY_LABEL_HANJA: Record<CodexCategoryKey, string> = {
   sword: '劍法',
   saber: '刀法',
   fist: '拳法',
-  palm: '掌法',
   lightness: '步法',
-  internal: '內功',
-  external: '外功',
   hidden: '暗器',
+  external: '外功',
+  qigong: '內功',
+  medical: '醫家武功',
 };
 
 // 도감 화면 액션

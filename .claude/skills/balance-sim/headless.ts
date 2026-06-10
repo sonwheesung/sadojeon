@@ -371,7 +371,7 @@ function assignRoles(comp: string[]): Record<string, string> {
   const ids = [...ds.order];
   const eff = (id: string, k: string): number =>
     EFF_RANK[(ds.disciples[id]?.efficiency as Record<string, string> | undefined)?.[k] ?? '보통'] ?? 2;
-  const combatScore = (id: string) => Math.max(eff(id, 'sword'), eff(id, 'fist'), eff(id, 'darkArts'), eff(id, 'staff'));
+  const combatScore = (id: string) => Math.max(eff(id, 'sword'), eff(id, 'saber'), eff(id, 'fist'), eff(id, 'darkArts'));
   ids.sort((a, b) => combatScore(b) - combatScore(a)); // 캐리 = 전투 적성 최고
   const carry = ids[0];
   const roleMap: Record<string, string> = { [carry]: 'carry' };
