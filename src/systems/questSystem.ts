@@ -13,7 +13,8 @@ import {
   maxGradeForReputation,
 } from '@/data/quests';
 import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
-import { findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
+import { MARTIAL_ARTS, findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
+import { useCodexStore } from '@/stores/codexStore';
 import { REALM_SEONG_CAP, realmIndex } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -35,6 +36,7 @@ import { addMaterial, consumeElixirItem } from './alchemySystem';
 import { inflictWound } from './woundSystem';
 import { currentAge } from './discipleCtx';
 import type { WoundType } from '@/types/disciple';
+import type { MartialArtGrade, MartialArtSchool } from '@/types/martialArt';
 import { STAT_LABEL, type StatId } from '@/types/training';
 import type {
   ActiveQuest,
@@ -385,6 +387,64 @@ const OUTCOME_SCALE: Record<QuestOutcome, { money: number; fame: number; growth:
   disaster: { money: 0, fame: 0, growth: 0 },
 };
 
+// ─── 비급 드랍 — 의뢰 등급↔비급 등급, 도메인↔갈래 결 매칭. docs/05·09 (2026-06-10). 🔧 ───
+// 잡일은 비급이 없고, 위로 갈수록 확률·등급이 오른다. 신품은 드랍 없음(업적·사문 전승만).
+// 드랍 즉시 식별 완료(연구 시스템 연결은 후속 — docs/05 연구도 회차 리셋과 함께 배선 예정).
+const SCROLL_DROP: Partial<
+  Record<QuestGrade, { chance: number; grades: MartialArtGrade[] }>
+> = {
+  minor: { chance: 0.04, grades: ['novice'] },
+  normal: { chance: 0.1, grades: ['novice', 'apprentice'] },
+  dangerous: { chance: 0.25, grades: ['apprentice', 'master'] },
+  extreme: { chance: 0.75, grades: ['master', 'grandmaster'] },
+};
+
+// 도메인 ↔ 갈래 결 — 맞는 갈래의 비급이 3배 잘 나온다(살수 의뢰에서 살수 비급).
+const DOMAIN_SCHOOL_AFFINITY: Record<QuestDomain, MartialArtSchool[]> = {
+  guard: ['external', 'saber', 'fist'],
+  scout: ['lightness', 'hidden'],
+  duel: ['sword', 'saber', 'fist'],
+  medicine: ['medical', 'qigong'],
+  assassin: ['hidden', 'sword', 'darkArts'],
+  grand: ['sword', 'saber', 'fist', 'qigong', 'external'],
+};
+
+function maybeDropScroll(q: Quest): void {
+  const rule = SCROLL_DROP[q.grade];
+  if (!rule || Math.random() >= rule.chance) return;
+  const codex = useCodexStore.getState();
+  const pool = MARTIAL_ARTS.filter(
+    (a) => a.acquisition === 'quest' && rule.grades.includes(a.grade) && !codex.hasScroll(a.id),
+  );
+  if (pool.length === 0) return;
+  const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
+  // 결 맞는 갈래 가중 ×3 — 풀을 가중 복제해 단순 추첨.
+  const weighted = pool.flatMap((a) => (affinity.includes(a.school) ? [a, a, a] : [a]));
+  const art = weighted[Math.floor(Math.random() * weighted.length)];
+  const day = useTimeStore.getState().totalDay;
+  codex.addScroll({
+    artId: art.id,
+    acquiredAtRun: 1,
+    acquiredAtDay: day,
+    status: 'identified',
+    researchProgress: 100,
+    isTrap: false,
+    isIncomplete: false,
+  });
+  useInboxStore.getState().add({
+    id: `scroll-${art.id}-${day}`,
+    kind: 'report',
+    title: `비급 입수 — ${art.name}`,
+    preview: `의뢰 끝에 비급 「${art.name}(${art.hanjaName})」이 사문에 들었다.`,
+    body: `의뢰를 마치고 돌아온 짐 속에서 비급 한 권이 나왔다. **${art.name}(${art.hanjaName})** — ${art.description} 사문의 서고에 고이 들였다.`,
+    priority: 'normal',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'jianghu_news' },
+  });
+}
+
 // 재난(disaster) 발생 시 희생자가 *사망*할 확률. 나머지는 중상으로 생존. docs/29.
 // 극험 의뢰를 반복해도 한 번의 운으로 핵심 제자를 잃는 빈도를 낮춘다(극험만 양육 시 회당 ~20% 사망).
 const QUEST_DISASTER_FATALITY = 0.2;
@@ -694,6 +754,9 @@ function resolveQuest(active: ActiveQuest): Milestone {
       payload: { domain: 'jianghu_news' },
     });
   }
+
+  // 비급 드랍 — 의뢰 성공(완수·위기) 시 등급·도메인에 맞는 미보유 비급을 얻을 수 있다. docs/05·04·09.
+  if (outcome === 'full' || outcome === 'crisis') maybeDropScroll(q);
 
   const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
   let lostName = '';

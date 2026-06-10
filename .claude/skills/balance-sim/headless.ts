@@ -27,6 +27,7 @@ import { isRespondable, resolveInboxItem } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
 import { findMartialArt } from '@/data/martialArts';
+import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { effectiveRealmCeiling, realmIndex } from '@/data/realm';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -561,17 +562,29 @@ async function runFactorySweep(): Promise<void> {
     for (const id of RECIPE_IDS) learnRecipe(id);
     for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
     const carryId = 'yun-soso';
-    const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId);
+    // 쌍벽 빌드(2026-06-10) — 대성(7성)은 실전·대련만 여는 새 규칙에 맞춘 최적 조합:
+    // 전투 2인(카리+대련 상대가 서로 박빙 유지)+연단 서폿 2인. 장철=권 상성(흑야 트리 동행).
+    const sparPartnerId = 'jang-cheol';
+    const supportIds = useDiscipleStore
+      .getState()
+      .order.filter((id) => id !== carryId && id !== sparPartnerId);
     let divine = 0;
     let internalDan = 0;
 
-    // 역할 — 카리1 + 서폿3 전원 영약제조('alchemy'役: 공부+연단).
-    const roleMap: Record<string, string> = { [carryId]: 'carry' };
+    const roleMap: Record<string, string> = { [carryId]: 'carry', [sparPartnerId]: 'carry' };
     for (const sid of supportIds) roleMap[sid] = 'alchemy';
 
     for (let d = 0; d < days; d += 1) {
       // 카리=전투 화경 훈련, 서폿=alchemy 공부 패턴(연단공장).
       configurePartyDay(roleMap);
+      // 쌍벽 대련 — 주 2회(무공일 1·5): 대성(7성) 실전 게이트는 대련·의뢰만 연다. docs/06·26.
+      // (configurePartyDay 가 매일 축을 새로 정하므로, 대련 외 날은 정책 선택이 그대로 산다.)
+      const upcoming = (useTimeStore.getState().current.day % 7) + 1;
+      if (upcoming === 1 || upcoming === 5) {
+        const sch = useScheduleStore.getState();
+        sch.setDailyChoice(carryId, 'martial', daeryeonChoiceValue(sparPartnerId));
+        sch.setDailyChoice(sparPartnerId, 'martial', daeryeonChoiceValue(carryId));
+      }
       const dsNow = useDiscipleStore.getState();
       // 서폿 연단 — 가용(training)일 때 만들 수 있는 최고 등급 영단 제조(연단실 가동 시).
       for (const sid of supportIds) {

@@ -24,6 +24,7 @@ import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
 import { canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { currentAge } from '@/systems/discipleCtx';
 import { QUEST_GRADE_ORDER } from '@/data/quests';
+import { useCodexStore } from '@/stores/codexStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -61,15 +62,41 @@ function learnableArts(d: Disciple): MartialArt[] {
 }
 
 // ── 계보 트리 climbing ─────────────────────────────────────────────────────
-// 제자의 최종 목표 무공(그 계열의 화경급 정점). 화경 트리는 현 데이터에 2개:
-//  - 화산 검: …→이십사수매화검(grandmaster)   - 사파→마교: 흑풍권@5성→혈마공(grandmaster)
+// 제자의 최종 목표 무공 — **사문이 비급을 보유한**(코덱스) 정점 무공 중 최고 등급.
+// 습득 경로 게이트(2026-06-10) 후로는 의뢰 드랍으로 비급이 모여야 상위 트리가 열린다.
+// 기본 보장 경로 = 본문 흑야권법(신품, 시작 소장 — 백운권법 7성 선행).
+const GOAL_GRADE_RANK: Record<MartialArt['grade'], number> = {
+  novice: 0, apprentice: 1, master: 2, grandmaster: 3, legendary: 4,
+};
+
+// 비급 보유 — 목표 + 선행 전체(전이적)가 코덱스에 있어야 그 트리를 탈 수 있다.
+function chainOwned(art: MartialArt, depth = 0): boolean {
+  if (depth > 8) return false;
+  const codex = useCodexStore.getState();
+  if (!codex.hasScroll(art.id)) return false;
+  for (const p of art.prerequisites ?? []) {
+    const pre = findMartialArt(p.artId);
+    if (!pre || !chainOwned(pre, depth + 1)) return false;
+  }
+  return true;
+}
+
 function goalArtFor(d: Disciple): MartialArt | null {
-  // 이미 사파 권(흑풍권)을 든 제자는 그 트리(→혈마공)를 탄다.
-  if (owns(d, 'heukpung-fist')) return findMartialArt('hyeolma-gong') ?? null;
-  const school = mainArtOf(d)?.school;
-  if (school === 'fist' || school === 'darkArts') return findMartialArt('hyeolma-gong') ?? null;
-  // 그 외(검·내공·보법 등)는 가장 일반적인 화경 트리(화산 검)로.
-  return findMartialArt('isipsa-maehwa-sword') ?? null;
+  const apexes = MARTIAL_ARTS.filter(
+    (a) =>
+      (a.grade === 'grandmaster' || a.grade === 'legendary') &&
+      a.minDarkness == null && // 마공 트리는 최적 정책에서 제외(흑화 대가)
+      chainOwned(a),
+  );
+  if (apexes.length === 0) return findMartialArt('heugya-fist') ?? null;
+  // 등급 우선, 같으면 제자 갈래 효율(특화>상성>보통>미숙>상극) 우선.
+  const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
+  apexes.sort((a, b) => {
+    const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
+    if (g !== 0) return g;
+    return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
+  });
+  return apexes[0];
 }
 
 // 목표를 향해 "오늘 주력으로 삼아 키울 무공" — 선행조건을 합법적으로 한 단계씩 밟는다.

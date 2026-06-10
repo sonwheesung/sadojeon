@@ -61,16 +61,17 @@ export type MartialArtSchool =
 
 export type TalentAxis = 'body' | 'qi' | 'agility' | 'insight' | 'mind';
 
-export interface TalentRequirement {
-  axis: TalentAxis;
-  minimum: number;
-}
-
 // 무공서 스킬트리 선행조건 — 선행 무공서를 최소 성까지 익혀야 학습 가능. docs/28 §5-2.
 export interface ArtPrerequisite {
   artId: string;
   minSeong: number; // 1~10
 }
+
+// 무공서 습득 경로 — docs/05·04 (2026-06-10 확정).
+//  start       : 시작 사문 소장(본문 비급) — 회차 시작부터 도감에.
+//  quest       : 의뢰 보상 드랍 — 의뢰 등급↔비급 등급, 도메인↔갈래 결 매칭(questSystem).
+//  achievement : 업적 해금(전설급 — 업적 인프라 후속).
+export type ArtAcquisition = 'start' | 'quest' | 'achievement';
 
 export interface MartialArt {
   id: string;
@@ -80,13 +81,15 @@ export interface MartialArt {
   school: MartialArtSchool;
   grade: MartialArtGrade;
   path: MartialPath; // 노선(색) — 상극·마공 판정. docs/04.
-  requirements: TalentRequirement[];
-  preferredTalents: TalentAxis[];
   isSectArt: boolean;
+  // 습득 경로 — 어디서 이 비급을 얻는가.
+  acquisition: ArtAcquisition;
   // 스킬트리 선행조건 — 미충족 시 학습 불가(경지 게이트와 함께). 없으면 선행 없음. docs/28 §5-2.
   prerequisites?: ArtPrerequisite[];
   // 문파·계보 — 무공 계보 화면에서 같은 lineage 끼리 한 트리로 묶음(화산·소림·사문…). docs/26 §5-4.
   lineage?: string;
+  // 깊은 마공 게이트 — 흑화 단계가 이 이상이라야 학습 가능(마도 무공의 적층, docs/04 §카테고리 4단계).
+  minDarkness?: number;
 }
 
 // 제자가 익히고 있는 무공의 진행 상태. docs/26_무공_숙련도.md.

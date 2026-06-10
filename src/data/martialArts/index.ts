@@ -12,175 +12,46 @@ import {
   artGradeLearnRealm,
   realmIndex,
 } from '@/data/realm';
+import { MARTIAL_ARTS } from './catalog';
 
-// 시작 사문이 보유한 디폴트 무공 카탈로그. docs/04_무공_도감.md 갈래 8종 중 일부.
-// 그레이박스용 — 실제 풀(150~250)은 추후 데이터 작업.
-export const MARTIAL_ARTS: MartialArt[] = [
-  {
-    id: 'cheongpung-swordplay',
-    name: '청풍검법',
-    hanjaName: '靑風劍法',
-    description: '바람을 베듯 가볍고 정직한 검술. 초심자가 검의 결을 익히기 좋다.',
-    school: 'sword',
-    grade: 'apprentice',
-    path: 'jeong',
-    requirements: [{ axis: 'body', minimum: 2 }],
-    preferredTalents: ['body', 'agility'],
-    isSectArt: true,
-    lineage: 'sect',
-  },
-  {
-    id: 'baekun-fist',
-    name: '백운권법',
-    hanjaName: '白雲拳法',
-    description: '구름이 흩어지듯 흐르는 권법. 강하지 않으나 결이 끊기지 않는다.',
-    school: 'fist',
-    grade: 'apprentice',
-    path: 'jeong',
-    requirements: [{ axis: 'body', minimum: 2 }],
-    preferredTalents: ['body', 'qi'],
-    isSectArt: true,
-    lineage: 'sect',
-  },
-  {
-    id: 'unbo',
-    name: '운보',
-    hanjaName: '雲步',
-    description: '발끝이 땅을 거의 닿지 않는 기초 보법. 모든 무공의 받침.',
-    school: 'lightness',
-    grade: 'novice',
-    path: 'jung',
-    requirements: [{ axis: 'agility', minimum: 2 }],
-    preferredTalents: ['agility', 'mind'],
-    isSectArt: true,
-    lineage: 'sect',
-  },
-  {
-    id: 'cheongsim-gigong',
-    name: '청심기공',
-    hanjaName: '淸心氣功',
-    description: '마음을 맑게 다스리는 기초 내공. 잡념을 거두고 호흡을 고른다.',
-    school: 'qigong',
-    grade: 'novice',
-    path: 'jeong',
-    requirements: [{ axis: 'mind', minimum: 2 }],
-    preferredTalents: ['mind', 'insight'],
-    isSectArt: true,
-    lineage: 'sect',
-  },
-  // ── 화산파 검 계보 (분기·합류 스킬트리 예시). docs/26 §5-4 ──
-  {
-    id: 'hwasan-gicho-sword',
-    name: '화산기초검',
-    hanjaName: '華山基礎劍',
-    description: '화산 입문제자가 처음 잡는 검. 모든 화산 검의 뿌리.',
-    school: 'sword',
-    grade: 'novice',
-    path: 'jeong',
-    requirements: [{ axis: 'body', minimum: 1 }],
-    preferredTalents: ['body', 'agility'],
-    isSectArt: false,
-    lineage: 'hwasan',
-  },
-  {
-    id: 'yukhap-sword',
-    name: '육합검',
-    hanjaName: '六合劍',
-    description: '천지사방을 하나로 베는 화산 중급 검. 여러 절기의 갈림목.',
-    school: 'sword',
-    grade: 'apprentice',
-    path: 'jeong',
-    requirements: [{ axis: 'body', minimum: 2 }],
-    preferredTalents: ['body', 'agility'],
-    isSectArt: false,
-    lineage: 'hwasan',
-    prerequisites: [{ artId: 'hwasan-gicho-sword', minSeong: 3 }],
-  },
-  {
-    id: 'maehwa-sword',
-    name: '매화검법',
-    hanjaName: '梅花劍法',
-    description: '매화가 흩날리듯 현란한 화산 검. 육합검에서 갈라진 한 길.',
-    school: 'sword',
-    grade: 'master',
-    path: 'jeong',
-    requirements: [{ axis: 'agility', minimum: 3 }],
-    preferredTalents: ['agility', 'mind'],
-    isSectArt: false,
-    lineage: 'hwasan',
-    prerequisites: [{ artId: 'yukhap-sword', minSeong: 5 }],
-  },
-  {
-    id: 'jaha-sword',
-    name: '자하검법',
-    hanjaName: '紫霞劍法',
-    description: '보랏빛 노을의 기운을 두른 화산 검. 육합검에서 갈라진 또 한 길.',
-    school: 'sword',
-    grade: 'master',
-    path: 'jeong',
-    requirements: [{ axis: 'qi', minimum: 3 }],
-    preferredTalents: ['qi', 'mind'],
-    isSectArt: false,
-    lineage: 'hwasan',
-    prerequisites: [{ artId: 'yukhap-sword', minSeong: 5 }],
-  },
-  {
-    id: 'isipsa-maehwa-sword',
-    name: '이십사수매화검',
-    hanjaName: '二十四手梅花劍',
-    description: '매화와 자하의 묘리를 한데 모은 화산 비전. 두 길이 다시 만나는 정점.',
-    school: 'sword',
-    grade: 'grandmaster',
-    path: 'jeong',
-    requirements: [{ axis: 'agility', minimum: 4 }],
-    preferredTalents: ['agility', 'mind'],
-    isSectArt: false,
-    lineage: 'hwasan',
-    prerequisites: [
-      { artId: 'maehwa-sword', minSeong: 6 },
-      { artId: 'jaha-sword', minSeong: 4 },
-    ],
-  },
-  // ── 사파·마교 (사문 기본 외 — 의뢰·발견으로 입수). docs/04 §무공 색깔 ──
-  {
-    id: 'heukpung-fist',
-    name: '흑풍권',
-    hanjaName: '黑風拳',
-    description: '거칠고 매서운 사파 권법. 빠른 살수에 능하나 결이 어둡다.',
-    school: 'fist',
-    grade: 'master',
-    path: 'sa',
-    requirements: [{ axis: 'body', minimum: 2 }],
-    preferredTalents: ['body', 'agility'],
-    isSectArt: false,
-    lineage: 'sapa',
-  },
-  {
-    id: 'hyeolma-gong',
-    name: '혈마공',
-    hanjaName: '血魔功',
-    description: '피로 기를 기르는 마교 비전. 폭발적 성장의 대가로 인격을 갉는다.',
-    school: 'darkArts',
-    grade: 'grandmaster',
-    path: 'ma',
-    requirements: [{ axis: 'qi', minimum: 3 }],
-    preferredTalents: ['qi', 'mind'],
-    isSectArt: false,
-    lineage: 'magyo',
-    // 스킬트리 — 사파 무공을 깊이(흑풍권 5성) 익힌 자라야 마공을 감당. docs/28 §5-2 천마신공류 게이트 예시.
-    prerequisites: [{ artId: 'heukpung-fist', minSeong: 5 }],
-  },
-];
+export { MARTIAL_ARTS };
 
-// 문파·계보 라벨 + 표시 순서. lineage 미지정 무공은 '기타'.
+
+
+// 문파·계보 라벨 + 표시 순서. lineage 미지정 무공은 '기타'. (22계보 — catalog.ts)
 export const LINEAGE_LABEL: Record<string, string> = {
   sect: '본문(무명산문)',
   hwasan: '화산파',
+  mudang: '무당파',
+  sorim: '소림사',
+  gaebang: '개방',
+  ami: '아미파',
+  jeomchang: '점창파',
+  gollyun: '곤륜파',
+  jongnam: '종남파',
+  cheongseong: '청성파',
+  gongdong: '공동파',
+  namgung: '남궁세가',
+  dangga: '사천당가',
+  paengga: '하북팽가',
+  moyong: '모용세가',
+  pyoguk: '표국',
+  doga: '도가',
+  uiga: '의가',
+  salsu: '살수',
   sapa: '사파',
   magyo: '마교',
+  legend: '전설·기연',
 };
 
-export const LINEAGE_ORDER: readonly string[] = ['sect', 'hwasan', 'sapa', 'magyo'];
+export const LINEAGE_ORDER: readonly string[] = [
+  'sect',
+  'hwasan', 'mudang', 'sorim', 'gaebang', 'ami', 'jeomchang', 'gollyun', 'jongnam', 'cheongseong', 'gongdong',
+  'namgung', 'dangga', 'paengga', 'moyong',
+  'pyoguk', 'doga', 'uiga',
+  'salsu', 'sapa', 'magyo',
+  'legend',
+];
 
 export function artsByLineage(lineage: string): MartialArt[] {
   return MARTIAL_ARTS.filter((m) => (m.lineage ?? 'sect') === lineage);
@@ -207,10 +78,12 @@ export function unmetPrerequisites(disciple: Disciple, art: MartialArt): ArtPrer
   });
 }
 
-// 무공 학습 자격 — 경지 게이트 + 무공서 선행조건(스킬트리). docs/26 §5-1 · docs/28 §5-2.
+// 무공 학습 자격 — 경지 게이트 + 무공서 선행조건(스킬트리) + 마공 흑화 게이트. docs/26 §5-1 · docs/28 §5-2 · docs/04 §카테고리 4단계.
 // 재능 게이트 폐기: 효율(상극이면 ×0.04)은 성장 속도로만 차등(학습은 막지 않음).
+// (비급 보유 여부는 데이터 밖 — discipleStore.assignMainMartialArt 의 코덱스 가드가 막는다.)
 export function canLearnArt(disciple: Disciple, art: MartialArt): boolean {
   if (realmIndex(disciple.realm) < realmIndex(artGradeLearnRealm(art.grade))) return false;
+  if (art.minDarkness != null && disciple.darknessLevel < art.minDarkness) return false;
   return unmetPrerequisites(disciple, art).length === 0;
 }
 

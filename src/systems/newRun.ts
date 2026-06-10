@@ -136,9 +136,10 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
   };
 }
 
-// 사문 보유 비급 — 시작 시 모든 카탈로그 무공을 식별 완료 상태로 보유.
+// 사문 보유 비급 — 시작 소장(acquisition 'start' = 본문 비급)만. docs/05·04 습득 경로.
+// 나머지는 의뢰 드랍(questSystem.maybeDropScroll)·업적·결제로 입수.
 function sectScrolls(): ScrollInventoryItem[] {
-  return MARTIAL_ARTS.map((art) => ({
+  return MARTIAL_ARTS.filter((art) => art.acquisition === 'start').map((art) => ({
     artId: art.id,
     acquiredAtRun: 1,
     acquiredAtDay: 0,

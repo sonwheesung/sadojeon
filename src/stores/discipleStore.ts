@@ -272,7 +272,10 @@ export const useDiscipleStore = create<DiscipleStore>()(
           const has = cur.martialArts.some((a) => a.artId === artId);
           let martialArts = cur.martialArts;
           if (!has) {
-            // 새 무공 — 경지 기반 시작 성(고수는 기초 건너뜀). 기존 무공은 보존. docs/26 §5-2.
+            // 새 무공 — **사문이 비급을 보유해야** 가르칠 수 있다(습득 경로 게이트, docs/05·04).
+            const { useCodexStore } = require('./codexStore') as typeof import('./codexStore');
+            if (!useCodexStore.getState().hasScroll(artId)) return s;
+            // 경지 기반 시작 성(고수는 기초 건너뜀). 기존 무공은 보존. docs/26 §5-2.
             const art = findMartialArt(artId);
             const seong = art ? initialSeong(cur, art) : 1;
             martialArts = [...cur.martialArts, { artId, seong, exp: 0, unlockedAt: 0 }];
