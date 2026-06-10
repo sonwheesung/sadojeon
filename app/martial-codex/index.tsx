@@ -51,38 +51,21 @@ export default function MartialCodexScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Legend ownership={!disciple} />
-          {lineages.map((lin) => {
-            // 도감 잠금 — 보유 비급이 한 권도 없는 문파는 미발견(이름·트리 숨김). docs/04 §도감 잠금.
-            // 의뢰 드랍으로 그 문파 비급이 처음 들어오는 순간 열린다(발견 = 진행감).
-            const arts = artsByLineage(lin);
-            const undiscovered =
-              !disciple && ownedIds != null && !arts.some((a) => ownedIds.has(a.id));
-            if (undiscovered) {
-              return (
-                <View key={lin} style={styles.section}>
-                  <Text style={styles.lineageLabelLocked}>미발견 문파</Text>
-                  <View style={[styles.treeBox, styles.lockedBox]}>
-                    <Text style={styles.lockedText}>
-                      아직 강호에서 이 문파의 비급을 얻지 못했다.
-                    </Text>
-                  </View>
-                </View>
-              );
-            }
-            return (
-              <View key={lin} style={styles.section}>
-                <Text style={styles.lineageLabel}>{LINEAGE_LABEL[lin] ?? lin}</Text>
-                <View style={styles.treeBox}>
-                  <MartialTree
-                    arts={arts}
-                    disciple={disciple}
-                    ownedIds={ownedIds}
-                    highlightId={focus}
-                  />
-                </View>
+          {/* 도감 = 전 카탈로그 노출(미습득 포함) — 보유 ● 활성 / 미보유 ○ 비활성(흐림)으로 구분.
+              (미발견 잠금 정책은 폐기 — 사용자 결정 2026-06-10: 수집 목표가 보여야 도감이 동기가 된다.) */}
+          {lineages.map((lin) => (
+            <View key={lin} style={styles.section}>
+              <Text style={styles.lineageLabel}>{LINEAGE_LABEL[lin] ?? lin}</Text>
+              <View style={styles.treeBox}>
+                <MartialTree
+                  arts={artsByLineage(lin)}
+                  disciple={disciple}
+                  ownedIds={ownedIds}
+                  highlightId={focus}
+                />
               </View>
-            );
-          })}
+            </View>
+          ))}
         </ScrollView>
       </PaperCard>
     </SafetyZone>
@@ -148,21 +131,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.brown,
     letterSpacing: typography.letterSpacing.wide,
-  },
-  lineageLabelLocked: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.sm,
-    color: colors.inkSoft,
-    letterSpacing: typography.letterSpacing.wide,
-  },
-  lockedBox: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  lockedText: {
-    fontFamily: typography.serif,
-    fontSize: typography.sizes.xs,
-    color: colors.inkSoft,
   },
   treeBox: {
     borderWidth: 1,
