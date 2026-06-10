@@ -97,12 +97,19 @@ export function bodyAgeMultiplier(age: number): number {
   return 0.55; // 장성 후 — 근골은 거의 굳음
 }
 
+// 환골탈태 후 나이 보정 하한 — 젊은 육체(15~16세 수준)로 회귀, 몸이 다시 자란다. docs/23 §5.
+export const BONE_REBIRTH_AGE_FLOOR = 2.4;
+
 // 단련/비무공 능력치 학습 효율 — 영역 효율맵. 미기재 영역 = '보통'. docs/28 §2.
 // 외공(근력·체력)은 무공보다 노력 의존(압축 효율) + 어릴 때 강함(나이 보정). docs/28 §5-1.
 function aptitudeMultiplier(d: Disciple, statId: StatId): number {
   const tier = d.efficiency?.[statId] ?? '보통';
   if (BODY_STATS.includes(statId)) {
-    return BODY_EFFICIENCY_MULTIPLIER[tier] * bodyAgeMultiplier(currentAge(d));
+    // 환골탈태 — 몸이 다시 태어나 젊은 육체로 회귀(정통무협). 나이 보정이 청년기(×2.4) 밑으로 안 떨어짐.
+    const ageMul = d.boneReborn
+      ? Math.max(bodyAgeMultiplier(currentAge(d)), BONE_REBIRTH_AGE_FLOOR)
+      : bodyAgeMultiplier(currentAge(d));
+    return BODY_EFFICIENCY_MULTIPLIER[tier] * ageMul;
   }
   return EFFICIENCY_MULTIPLIER[tier];
 }

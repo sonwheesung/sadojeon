@@ -4,7 +4,8 @@
 //
 // 리스크: 심마 ≤ SAFE_SIMMA 안전. 초과분만큼 실패 확률 — 실패 = 주화입마 발작(simmaSystem).
 //         단 영약은 몸이 받아내지 못해 토해냄(보존) → 심마를 다스린 뒤(안신단) 재도전 가능.
-// 메리트: 외공 +8(근골) · 체력 그릇 +4(금강불괴 결) · 심마 0(탁기 일소) · 상처 완치 · 스트레스 0.
+// 메리트: 외공 +8(근골) · 체력 그릇 +4(금강불괴 결) · 심마 0(탁기 일소) · 상처 완치 · 스트레스 0
+//         · **젊은 육체 회귀**(boneReborn — 이후 외공·체력 훈련 나이 보정이 청년기 ×2.4 밑으로 안 떨어짐).
 
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -43,6 +44,7 @@ export function attemptBoneRebirth(discipleId: string): boolean {
     },
     simma: 0, // 탁기·마장 일소
     stress: 0, // 심신이 갓난아기처럼 맑아짐
+    boneReborn: true, // 젊은 육체 회귀 — 근골이 다시 자란다(나이 보정 하한 ×2.4)
     // 상처·내상 완치 — 묵은 상처까지 씻겨 나간다.
     wound: undefined,
     injuryDaysRemaining: 0,
@@ -55,7 +57,7 @@ export function attemptBoneRebirth(discipleId: string): boolean {
     kind: 'report',
     title: `${d.name} — 환골탈태(換骨奪胎)`,
     preview: `${d.name}의 몸에서 검은 진액이 배어 나오더니, 폐관실에 맑은 기운이 가득 찼다.`,
-    body: `구전대환단의 약력이 ${d.name}의 임독양맥을 꿰뚫었다. 막혔던 기맥이 차례로 열리고, 묵은 탁기가 검은 진액이 되어 모공으로 배어 나왔다. 사흘 밤낮이 지나 폐관실 문이 열렸을 때 — 묵은 상처는 흔적도 없고, 근골은 다시 빚어졌으며, 눈빛은 갓난아기처럼 맑았다. 몸이 다시 태어난 것이다.`,
+    body: `구전대환단의 약력이 ${d.name}의 임독양맥을 꿰뚫었다. 막혔던 기맥이 차례로 열리고, 묵은 탁기가 검은 진액이 되어 모공으로 배어 나왔다. 사흘 밤낮이 지나 폐관실 문이 열렸을 때 — 묵은 상처는 흔적도 없고, 근골은 다시 빚어졌으며, 눈빛은 갓난아기처럼 맑았다. 몸이 다시 태어난 것이다. 굳어가던 근골이 소년의 것처럼 다시 자라기 시작한다.`,
     priority: 'high',
     createdAtDay: day,
     read: false,

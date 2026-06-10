@@ -132,6 +132,9 @@ export interface Disciple {
   // 심마(心魔) — 숨은 정신압 게이지 0~100. 무리한 돌파 실패·상극 내공 흡수·마공 깊이·지속 고스트레스로
   // 누적, 임계 넘으면 주화입마 발작(내상·내공 흩어짐). 안신단으로 가라앉힘. UI 비노출(흑화·스트레스처럼). docs/13·26.
   simma?: number;
+  // 환골탈태 — 신품 영약으로 몸이 다시 태어남(boneRebirthSystem). 젊은 육체 회귀:
+  // 이후 외공·체력 훈련의 나이 보정이 청년기(×2.4) 밑으로 떨어지지 않는다. docs/23 §5.
+  boneReborn?: boolean;
 
   personality: PersonalityTraits;
 
