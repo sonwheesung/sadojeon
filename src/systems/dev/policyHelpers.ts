@@ -13,6 +13,7 @@ import {
 } from '@/data/martialArts';
 import {
   REALM_EXTERNAL_REQ,
+  externalSupportReq,
   REALM_INTERNAL_REQ,
   REALM_SEONG_GATE,
   nextRealm,
@@ -136,9 +137,10 @@ function configureCarryTraining(id: string): boolean {
     : 'chosik';
   sched.setDailyChoice(id, 'martial', axis);
 
-  // 3) 체력 — 외공 요건 채울 때까지 기마자세, 채우면 암벽.
+  // 3) 체력 — 외공 받침 채울 때까지 기마자세, 채우면 암벽.
+  // 화경은 받침 62(externalSupportReq) — 마지막 8은 환골탈태(영약)가 채우므로 70을 목표로 헛수련하지 않는다.
   const strengthLv = d.stats?.strength?.level ?? 0;
-  const extReq = next ? (REALM_EXTERNAL_REQ[next] ?? 0) : 0;
+  const extReq = next ? externalSupportReq(next) : 0;
   sched.setDailyChoice(id, 'physical', strengthLv < extReq ? 'phys_horse' : 'phys_climb');
 
   return realmIndex(d.realm) >= realmIndex('chojeoljeong');

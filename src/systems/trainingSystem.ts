@@ -51,8 +51,10 @@ import {
   REALM_EXTERNAL_REQ,
   REALM_SEONG_GATE,
   REALM_SEONG_CAP,
+  BONE_REBIRTH_STRENGTH_BONUS,
   effectiveRealmCeiling,
   enlightenmentChance,
+  externalSupportReq,
   isWallTransition,
   nextRealm,
   realmCeiling,
@@ -60,7 +62,7 @@ import {
 } from '@/data/realm';
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
-import { consumeDivineElixir } from './elixirSystem';
+import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
 import { addSimma, onForcedBreakthroughFail } from './simmaSystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
@@ -357,12 +359,14 @@ function applyRealmTick(
   }
 
   // 벽 도달 — 세 기둥 다 찼는데 깨달음 게이트.
+  // 외공은 "스스로 단련한 받침"(externalSupportReq)으로 판정 — 화경(70)만 마지막 8을
+  // 환골탈태(영약 복용 시 외공 +8)가 채우므로 받침 62로 벽에 설 수 있다. docs/23 §5.
   const wallTarget = nextRealm(realm);
   const atWall =
     wallTarget != null &&
     realmIndex(wallTarget) <= realmIndex(ceiling) &&
     internal >= REALM_INTERNAL_REQ[wallTarget] &&
-    external >= REALM_EXTERNAL_REQ[wallTarget] &&
+    external >= externalSupportReq(wallTarget) &&
     mainSeong >= REALM_SEONG_GATE[wallTarget] &&
     isWallTransition(wallTarget);
 
@@ -375,10 +379,15 @@ function applyRealmTick(
       } else if (wallTarget === 'hwagyeong') {
         // 화경 벽 — 신품 영약이 깨달음의 열쇠. 보유 시 소모하고 돌파, 없으면 못 넘는다. docs/28 §5-1.
         if (consumeDivineElixir()) {
+          applyBoneRebirth(discipleId); // 환골탈태 — 외공 +8 영구(받침 62 → 화경의 몸 70)
           realm = wallTarget;
           pity = 0;
           petitioned = false;
           cancelOverride(discipleId);
+        } else {
+          // 영약 없는 폐관(헛폐관) — 청원 자격 회복. 영약이 생기면 다시 청원하게 한다.
+          // (없으면 "벽당 1회 청원" 룰 때문에 영약을 늦게 구한 회차가 영영 화경 기회를 잃는다.)
+          petitioned = false;
         }
       } else {
         // 절정·초절정 벽 → 깨달음 굴림 (오성 + pity, 보장치 도달 시 성공). 폐관은 확률 낮고 느리다.
@@ -395,8 +404,10 @@ function applyRealmTick(
           forcedFail = true; // 무리한 강행 실패 → 진기 흩어짐(심마·주화입마 위험)
         }
       }
-    } else if (!petitioned) {
+    } else if (!petitioned && (wallTarget !== 'hwagyeong' || hasDivineElixir())) {
       // 벽인데 폐관 안 함 → 제자가 폐관 청원 (once per 벽).
+      // 화경 벽만 예외: 신품 영약이 사문에 있어야 청원 — 영약 없는 폐관(헛폐관) 낭비 방지.
+      // 벽 도달 자체는 제자 상세의 "벽에 닿음"으로 노출(docs/23 §10), 영약이 생기는 순간 청원이 온다.
       seclusionPetitionToInbox(d, wallTarget);
       petitioned = true;
     }
@@ -440,6 +451,21 @@ function consumeByeokgokdan(n: number): boolean {
   return true;
 }
 
+// ─── 환골탈태 — 신품 영약 복용 순간 몸이 다시 태어남 (외공 +8 영구) ─────────────
+// 화경 외공 70(화경의 몸) 중 스스로 단련하는 받침은 62 — 마지막 8을 영약이 채운다. docs/23 §5.
+function applyBoneRebirth(discipleId: string): void {
+  const store = useDiscipleStore.getState();
+  const d = store.disciples[discipleId];
+  if (!d) return;
+  const track = d.stats?.strength ?? { level: 0, exp: 0 };
+  store.update(discipleId, {
+    stats: {
+      ...d.stats,
+      strength: { ...track, level: Math.min(100, track.level + BONE_REBIRTH_STRENGTH_BONUS) },
+    },
+  });
+}
+
 // ─── 의뢰(실전) 깨달음 — 폐관보다 높은 확률로 벽 돌파 ───────────────────────────
 // 결투·큰의뢰 성공 후 호출. 세 기둥(내공·외공·성)을 채웠고 벽(절정/초절정/화경) 앞이면,
 // 실전 깨달음을 굴린다. 폐관 대비 chanceBonus 만큼 높다(실전이 더 잘 뚫림 — docs/28 §5).
@@ -462,7 +488,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   const mainSeong = mainId ? (d.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
   if (
     internal < REALM_INTERNAL_REQ[wallTarget] ||
-    external < REALM_EXTERNAL_REQ[wallTarget] ||
+    external < externalSupportReq(wallTarget) || // 화경은 받침 62 — 나머지 8은 환골탈태가 채움
     mainSeong < REALM_SEONG_GATE[wallTarget]
   ) {
     return null; // 세 기둥 미충족 — 아직 벽 앞이 아님
@@ -471,6 +497,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   const pity = d.realmProgress?.pity ?? 0;
   if (wallTarget === 'hwagyeong') {
     if (!consumeDivineElixir()) return null; // 화경은 신품 영약 필수
+    applyBoneRebirth(discipleId); // 환골탈태 — 외공 +8 영구
     store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });
     realmUpToInbox(d, wallTarget);
     return wallTarget;

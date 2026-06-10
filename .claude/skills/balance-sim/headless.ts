@@ -610,6 +610,15 @@ async function runFactorySweep(): Promise<void> {
     if (realm === 'hwagyeong') carryHwa += 1;
     sumDivine += divine;
     sumInternalDan += internalDan;
+    // 진단 — 카리 세 기둥 + 영약 재고 (화경 병목 추적)
+    {
+      const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
+      const seong = mainId ? (carry?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
+      const stock = useItemStore.getState().items.find((i) => i.id === 'guzeon-daehwandan')?.count ?? 0;
+      console.log(
+        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
+      );
+    }
   }
   const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
   console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 카리 최종경지 분포: ${dist}`);

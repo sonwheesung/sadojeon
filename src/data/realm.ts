@@ -55,8 +55,9 @@ export const REALM_INTERNAL_REQ: Record<Realm, number> = {
 // targetRealm 진입 외공(체력·근골 ≈ strength level 0~100) 요구. docs/28 §5-1. 세 기둥 중 하나.
 // "체력만으론 경지 X" — 내공·무공서와 함께 충족해야. 가장 약한 기둥이 경지를 잡아끈다.
 // 고경지 외공 — str보통 도달선으로 현실화(project_realm_balance 화경 경로).
-// 화경 외공(70, 절충)은 영약 복용(환골탈태)이 마지막 도약을 대신한다는 전제 — 외공 하드천장이 아니라 받침.
-// 단 62→70 상향으로 "몸도 어느 정도 키운 빌드"라야 화경 — 외공도 화경의 받침 게이트로 작동.
+// 화경 외공 70 = "화경의 몸"(결정 2026-06-10). 단 외공 보통 재능의 수련 한계가 ~65라 70은 스스로 못 채움 —
+// 마지막 8은 신품 영약의 **환골탈태**(BONE_REBIRTH_STRENGTH_BONUS)가 채운다. 즉 스스로 62(받침)까지
+// 단련한 몸이라야 영약이 화경의 몸(70)으로 다시 빚는다. 시뮬: 받침 62 기준 무과금 ~43%.
 export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
   none: 0,
   samryu: 10,
@@ -66,6 +67,16 @@ export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
   chojeoljeong: 56,
   hwagyeong: 70,
 };
+
+// 환골탈태 — 신품 영약 복용 순간 외공(strength) 영구 +8. 몸이 다시 태어난다(정통무협).
+// 화경 벽 도전 자격(받침) = REALM_EXTERNAL_REQ.hwagyeong − 이 보너스 = 62.
+export const BONE_REBIRTH_STRENGTH_BONUS = 8;
+
+// targetRealm 벽 도전에 필요한 "스스로 단련한" 외공 받침. 화경만 환골탈태 몫(+8)을 영약이 대신 채운다.
+export function externalSupportReq(target: Realm): number {
+  const req = REALM_EXTERNAL_REQ[target];
+  return target === 'hwagyeong' ? req - BONE_REBIRTH_STRENGTH_BONUS : req;
+}
 
 // targetRealm 진입 주력 무공서 성 게이트. docs/28 §5: ~절정 등급무관(0), 초절정 5성, 화경 7성(대성).
 // 무공서 등급 천장(effectiveRealmCeiling)이 1차, 이 성 게이트가 "그 무공을 익혔나" 2차.
