@@ -18,6 +18,7 @@ import { applyMeetingChoice } from './meetingSystem';
 import type { MeetingOption } from '@/data/scenarios/meetings';
 import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
 import { resolveMoralChoice } from './moralEventSystem';
+import { counselChoices, mediationChoices, resolveCounsel, resolveMediation } from './mediationSystem';
 import { issueOverride } from './overrideSystem';
 import { saveCurrentRunSilently } from './runSync';
 import { ONE_LINER_TONE_ORDER, respondToOneLiner, type OneLinerTone } from './oneLinerSystem';
@@ -51,7 +52,9 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'seclusion_petition' ||
     d === 'quest_event' ||
     d === 'graduation' ||
-    d === 'meeting'
+    d === 'meeting' ||
+    d === 'mediation' ||
+    d === 'counsel'
   );
 }
 
@@ -85,6 +88,12 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
       { key: 'allow', label: '폐관을 허락한다' },
       { key: 'hold', label: '아직 이르다 (보류)' },
     ];
+  }
+  if (p.domain === 'mediation') {
+    return mediationChoices(String(p.aName ?? '한쪽'), String(p.bName ?? '다른 쪽'));
+  }
+  if (p.domain === 'counsel') {
+    return counselChoices();
   }
   if (p.domain === 'quest_event') {
     const choices = (p.choices ?? []) as QuestEventChoiceView[];
@@ -155,6 +164,12 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
           .update(discipleId, { realmProgress: { ...d.realmProgress, petitioned: false } });
       }
     }
+  } else if (p.domain === 'mediation') {
+    // 중재 면담(2인) — 사부의 관계 개입. docs/33 §3.
+    resolveMediation(String(p.aId ?? ''), String(p.bId ?? ''), key);
+  } else if (p.domain === 'counsel') {
+    // 상담(1:1) — 그 제자의 인식만 약하게. docs/33 §3.
+    resolveCounsel(String(p.subjectId ?? ''), String(p.otherId ?? ''), key);
   } else if (p.domain === 'quest_event') {
     const questId = String(p.questId ?? '');
     const choices = (p.choices ?? []) as QuestEventChoiceView[];

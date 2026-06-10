@@ -34,6 +34,7 @@ import type {
 import { usePendingStore } from '@/stores/pendingStore';
 
 import { applyAllEffects } from './applyEffects';
+import { applyRivalryTone } from '../mediationSystem';
 import { llmResolver } from './llmResolver';
 import { collectEligible, pickByTier } from './triggers';
 import { ruleResolver } from './ruleResolver';
@@ -246,6 +247,9 @@ async function resolveMoral(tone: MoralChoiceTone): Promise<void> {
     const output = await resolver.resolve(input);
 
     applyAllEffects(output.effects, perpetrator.id, perpetrator.name, pending.siblingName);
+
+    // 적대 페어 개인 이벤트 → 실제 관계 배선 — 훈계=화해 노선·묵인=심화. docs/33 §4.
+    if (pending.siblingId) applyRivalryTone(perpetrator.id, pending.siblingId, tone);
 
     const day = useTimeStore.getState().totalDay;
     useEventHistoryStore.getState().push({

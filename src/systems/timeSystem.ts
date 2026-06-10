@@ -21,6 +21,7 @@ import { generateBoard, tickQuests } from './questSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
+import { triggerDailyMediation } from './mediationSystem';
 import { tickDarkness } from './darknessSystem';
 import { tickSimma } from './simmaSystem';
 import { tickCraft, tickElixirAbsorb } from './alchemySystem';
@@ -124,6 +125,7 @@ export function triggerPostSettlement(): void {
   triggerDailyOneLiner();
   triggerDailyMeeting();
   triggerDailySpar(); // 동문 비무 — 전투력 양육기 노출(저확률). docs/27 §5
+  triggerDailyMediation(); // 중재 면담·상담 기회 — 응어리 쌍이 있을 때. docs/33 §3
   tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
   tickSimma(); // 심마 누적·진정 + 주화입마 발작 굴림. docs/13·26
 
