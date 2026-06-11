@@ -8,11 +8,10 @@ import { colors, radius, spacing, typography } from '@/theme';
 import type { CutsceneTone } from '@/data/cutscenes';
 import { findCutsceneMedia } from '@/data/cutscenes/media';
 
-// 컷씬 오버레이 — docs/20. 쇼츠식 풀스크린(✅ 사용자 확정 2026-06-12):
-// 세로(9:16) 모션 컷이 화면 전체를 덮고, 아래에만 옅은 어둠 위 자막(이름·서사·한마디·탭 안내).
-// 상단 텍스트(사건명·큰 한자) 분기(✅ 사용자 결정 2026-06-12):
-//   cover(쇼츠) = 얼굴을 가리므로 금지 / letterbox(가로)·그레이박스 = 먹색 띠가 있어 유지.
-// 모션 미디어 없는 컷은 먹색 바탕 + 점선 자리(그레이박스) 폴백. 탭 = 다음.
+// 컷씬 오버레이 — docs/20. 두 레이아웃(✅ 사용자 확정 2026-06-12):
+// · cover(쇼츠, 세로 9:16): 모션 컷이 화면 전체를 덮고, 하단에만 옅은 어둠 위 자막. 그림 위 텍스트 금지(얼굴 가림).
+// · letterbox(가로)·그레이박스: 위 띠 / 그림 / 아래 띠 3단 — 위 띠 정중앙에 사건명·큰 한자,
+//   아래 띠 안에 자막(그림을 덮지 않게 띠 안에서만). 탭 = 다음.
 
 const TONE_ACCENT: Record<CutsceneTone, string> = {
   gold: colors.gold,
@@ -32,8 +31,7 @@ export function CutsceneOverlay() {
   const media = current
     ? findCutsceneMedia(current.eventId, current.discipleId, current.mediaVariant ?? 'default')
     : undefined;
-  // 쇼츠(cover) 컷만 상단 텍스트 금지 — 가로 레터박스·그레이박스는 한자·사건명 유지.
-  const showTopText = media?.fit !== 'cover';
+  const isCover = media?.fit === 'cover';
 
   useEffect(() => {
     if (!current) return;
@@ -43,14 +41,14 @@ export function CutsceneOverlay() {
     hintOpacity.setValue(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     Animated.sequence([
-      showTopText
-        ? Animated.parallel([
+      isCover
+        ? Animated.delay(0)
+        : Animated.parallel([
             Animated.timing(hanziOpacity, { toValue: 1, duration: 900, useNativeDriver: true }),
             Animated.timing(hanziScale, { toValue: 1, duration: 900, useNativeDriver: true }),
-          ])
-        : Animated.delay(0),
+          ]),
       // 모션 컷(3~5초)이 흐를 시간을 주고 글이 자막처럼 내려앉는다.
-      Animated.delay(showTopText ? 1400 : 1800),
+      Animated.delay(isCover ? 1800 : 1400),
       Animated.timing(bodyOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(hintOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
@@ -62,61 +60,69 @@ export function CutsceneOverlay() {
 
   const accent = TONE_ACCENT[current.tone];
 
+  const subtitle = (
+    <>
+      <Animated.View style={[styles.textBlock, { opacity: bodyOpacity }]}>
+        <Text style={styles.name}>{current.discipleName}</Text>
+        <Text style={styles.line}>{current.line}</Text>
+        {current.quote ? (
+          <Text style={[styles.quote, { color: accent }]}>「{current.quote}」</Text>
+        ) : null}
+      </Animated.View>
+      <Animated.Text style={[styles.hint, { opacity: hintOpacity }]}>탭하여 계속 ▶</Animated.Text>
+    </>
+  );
+
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>
       <Pressable style={styles.screen} onPress={pop} accessibilityRole="button" accessibilityLabel="컷씬 계속">
-        {/* 배경 — 세로(cover) 자산은 화면 전체를 덮고, 가로 레거시(letterbox)는 가운데 꽉 차게 */}
-        {media ? (
-          media.fit === 'cover' ? (
+        {isCover && media ? (
+          <>
+            {/* 쇼츠 — 풀스크린 cover + 하단 자막(옅은 어둠) */}
             <Image source={media.source} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : (
-            <View style={styles.letterboxWrap} pointerEvents="none">
-              <Image source={media.source} style={styles.letterboxMedia} contentFit="cover" />
+            <View style={styles.coverBottom} pointerEvents="none">
+              {subtitle}
             </View>
-          )
+          </>
         ) : (
-          <View style={styles.fallbackWrap}>
-            {/* 그레이박스 — 모션 미디어 미등록 컷. docs/20 */}
-            <View style={[styles.artSlot, { borderColor: accent }]}>
-              <Text style={styles.artSlotLabel}>
-                (모션 컷 자리 — {current.eventId}/{current.discipleId})
-              </Text>
+          <>
+            {/* 가로·그레이박스 — 위 띠(한자) / 그림 / 아래 띠(자막) 3단 */}
+            <View style={styles.topBand} pointerEvents="none">
+              <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
+              <Animated.Text
+                style={[
+                  styles.hanzi,
+                  { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
+                ]}
+              >
+                {current.hanzi}
+              </Animated.Text>
             </View>
-          </View>
+
+            {media ? (
+              <Image source={media.source} style={styles.letterboxMedia} contentFit="cover" />
+            ) : (
+              <View style={styles.fallbackWrap}>
+                {/* 그레이박스 — 모션 미디어 미등록 컷. docs/20 */}
+                <View style={[styles.artSlot, { borderColor: accent }]}>
+                  <Text style={styles.artSlotLabel}>
+                    (모션 컷 자리 — {current.eventId}/{current.discipleId})
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.bottomBand} pointerEvents="none">
+              {subtitle}
+            </View>
+          </>
         )}
-
-        {/* 위 — 사건명 + 큰 한자 (가로·그레이박스 전용. 쇼츠 컷은 얼굴 가림 금지) */}
-        {showTopText ? (
-          <View style={styles.topArea} pointerEvents="none">
-            <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
-            <Animated.Text
-              style={[
-                styles.hanzi,
-                { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
-              ]}
-            >
-              {current.hanzi}
-            </Animated.Text>
-          </View>
-        ) : null}
-
-        {/* 아래 — 자막: 옅은 어둠 위에 이름·서사·한마디 + 탭 안내 */}
-        <View style={styles.bottomArea} pointerEvents="none">
-          <Animated.View style={[styles.textBlock, { opacity: bodyOpacity }]}>
-            <Text style={styles.name}>{current.discipleName}</Text>
-            <Text style={styles.line}>{current.line}</Text>
-            {current.quote ? (
-              <Text style={[styles.quote, { color: accent }]}>「{current.quote}」</Text>
-            ) : null}
-          </Animated.View>
-          <Animated.Text style={[styles.hint, { opacity: hintOpacity }]}>탭하여 계속 ▶</Animated.Text>
-        </View>
       </Pressable>
     </Modal>
   );
 }
 
-// 자막 가독성 — 영상 위 글자는 전부 그림자.
+// 영상 위 글자 가독성 — 자막은 전부 그림자.
 const TEXT_SHADOW = {
   textShadowColor: 'rgba(0,0,0,0.85)',
   textShadowOffset: { width: 0, height: 1 },
@@ -128,23 +134,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  fallbackWrap: {
-    ...StyleSheet.absoluteFillObject,
+
+  // ── 쇼츠(cover) 레이아웃 ──
+  coverBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    gap: spacing.base,
+    paddingTop: spacing['2xl'],
+    paddingBottom: spacing['2xl'],
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(26, 22, 18, 0.45)',
+  },
+
+  // ── 가로·그레이박스(3단) 레이아웃 ──
+  topBand: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  letterboxWrap: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
+    gap: spacing.sm,
   },
   letterboxMedia: {
     width: '100%',
     aspectRatio: 3 / 2,
   },
+  fallbackWrap: {
+    width: '100%',
+    aspectRatio: 3 / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomBand: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.base,
+    paddingHorizontal: spacing.lg,
+  },
+
+  eventTitle: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.md,
+    letterSpacing: typography.letterSpacing.wider,
+    opacity: 0.9,
+  },
+  hanzi: {
+    fontFamily: typography.serifCNBold,
+    fontSize: typography.sizes['4xl'],
+    letterSpacing: typography.letterSpacing.wider,
+    textAlign: 'center',
+  },
   artSlot: {
-    width: '72%',
-    aspectRatio: 9 / 16,
-    maxHeight: '60%',
+    width: '70%',
+    height: '80%',
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: radius.md,
@@ -160,40 +204,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
   },
-  topArea: {
-    position: 'absolute',
-    top: spacing['4xl'],
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  eventTitle: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.md,
-    letterSpacing: typography.letterSpacing.wider,
-    opacity: 0.9,
-    ...TEXT_SHADOW,
-  },
-  hanzi: {
-    fontFamily: typography.serifCNBold,
-    fontSize: typography.sizes['4xl'] * 1.4,
-    letterSpacing: typography.letterSpacing.wider,
-    textAlign: 'center',
-    ...TEXT_SHADOW,
-  },
-  bottomArea: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    gap: spacing.base,
-    paddingTop: spacing['2xl'],
-    paddingBottom: spacing['2xl'],
-    paddingHorizontal: spacing.lg,
-    backgroundColor: 'rgba(26, 22, 18, 0.45)',
-  },
+
+  // ── 자막 공통 ──
   textBlock: {
     alignItems: 'center',
     gap: spacing.sm,
