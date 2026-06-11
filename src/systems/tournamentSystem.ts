@@ -7,6 +7,7 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { realmIndex } from '@/data/realm';
 import { combatPower } from './combatPower';
+import { playCutscene } from './cutsceneSystem';
 import { currentAge } from './discipleCtx';
 import type { Disciple } from '@/types';
 
@@ -138,4 +139,9 @@ export function runYoungTalentsTournament(): void {
       : `${year}년 용봉지회 — ${champ.name}이 장원에 올랐다`;
   const body = `올해 용봉지회에 강호의 후기지수 ${field.length}인이 모였다.\n\n${lines.join('\n')}`;
   pushNews(headline, body, champ.isDisciple ? 'high' : 'normal');
+
+  // 우리 제자가 장원 — 컷씬(docs/20 특별 사건 × 제자 전용 연출).
+  if (champ.isDisciple && champ.discipleId) {
+    playCutscene('tournament_champion', { id: champ.discipleId, name: champ.name });
+  }
 }

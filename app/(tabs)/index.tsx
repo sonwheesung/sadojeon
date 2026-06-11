@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { CutsceneOverlay } from '@/components/cutscene/CutsceneOverlay';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { DailyChoiceModal } from '@/components/dialogue/DailyChoiceModal';
@@ -83,6 +84,7 @@ export default function SectScreen() {
       <MonthlyScheduleModal />
       <DailySettlementModal />
       <MilestoneModal />
+      <CutsceneOverlay />
     </SafetyZone>
   );
 }

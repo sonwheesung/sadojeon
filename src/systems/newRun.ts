@@ -13,6 +13,7 @@ import { MASTER_STAT } from '@/data/constants';
 import { deriveMaxStamina, START_ENDURANCE_LEVEL } from '@/data/training';
 import {
   useCodexStore,
+  useCutsceneStore,
   useDiscipleStore,
   useEventHistoryStore,
   useGraduateStore,
@@ -197,6 +198,7 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   resetAlchemy(); // 연단 상태(학습 레시피·재료·진행 중 제조) 회차 초기화
   useEventHistoryStore.getState().reset();
   useLlmSettingsStore.getState().resetCounter();
+  useCutsceneStore.getState().clear(); // 재생 못 한 컷씬 잔여 큐 — 새 회차로 안 넘김
   // 자식 도메인(서신함·강호·물품·NPC) 회차 초기 상태로 — 각 슬라이스가 알아서 비우거나 시드.
   RUN_CHILD_SLICES.forEach((slice) => slice.reset());
 

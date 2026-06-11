@@ -30,6 +30,7 @@ import { shiftPersona } from './personaShift';
 import { applyPrereqTrickle } from './martialExp';
 import { isResearchInstant } from './researchSystem';
 import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat, type NpcArchetype } from './combat';
+import { playCutscene } from './cutsceneSystem';
 import type { Realm } from '@/types/realm';
 import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
@@ -958,6 +959,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
           inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다
           gravelyHurtName = d.name;
           rescueRoute = rescue;
+          // 구사일생 컷씬 — 살린 경로(영약/의술/마을)마다 다른 컷. docs/20.
+          playCutscene(`fatal_rescue_${rescue}`, { id: d.id, name: d.name });
         } else {
           patch.status = 'departed'; // 마을까지 업혀 갔으나 끝내 쓰러진다
           lostName = d.name;

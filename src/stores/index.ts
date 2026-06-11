@@ -18,3 +18,5 @@ export { useSectAtmosphereStore } from './sectAtmosphereStore';
 export { useMoralEventStore } from './moralEventStore';
 export { useEventHistoryStore } from './eventHistoryStore';
 export { useLlmSettingsStore } from './llmSettingsStore';
+export { useCutsceneStore } from './cutsceneStore';
+export type { PlayingCutscene } from './cutsceneStore';
