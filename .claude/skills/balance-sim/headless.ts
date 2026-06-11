@@ -1,4 +1,4 @@
-// 헤드리스 실코드 자동플레이 — 실제 TS 시스템(timeSystem·이벤트·면담·영약…)을 Node에서 구동하고,
+﻿// 헤드리스 실코드 자동플레이 — 실제 TS 시스템(timeSystem·이벤트·면담·영약…)을 Node에서 구동하고,
 // **실제 Supabase에 영속**한다(진짜 end-to-end). 게임의 실제 runSync 경로로 저장 → DB에서 검증 가능.
 //
 // 정책 2종(둘 다 필요 — 사용자 요청):
@@ -999,20 +999,27 @@ const OUTCOME_BY_TITLE: [string, string][] = [
 
 async function runQuestMatrix(): Promise<void> {
   setAutoSaveEnabled(false);
-  const reps = Number(process.argv[3] ?? 120);
-  console.log(`=== 의뢰 정밀 매트릭스 — 전 의뢰 × 적합도, 의뢰당 ${reps}회 실측 (실코드 결산) ===`);
-  console.log('결투·큰의뢰=전투 도메인 사다리(미달/적정/우월), 그 외=능력치 minStat−15/+10/+30.');
-  console.log('표기: 완/성/위/실/재 % · 사망 % · 치명상(생환) % · 평균 자금Δ(동) · 드랍 % · 평균 소요일\n');
+  const reps = Number(process.argv[3] ?? 100);
+  console.log(`=== 의뢰 정밀 매트릭스 — 전 의뢰 × 경지 사다리 × 조합, 행당 ${reps}회 실측 (실코드 결산) ===`);
+  console.log('경지: 미달/적정/우월 — 전투(결투·큰의뢰)=프리셋 사다리, 스탯 도메인=minStat−15/+10/+30 + 등급 몸.');
+  console.log('조합: 솔로 / 추천(추천 인원만큼 동급 동행) / 의원(추천 인원 + 의술 35 의원 1).');
+  console.log('표기: 완/성/위/실/재 % · 사망 % · 치명생환 % · 평균 자금Δ(동) · 드랍 % · 일수\n');
 
   seedNewRun(SEED_POOL);
   useGameStore.getState().setPhase('playing');
   setFoodCost(0); // 자금 델타에서 일상 경제 소음 제거 — 의뢰 보상만 잰다.
   setPatronageMult(0);
-  setGeumchangBudget(Infinity); // 구급영약 무한 — 생존 체인 1단이 항상 열림(영약 보유 가정 행은 별도)
+  setGeumchangBudget(Infinity); // 구급영약 무한 — 생존 체인 1단이 항상 열림
   const ds = () => useDiscipleStore.getState();
-  const carry = ds().order[0];
-  // 동료들은 쉬게 — 비무·습격·일과 소음 제거.
-  for (const id of ds().order.slice(1)) ds().update(id, { status: 'resting' });
+  const roster = ds().order.slice(0, 4);
+
+  // 스탯 도메인의 "몸" — 등급에 맞는 경지·근골(사망 굴림·재난 내성은 몸에 달렸으므로 등급 비례).
+  const BODY_BY_GRADE: Record<string, PresetKey> = {
+    minor: 'iryu4',
+    normal: 'iryu4',
+    dangerous: 'ilryu6',
+    extreme: 'jeol7',
+  };
 
   const quests = QUEST_POOL.filter((q) => q.grade !== 'menial');
   for (const q of quests) {
@@ -1025,87 +1032,110 @@ async function runQuestMatrix(): Promise<void> {
           ? 'scouting'
           : 'guarding'
       : null;
-    const tiers = isCombat ? [0, 1, 2] : [1]; // 판정식 도메인은 적정만(곡선은 기존 검증 — 여긴 결투 정밀이 본론)
-    for (const tier of tiers) {
-      const presetKey = isCombat ? COMBAT_TIERS[q.grade][tier] : 'iryu4';
+    // 조합 — 솔로 / 추천 인원 충족 / 의원 동행. 추천 1인 의뢰는 솔로=추천이라 [솔로, 의원 2인]만.
+    const comps: { label: string; size: number; medic: boolean }[] =
+      q.recommended <= 1
+        ? [
+            { label: '솔로', size: 1, medic: false },
+            { label: '의원2인', size: 2, medic: true },
+          ]
+        : [
+            { label: '솔로', size: 1, medic: false },
+            { label: `추천${q.recommended}인`, size: q.recommended, medic: false },
+            { label: `의원${q.recommended}인`, size: q.recommended, medic: true },
+          ];
+
+    for (const tier of [0, 1, 2]) {
+      const presetKey = isCombat ? COMBAT_TIERS[q.grade][tier] : BODY_BY_GRADE[q.grade];
       const statLevel = stat ? Math.max(1, q.minStat + [-15, 10, 30][tier]) : 0;
 
-      const out: Record<string, number> = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0, gate: 0 };
-      let dead = 0;
-      let fatalSurvived = 0;
-      let moneySum = 0;
-      let dropCount = 0;
-      let daySum = 0;
-      for (let i = 0; i < reps; i += 1) {
-        applyPreset(carry, PRESETS[presetKey], stat ? { stat, level: statLevel } : undefined);
-        // 격리 — 이전 rep 의 잔여 상태(미결산 파견·종결 페이즈)가 다음 rep 을 오염시키지 않게.
-        // 나이도 고정: 매트릭스가 게임 시간을 수십 년 흘리므로, 늙은 제자 전원 졸업 → 회차 종결 →
-        // advanceTurn 조기 반환으로 의뢰가 영구 동결되는 것을 막는다.
-        {
-          const year = useTimeStore.getState().current.year;
-          for (const id of ds().order) {
-            ds().update(id, {
-              age: 16,
-              entryYear: year,
-              ...(id === carry ? {} : { status: 'resting' as const }),
-            });
+      for (const comp of comps) {
+        const party = roster.slice(0, Math.min(comp.size, roster.length));
+        const carry = party[0];
+        const out: Record<string, number> = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0, gate: 0 };
+        let dead = 0;
+        let fatalSurvived = 0;
+        let moneySum = 0;
+        let dropCount = 0;
+        let daySum = 0;
+        for (let i = 0; i < reps; i += 1) {
+          // 파티 전원 동급 프리셋. 의원 조합이면 마지막 1인은 의술 35(완화 임계 30 충족).
+          for (let m = 0; m < roster.length; m += 1) {
+            const id = roster[m];
+            const inParty = m < party.length;
+            const isMedic = comp.medic && inParty && m === party.length - 1;
+            applyPreset(
+              id,
+              PRESETS[presetKey],
+              isMedic ? { stat: 'medicine', level: 35 } : stat && inParty ? { stat, level: statLevel } : undefined,
+            );
+            if (!inParty) ds().update(id, { status: 'resting' });
           }
-          // 사부 수명도 고정 — 매트릭스 누적이 ~99 게임년을 넘으면 사부 수명 종결(phase ended)로
-          // 모든 의뢰가 동결된다(advanceTurn 조기 반환).
-          useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
-        }
-        useGameStore.getState().setPhase('playing');
-        useQuestStore.setState({ board: [q], active: [] });
-        const money0 = useSectStore.getState().sect?.resources ?? 0;
-        const scrolls0 = useCodexStore.getState().scrolls.length;
-        if (!dispatchQuest(q.id, [carry])) {
-          out.gate += 1;
-          continue;
-        }
-        let days = 0;
-        let outcome = '';
-        while (ds().disciples[carry]?.status === 'questing' && days < q.weeks * 7 + 14) {
-          advanceTurn();
-          days += 1;
-          // 결과 판독 — 결산 마일스톤은 정산 큐(pendingStore.milestones)에 실린다(서신 변환은 정산 확인 후라 시뮬에선 큐에서 직접).
-          for (const m of usePendingStore.getState().milestones) {
-            if (m.kind !== 'quest') continue;
-            for (const [title, o] of OUTCOME_BY_TITLE) {
-              if (m.title === title) {
-                outcome = o;
-                break;
+          // 격리 — 나이·사부 수명·페이즈·파견 큐. (누적 게임년이 졸업·사부 수명 종결을 부르면
+          // advanceTurn 조기 반환으로 모든 의뢰가 동결된다 — questmatrix 디버깅에서 확인.)
+          {
+            const year = useTimeStore.getState().current.year;
+            for (const id of roster) ds().update(id, { age: 16, entryYear: year });
+            useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
+          }
+          useGameStore.getState().setPhase('playing');
+          useQuestStore.setState({ board: [q], active: [] });
+          const money0 = useSectStore.getState().sect?.resources ?? 0;
+          const scrolls0 = useCodexStore.getState().scrolls.length;
+          if (!dispatchQuest(q.id, party)) {
+            out.gate += 1;
+            continue;
+          }
+          let days = 0;
+          let outcome = '';
+          while (ds().disciples[carry]?.status === 'questing' && days < q.weeks * 7 + 14) {
+            advanceTurn();
+            days += 1;
+            // 결과 판독 — 결산 마일스톤은 정산 큐(pendingStore.milestones)에 실린다.
+            for (const m of usePendingStore.getState().milestones) {
+              if (m.kind !== 'quest') continue;
+              for (const [title, o] of OUTCOME_BY_TITLE) {
+                if (m.title === title) {
+                  outcome = o;
+                  break;
+                }
+              }
+            }
+            const s = useScheduleStore.getState();
+            if (s.pendingReport) s.resolveMonthlyReport();
+            if (s.pendingSetup) s.resolveMonthlySetup();
+            if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+            for (const item of [...useInboxStore.getState().items]) {
+              const dom = (item.payload as { domain?: string } | undefined)?.domain;
+              if (isRespondable(item) && dom !== 'seclusion_petition') {
+                const key = responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+                if (key) await resolveInboxItem(item, key);
               }
             }
           }
-          const s = useScheduleStore.getState();
-          if (s.pendingReport) s.resolveMonthlyReport();
-          if (s.pendingSetup) s.resolveMonthlySetup();
-          if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
-          for (const item of [...useInboxStore.getState().items]) {
-            const dom = (item.payload as { domain?: string } | undefined)?.domain;
-            if (isRespondable(item) && dom !== 'seclusion_petition') {
-              const key = responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
-              if (key) await resolveInboxItem(item, key);
-            }
+          daySum += days;
+          if (outcome) out[outcome] += 1;
+          // 사상 집계 — 파티 전원 기준(재난 희생자는 무작위 1인이라 솔로/다인 비교에 중요).
+          for (const id of party) {
+            const d = ds().disciples[id];
+            if (d?.status === 'departed') dead += 1;
+            else if (d?.wound?.severity === 1) fatalSurvived += 1;
           }
+          moneySum += (useSectStore.getState().sect?.resources ?? 0) - money0;
+          if (useCodexStore.getState().scrolls.length > scrolls0) dropCount += 1;
+          useInboxStore.getState().reset();
+          // 사망했어도 다음 rep을 위해 프리셋 재적용이 부활시킨다.
         }
-        daySum += days;
-        if (outcome) out[outcome] += 1;
-        const d = ds().disciples[carry];
-        if (d?.status === 'departed') dead += 1;
-        else if (d?.wound?.severity === 1) fatalSurvived += 1;
-        moneySum += (useSectStore.getState().sect?.resources ?? 0) - money0;
-        if (useCodexStore.getState().scrolls.length > scrolls0) dropCount += 1;
-        useInboxStore.getState().reset();
-        // 사망했어도 다음 rep을 위해 부활(프리셋 재적용이 status까지 복원).
+        const pct = (n: number) => `${Math.round((n / reps) * 100)}`;
+        const tierLabel = isCombat
+          ? `${TIER_LABEL[tier]}(${PRESETS[presetKey].label})`
+          : `${TIER_LABEL[tier]}(${stat} ${statLevel})`;
+        console.log(
+          `[${QUEST_GRADE_ORDER.indexOf(q.grade)}·${q.grade}] ${q.title.padEnd(14)} ${q.domain.padEnd(8)} ${tierLabel.padEnd(16)} ${comp.label.padEnd(7)} ` +
+            `완${pct(out.full)} 성${pct(out.partial)} 위${pct(out.crisis)} 실${pct(out.fail)} 재${pct(out.disaster)}${out.gate ? ` 게이트${pct(out.gate)}` : ''} | ` +
+            `사망${pct(dead)} 치명생환${pct(fatalSurvived)} | 자금Δ${Math.round(moneySum / reps)} | 드랍${pct(dropCount)} | ${Math.round(daySum / Math.max(1, reps))}일`,
+        );
       }
-      const pct = (n: number) => `${Math.round((n / reps) * 100)}`;
-      const tierLabel = isCombat ? `${TIER_LABEL[tier]}(${PRESETS[presetKey].label})` : `적정(${stat} ${statLevel})`;
-      console.log(
-        `[${QUEST_GRADE_ORDER.indexOf(q.grade)}·${q.grade}] ${q.title.padEnd(14)} ${q.domain.padEnd(8)} ${tierLabel.padEnd(14)} ` +
-          `완${pct(out.full)} 성${pct(out.partial)} 위${pct(out.crisis)} 실${pct(out.fail)} 재${pct(out.disaster)}${out.gate ? ` 게이트${pct(out.gate)}` : ''} | ` +
-          `사망${pct(dead)} 치명생환${pct(fatalSurvived)} | 자금Δ${Math.round(moneySum / reps)} | 드랍${pct(dropCount)} | ${Math.round(daySum / Math.max(1, reps))}일`,
-      );
     }
   }
 }
