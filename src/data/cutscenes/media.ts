@@ -12,9 +12,10 @@ export interface CutsceneMediaEntry {
 
 export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> = {
   enlightenment: {
+    // 세로판(9:16) — 쇼츠식 풀스크린. 가로 레거시(jang-cheol.webp)는 보관만.
     'jang-cheol': {
-      source: require('../../../assets/images/cutscenes/enlightenment/jang-cheol.webp'),
-      fit: 'letterbox',
+      source: require('../../../assets/images/cutscenes/enlightenment/jang-cheol-v.webp'),
+      fit: 'cover',
     },
   },
 };
