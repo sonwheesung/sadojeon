@@ -1073,6 +1073,49 @@ export const MARTIAL_ARTS: MartialArt[] = [
   },
 
   // ═══ 마교 — 역천의 무공 (흑화 게이트) ═════════════════════════════════════
+  // 트리: 섭혼술(하·뿌리) → 수라마공(상) → 흡성대법(절) / 섭혼술+화골면장 → 소수마공(상)
+  //       혈영신법(중·신법) / 사파 흑풍권 5성 → 혈마공(절) → 천마비전(절). 2026-06-11 하위 보강.
+  {
+    id: 'seophon-sul',
+    name: '섭혼술',
+    hanjaName: '攝魂術',
+    description: '눈을 마주친 자의 넋을 흔드는 마교 입문 술법. 마음의 그늘이 깊을수록 잘 먹힌다.',
+    school: 'darkArts', grade: 'novice', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    minDarkness: 1,
+  },
+  {
+    id: 'hwagol-myeonjang',
+    name: '화골면장',
+    hanjaName: '化骨綿掌',
+    description: '스친 자리는 멀쩡한데 뼈가 솜처럼 무른다는 음독한 장법.',
+    school: 'fist', grade: 'apprentice', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    minDarkness: 1,
+  },
+  {
+    id: 'hyeolyeong-sinbeop',
+    name: '혈영신법',
+    hanjaName: '血影身法',
+    description: '핏빛 잔영만 남기고 스러지는 마교의 신법. 쫓는 눈이 잔영을 베는 사이 본신은 이미 등 뒤다.',
+    school: 'lightness', grade: 'apprentice', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 4 }],
+    minDarkness: 1,
+  },
+  {
+    id: 'sosu-magong',
+    name: '소수마공',
+    hanjaName: '素手魔功',
+    description: '희고 고운 맨손이 닿는 것마다 시들게 한다. 장법과 술법이 한데 녹은 마교의 절학.',
+    school: 'darkArts', grade: 'master', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [
+      { artId: 'seophon-sul', minSeong: 4 },
+      { artId: 'hwagol-myeonjang', minSeong: 5 },
+    ],
+    minDarkness: 2,
+  },
   {
     id: 'sura-magong',
     name: '수라마공',
@@ -1080,6 +1123,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '분노와 살기를 연료로 태우는 입문 마공. 마음의 그늘이 있어야 받아들일 수 있다.',
     school: 'darkArts', grade: 'master', path: 'ma',
     isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'seophon-sul', minSeong: 3 }],
     minDarkness: 1,
   },
   {
