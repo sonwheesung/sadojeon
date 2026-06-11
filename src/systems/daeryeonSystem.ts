@@ -11,6 +11,7 @@ import {
   seongCap,
   expToNextSeong,
   EXP_BASE_BY_STAGE,
+  GRADE_LEARN_MULT,
   seongToStage,
 } from '@/data/martialArts';
 import { REALM_SEONG_CAP } from '@/data/realm';
@@ -99,8 +100,9 @@ function gainSparSeongExp(
 
   const noviceMult = inst.seong + 1 <= 4 ? NOVICE_SPAR_MULT : 1;
   const base = EXP_BASE_BY_STAGE[seongToStage(inst.seong)];
-  // 대련 1회 = 기초 수련 하루치 기준 × 결과 배율. (정체기 보정 없음 — 맞상대가 정체를 깬다.)
-  const exp = Math.max(0, Math.round(base * tierMult * noviceMult));
+  // 대련 1회 = 기초 수련 하루치 기준 × 결과 배율 × 등급 학습 속도(하품은 금방 뗀다, docs/26).
+  // (정체기 보정 없음 — 맞상대가 정체를 깬다.)
+  const exp = Math.max(0, Math.round(base * tierMult * noviceMult * GRADE_LEARN_MULT[art.grade]));
   if (exp <= 0) return null;
 
   const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm ?? 'samryu']);

@@ -13,7 +13,7 @@ import {
   maxGradeForReputation,
 } from '@/data/quests';
 import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
-import { MARTIAL_ARTS, findMartialArt, expToNextSeong, seongCap } from '@/data/martialArts';
+import { MARTIAL_ARTS, findMartialArt, expToNextSeong, seongCap, GRADE_LEARN_MULT } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
 import { REALM_SEONG_CAP, realmIndex } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -597,11 +597,13 @@ function questWoundType(q: Quest): WoundType {
   return q.woundType ?? DOMAIN_WOUND[q.domain];
 }
 
-function gainMainSeongExp(d: Disciple, exp: number): void {
+function gainMainSeongExp(d: Disciple, expIn: number): void {
   const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
-  if (!mainId || exp <= 0) return;
+  if (!mainId || expIn <= 0) return;
   const art = findMartialArt(mainId);
   if (!art) return;
+  // 하품 비급은 금방 뗀다 — 등급별 학습 속도(디딤돌 가속). docs/26.
+  const exp = Math.max(1, Math.round(expIn * GRADE_LEARN_MULT[art.grade]));
   const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm]);
   const martialArts = d.martialArts.map((a) => {
     if (a.artId !== mainId) return a;

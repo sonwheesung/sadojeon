@@ -648,8 +648,10 @@ async function runFactorySweep(): Promise<void> {
       const stock = useItemStore.getState().items.find((i) => i.id === 'guzeon-daehwandan')?.count ?? 0;
       const scrollCount = useCodexStore.getState().scrolls.length;
       const rep = useSectStore.getState().sect?.reputation ?? 0;
+      const learned = carry?.martialArts.length ?? 0;
+      const learnedDeep = carry?.martialArts.filter((a) => a.seong >= 4).length ?? 0;
       console.log(
-        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 비급 ${scrollCount}권 · 명성 ${rep} · 의뢰 ${questCount}회 · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
+        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 익힌 무공 ${learned}권(소성+ ${learnedDeep}) · 비급 ${scrollCount}권 · 명성 ${rep} · 의뢰 ${questCount}회 · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
       );
     }
   }

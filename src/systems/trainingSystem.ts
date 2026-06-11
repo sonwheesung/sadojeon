@@ -11,6 +11,7 @@
 import {
   findMartialArt,
   EXP_BASE_BY_STAGE,
+  GRADE_LEARN_MULT,
   expToNextSeong,
   seongCap,
   seongToStage,
@@ -288,7 +289,8 @@ function tickDiscipleArt(
   // 혼자 수련의 한계 — 대성(7성) 문턱부터는 "더 짜낼 형이 없다". 대련·의뢰(실전)가 주 통로. docs/26·06.
   // (이 함수는 기초 수련·폐관 전용 — 의뢰는 gainMainSeongExp, 대련은 daeryeonSystem 별도 경로라 영향 없음.)
   const soloMul = instance.seong + 1 >= 7 ? SOLO_GREAT_MULT : 1;
-  const delta = base * tMul * pMul * intensity * progressMul * soloMul;
+  // 하품 비급은 금방 뗀다 — 등급별 학습 속도(디딤돌 가속). docs/26.
+  const delta = base * tMul * pMul * intensity * progressMul * soloMul * GRADE_LEARN_MULT[art.grade];
 
   let seong = instance.seong;
   let exp = instance.exp + delta;

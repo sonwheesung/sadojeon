@@ -194,6 +194,18 @@ export function expToNextSeong(seong: number): number {
   return 140 + (s - 1) * 80;
 }
 
+// 등급별 학습 속도 — "하품 비급은 금방 뗀다". 디딤돌(하·중품)은 빨리 익히고 다음 권으로,
+// 상품 이상은 그대로(화경 경로 밸런스 불변). 카탈로그 640권 확장으로 "15년에 5~8권"이던
+// 학습 권수를 끌어올리는 레버 (2026-06-11, docs/26 §학습 속도). 세 적립 경로(기초 수련·
+// 의뢰 실전·대련)가 모두 이 배율을 곱한다 — 단일 출처. 🔧
+export const GRADE_LEARN_MULT: Record<MartialArtGrade, number> = {
+  novice: 2.2,
+  apprentice: 1.6,
+  master: 1.0,
+  grandmaster: 1.0,
+  legendary: 1.0,
+};
+
 // 밴드별 하루 base EXP. 고밴드도 적립이 너무 작으면 신품 무공서 7성(화경 게이트)에 평생 못 닿아
 // 완화(docs/28 §5·project_realm_balance 화경 경로): 순수수련으로도 신품 무공서 대성(7성) 도달 가능.
 export const EXP_BASE_BY_STAGE: Record<MartialStage, number> = {
