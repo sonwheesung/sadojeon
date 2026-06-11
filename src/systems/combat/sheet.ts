@@ -85,8 +85,9 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
     staminaMult *
     woundMult;
   // 방어 — 외공서(금종조·역근경류)가 주 받침, 심법은 호신강기로 소폭. 🔧
-  const def = power * (0.5 + c.strength * 0.004 + extDepth * 0.022 + qigongDepth * 0.01);
-  const spd = c.agility + lightDepth * 4.5 + realmIdx * 8;
+  // 보법 우위 ↔ 외공 받아내기가 문파전에서 맞서도록 캘리브레이션(2026-06-11, docs/35 §6).
+  const def = power * (0.5 + c.strength * 0.004 + extDepth * 0.03 + qigongDepth * 0.01);
+  const spd = c.agility + lightDepth * 3.5 + realmIdx * 8;
   const maxHp = 70 + c.endurance;
 
   // 내공 소모 — 주력이 무거울수록(상승 비급) 한 수가 크고, 심법이 깊으면 호흡이 길다. 🔧
