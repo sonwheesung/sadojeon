@@ -65,6 +65,7 @@ import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
 import { attemptBoneRebirth } from './boneRebirthSystem';
 import { parseDaeryeonChoice, resolveDaeryeon } from './daeryeonSystem';
+import { applyPrereqTrickle } from './martialExp';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
 import { addSimma, onForcedBreakthroughFail } from './simmaSystem';
 import { staminaRatioMultiplier, triggerCollapse } from './staminaSystem';
@@ -632,7 +633,10 @@ export function tickDailyTraining(): DiscipleTickReport[] {
           const nextArts = d.martialArts.map((a) =>
             a.artId === plan.artId ? r.next : a,
           );
-          store.update(id, { martialArts: nextArts });
+          // 수련 낙수 — 닦은 무공의 직계 선행도 함께 무르익는다(클릭 0 키트 빌딩). docs/26 §낙수.
+          store.update(id, {
+            martialArts: applyPrereqTrickle(nextArts, plan.artId, r.result.delta, d.realm),
+          });
           arts.push(r.result);
         }
       }

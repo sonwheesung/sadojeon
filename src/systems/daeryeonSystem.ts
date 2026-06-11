@@ -20,6 +20,7 @@ import type { Disciple, RelationLevel } from '@/types';
 import type { CombatTier } from '@/types/combat';
 import { combatantFromDisciple, simulateCombat } from './combat';
 import { inflictWound } from './woundSystem';
+import { applyPrereqTrickle } from './martialExp';
 import { shiftPersona } from './personaShift';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
@@ -120,7 +121,10 @@ function gainSparSeongExp(
   const martialArts = d.martialArts.map((a) =>
     a.artId === mainId ? { ...a, seong, exp: e } : a,
   );
-  useDiscipleStore.getState().update(d.id, { martialArts });
+  // 수련 낙수 — 대련에서 주력을 쓰면 그 뿌리도 단련된다. docs/26 §낙수.
+  useDiscipleStore.getState().update(d.id, {
+    martialArts: applyPrereqTrickle(martialArts, mainId, exp, d.realm ?? 'samryu'),
+  });
   return { artId: mainId, seongBefore, seong, delta: exp };
 }
 

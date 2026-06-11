@@ -18,7 +18,8 @@ export const LEGEND_ARTS: MartialArt[] = [
     description: '물결 위를 스치듯 걷는다는 전설의 보법. 육십사괘의 자리를 밟는다.',
     school: 'lightness', grade: 'grandmaster', path: 'jung',
     isSectArt: false, lineage: 'legend', acquisition: 'quest',
-    prerequisites: [{ artId: 'chosangbi', minSeong: 6 }],
+    // 경공 사다리 정점(등평도수)을 딛고서야 — 초상비 직행 지름길이 첫 회차 화경을 뚫던 구멍 봉합(2026-06-11).
+    prerequisites: [{ artId: 'deungpyeong-dosu', minSeong: 5 }],
   },
   {
     id: 'legend-heogong-dapbo',

@@ -27,6 +27,7 @@ import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
+import { applyPrereqTrickle } from './martialExp';
 import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
@@ -413,9 +414,18 @@ function maybeDropScroll(q: Quest): void {
   const rule = SCROLL_DROP[q.grade];
   if (!rule || Math.random() >= rule.chance) return;
   const codex = useCodexStore.getState();
-  const pool = MARTIAL_ARTS.filter(
-    (a) => a.acquisition === 'quest' && rule.grades.includes(a.grade) && !codex.hasScroll(a.id),
-  );
+  // 풀 = 의뢰 등급에 맞는 비급 ∪ **다음 권**(선행 비급을 모두 보유한 무공 — 등급 무관).
+  // 트리가 깊어진 카탈로그(640권)에서 고급 의뢰만 돌면 사다리 중간 권이 영영 안 모이는 문제 봉합:
+  // "사문이 찾는 다음 권은 어느 의뢰판에서든 눈에 띈다" (2026-06-11). 신품은 여전히 드랍 없음.
+  const pool = MARTIAL_ARTS.filter((a) => {
+    if (a.acquisition !== 'quest' || codex.hasScroll(a.id)) return false;
+    if (rule.grades.includes(a.grade)) return true;
+    return (
+      a.grade !== 'legendary' &&
+      (a.prerequisites?.length ?? 0) > 0 &&
+      a.prerequisites!.every((pr) => codex.hasScroll(pr.artId))
+    );
+  });
   if (pool.length === 0) return;
   const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
   // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×8**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
@@ -619,7 +629,10 @@ function gainMainSeongExp(d: Disciple, expIn: number): void {
     }
     return { ...a, seong, exp: e };
   });
-  useDiscipleStore.getState().update(d.id, { martialArts });
+  // 수련 낙수 — 실전에서 주력을 쓰면 그 뿌리도 단련된다. docs/26 §낙수.
+  useDiscipleStore.getState().update(d.id, {
+    martialArts: applyPrereqTrickle(martialArts, mainId, exp, d.realm),
+  });
 }
 
 // 의뢰 수행 → 인격 6축 미세 변화. 도메인·회색·결과가 사람을 빚는다. docs/28 §6.
