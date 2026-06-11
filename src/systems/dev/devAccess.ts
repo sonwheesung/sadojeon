@@ -4,7 +4,7 @@
 
 import { useAuthStore } from '@/stores/authStore';
 
-export const DEV_ACCOUNT_IDS: readonly string[] = ['simlab', 'simbot', 'dev'];
+export const DEV_ACCOUNT_IDS: readonly string[] = ['shstest', 'simlab', 'simbot', 'dev'];
 
 export function isDevAccount(email: string | null | undefined): boolean {
   if (!email) return false;
