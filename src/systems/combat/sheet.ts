@@ -9,15 +9,7 @@
 import type { CombatArt, Combatant } from '@/types/combat';
 import type { MartialArtGrade, MartialArtSchool } from '@/types/martialArt';
 import { REALM_ORDER } from '@/types/realm';
-import { kitPower } from '../combatPower';
-
-const GRADE_COEF: Record<MartialArtGrade, number> = {
-  novice: 1.0,
-  apprentice: 1.4,
-  master: 2.0,
-  grandmaster: 2.8,
-  legendary: 3.6,
-};
+import { GRADE_COEF, kitPower } from '../combatPower';
 
 // 갈래별 가장 깊은 무공의 깊이 — (성−1) × 등급계수. 없으면 0.
 function bestDepth(arts: CombatArt[], school: MartialArtSchool): number {

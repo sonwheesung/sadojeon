@@ -18,7 +18,8 @@ const REALM_WEIGHT: Record<Realm, number> = {
 };
 
 // 무공서 등급계수 — 같은 성이라도 상승 비급이 묵직하다. (그레이박스)
-const GRADE_COEF: Record<MartialArtGrade, number> = {
+// 단일 출처: 전투 엔진 시트(combat/sheet)의 갈래 깊이 계산도 이 표를 쓴다.
+export const GRADE_COEF: Record<MartialArtGrade, number> = {
   novice: 1.0,
   apprentice: 1.4,
   master: 2.0,

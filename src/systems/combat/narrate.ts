@@ -2,7 +2,17 @@
 // 않고, 사부가 지켜본 듯한 몇 줄의 풍경으로만 결과를 읽게 한다(서신·일지용).
 
 import type { CombatResult, CombatantResult } from '@/types/combat';
-import { WOUND_TYPE_LABEL } from '../woundSystem';
+import type { WoundType } from '@/types/disciple';
+
+// 상처 속성 라벨 — woundSystem.WOUND_TYPE_LABEL 과 같은 값. 전투 모듈은 스토어 사슬
+// (woundSystem→alchemySystem→스토어)을 끌고 오지 않으려 여기 사본을 둔다(표시 전용).
+const WOUND_TYPE_LABEL: Record<WoundType, string> = {
+  wound: '외상',
+  burn: '화상',
+  poison: '중독',
+  frost: '동상',
+  inner: '내상',
+};
 
 function names(list: CombatantResult[]): string {
   return list.map((c) => c.name).join('·');
