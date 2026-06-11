@@ -1,6 +1,8 @@
-import { router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useDevAccess } from '@/systems/dev/devAccess';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
@@ -49,6 +51,9 @@ export default function SlotSelectScreen() {
   const setSaveSlot = useGameStore((s) => s.setSaveSlot);
   const [loading, setLoading] = useState(true);
   const [bySlot, setBySlot] = useState<Record<number, RunRecord>>({});
+  // 개발 계정은 사문 선택 대신 시뮬레이션 실험실로 — ?game=1 이면 일반 게임 진입 허용.
+  const devAccess = useDevAccess();
+  const { game } = useLocalSearchParams<{ game?: string }>();
 
   // 뒤로가기 → 게임 종료 확인.
   useBackConfirm(
@@ -109,6 +114,9 @@ export default function SlotSelectScreen() {
     if (run) resume(run);
     else startNew(slot);
   };
+
+  // 개발 계정 — 시뮬레이션 실험실로. (훅 호출 뒤의 분기라 훅 순서 안전.)
+  if (devAccess && game !== '1') return <Redirect href={'/simlab' as Href} />;
 
   return (
     <SafetyZone variant="stack" background={colors.background}>

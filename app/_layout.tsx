@@ -87,6 +87,10 @@ export default function RootLayout() {
               <Stack.Screen name="npc/index" options={{ presentation: 'modal' }} />
               <Stack.Screen name="npc/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="dev/autoplay" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="simlab/index" />
+              <Stack.Screen name="simlab/combat" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="simlab/relations" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="simlab/career" options={{ presentation: 'modal' }} />
               <Stack.Screen name="alchemy/index" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!authed}>
