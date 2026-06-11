@@ -418,13 +418,14 @@ function maybeDropScroll(q: Quest): void {
   );
   if (pool.length === 0) return;
   const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
-  // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×3**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
+  // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×8**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
   // 잘 나온다 — "한 문파의 비급은 함께 강호를 돈다". 트리가 자연히 완성되는 장치(보장 정점 폐기 보완).
+  // ×3→×8 (2026-06-11): 카탈로그 640권 확장으로 풀이 희석돼 절품 트리 완성이 늦어짐(화경 38%) → 사슬 강화. 🔧
   const weighted = pool.flatMap((a) => {
     let w = 1;
     if (affinity.includes(a.school)) w *= 3;
     const chainNext = (a.prerequisites ?? []).every((pr) => codex.hasScroll(pr.artId));
-    if (a.prerequisites?.length && chainNext) w *= 3;
+    if (a.prerequisites?.length && chainNext) w *= 8;
     return Array(w).fill(a) as typeof pool;
   });
   const art = weighted[Math.floor(Math.random() * weighted.length)];
