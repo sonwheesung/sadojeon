@@ -91,10 +91,12 @@ export function advanceTurn() {
   }
 
   const reports = tickDailyTraining();
-  tickQuests(); // 기한 도래 의뢰 결산 → 마일스톤(서신함)
   const dateLabel = buildDateLabel();
   const { log, badges, milestones } = buildTickArtifacts(reports, dateLabel);
   usePendingStore.getState().setDailyTick(log, badges, milestones);
+  // 의뢰 결산은 setDailyTick **뒤에** — setDailyTick 이 마일스톤 큐를 교체하므로, 앞서 부르면
+  // 의뢰 결산 서신이 그대로 증발한다(🐛 2026-06-11 questmatrix 시뮬이 발견 — 결산 서신 미발송 버그).
+  tickQuests(); // 기한 도래 의뢰 결산 → 마일스톤(서신함)
 
   // 정산 모달 set — 사용자가 [다음 ▶] 누를 때까지 일상 모달 trigger 대기.
   // llmDebugBuffer 는 이전 turn 응답 시 누적된 LLM 호출 정보.

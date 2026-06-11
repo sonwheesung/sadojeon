@@ -16,7 +16,8 @@ import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
-import { QUEST_GRADE_ORDER } from '@/data/quests';
+import { QUEST_GRADE_ORDER, QUEST_POOL } from '@/data/quests';
+import type { Quest, MartialArtInstance } from '@/types';
 import { useQuestStore } from '@/stores/questStore';
 import { useCodexStore } from '@/stores/codexStore';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
@@ -37,6 +38,7 @@ import { setResearchInstant } from '@/systems/researchSystem';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useMasterStore } from '@/stores/masterStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
@@ -941,6 +943,173 @@ async function runTrainSweep(): Promise<void> {
   console.log(issues.length === 0 ? '\n수치 무결성: 이상 없음 (NaN/음수/성 하락/exp 미소진 0건)' : `\n⚠ 수치 이상 ${issues.length}건:\n  ${[...new Set(issues)].slice(0, 10).join('\n  ')}`);
 }
 
+// ── 의뢰 정밀 매트릭스 — 전 의뢰 × 파티 적합도 → 결과 분포·사망·치명상·자금·드랍 ──────
+// 결투(엔진)·판정식 도메인을 같은 틀에서 실측. 실행: run-headless.cjs questmatrix [reps]
+const inst = (artId: string, seong: number): MartialArtInstance => ({ artId, seong, exp: 0, unlockedAt: 0 });
+const PRESETS = {
+  samryu3: { label: '삼류3성', realm: 'samryu', internal: 60, str: 12, agi: 12, end: 18, arts: [inst('samjae-sword', 3), inst('chosangbi', 2)] },
+  iryu4: { label: '이류4성', realm: 'iryu', internal: 200, str: 25, agi: 25, end: 30, arts: [inst('samjae-sword', 4), inst('chosangbi', 3), inst('tonap-beop', 3)] },
+  ilryu6: { label: '일류6성', realm: 'ilryu', internal: 400, str: 40, agi: 38, end: 40, arts: [inst('maehwa-sword', 6), inst('chosangbi', 4), inst('tonap-beop', 4), inst('geumjong-jo', 3)] },
+  jeol7: { label: '절정7성', realm: 'jeoljeong', internal: 650, str: 50, agi: 45, end: 48, arts: [inst('maehwa-sword', 7), inst('chosangbi', 5), inst('tonap-beop', 5), inst('geumjong-jo', 4)] },
+  cho8: { label: '초절8성', realm: 'chojeoljeong', internal: 900, str: 56, agi: 50, end: 54, arts: [inst('isipsa-maehwa-sword', 8), inst('chosangbi', 6), inst('tonap-beop', 6), inst('geumjong-jo', 5)] },
+} as const;
+type PresetKey = keyof typeof PRESETS;
+
+// 전투 도메인(결투·큰의뢰) — 등급별 미달/적정/우월 프리셋 사다리.
+const COMBAT_TIERS: Record<string, [PresetKey, PresetKey, PresetKey]> = {
+  minor: ['samryu3', 'samryu3', 'iryu4'],
+  normal: ['samryu3', 'iryu4', 'ilryu6'],
+  dangerous: ['iryu4', 'ilryu6', 'jeol7'],
+  extreme: ['ilryu6', 'jeol7', 'cho8'],
+};
+const TIER_LABEL = ['미달', '적정', '우월'];
+
+function applyPreset(id: string, p: (typeof PRESETS)[PresetKey], statOverride?: { stat: string; level: number }): void {
+  const ds = useDiscipleStore.getState();
+  const d = ds.disciples[id];
+  if (!d) return;
+  const stats: Record<string, { level: number; exp: number }> = {
+    strength: { level: p.str, exp: 0 },
+    agility: { level: p.agi, exp: 0 },
+    endurance: { level: p.end, exp: 0 },
+  };
+  if (statOverride) stats[statOverride.stat] = { level: statOverride.level, exp: 0 };
+  ds.update(id, {
+    realm: p.realm as never,
+    realmProgress: { internal: p.internal, pity: 0, petitioned: false },
+    martialArts: p.arts.map((a) => ({ ...a })),
+    mainMartialArtId: p.arts[0]?.artId,
+    stats: stats as never,
+    status: 'training',
+    wound: undefined,
+    injuryDaysRemaining: 0,
+    stamina: d.maxStamina,
+    stress: 0,
+    simma: 0,
+  });
+}
+
+const OUTCOME_BY_TITLE: [string, string][] = [
+  ['의뢰 위기 끝에 성공', 'crisis'],
+  ['의뢰 완수', 'full'],
+  ['의뢰 성공', 'partial'],
+  ['의뢰 실패', 'fail'],
+  ['의뢰 재난', 'disaster'],
+];
+
+async function runQuestMatrix(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const reps = Number(process.argv[3] ?? 120);
+  console.log(`=== 의뢰 정밀 매트릭스 — 전 의뢰 × 적합도, 의뢰당 ${reps}회 실측 (실코드 결산) ===`);
+  console.log('결투·큰의뢰=전투 도메인 사다리(미달/적정/우월), 그 외=능력치 minStat−15/+10/+30.');
+  console.log('표기: 완/성/위/실/재 % · 사망 % · 치명상(생환) % · 평균 자금Δ(동) · 드랍 % · 평균 소요일\n');
+
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  setFoodCost(0); // 자금 델타에서 일상 경제 소음 제거 — 의뢰 보상만 잰다.
+  setPatronageMult(0);
+  setGeumchangBudget(Infinity); // 구급영약 무한 — 생존 체인 1단이 항상 열림(영약 보유 가정 행은 별도)
+  const ds = () => useDiscipleStore.getState();
+  const carry = ds().order[0];
+  // 동료들은 쉬게 — 비무·습격·일과 소음 제거.
+  for (const id of ds().order.slice(1)) ds().update(id, { status: 'resting' });
+
+  const quests = QUEST_POOL.filter((q) => q.grade !== 'menial');
+  for (const q of quests) {
+    const isCombat = q.domain === 'duel' || q.domain === 'grand';
+    // 도메인 → 역량 스탯(QUEST_DOMAIN_STAT 와 동일): 의술→medicine, 정탐·살수→scouting, 호위→guarding.
+    const stat = !isCombat
+      ? q.domain === 'medicine'
+        ? 'medicine'
+        : q.domain === 'scout' || q.domain === 'assassin'
+          ? 'scouting'
+          : 'guarding'
+      : null;
+    const tiers = isCombat ? [0, 1, 2] : [1]; // 판정식 도메인은 적정만(곡선은 기존 검증 — 여긴 결투 정밀이 본론)
+    for (const tier of tiers) {
+      const presetKey = isCombat ? COMBAT_TIERS[q.grade][tier] : 'iryu4';
+      const statLevel = stat ? Math.max(1, q.minStat + [-15, 10, 30][tier]) : 0;
+
+      const out: Record<string, number> = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0, gate: 0 };
+      let dead = 0;
+      let fatalSurvived = 0;
+      let moneySum = 0;
+      let dropCount = 0;
+      let daySum = 0;
+      for (let i = 0; i < reps; i += 1) {
+        applyPreset(carry, PRESETS[presetKey], stat ? { stat, level: statLevel } : undefined);
+        // 격리 — 이전 rep 의 잔여 상태(미결산 파견·종결 페이즈)가 다음 rep 을 오염시키지 않게.
+        // 나이도 고정: 매트릭스가 게임 시간을 수십 년 흘리므로, 늙은 제자 전원 졸업 → 회차 종결 →
+        // advanceTurn 조기 반환으로 의뢰가 영구 동결되는 것을 막는다.
+        {
+          const year = useTimeStore.getState().current.year;
+          for (const id of ds().order) {
+            ds().update(id, {
+              age: 16,
+              entryYear: year,
+              ...(id === carry ? {} : { status: 'resting' as const }),
+            });
+          }
+          // 사부 수명도 고정 — 매트릭스 누적이 ~99 게임년을 넘으면 사부 수명 종결(phase ended)로
+          // 모든 의뢰가 동결된다(advanceTurn 조기 반환).
+          useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
+        }
+        useGameStore.getState().setPhase('playing');
+        useQuestStore.setState({ board: [q], active: [] });
+        const money0 = useSectStore.getState().sect?.resources ?? 0;
+        const scrolls0 = useCodexStore.getState().scrolls.length;
+        if (!dispatchQuest(q.id, [carry])) {
+          out.gate += 1;
+          continue;
+        }
+        let days = 0;
+        let outcome = '';
+        while (ds().disciples[carry]?.status === 'questing' && days < q.weeks * 7 + 14) {
+          advanceTurn();
+          days += 1;
+          // 결과 판독 — 결산 마일스톤은 정산 큐(pendingStore.milestones)에 실린다(서신 변환은 정산 확인 후라 시뮬에선 큐에서 직접).
+          for (const m of usePendingStore.getState().milestones) {
+            if (m.kind !== 'quest') continue;
+            for (const [title, o] of OUTCOME_BY_TITLE) {
+              if (m.title === title) {
+                outcome = o;
+                break;
+              }
+            }
+          }
+          const s = useScheduleStore.getState();
+          if (s.pendingReport) s.resolveMonthlyReport();
+          if (s.pendingSetup) s.resolveMonthlySetup();
+          if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+          for (const item of [...useInboxStore.getState().items]) {
+            const dom = (item.payload as { domain?: string } | undefined)?.domain;
+            if (isRespondable(item) && dom !== 'seclusion_petition') {
+              const key = responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+              if (key) await resolveInboxItem(item, key);
+            }
+          }
+        }
+        daySum += days;
+        if (outcome) out[outcome] += 1;
+        const d = ds().disciples[carry];
+        if (d?.status === 'departed') dead += 1;
+        else if (d?.wound?.severity === 1) fatalSurvived += 1;
+        moneySum += (useSectStore.getState().sect?.resources ?? 0) - money0;
+        if (useCodexStore.getState().scrolls.length > scrolls0) dropCount += 1;
+        useInboxStore.getState().reset();
+        // 사망했어도 다음 rep을 위해 부활(프리셋 재적용이 status까지 복원).
+      }
+      const pct = (n: number) => `${Math.round((n / reps) * 100)}`;
+      const tierLabel = isCombat ? `${TIER_LABEL[tier]}(${PRESETS[presetKey].label})` : `적정(${stat} ${statLevel})`;
+      console.log(
+        `[${QUEST_GRADE_ORDER.indexOf(q.grade)}·${q.grade}] ${q.title.padEnd(14)} ${q.domain.padEnd(8)} ${tierLabel.padEnd(14)} ` +
+          `완${pct(out.full)} 성${pct(out.partial)} 위${pct(out.crisis)} 실${pct(out.fail)} 재${pct(out.disaster)}${out.gate ? ` 게이트${pct(out.gate)}` : ''} | ` +
+          `사망${pct(dead)} 치명생환${pct(fatalSurvived)} | 자금Δ${Math.round(moneySum / reps)} | 드랍${pct(dropCount)} | ${Math.round(daySum / Math.max(1, reps))}일`,
+      );
+    }
+  }
+}
+
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
@@ -978,6 +1147,10 @@ async function main() {
   }
   if (process.argv[2] === 'trainsweep') {
     await runTrainSweep();
+    return;
+  }
+  if (process.argv[2] === 'questmatrix') {
+    await runQuestMatrix();
     return;
   }
   const years = Number(process.argv[2] ?? 15);

@@ -22,6 +22,7 @@ description: Run headless 15-year growth/balance simulations for Shidao — veri
 - `run-headless.cjs` — `.env(.development)` 를 process.env 에 주입한 뒤 esbuild 번들(RN·AsyncStorage·expo-fs 스텁 + url-polyfill no-op + executorch external + `__DEV__` define) 후 Node 실행. **supabase·runSync 는 실번들(스텁 아님).**
 - `_stubs/` — 헤드리스용 스텁. 실행: `node .claude/skills/balance-sim/run-headless.cjs [years]`.
 - **고속 진행 쓰기증폭 차단:** 게임 내부 매일 autosave 는 `setAutoSaveEnabled(false)` 로 끄고 하네스가 연 단위로만 명시 저장. (앱은 기본 ON.)
+- **questmatrix** (`run-headless.cjs questmatrix [reps=120]`): 의뢰 정밀 매트릭스 — 전 의뢰(잡일 제외) × 적합도(결투·큰의뢰=미달/적정/우월 프리셋 사다리, 스탯 도메인=minStat+10) × reps회 실코드 결산. 결과 5분기·사망·치명생환·자금Δ·드랍·소요일. 격리: 매 rep 제자 프리셋·나이 16 고정·사부 수명 리셋·active/phase 초기화(누적 게임년이 사부 수명 99년을 넘으면 회차 종결로 전부 동결됨). 결과 판독은 정산 큐(pendingStore.milestones)에서. 의뢰 보상·위험·결투 풀(DUEL_POOL) 튜닝 후 회귀용.
 - **trainsweep** (`run-headless.cjs trainsweep`): 무공 선택→훈련 궤적 검증 — A. 하품 한 권 집중(수동 일과 3년: 디딤돌 ×2.2 속도·경지 캡 클램프) B. 화산 트리 8권 등반(최적 일과 15년: 선행 사다리 갈아타기·수련 낙수 1단계·솔로 대성 정체 룰·절품 7성→화경). 매일 전 무공 수치 무결성(NaN/음수/성 하락/exp 미소진) 감시. 성장 수치(GRADE_LEARN_MULT·낙수·EXP 곡선·경지 캡) 만진 뒤 회귀용.
 - **플레이 정책 2종 (인자 `[growth|random|both]`, 기본 both):** `autoPlay` 가 `PlayPolicy` 주입식(`policyHelpers.ts`)이라 갈아끼운다(in-app QA 는 항상 random). **두 정책 모두 게임의 전 결정표면을 다룬다:** 훈련 카테고리·세부종목, 무공축(심법/초식/경공), **무공서 변경**(assignMainMartialArt), **영약 복용**(grantDivineElixir), 의뢰 파견, 4지선다.
   - **growth=optimal** (→ slot 1, `configureOptimal`): 등급천장 높은 무공서로 갈아탐(화경=절품 grandmaster 필요라 필요시 타계열) → 성게이트→내공→외공 균형 무공축 + 기마자세 → 초절정서 신품 영약 확보. 파견 X. 4지선다는 랜덤. **절정/초절정/화경 도달성 검증.**
