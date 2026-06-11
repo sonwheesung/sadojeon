@@ -1190,6 +1190,8 @@ async function runCovertSweep(): Promise<void> {
         for (const id of roster) ds().update(id, { age: 16, entryYear: year });
         useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
       }
+      // 의뢰가 없는 날은 최적 훈련(경지 성장 — 살수 전업도 수련은 한다).
+      configureOptimal();
       // 파견 — 게시판의 회색 의뢰만, 가장 높은 등급부터. 추천 2인↑이면 의원을 붙인다.
       const me = ds().disciples[carry];
       if (me?.status === 'training') {
@@ -1251,9 +1253,16 @@ async function runCovertSweep(): Promise<void> {
           }
         }
         const money = useSectStore.getState().sect?.resources ?? 0;
-        const mercy = ds().disciples[carry]?.personality.mercy ?? 50;
+        const c = ds().disciples[carry];
+        const mercy = c?.personality.mercy ?? 50;
+        // 성장 추적 — 경지·주력 성·흑화·마공 비급(살수 의뢰 affinity 로 darkArts 드랍이 잘 옴).
+        const mainId = c?.mainMartialArtId ?? c?.martialArts[0]?.artId;
+        const mainSeong = c?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0;
+        const darkScrolls = useCodexStore
+          .getState()
+          .scrolls.filter((sc) => findMartialArt(sc.artId)?.school === 'darkArts').length;
         console.log(
-          `  [${yr}년차] 자금 ${coinStr(money)} · 정파평판 ${(right / Math.max(1, rightN)).toFixed(0)} · 사파평판 ${(dark / Math.max(1, darkN)).toFixed(0)} · 자객 ${assassinCount}회(${assassinCost}냥) · 후원수행 ${sponsored} · 의뢰 ${quests}회 · 카리 자비 ${mercy}`,
+          `  [${yr}년차] ${REALM_LABEL[c?.realm ?? 'samryu']}·${findMartialArt(mainId ?? '')?.name ?? '?'} ${mainSeong}성·흑화${c?.darknessLevel ?? 0}·자비${mercy} | 자금 ${coinStr(money)} · 정파 ${(right / Math.max(1, rightN)).toFixed(0)} · 사파 ${(dark / Math.max(1, darkN)).toFixed(0)} · 자객 ${assassinCount}회(${assassinCost}냥) · 후원 ${sponsored} · 의뢰 ${quests}회 · 마공비급 ${darkScrolls}권`,
         );
       }
     }
@@ -1263,6 +1272,15 @@ async function runCovertSweep(): Promise<void> {
     sumAssassinCount += assassinCount;
     sumSponsored += sponsored;
     sumQuests += quests;
+    // 카리 최종 성장 — 회차별 경지·흑화.
+    {
+      const c = ds().disciples[carry];
+      const mainId = c?.mainMartialArtId ?? c?.martialArts[0]?.artId;
+      const seong = c?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0;
+      console.log(
+        `  [it${it} 종착] ${REALM_LABEL[c?.realm ?? 'samryu']} · 주력 ${findMartialArt(mainId ?? '')?.name ?? '?'} ${seong}성 · 흑화 ${c?.darknessLevel ?? 0} · 익힌 무공 ${c?.martialArts.length ?? 0}권`,
+      );
+    }
   }
 
   const n = Math.max(1, totalOut.full + totalOut.partial + totalOut.crisis + totalOut.fail + totalOut.disaster);
