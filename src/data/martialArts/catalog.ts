@@ -48,6 +48,26 @@ export const MARTIAL_ARTS: MartialArt[] = [
     school: 'fist', grade: 'apprentice', path: 'jeong',
     isSectArt: true, lineage: 'common', acquisition: 'start',
   },
+  // 공용 경공 사다리 — 정통 경공 경지 그대로: 초상비 → 답설무흔 → 등평도수. (2026-06-11)
+  // 보법 전승이 없는 문파(당가·세가·마교·표국…)도 이 사다리로 신법을 갖춘다.
+  {
+    id: 'dapseol-muheun',
+    name: '답설무흔',
+    hanjaName: '踏雪無痕',
+    description: '눈 위를 달려도 자국 하나 남지 않는다. 천하에 도는 경공의 둘째 걸음.',
+    school: 'lightness', grade: 'apprentice', path: 'jung',
+    isSectArt: false, lineage: 'common', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 4 }],
+  },
+  {
+    id: 'deungpyeong-dosu',
+    name: '등평도수',
+    hanjaName: '登萍渡水',
+    description: '부평초를 밟고 물을 건넌다. 도가에서 나왔다 전하나 이제는 천하 경공의 높은 경지를 이르는 이름.',
+    school: 'lightness', grade: 'master', path: 'jung',
+    isSectArt: false, lineage: 'common', acquisition: 'quest',
+    prerequisites: [{ artId: 'dapseol-muheun', minSeong: 5 }],
+  },
 
   // ═══ 화산파 — 매화·자하 ═══════════════════════════════════════════════════
   {
@@ -274,6 +294,15 @@ export const MARTIAL_ARTS: MartialArt[] = [
     school: 'external', grade: 'grandmaster', path: 'jeong',
     isSectArt: false, lineage: 'sorim', acquisition: 'quest',
     prerequisites: [{ artId: 'cheolpo-sam', minSeong: 6 }],
+  },
+  {
+    id: 'ilwi-dogang',
+    name: '일위도강',
+    hanjaName: '一葦渡江',
+    description: '달마가 갈대 한 잎으로 장강을 건넜다는 불가 비전의 경공. 소림 무승의 걸음.',
+    school: 'lightness', grade: 'master', path: 'jeong',
+    isSectArt: false, lineage: 'sorim', acquisition: 'quest',
+    prerequisites: [{ artId: 'chosangbi', minSeong: 5 }],
   },
   {
     id: 'yeokgeun-gyeong',
