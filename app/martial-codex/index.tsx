@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
-import { MartialTree } from '@/components/martial-art';
+import { MartialTree, ResearchPanel } from '@/components/martial-art';
 import { LINEAGE_LABEL, allLineageIds, artsByLineage, findMartialArt } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -50,6 +50,8 @@ export default function MartialCodexScreen() {
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* 비급 연구 — 보유했지만 풀이 못 한 비급(실시간 타이머·다이아 스킵). docs/05. */}
+          <ResearchPanel />
           <Legend ownership={!disciple} />
           {/* 도감 = 전 카탈로그 노출(미습득 포함) — 보유 ● 활성 / 미보유 ○ 비활성(흐림)으로 구분.
               (미발견 잠금 정책은 폐기 — 사용자 결정 2026-06-10: 수집 목표가 보여야 도감이 동기가 된다.) */}
