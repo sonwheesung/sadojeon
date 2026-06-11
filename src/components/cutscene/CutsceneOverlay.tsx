@@ -10,7 +10,8 @@ import { findCutsceneMedia } from '@/data/cutscenes/media';
 
 // 컷씬 오버레이 — docs/20. 쇼츠식 풀스크린(✅ 사용자 확정 2026-06-12):
 // 세로(9:16) 모션 컷이 화면 전체를 덮고, 아래에만 옅은 어둠 위 자막(이름·서사·한마디·탭 안내).
-// 그림 위(얼굴 영역) 텍스트는 전부 금지 — 한자·사건명 오버레이 제거(✅ 사용자 결정 2026-06-12, 얼굴 가림).
+// 상단 텍스트(사건명·큰 한자) 분기(✅ 사용자 결정 2026-06-12):
+//   cover(쇼츠) = 얼굴을 가리므로 금지 / letterbox(가로)·그레이박스 = 먹색 띠가 있어 유지.
 // 모션 미디어 없는 컷은 먹색 바탕 + 점선 자리(그레이박스) 폴백. 탭 = 다음.
 
 const TONE_ACCENT: Record<CutsceneTone, string> = {
@@ -23,17 +24,33 @@ export function CutsceneOverlay() {
   const current = useCutsceneStore((s) => s.queue[0]);
   const pop = useCutsceneStore((s) => s.pop);
 
+  const hanziOpacity = useRef(new Animated.Value(0)).current;
+  const hanziScale = useRef(new Animated.Value(1.18)).current;
   const bodyOpacity = useRef(new Animated.Value(0)).current;
   const hintOpacity = useRef(new Animated.Value(0)).current;
 
+  const media = current
+    ? findCutsceneMedia(current.eventId, current.discipleId, current.mediaVariant ?? 'default')
+    : undefined;
+  // 쇼츠(cover) 컷만 상단 텍스트 금지 — 가로 레터박스·그레이박스는 한자·사건명 유지.
+  const showTopText = media?.fit !== 'cover';
+
   useEffect(() => {
     if (!current) return;
+    hanziOpacity.setValue(0);
+    hanziScale.setValue(1.18);
     bodyOpacity.setValue(0);
     hintOpacity.setValue(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     Animated.sequence([
+      showTopText
+        ? Animated.parallel([
+            Animated.timing(hanziOpacity, { toValue: 1, duration: 900, useNativeDriver: true }),
+            Animated.timing(hanziScale, { toValue: 1, duration: 900, useNativeDriver: true }),
+          ])
+        : Animated.delay(0),
       // 모션 컷(3~5초)이 흐를 시간을 주고 글이 자막처럼 내려앉는다.
-      Animated.delay(1800),
+      Animated.delay(showTopText ? 1400 : 1800),
       Animated.timing(bodyOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(hintOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
@@ -44,7 +61,6 @@ export function CutsceneOverlay() {
   }
 
   const accent = TONE_ACCENT[current.tone];
-  const media = findCutsceneMedia(current.eventId, current.discipleId, current.mediaVariant ?? 'default');
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>
@@ -69,7 +85,22 @@ export function CutsceneOverlay() {
           </View>
         )}
 
-        {/* 아래 — 자막: 옅은 어둠 위에 이름·서사·한마디 + 탭 안내 (그림 위 텍스트 금지) */}
+        {/* 위 — 사건명 + 큰 한자 (가로·그레이박스 전용. 쇼츠 컷은 얼굴 가림 금지) */}
+        {showTopText ? (
+          <View style={styles.topArea} pointerEvents="none">
+            <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
+            <Animated.Text
+              style={[
+                styles.hanzi,
+                { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
+              ]}
+            >
+              {current.hanzi}
+            </Animated.Text>
+          </View>
+        ) : null}
+
+        {/* 아래 — 자막: 옅은 어둠 위에 이름·서사·한마디 + 탭 안내 */}
         <View style={styles.bottomArea} pointerEvents="none">
           <Animated.View style={[styles.textBlock, { opacity: bodyOpacity }]}>
             <Text style={styles.name}>{current.discipleName}</Text>
@@ -128,6 +159,28 @@ const styles = StyleSheet.create({
     color: colors.paperBright,
     textAlign: 'center',
     opacity: 0.8,
+  },
+  topArea: {
+    position: 'absolute',
+    top: spacing['4xl'],
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  eventTitle: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.md,
+    letterSpacing: typography.letterSpacing.wider,
+    opacity: 0.9,
+    ...TEXT_SHADOW,
+  },
+  hanzi: {
+    fontFamily: typography.serifCNBold,
+    fontSize: typography.sizes['4xl'] * 1.4,
+    letterSpacing: typography.letterSpacing.wider,
+    textAlign: 'center',
+    ...TEXT_SHADOW,
   },
   bottomArea: {
     position: 'absolute',
