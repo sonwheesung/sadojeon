@@ -143,7 +143,7 @@ function sectScrolls(): ScrollInventoryItem[] {
     artId: art.id,
     acquiredAtRun: 1,
     acquiredAtDay: 0,
-    status: 'identified',
+    status: 'complete', // 본문 비급 — 이미 풀이된 것(연구 불필요). docs/05.
     researchProgress: 100,
     isTrap: false,
     isIncomplete: false,

@@ -114,4 +114,8 @@ export interface ScrollInventoryItem {
   researchProgress: number; // 0~100, 회차마다 리셋
   isTrap: boolean;
   isIncomplete: boolean;
+  // 실시간 연구 타이머(researching일 때) — 실제 시간 기준(epoch ms). 등급별 5분~12시간,
+  // 다이아로 즉시 완료 가능. 사문 공유 — 비급당 1회 연구하면 전 제자 학습 가능. docs/05.
+  researchStartAt?: number;
+  researchEndAt?: number;
 }

@@ -33,6 +33,7 @@ import { findMartialArt } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { effectiveRealmCeiling, realmIndex, nextRealm as nextRealmOf, REALM_INTERNAL_REQ } from '@/data/realm';
 import { expToNextSeong } from '@/data/martialArts';
+import { setResearchInstant } from '@/systems/researchSystem';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -801,8 +802,8 @@ function grantScroll(artId: string): void {
     artId,
     acquiredAtRun: 1,
     acquiredAtDay: useTimeStore.getState().totalDay,
-    status: 'identified',
-    researchProgress: 0,
+    status: 'complete', // 시뮬 — 연구 게이트는 즉시 완료(실시간 타이머는 시뮬과 양립 불가)
+    researchProgress: 100,
     isTrap: false,
     isIncomplete: false,
   });
@@ -938,6 +939,8 @@ async function runTrainSweep(): Promise<void> {
 }
 
 async function main() {
+  // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
+  setResearchInstant(true);
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
     return;

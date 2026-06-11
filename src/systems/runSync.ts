@@ -37,7 +37,7 @@ function snapshot(): { payload: RunWrite; disciples: RunDiscipleRecord[] } {
   return {
     payload: {
       slot,
-      diamonds: 0, // 재화 도입 시 채움
+      diamonds: useGameStore.getState().diamonds, // 다이아(계정 단위 재화 — 연구 즉시 완료 등 편의 소비)
       gameTime: { current: time.current, totalDay: time.totalDay },
       master,
       sect,

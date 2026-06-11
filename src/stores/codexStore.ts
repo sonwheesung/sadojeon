@@ -6,6 +6,7 @@ import type {
   ResearchStatus,
   ScrollInventoryItem,
 } from '@/types';
+import { MARTIAL_ARTS } from '@/data/martialArts';
 import { slotAwareStorage } from './persistStorage';
 
 // 사문 자산 도감.
@@ -23,6 +24,8 @@ interface CodexStore {
   addScroll: (item: ScrollInventoryItem) => void;
   updateResearchProgress: (artId: string, delta: number) => void;
   setScrollStatus: (artId: string, status: ResearchStatus) => void;
+  // 부분 갱신 — 연구 타이머(researchStartAt/EndAt·status) 등. researchSystem 전용.
+  patchScroll: (artId: string, patch: Partial<ScrollInventoryItem>) => void;
   removeScroll: (artId: string) => void;
   hasScroll: (artId: string) => boolean;
 
@@ -67,6 +70,13 @@ export const useCodexStore = create<CodexStore>()(
           ),
         })),
 
+      patchScroll: (artId, patch) =>
+        set((s) => ({
+          scrolls: s.scrolls.map((x) =>
+            x.artId === artId ? { ...x, ...patch } : x,
+          ),
+        })),
+
       removeScroll: (artId) =>
         set((s) => ({ scrolls: s.scrolls.filter((x) => x.artId !== artId) })),
 
@@ -103,16 +113,22 @@ export const useCodexStore = create<CodexStore>()(
             .filter((e) => e.quantity > 0),
         })),
 
-      // 새 회차: 비급 원본은 유지, 연구 진행도/status 0, 영약 전부 소실
+      // 새 회차: 비급 원본은 유지, 연구 진행도/status 0, 영약 전부 소실.
+      // 단 시작 소장 5권(acquisition 'start' — 본문 비급)은 이미 풀이된 것 — 연구 완료 유지.
       resetForNewRun: () =>
-        set((s) => ({
-          scrolls: s.scrolls.map((x) => ({
-            ...x,
-            researchProgress: 0,
-            status: 'identified' as ResearchStatus,
-          })),
-          elixirs: [],
-        })),
+        set((s) => {
+          const startIds = new Set(
+            MARTIAL_ARTS.filter((a) => a.acquisition === 'start').map((a) => a.id),
+          );
+          return {
+            scrolls: s.scrolls.map((x) =>
+              startIds.has(x.artId)
+                ? { ...x, researchProgress: 100, status: 'complete' as ResearchStatus, researchStartAt: undefined, researchEndAt: undefined }
+                : { ...x, researchProgress: 0, status: 'identified' as ResearchStatus, researchStartAt: undefined, researchEndAt: undefined },
+            ),
+            elixirs: [],
+          };
+        }),
 
       resetAll: () => set({ scrolls: [], elixirs: [] }),
     }),

@@ -27,7 +27,7 @@ import {
 import { REALM_LABEL } from '@/types/realm';
 
 // 무공 수련 패널 — 보유 무공(성·주력) + 사문 무공서에서 골라 전수→주력 지정. docs/26 §5-1.
-// 연구 게이트는 건너뛴다(사문 보유 비급이면 바로 전수). 주력으로 삼으면 무공일(초식)에 그 무공 성이 오름.
+// 연구 게이트: 연구를 마친(complete) 비급만 전수 가능 — 미연구는 '연구 필요'(도감의 연구 패널에서). docs/05.
 export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
   const confirm = useConfirm();
   const assignMain = useDiscipleStore((s) => s.assignMainMartialArt);
@@ -130,6 +130,7 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
               if (!art) return null;
               const learnable = canLearnArt(disciple, art);
               const has = disciple.martialArts.some((a) => a.artId === sc.artId);
+              const researched = sc.status === 'complete';
               const isMain = sc.artId === mainId;
               const ceiling = REALM_LABEL[artGradeRealmCeiling(art.grade)];
               const needRealm = artGradeLearnRealm(art.grade);
@@ -139,20 +140,22 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
                 unmet.length > 0
                   ? `${findMartialArt(unmet[0].artId)?.name ?? '선행 무공'} ${unmet[0].minSeong}성 필요`
                   : null;
-              const disabled = isMain || (!learnable && !has);
+              const disabled = isMain || (!has && (!learnable || !researched));
               const stateLabel = isMain
                 ? '주력'
                 : has
                   ? '보유'
-                  : learnable
-                    ? '전수 ▶'
-                    : !realmOk
-                      ? `${REALM_LABEL[needRealm]} 필요`
-                      : prereqLabel
-                        ? prereqLabel
-                        : !talentMet(disciple, art)
-                          ? '재능 부족'
-                          : '—';
+                  : !researched
+                    ? '연구 필요'
+                    : learnable
+                      ? '전수 ▶'
+                      : !realmOk
+                        ? `${REALM_LABEL[needRealm]} 필요`
+                        : prereqLabel
+                          ? prereqLabel
+                          : !talentMet(disciple, art)
+                            ? '재능 부족'
+                            : '—';
               return (
                 <Pressable
                   key={sc.artId}

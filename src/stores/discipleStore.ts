@@ -272,9 +272,11 @@ export const useDiscipleStore = create<DiscipleStore>()(
           const has = cur.martialArts.some((a) => a.artId === artId);
           let martialArts = cur.martialArts;
           if (!has) {
-            // 새 무공 — **사문이 비급을 보유해야** 가르칠 수 있다(습득 경로 게이트, docs/05·04).
+            // 새 무공 — **사문이 비급을 보유하고 연구를 마쳐야** 가르칠 수 있다(docs/05·04).
+            // 비급은 사문 공유 — 한 번 연구하면 전 제자 학습 가능. (이미 배운 무공의 주력 전환은 무관.)
             const { useCodexStore } = require('./codexStore') as typeof import('./codexStore');
-            if (!useCodexStore.getState().hasScroll(artId)) return s;
+            const scroll = useCodexStore.getState().scrolls.find((x) => x.artId === artId);
+            if (!scroll || scroll.status !== 'complete') return s;
             // 경지 기반 시작 성(고수는 기초 건너뜀). 기존 무공은 보존. docs/26 §5-2.
             const art = findMartialArt(artId);
             const seong = art ? initialSeong(cur, art) : 1;

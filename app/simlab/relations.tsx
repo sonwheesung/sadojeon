@@ -9,6 +9,7 @@ import { SafetyZone } from '@/components/common/SafetyZone';
 import { seedNewRun } from '@/systems/newRun';
 import { advanceTurn } from '@/systems/timeSystem';
 import { setAutoSaveEnabled } from '@/systems/runSync';
+import { setResearchInstant } from '@/systems/researchSystem';
 import { configureOptimal } from '@/systems/dev/policyHelpers';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
@@ -76,6 +77,7 @@ export default function RelationsSimScreen() {
     setProgress(0);
     setResult(null);
     setAutoSaveEnabled(false); // 고속 진행 쓰기 증폭 방지 — 시뮬 동안 자동 저장 OFF
+    setResearchInstant(true); // 실시간 연구 타이머는 시뮬과 양립 불가 — 즉시 완료
     try {
       seedNewRun(SEED);
       useGameStore.getState().setPhase('playing');
@@ -161,6 +163,7 @@ export default function RelationsSimScreen() {
       setResult({ years, pairs, swornPairs, feudHealedYear, events, timeline });
     } finally {
       setAutoSaveEnabled(true);
+      setResearchInstant(false);
       setRunning(false);
       setProgress(100);
     }

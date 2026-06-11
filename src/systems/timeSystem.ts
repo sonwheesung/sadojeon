@@ -25,6 +25,7 @@ import { triggerDailyMediation } from './mediationSystem';
 import { tickDarkness } from './darknessSystem';
 import { tickSimma } from './simmaSystem';
 import { tickCraft, tickElixirAbsorb } from './alchemySystem';
+import { syncResearch } from './researchSystem';
 import { tickWoundRecovery } from './woundSystem';
 import { tickMonthlyEconomy } from './economySystem';
 import { triggerDailyWish } from './wishSystem';
@@ -42,6 +43,7 @@ import { saveCurrentRunSilently } from './runSync';
 export function advanceTurn() {
   const before = useTimeStore.getState().current;
   useTimeStore.getState().advanceDay();
+  syncResearch(); // 비급 연구(실시간 타이머) 기한 도래분 완료 처리. docs/05.
   tickOverrideExpiry();
   tickCraft(); // 연단 완료 처리(제조 기간 도래)
   tickElixirAbsorb(); // 내공단 흡수 진행(매일 perDay 내공)

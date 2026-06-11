@@ -28,6 +28,7 @@ import { useReputationStore } from '@/stores/reputationStore';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
 import { applyPrereqTrickle } from './martialExp';
+import { isResearchInstant } from './researchSystem';
 import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
@@ -444,8 +445,9 @@ function maybeDropScroll(q: Quest): void {
     artId: art.id,
     acquiredAtRun: 1,
     acquiredAtDay: day,
-    status: 'identified',
-    researchProgress: 100,
+    // 드랍 비급은 미연구 — 사부가 풀어야(실시간 연구, researchSystem) 가르칠 수 있다. docs/05.
+    status: isResearchInstant() ? 'complete' : 'identified',
+    researchProgress: isResearchInstant() ? 100 : 0,
     isTrap: false,
     isIncomplete: false,
   });
