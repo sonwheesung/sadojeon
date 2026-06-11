@@ -5,7 +5,10 @@
 import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CutsceneOverlay } from '@/components/cutscene/CutsceneOverlay';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import { CUTSCENES } from '@/data/cutscenes';
+import { playCutscene } from '@/systems/cutsceneSystem';
 import { useDevAccess } from '@/systems/dev/devAccess';
 import { colors, spacing, typography } from '@/theme';
 
@@ -55,6 +58,19 @@ export default function SimLabHub() {
         <Text style={styles.cardTitle}>자동 플레이 QA</Text>
         <Text style={styles.cardDesc}>랜덤 N년 자동 진행 — 이벤트·면담·LLM 발화 로그 (기존)</Text>
       </Pressable>
+
+      <Pressable
+        style={styles.card}
+        onPress={() => {
+          // 등록된 컷씬 전부 큐에 — 탭으로 한 장씩 넘기며 연출·미디어 확인. docs/20.
+          for (const c of CUTSCENES) playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' });
+        }}
+      >
+        <Text style={styles.cardTitle}>컷씬 미리보기</Text>
+        <Text style={styles.cardDesc}>등록된 컷씬 전부 재생(장철 기준) — 모션 WebP·전용 대사·폴백 확인</Text>
+      </Pressable>
+
+      <CutsceneOverlay />
 
       <Pressable style={[styles.card, styles.normal]} onPress={() => router.push('/slot-select?game=1' as Href)}>
         <Text style={styles.cardTitle}>일반 게임으로</Text>

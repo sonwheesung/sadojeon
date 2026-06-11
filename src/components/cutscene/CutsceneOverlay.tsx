@@ -1,10 +1,12 @@
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { CutsceneTone } from '@/data/cutscenes';
+import { findCutsceneMedia } from '@/data/cutscenes/media';
 
 // 컷씬 오버레이 — docs/20 그레이박스. 풀스크린 먹색 정지 화면:
 // 큰 한자(페이드+미세 축소) + 일러스트 자리(dashed) + 서사 한 줄 + 제자 한마디 + 탭하여 계속.
@@ -47,6 +49,7 @@ export function CutsceneOverlay() {
   }
 
   const accent = TONE_ACCENT[current.tone];
+  const media = findCutsceneMedia(current.eventId, current.discipleId);
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>
@@ -63,12 +66,16 @@ export function CutsceneOverlay() {
         </Animated.Text>
 
         <Animated.View style={[styles.body, { opacity: bodyOpacity }]}>
-          {/* 일러스트 자리 — 그레이박스. Phase 2: assets/images/cutscenes/<eventId>/<discipleId>.png */}
-          <View style={[styles.artSlot, { borderColor: accent }]}>
-            <Text style={styles.artSlotLabel}>
-              (일러스트 자리 — {current.eventId}/{current.discipleId})
-            </Text>
-          </View>
+          {/* 모션 컷(움직이는 WebP, 1회 재생 후 마지막 장면 정지) — 없으면 그레이박스 점선. docs/20 */}
+          {media ? (
+            <Image source={media} style={styles.media} contentFit="cover" />
+          ) : (
+            <View style={[styles.artSlot, { borderColor: accent }]}>
+              <Text style={styles.artSlotLabel}>
+                (일러스트 자리 — {current.eventId}/{current.discipleId})
+              </Text>
+            </View>
+          )}
 
           <Text style={styles.name}>{current.discipleName}</Text>
           <Text style={styles.line}>{current.line}</Text>
@@ -105,6 +112,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.lg,
+  },
+  media: {
+    width: '100%',
+    maxWidth: 400,
+    aspectRatio: 3 / 2,
+    borderRadius: radius.md,
   },
   artSlot: {
     width: 220,
