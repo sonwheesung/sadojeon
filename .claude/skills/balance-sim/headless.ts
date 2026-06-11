@@ -31,7 +31,8 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
 import { findMartialArt } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
-import { effectiveRealmCeiling, realmIndex } from '@/data/realm';
+import { effectiveRealmCeiling, realmIndex, nextRealm as nextRealmOf, REALM_INTERNAL_REQ } from '@/data/realm';
+import { expToNextSeong } from '@/data/martialArts';
 import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -789,6 +790,153 @@ async function runEconomySweep(): Promise<void> {
         }
 }
 
+// ── 무공 선택→훈련 궤적 검증 — 성·낙수·등급 속도·경지 클램프가 정상 동작·수치인지 ──────
+const HWASAN_TREE = [
+  'hwasan-gicho-sword', 'yukhap-sword', 'maehwa-sword', 'jaha-sword', 'isipsa-maehwa-sword',
+  'maehwa-gigong', 'jaha-singong', 'amhyang-pyo',
+];
+
+function grantScroll(artId: string): void {
+  useCodexStore.getState().addScroll({
+    artId,
+    acquiredAtRun: 1,
+    acquiredAtDay: useTimeStore.getState().totalDay,
+    status: 'identified',
+    researchProgress: 0,
+    isTrap: false,
+    isIncomplete: false,
+  });
+}
+
+interface ArtSnap { seong: number; exp: number }
+function snapArts(id: string): Record<string, ArtSnap> {
+  const d = useDiscipleStore.getState().disciples[id];
+  const out: Record<string, ArtSnap> = {};
+  for (const a of d?.martialArts ?? []) out[a.artId] = { seong: a.seong, exp: a.exp };
+  return out;
+}
+
+// 수치 무결성 — NaN/음수/성 하락/캡 초과를 매일 감시.
+function sanityCheck(id: string, prev: Record<string, ArtSnap>, issues: string[]): Record<string, ArtSnap> {
+  const now = snapArts(id);
+  for (const [artId, s] of Object.entries(now)) {
+    if (!Number.isFinite(s.exp) || s.exp < 0) issues.push(`${artId}: exp 이상치 ${s.exp}`);
+    if (s.seong < 1 || s.seong > 10) issues.push(`${artId}: 성 범위 밖 ${s.seong}`);
+    const p = prev[artId];
+    if (p && s.seong < p.seong) issues.push(`${artId}: 성 하락 ${p.seong}→${s.seong}`);
+    if (s.exp >= expToNextSeong(s.seong) + 1) issues.push(`${artId}: exp 미소진 ${Math.round(s.exp)}/${expToNextSeong(s.seong)}`);
+  }
+  return now;
+}
+
+async function runTrainSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const ds = () => useDiscipleStore.getState();
+  const carry = 'yun-soso';
+  const issues: string[] = [];
+
+  // ── 시나리오 A: 하품 한 권 집중(수동 일과 — 봇 개입 없음) — 디딤돌 속도·경지 클램프 ──
+  console.log('=== A. 하품 집중 — 화산기초검 한 권만, 수동 일과 3년 (윤소소·검 특화) ===');
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  setByeokgokdanBudget(Infinity);
+  grantScroll('hwasan-gicho-sword');
+  ds().assignMainMartialArt(carry, 'hwasan-gicho-sword');
+  useScheduleStore.getState().setSchedule({
+    weeklyPattern: ['martial', 'martial', 'martial', 'physical', 'martial', 'martial', 'rest'],
+    monthlyQuests: 0,
+  });
+  let prev = snapArts(carry);
+  let lastSeong = 1;
+  let lastRealm = ds().disciples[carry]?.realm ?? 'samryu';
+  for (let d = 0; d < 3 * 336; d += 1) {
+    const me = ds().disciples[carry];
+    if (!me) break;
+    // 봇 없이 사람처럼: 다음 경지 내공이 모자라면 심법/초식 격일, 아니면 초식만. 체력일은 기마자세.
+    const next = nextRealmOf(me.realm);
+    const needInternal = next ? (me.realmProgress?.internal ?? 0) < (REALM_INTERNAL_REQ[next] ?? 0) : false;
+    const axis = needInternal && d % 2 === 0 ? 'simbeop' : 'chosik';
+    const sch = useScheduleStore.getState();
+    sch.setDailyChoice(carry, 'martial', axis);
+    sch.setDailyChoice(carry, 'physical', 'phys_horse');
+    advanceTurn();
+    const s = useScheduleStore.getState();
+    if (s.pendingReport) s.resolveMonthlyReport();
+    if (s.pendingSetup) s.resolveMonthlySetup();
+    if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+    useInboxStore.getState().reset();
+    prev = sanityCheck(carry, prev, issues);
+
+    const after = ds().disciples[carry];
+    const inst = after?.martialArts.find((a) => a.artId === 'hwasan-gicho-sword');
+    if (inst && inst.seong !== lastSeong) {
+      console.log(`  D${d + 1}: 화산기초검 ${lastSeong}성 → ${inst.seong}성 (경지 ${REALM_LABEL[after!.realm]} · 내공 ${Math.round(after!.realmProgress?.internal ?? 0)})`);
+      lastSeong = inst.seong;
+    }
+    if (after && after.realm !== lastRealm) {
+      console.log(`  D${d + 1}: 경지 ${REALM_LABEL[lastRealm]} → ${REALM_LABEL[after.realm]} — 성 상한 해제 확인`);
+      lastRealm = after.realm;
+    }
+  }
+  {
+    const me = ds().disciples[carry];
+    const inst = me?.martialArts.find((a) => a.artId === 'hwasan-gicho-sword');
+    console.log(`  → 3년 종착: 화산기초검 ${inst?.seong}성/${'6'}(하품 캡) · 경지 ${REALM_LABEL[me?.realm ?? 'samryu']} · 익힌 무공 ${me?.martialArts.length}권`);
+  }
+
+  // ── 시나리오 B: 화산 트리 등반(봇 최적 일과 15년) — 갈아타기·낙수·절품 등정 ──────────
+  console.log('\n=== B. 화산 트리 등반 — 8권 비급 보유, 최적 일과 15년 (낙수·갈아타기 관찰) ===');
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  setByeokgokdanBudget(Infinity);
+  setElixirBudget(1); // 화경 벽 1회분 — 끝까지 오르는지
+  for (const id of HWASAN_TREE) grantScroll(id);
+  prev = snapArts(carry);
+  let lastMain = '';
+  const seongOfMain = () => {
+    const me = ds().disciples[carry];
+    const mid = me?.mainMartialArtId ?? '';
+    return me?.martialArts.find((a) => a.artId === mid)?.seong ?? 0;
+  };
+  let lastMainSeong = 0;
+  lastRealm = 'samryu';
+  for (let d = 0; d < 15 * 336; d += 1) {
+    await fastDay();
+    prev = sanityCheck(carry, prev, issues);
+    const me = ds().disciples[carry];
+    if (!me) break;
+    const main = me.mainMartialArtId ?? '';
+    if (main !== lastMain) {
+      console.log(`  D${d + 1}: 주력 교체 → ${findMartialArt(main)?.name ?? main}`);
+      lastMain = main;
+      lastMainSeong = seongOfMain();
+    } else {
+      const s2 = seongOfMain();
+      if (s2 > lastMainSeong) {
+        lastMainSeong = s2;
+      }
+    }
+    if (me.realm !== lastRealm) {
+      console.log(`  D${d + 1}: 경지 ${REALM_LABEL[lastRealm]} → ${REALM_LABEL[me.realm]}`);
+      lastRealm = me.realm;
+    }
+    // 연 1회 — 트리 전체 스냅샷(낙수로 하위 책이 같이 자라는지).
+    if ((d + 1) % 336 === 0) {
+      const line = HWASAN_TREE.map((id2) => {
+        const inst = me.martialArts.find((a) => a.artId === id2);
+        return inst ? `${findMartialArt(id2)?.name} ${inst.seong}성` : null;
+      }).filter(Boolean).join(' · ');
+      console.log(`  [${(d + 1) / 336}년차] ${line || '(아직 학습 전)'}`);
+    }
+  }
+  {
+    const me = ds().disciples[carry];
+    console.log(`  → 15년 종착: 경지 ${REALM_LABEL[me?.realm ?? 'samryu']} · 익힌 무공 ${me?.martialArts.length}권`);
+  }
+
+  console.log(issues.length === 0 ? '\n수치 무결성: 이상 없음 (NaN/음수/성 하락/exp 미소진 0건)' : `\n⚠ 수치 이상 ${issues.length}건:\n  ${[...new Set(issues)].slice(0, 10).join('\n  ')}`);
+}
+
 async function main() {
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
@@ -820,6 +968,10 @@ async function main() {
   }
   if (process.argv[2] === 'buildsweep') {
     await runBuildSweep();
+    return;
+  }
+  if (process.argv[2] === 'trainsweep') {
+    await runTrainSweep();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
