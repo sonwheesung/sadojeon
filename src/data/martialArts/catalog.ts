@@ -1107,6 +1107,16 @@ export const MARTIAL_ARTS: MartialArt[] = [
     minDarkness: 2,
   },
   {
+    id: 'geongon-daenai',
+    name: '건곤대나이',
+    hanjaName: '乾坤大挪移',
+    description: '하늘과 땅의 힘을 옮겨 싣는다 — 서역에서 전래해 교주에게만 잇는 호교신공. 상대의 힘마저 내 것이 된다.',
+    school: 'qigong', grade: 'grandmaster', path: 'jung',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'sura-magong', minSeong: 5 }],
+    minDarkness: 2,
+  },
+  {
     id: 'cheonma-gunrim-bo',
     name: '천마군림보',
     hanjaName: '天魔君臨步',
