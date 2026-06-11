@@ -74,10 +74,19 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
   const main = mainArt(c);
   const isMa = main?.path === 'ma';
 
+  // 주력의 격 — 상승 절기는 내공을 잡아먹는 대신(qiDrain) 한 수가 무겁다. 비용·보상 쌍. 🔧
+  const mainGradeMult = 1 + (main ? GRADE_RANK[main.grade] * 0.035 : 0);
+
   const atk =
-    power * (0.85 + c.strength * 0.003) * qiEdge(c.internal, foeMeanInternal) * staminaMult * woundMult;
-  const def = power * (0.5 + c.strength * 0.004 + extDepth * 0.012);
-  const spd = c.agility + lightDepth * 6 + realmIdx * 8;
+    power *
+    (0.85 + c.strength * 0.003) *
+    mainGradeMult *
+    qiEdge(c.internal, foeMeanInternal) *
+    staminaMult *
+    woundMult;
+  // 방어 — 외공서(금종조·역근경류)가 주 받침, 심법은 호신강기로 소폭. 🔧
+  const def = power * (0.5 + c.strength * 0.004 + extDepth * 0.022 + qigongDepth * 0.01);
+  const spd = c.agility + lightDepth * 4.5 + realmIdx * 8;
   const maxHp = 70 + c.endurance;
 
   // 내공 소모 — 주력이 무거울수록(상승 비급) 한 수가 크고, 심법이 깊으면 호흡이 길다. 🔧
