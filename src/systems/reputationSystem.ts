@@ -66,6 +66,30 @@ export function applyAlignmentReputation(
   }
 }
 
+// 회색(은밀) 의뢰 평판 — **평판은 "알려진 것"에만 반응한다**(사용자 결정 2026-06-11).
+// 무흔 완수는 강호(정파)가 모른다: 정파 하락은 발각 정도(exposure 0~1)에만 비례.
+// 사파 신용(credit 0~1)은 일처리에 비례 — 의뢰인의 세계는 누가 했는지 안다(깔끔할수록 신용↑).
+export function applyCovertReputation(
+  magnitude: number,
+  exposure: number,
+  credit: number,
+  presentDiscipleIds: string[] = [],
+): void {
+  const store = useReputationStore.getState();
+  for (const f of FACTIONS) {
+    let delta = 0;
+    if (f.alignment === 'right') delta = -Math.round(magnitude * exposure);
+    else if (f.alignment === 'sapa' || f.alignment === 'magyo') delta = Math.round(magnitude * credit);
+    else continue; // 중도는 흔들리지 않음
+    if (delta === 0) continue;
+    store.adjustSect(f.id, delta);
+    const half = delta > 0 ? Math.ceil(delta / 2) : Math.floor(delta / 2);
+    if (half !== 0) {
+      for (const id of presentDiscipleIds) store.adjustDisciple(id, f.id, half);
+    }
+  }
+}
+
 // 매년 1회(연 경계) — 평판이 결과로 돌아온다. 맹우 문파는 후의(자금 선물), 적대 문파는 자객·시비(피해).
 // docs/30. 대부분 문파는 평범(0)이라 초반엔 거의 발동 X — 관계를 쌓아야 영향이 생김.
 export function tickReputationInfluence(): void {

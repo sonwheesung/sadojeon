@@ -25,7 +25,7 @@ import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
-import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './reputationSystem';
+import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation, applyCovertReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
 import { applyPrereqTrickle } from './martialExp';
 import { isResearchInstant } from './researchSystem';
@@ -858,19 +858,31 @@ function resolveQuest(active: ActiveQuest): Milestone {
     useSectStore.getState().adjustReputation(Math.round(q.reward.fame * scale.fame * mult * 0.6));
   }
   // 사문 분위기 — 의뢰 사상색(정파/사파·회색) 누적. docs/28 §7.
+  // (분위기·인격은 평판과 달리 **사문 안의 사실** — 무흔이어도 한 일은 한 일이라 그대로 적용.)
+  const righteousness = QUEST_DOMAIN_RIGHTEOUSNESS[q.domain] + (q.gray ? -3 : 0);
   if (outcome !== 'fail') {
-    const righteousness = QUEST_DOMAIN_RIGHTEOUSNESS[q.domain] + (q.gray ? -3 : 0);
     useSectAtmosphereStore.getState().adjust({
       righteousness,
       unity: present.length >= 2 ? 2 : 0,
     });
-    // 문파 평판 — 같은 사상색으로 정파↑·사파↓(동행 제자는 개인 인연도). docs/30.
+  }
+  // 문파 평판 — docs/30.
+  if (q.gray) {
+    // 은밀의 결(사용자 결정 2026-06-11): **평판은 알려진 것에만 반응한다.**
+    //  · 정파 하락 = 발각 정도 — 무흔 완수 0 / 흔적(부분)·어설픈 실패 0.5 / 요란(위기·재난) 1.
+    //  · 사파 신용 = 일처리 — 깔끔한 완수 1 / 부분·위기 0.5 / 실패·재난 0(어둠의 세계에서도 신용을 잃음).
+    const mag = Math.max(1, Math.round(Math.abs(righteousness) * 0.6));
+    const exposure = outcome === 'full' ? 0 : outcome === 'partial' || outcome === 'fail' ? 0.5 : 1;
+    const credit = outcome === 'full' ? 1 : outcome === 'partial' || outcome === 'crisis' ? 0.5 : 0;
+    applyCovertReputation(mag, exposure, credit, present);
+  } else if (outcome !== 'fail') {
+    // 정도(비회색) 의뢰 — 알려질수록 좋은 일이라 기존 그대로(정파↑·사파↓).
     applyAlignmentReputation(righteousness, scale.growth || 0.5, present);
-    // 후원 의뢰 완수 → 그 문파 평판 직접 강화(동행 제자 인연도).
-    if (q.faction) {
-      adjustSectRep(q.faction, 6);
-      for (const id of present) adjustDiscipleRep(id, q.faction, 3);
-    }
+  }
+  if (outcome !== 'fail' && q.faction) {
+    // 후원 의뢰 완수 → 그 문파 평판 직접 강화(의뢰인은 늘 안다 — 회색이어도).
+    adjustSectRep(q.faction, 6);
+    for (const id of present) adjustDiscipleRep(id, q.faction, 3);
   }
 
   // 신품 영약 드랍 — 극험(extreme) 의뢰를 온전히/위기 끝에 완수 시 낮은 확률(운). 화경의 열쇠. docs/28 §5-1.

@@ -39,6 +39,7 @@ import { useGameStore } from '@/stores/gameStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useMasterStore } from '@/stores/masterStore';
+import { useReputationStore } from '@/stores/reputationStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
@@ -1071,12 +1072,14 @@ async function runQuestMatrix(): Promise<void> {
             );
             if (!inParty) ds().update(id, { status: 'resting' });
           }
-          // 격리 — 나이·사부 수명·페이즈·파견 큐. (누적 게임년이 졸업·사부 수명 종결을 부르면
-          // advanceTurn 조기 반환으로 모든 의뢰가 동결된다 — questmatrix 디버깅에서 확인.)
+          // 격리 — 나이·사부 수명·페이즈·파견 큐·평판. (누적 게임년이 졸업·사부 수명 종결을 부르면
+          // advanceTurn 조기 반환으로 모든 의뢰가 동결되고, 평판이 행 사이에 누적되면 앞 행이 쌓은
+          // 적대의 자객 비용이 뒤 행 자금 델타로 번진다 — questmatrix 디버깅에서 확인.)
           {
             const year = useTimeStore.getState().current.year;
             for (const id of roster) ds().update(id, { age: 16, entryYear: year });
             useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
+            useReputationStore.getState().reset();
           }
           useGameStore.getState().setPhase('playing');
           useQuestStore.setState({ board: [q], active: [] });
