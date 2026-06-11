@@ -10,6 +10,8 @@
 import { findMartialArt } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
+import { useMasterStore } from '@/stores/masterStore';
+import { INSIGHT_RESEARCH_MULTIPLIER } from '@/types/master';
 import type { MartialArtGrade } from '@/types/martialArt';
 
 const MIN = 60_000;
@@ -45,9 +47,21 @@ export function researchingScroll() {
   return useCodexStore.getState().scrolls.find((s) => s.status === 'researching') ?? null;
 }
 
+// 통찰★ 연구 속도 배율 — **기능만 준비, 적용은 OFF**(사용자 결정 대기 2026-06-11).
+// 켜면 소요 = 기본 시간 ÷ 배율(INSIGHT_RESEARCH_MULTIPLIER — ★1 ×0.5 느림 ~ ★5 ×2.5 빠름).
+// 예: 신품 12시간 → 통찰★5면 4.8시간. 진행 중 연구의 endAt 은 시작 시점 배율로 고정(소급 없음).
+export const RESEARCH_INSIGHT_ENABLED = false; // 🔧 적용 여부 미정 — true 한 줄로 켠다.
+
+function insightSpeedMult(): number {
+  if (!RESEARCH_INSIGHT_ENABLED) return 1;
+  const raw = useMasterStore.getState().master?.stats.insight ?? 3;
+  const star = Math.max(1, Math.min(5, Math.round(raw))) as 1 | 2 | 3 | 4 | 5;
+  return INSIGHT_RESEARCH_MULTIPLIER[star];
+}
+
 export function researchDurationFor(artId: string): number {
   const grade = findMartialArt(artId)?.grade ?? 'novice';
-  return RESEARCH_DURATION_MS[grade];
+  return Math.round(RESEARCH_DURATION_MS[grade] / insightSpeedMult());
 }
 
 function complete(artId: string): void {
