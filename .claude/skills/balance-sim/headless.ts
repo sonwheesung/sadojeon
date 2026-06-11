@@ -40,6 +40,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useMasterStore } from '@/stores/masterStore';
 import { useReputationStore } from '@/stores/reputationStore';
+import { FACTIONS } from '@/data/factions';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
@@ -1143,6 +1144,134 @@ async function runQuestMatrix(): Promise<void> {
   }
 }
 
+
+// ── 전업 살수 사문 — 회색 의뢰만 N년 연속(누적이 본론: 평판 궤적·자객 비용·사파 후원 루프) ──
+async function runCovertSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 4);
+  console.log(`=== 전업 살수 사문 — 회색 의뢰만 ${years}년 × ${iters}회 (자리 잡은 사문 가정: 명성 30 시드) ===`);
+  console.log('카리=살수형(일류6성 몸 + 정탐 55), 추천 2인↑이면 의원 동행. 무흔 완수=평판 무사 룰 검증.');
+  console.log('추적: 자금 · 정파/사파 평판 · 자객 시비(비용) · 사파 후원 의뢰 · 결과 분포 · 카리 자비.\n');
+
+  const ds = () => useDiscipleStore.getState();
+  let sumMoney = 0;
+  const totalOut: Record<string, number> = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0 };
+  let sumAssassinCost = 0;
+  let sumAssassinCount = 0;
+  let sumSponsored = 0;
+  let sumQuests = 0;
+
+  for (let it = 0; it < iters; it += 1) {
+    seedNewRun(SEED_POOL);
+    useGameStore.getState().setPhase('playing');
+    setFoodCost(20); // 기본 경제 복원(같은 프로세스의 다른 sweep 오버라이드 잔류 방지)
+    setPatronageMult(1);
+    setGeumchangBudget(Infinity);
+    const sect = useSectStore.getState();
+    if (sect.sect) sect.setSect({ ...sect.sect, reputation: 30 }); // 보통 게시판 해금 상태에서 전향
+    const roster = ds().order.slice(0, 4);
+    const carry = roster[0];
+    const medic = roster[1];
+    applyPreset(carry, PRESETS.ilryu6, { stat: 'scouting', level: 55 });
+    applyPreset(medic, PRESETS.iryu4, { stat: 'medicine', level: 35 });
+    for (const id of roster.slice(2)) ds().update(id, { status: 'resting' });
+
+    const out: Record<string, number> = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0 };
+    let assassinCost = 0;
+    let assassinCount = 0;
+    let sponsored = 0;
+    let quests = 0;
+
+    for (let d = 0; d < years * 336; d += 1) {
+      // 핀 — 졸업·사부 수명 종결 방지(전업 루프 관찰이 목적).
+      if (d % 336 === 0) {
+        const year = useTimeStore.getState().current.year;
+        for (const id of roster) ds().update(id, { age: 16, entryYear: year });
+        useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
+      }
+      // 파견 — 게시판의 회색 의뢰만, 가장 높은 등급부터. 추천 2인↑이면 의원을 붙인다.
+      const me = ds().disciples[carry];
+      if (me?.status === 'training') {
+        const grays = useQuestStore
+          .getState()
+          .board.filter((q) => q.gray && canDispatch(me, q))
+          .sort((a, b) => QUEST_GRADE_ORDER.indexOf(b.grade) - QUEST_GRADE_ORDER.indexOf(a.grade));
+        const target = grays[0];
+        if (target) {
+          const party =
+            target.recommended > 1 && ds().disciples[medic]?.status === 'training' ? [carry, medic] : [carry];
+          if (dispatchQuest(target.id, party)) {
+            quests += 1;
+            if (target.id.startsWith('spon-')) sponsored += 1;
+          }
+        }
+      }
+      advanceTurn();
+      for (const m of usePendingStore.getState().milestones) {
+        if (m.kind !== 'quest') continue;
+        for (const [title, o] of OUTCOME_BY_TITLE) if (m.title === title) out[o] += 1;
+      }
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      for (const item of [...useInboxStore.getState().items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        // 자객 시비 — 적대 문파의 보복 비용 집계.
+        if (item.title.endsWith('— 시비')) {
+          assassinCount += 1;
+          const mAmt = /금자 (\d+)냥/.exec(item.body ?? '');
+          if (mAmt) assassinCost += Number(mAmt[1]);
+        }
+        if (isRespondable(item) && dom !== 'seclusion_petition') {
+          const key = responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
+      }
+      useInboxStore.getState().reset();
+      healWithSalve(false);
+
+      // 연 단위 타임라인 — 첫 회만 상세.
+      if (it === 0 && (d + 1) % 336 === 0) {
+        const yr = (d + 1) / 336;
+        const rep = useReputationStore.getState().sect;
+        let right = 0;
+        let rightN = 0;
+        let dark = 0;
+        let darkN = 0;
+        for (const f of FACTIONS) {
+          const v = rep[f.id] ?? 0;
+          if (f.alignment === 'right') {
+            right += v;
+            rightN += 1;
+          } else if (f.alignment === 'sapa' || f.alignment === 'magyo') {
+            dark += v;
+            darkN += 1;
+          }
+        }
+        const money = useSectStore.getState().sect?.resources ?? 0;
+        const mercy = ds().disciples[carry]?.personality.mercy ?? 50;
+        console.log(
+          `  [${yr}년차] 자금 ${coinStr(money)} · 정파평판 ${(right / Math.max(1, rightN)).toFixed(0)} · 사파평판 ${(dark / Math.max(1, darkN)).toFixed(0)} · 자객 ${assassinCount}회(${assassinCost}냥) · 후원수행 ${sponsored} · 의뢰 ${quests}회 · 카리 자비 ${mercy}`,
+        );
+      }
+    }
+    sumMoney += useSectStore.getState().sect?.resources ?? 0;
+    for (const k of Object.keys(out)) totalOut[k] += out[k];
+    sumAssassinCost += assassinCost;
+    sumAssassinCount += assassinCount;
+    sumSponsored += sponsored;
+    sumQuests += quests;
+  }
+
+  const n = Math.max(1, totalOut.full + totalOut.partial + totalOut.crisis + totalOut.fail + totalOut.disaster);
+  console.log(
+    `\n${iters}회 평균: 최종 자금 ${coinStr(Math.round(sumMoney / iters))} · 의뢰 ${Math.round(sumQuests / iters)}회 · ` +
+      `완${Math.round((totalOut.full / n) * 100)}% 성${Math.round((totalOut.partial / n) * 100)}% 위${Math.round((totalOut.crisis / n) * 100)}% 실${Math.round((totalOut.fail / n) * 100)}% 재${Math.round((totalOut.disaster / n) * 100)}% · ` +
+      `자객 ${(sumAssassinCount / iters).toFixed(1)}회(평균 ${Math.round(sumAssassinCost / iters)}냥) · 사파 후원 수행 ${(sumSponsored / iters).toFixed(1)}회`,
+  );
+}
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
@@ -1182,6 +1311,10 @@ async function main() {
     await runTrainSweep();
     return;
   }
+  if (process.argv[2] === 'covertsweep') {
+    await runCovertSweep();
+    return;
+  }
   if (process.argv[2] === 'questmatrix') {
     await runQuestMatrix();
     return;
@@ -1206,3 +1339,5 @@ main().catch((e) => {
   console.error('헤드리스 실행 실패:', e);
   process.exit(1);
 });
+
+
