@@ -636,6 +636,9 @@ async function runFactorySweep(): Promise<void> {
         }
       }
       useInboxStore.getState().reset();
+      // 부상 즉시 치료 — 연단공장(무한재료) 빌드의 실플레이 가정: 다치면 약부터 짓는다.
+      // (엔진 결투·습격 도입으로 부상 빈도↑ — 치료 없는 봇은 다운타임이 성장을 왜곡. 경제는 economysweep 몫.)
+      healWithSalve(false);
     }
     const carry = useDiscipleStore.getState().disciples[carryId];
     const realm = carry?.realm ?? 'samryu';

@@ -29,6 +29,8 @@ import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation } from './re
 import { shiftPersona } from './personaShift';
 import { applyPrereqTrickle } from './martialExp';
 import { isResearchInstant } from './researchSystem';
+import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat, type NpcArchetype } from './combat';
+import type { Realm } from '@/types/realm';
 import { combatRating } from './combatPower';
 import { grantDivineElixir } from './elixirSystem';
 import { DIVINE_ELIXIR_DROP_RATE } from '@/data/elixirs';
@@ -542,25 +544,30 @@ function consumeGeumchang(): boolean {
   return true;
 }
 
-// 자력 생존 — 경지 높을수록 ↑, 화경이라도 ~50%. 내실(경지)이 목숨을 부지한다.
-function selfSurviveChance(realm: Disciple['realm']): number {
-  return Math.min(0.5, realmIndex(realm) * 0.085);
+// 마을 이송 생존율 — 마지막 보루(업고 달린다). 경지(내실)가 버티는 힘이지만 확정은 없다. 🔧
+function villageSurviveChance(realm: Disciple['realm']): number {
+  return Math.min(0.8, 0.45 + realmIndex(realm) * 0.05);
 }
 
-// 치명상에서 살아남는가 — ① 구급영약 → ② 신의급 의원 동행(본인 제외) → ③ 자력 생존(경지별). 다 실패 시 사망.
+// 치명상 생존 체인 — **즉사 없음**(사용자 확정 2026-06-11). 어느 단도 없이 바로 죽지 않는다:
+//  ① 최상급 구급영약(보유 시 소모 — 확정 소생)
+//  ② 의술 거의 최상위(신의급) 의원 동행(본인 제외 — 확정 소생)
+//  ③ 마을로 업고 달린다 — 생존 굴림(경지별 45~80%, 실패하면 그때 죽는다)
+// 반환: 살린 경로 또는 null(마을에서도 끝내).
+type RescueRoute = 'elixir' | 'medic' | 'village';
 function survivesFatalBlow(
   victim: Disciple,
   partyIds: string[],
   ds: ReturnType<typeof useDiscipleStore.getState>,
-): boolean {
-  if (consumeGeumchang()) return true;
+): RescueRoute | null {
+  if (consumeGeumchang()) return 'elixir';
   const hasDivineDoctor = partyIds.some((pid) => {
     if (pid === victim.id) return false; // 의원 본인이 치명상이면 자기 못 살림
     const m = ds.disciples[pid];
     return Boolean(m && m.status !== 'departed' && (m.stats?.medicine?.level ?? 0) >= DIVINE_DOCTOR_MEDICINE);
   });
-  if (hasDivineDoctor) return true;
-  return Math.random() < selfSurviveChance(victim.realm);
+  if (hasDivineDoctor) return 'medic';
+  return Math.random() < villageSurviveChance(victim.realm) ? 'village' : null;
 }
 
 function rollOutcome(active: ActiveQuest): QuestOutcome {
@@ -703,10 +710,116 @@ function bumpRelations(ids: string[]): void {
   }
 }
 
+// ── 결투 의뢰 — 전투 엔진(docs/35) 실전 1판으로 결산. 판정식이 아니라 실제 싸움. 🔧 ──────
+// 의뢰 등급 → 상대 풀(경지 혼합 + 영글기 범위 — 만나기 전엔 모르는 상대의 격).
+// 캘리브레이션(2026-06-11, 1500판×9조합): 적정 등급 성공(완수+위기) 76~89% / 한 등급 위
+// 도전은 성공 ~10%대·재난 6~14%(도박) / 아래 등급은 100%(안전 파밍). 재난도 생존 체인(즉사 X).
+interface DuelFoePool {
+  realm: Realm;
+  qMin: number;
+  qMax: number;
+  w: number;
+}
+const DUEL_POOL: Record<QuestGrade, DuelFoePool[]> = {
+  menial: [{ realm: 'samryu', qMin: 0.1, qMax: 0.3, w: 1 }], // 잡일엔 결투가 없지만 타입 충족용
+  minor: [{ realm: 'samryu', qMin: 0.3, qMax: 0.8, w: 1 }],
+  normal: [
+    { realm: 'iryu', qMin: 0.3, qMax: 0.9, w: 8 },
+    { realm: 'ilryu', qMin: 0.15, qMax: 0.35, w: 1.5 },
+  ],
+  dangerous: [
+    { realm: 'ilryu', qMin: 0.3, qMax: 0.8, w: 6 },
+    { realm: 'iryu', qMin: 0.7, qMax: 1, w: 1 },
+    { realm: 'jeoljeong', qMin: 0.2, qMax: 0.4, w: 2 },
+  ],
+  extreme: [
+    { realm: 'jeoljeong', qMin: 0.4, qMax: 0.8, w: 6 },
+    { realm: 'ilryu', qMin: 0.8, qMax: 1, w: 1 },
+    { realm: 'chojeoljeong', qMin: 0.15, qMax: 0.35, w: 2 },
+  ],
+};
+const DUEL_ARCHETYPES: NpcArchetype[] = ['orthodox', 'rogue', 'soldier', 'assassin'];
+
+// 의뢰별 상대 호칭(서사용) — 미지정은 결 무난한 기본값.
+const DUEL_FOE_NAME: Record<string, string> = {
+  'q-duel-challenge': '무관의 고수',
+  'q-bandit': '산채 두목',
+  'q-duel-master': '이름난 무인',
+  'q-hyeolsu': "'혈수'",
+};
+
+interface DuelResolution {
+  outcome: QuestOutcome;
+  championId: string;
+  note: string;
+  // 패배(실패)의 중상 — 결과 분기 밖에서 별도 적용(실패는 보상 0이지만 몸은 상한다).
+  failWound?: { severity: number; days: number };
+}
+
+function resolveDuelByEngine(active: ActiveQuest): DuelResolution | null {
+  const q = active.quest;
+  const ds = useDiscipleStore.getState();
+  const party = active.discipleIds
+    .map((id) => ds.disciples[id])
+    .filter((d): d is Disciple => d != null && d.status !== 'departed');
+  if (party.length === 0) return null;
+  const champion = party.reduce((a, b) => (combatRating(a) >= combatRating(b) ? a : b));
+
+  // 상대 뽑기 — 풀 가중 + 돌발 이벤트 성공 보정은 영글기(컨디션)로 환산.
+  const pool = DUEL_POOL[q.grade];
+  const total = pool.reduce((a, p) => a + p.w, 0);
+  let roll = Math.random() * total;
+  let pick = pool[0];
+  for (const p of pool) {
+    roll -= p.w;
+    if (roll <= 0) {
+      pick = p;
+      break;
+    }
+  }
+  const quality = Math.max(
+    0.05,
+    Math.min(1, pick.qMin + Math.random() * (pick.qMax - pick.qMin) - (active.successDelta ?? 0) * 0.3),
+  );
+  const npc = makeNpcCombatant({
+    id: 'duel-foe',
+    name: DUEL_FOE_NAME[q.id] ?? '맞수',
+    realm: pick.realm,
+    archetype: DUEL_ARCHETYPES[Math.floor(Math.random() * DUEL_ARCHETYPES.length)],
+    quality,
+  });
+
+  // lethal:false — 죽음은 엔진이 아니라 의뢰 생존 체인(즉사 금지)이 정한다. 결투장이라 패주 없음.
+  const r = simulateCombat([combatantFromDisciple(champion)], [npc], {
+    mode: 'real',
+    lethal: false,
+    allowRetreat: false,
+  });
+  const me = r.combatants.find((c) => c.id === champion.id);
+  const won = r.winner === 'A';
+  // 만신창이 승리(피 흘리며 이김)만 위기후성공 — 가벼운 생채기는 완수.
+  const bloodied = me?.wound != null && me.wound.severity <= 3;
+
+  let outcome: QuestOutcome;
+  let failWound: DuelResolution['failWound'];
+  if (won) {
+    outcome = bloodied ? 'crisis' : 'full';
+  } else if (me?.wound?.severity === 1) {
+    outcome = 'disaster'; // 치명상 — 사망 굴림 + 생존 체인(영약→의원→마을)으로.
+  } else {
+    outcome = 'fail'; // 패배 — 보상은 없지만 몸도 성치 않다(중상 별도 적용).
+    failWound = { severity: me?.wound?.severity ?? 2, days: me?.wound?.days ?? 21 };
+  }
+
+  return { outcome, championId: champion.id, note: narrateCombat(r), failWound };
+}
+
 // 결산 적용 + 마일스톤 1건 반환.
 function resolveQuest(active: ActiveQuest): Milestone {
   const q = active.quest;
-  let outcome = rollOutcome(active);
+  // 결투 도메인은 전투 엔진이 실전 1판을 굴려 결과를 정한다 — 그 외는 역량 판정식.
+  const duel = q.domain === 'duel' ? resolveDuelByEngine(active) : null;
+  let outcome = duel ? duel.outcome : rollOutcome(active);
 
   // 돌발 이벤트 위험 보정 — 부상·사망 확률 가산(무모한 선택의 대가).
   if (active.riskDelta && Math.random() < active.riskDelta) {
@@ -785,9 +898,15 @@ function resolveQuest(active: ActiveQuest): Milestone {
   // 비급 드랍 — 의뢰 성공(완수·위기) 시 등급·도메인에 맞는 미보유 비급을 얻을 수 있다. docs/05·04·09.
   if (outcome === 'full' || outcome === 'crisis') maybeDropScroll(q);
 
-  const victimIdx = present.length ? Math.floor(Math.random() * present.length) : -1;
+  // 결투 의뢰는 싸운 당사자(대표)가 위험을 진다 — 그 외엔 무작위.
+  const victimIdx = duel
+    ? Math.max(0, present.indexOf(duel.championId))
+    : present.length
+      ? Math.floor(Math.random() * present.length)
+      : -1;
   let lostName = '';
   let gravelyHurtName = ''; // 재난에서 죽지 않고 중상으로 살아남은 자(있으면)
+  let rescueRoute: RescueRoute | null = null; // 치명상을 살린 경로(영약/의원/마을)
 
   for (let i = 0; i < present.length; i += 1) {
     const id = present[i];
@@ -822,11 +941,13 @@ function resolveQuest(active: ActiveQuest): Milestone {
     if (outcome === 'disaster' && i === victimIdx) {
       // 사망 굴림 — 외공(금강불괴)이 치명상 확률을 깎는다. bodyToughnessMult.
       if (Math.random() < QUEST_DISASTER_FATALITY * bodyToughnessMult(d)) {
-        if (survivesFatalBlow(d, present, ds)) {
+        const rescue = survivesFatalBlow(d, present, ds);
+        if (rescue) {
           inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다
           gravelyHurtName = d.name;
+          rescueRoute = rescue;
         } else {
-          patch.status = 'departed'; // 생존 수단이 없어 끝내 쓰러진다
+          patch.status = 'departed'; // 마을까지 업혀 갔으나 끝내 쓰러진다
           lostName = d.name;
         }
       } else {
@@ -843,6 +964,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
       (q.grade === 'dangerous' || q.grade === 'extreme')
     ) {
       inflicted = { severity: 5, days: 5 }; // 위험·극험은 이겨도 찰과상 정도는 남는다(금창약으로 즉시 처치 가능)
+    } else if (outcome === 'fail' && duel?.failWound && i === victimIdx) {
+      inflicted = duel.failWound; // 결투 패배 — 보상 없는 실패여도 중상을 안고 돌아온다(엔진 결과)
     } else {
       patch.status = 'training';
     }
@@ -867,9 +990,15 @@ function resolveQuest(active: ActiveQuest): Milestone {
 
   let body: string;
   if (outcome === 'disaster' && lostName) {
-    body = `${tag} ${q.title} — ${names}\n임무 도중 ${lostName}이(가) 돌아오지 못했다. 남은 이들은 상처를 안고 사문으로 돌아왔다.`;
+    body = `${tag} ${q.title} — ${names}\n임무 도중 ${lostName}이(가) 치명상을 입었다. 동문들이 마을 의원까지 업고 달렸으나 — 끝내 돌아오지 못했다.`;
   } else if (outcome === 'disaster' && gravelyHurtName) {
-    body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${gravelyHurtName}이(가) 죽음의 문턱에서 가까스로 살아 돌아왔으나, 중상을 입어 오래 몸져눕는다.`;
+    const rescueNote =
+      rescueRoute === 'elixir'
+        ? '최상급 구급영약이 끊어지던 숨을 붙들었다.'
+        : rescueRoute === 'medic'
+          ? '동행한 의원의 손이 죽음의 문턱에서 끌어냈다.'
+          : '동문들이 마을 의원까지 업고 달린 끝에 가까스로 살렸다.';
+    body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${gravelyHurtName}이(가) 치명상을 입었으나 ${rescueNote} 오래 몸져눕는다.`;
   } else {
     const reward = `자금 ${Math.round(q.reward.money * scale.money)}${
       scale.fame > 0 ? ' · 명성 ↑' : ''
@@ -877,6 +1006,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
     const medicNote = medicSaved ? ' (동행한 의원이 큰 화를 막았다)' : '';
     body = `${tag} ${q.title} — ${names}\n${OUTCOME_LABEL[outcome]}.${medicNote} ${reward}`;
   }
+  // 결투 의뢰 — 엔진이 굴린 실제 싸움의 풍경을 싣는다(docs/35 §7).
+  if (duel) body += `\n\n${duel.note}`;
 
   return {
     id: `quest-${q.id}-${active.dueDay}`,
