@@ -12,7 +12,7 @@ export interface CutsceneMediaEntry {
 
 export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> = {
   enlightenment: {
-    // 세로판(9:16) — 쇼츠식 풀스크린. 가로 레거시(jang-cheol.webp)는 보관만.
+    // 세로판(9:16) — 쇼츠식 풀스크린. 인게임 기본 재생.
     'jang-cheol': {
       source: require('../../../assets/images/cutscenes/enlightenment/jang-cheol-v.webp'),
       fit: 'cover',
@@ -20,9 +20,22 @@ export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> 
   },
 };
 
+// 보조판(가로 등 다른 비율) — 두 버전 다 보존(✅ 사용자 결정 2026-06-12).
+// 인게임 트리거는 기본판만 재생, 시뮬랩 미리보기는 기본+보조 모두 큐에 올려 비교.
+export const CUTSCENE_MEDIA_ALT: Record<string, Record<string, CutsceneMediaEntry>> = {
+  enlightenment: {
+    'jang-cheol': {
+      source: require('../../../assets/images/cutscenes/enlightenment/jang-cheol.webp'),
+      fit: 'letterbox',
+    },
+  },
+};
+
 export function findCutsceneMedia(
   eventId: string,
   discipleId: string,
+  variant: 'default' | 'alt' = 'default',
 ): CutsceneMediaEntry | undefined {
-  return CUTSCENE_MEDIA[eventId]?.[discipleId];
+  const table = variant === 'alt' ? CUTSCENE_MEDIA_ALT : CUTSCENE_MEDIA;
+  return table[eventId]?.[discipleId];
 }

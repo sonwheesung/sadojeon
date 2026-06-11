@@ -5,7 +5,11 @@ import { findCutscene } from '@/data/cutscenes';
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { useTimeStore } from '@/stores/timeStore';
 
-export function playCutscene(eventId: string, disciple: { id: string; name: string }): void {
+export function playCutscene(
+  eventId: string,
+  disciple: { id: string; name: string },
+  opts?: { mediaVariant?: 'default' | 'alt' },
+): void {
   const def = findCutscene(eventId);
   if (!def) return; // 미등록 사건 — 조용히 무시(트리거가 데이터보다 먼저 깔려도 안전)
   const variant = def.byDisciple?.[disciple.id];
@@ -20,5 +24,6 @@ export function playCutscene(eventId: string, disciple: { id: string; name: stri
     tone: def.tone,
     line: (variant?.line ?? def.defaultLine).replaceAll('{name}', disciple.name),
     quote: variant?.quote,
+    mediaVariant: opts?.mediaVariant,
   });
 }

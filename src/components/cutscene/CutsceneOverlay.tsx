@@ -44,7 +44,7 @@ export function CutsceneOverlay() {
   }
 
   const accent = TONE_ACCENT[current.tone];
-  const media = findCutsceneMedia(current.eventId, current.discipleId);
+  const media = findCutsceneMedia(current.eventId, current.discipleId, current.mediaVariant ?? 'default');
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>

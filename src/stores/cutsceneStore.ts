@@ -15,6 +15,8 @@ export interface PlayingCutscene {
   tone: CutsceneTone;
   line: string; // 이름 치환 완료된 서사 한 줄
   quote?: string; // 제자 전용 한마디
+  // 보조 미디어판(가로 레거시 등) 재생 — 시뮬랩 미리보기 비교용. 기본 undefined = 기본판.
+  mediaVariant?: 'default' | 'alt';
 }
 
 interface CutsceneStore {

@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CutsceneOverlay } from '@/components/cutscene/CutsceneOverlay';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { CUTSCENES } from '@/data/cutscenes';
+import { CUTSCENE_MEDIA_ALT } from '@/data/cutscenes/media';
 import { playCutscene } from '@/systems/cutsceneSystem';
 import { useDevAccess } from '@/systems/dev/devAccess';
 import { colors, spacing, typography } from '@/theme';
@@ -63,11 +64,17 @@ export default function SimLabHub() {
         style={styles.card}
         onPress={() => {
           // 등록된 컷씬 전부 큐에 — 탭으로 한 장씩 넘기며 연출·미디어 확인. docs/20.
-          for (const c of CUTSCENES) playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' });
+          // 보조판(가로 레거시 등)이 있는 컷은 두 버전 다 올린다(✅ 두 버전 보존).
+          for (const c of CUTSCENES) {
+            playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' });
+            if (CUTSCENE_MEDIA_ALT[c.eventId]?.['jang-cheol']) {
+              playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' }, { mediaVariant: 'alt' });
+            }
+          }
         }}
       >
         <Text style={styles.cardTitle}>컷씬 미리보기</Text>
-        <Text style={styles.cardDesc}>등록된 컷씬 전부 재생(장철 기준) — 모션 WebP·전용 대사·폴백 확인</Text>
+        <Text style={styles.cardDesc}>등록된 컷씬 전부 재생(장철 기준) — 쇼츠판+가로판 비교·전용 대사·폴백 확인</Text>
       </Pressable>
 
       <CutsceneOverlay />
