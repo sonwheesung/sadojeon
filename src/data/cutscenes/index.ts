@@ -64,6 +64,21 @@ export const CUTSCENES: readonly CutsceneDef[] = [
     },
   },
 
+  // ── 깨달음 — 절정·초절정 벽을 깨는 순간(폐관·실전 공용, 제자당 회차 최대 2회) ──
+  {
+    eventId: 'enlightenment',
+    hanzi: '悟',
+    title: '깨달음',
+    tone: 'ink',
+    defaultLine: '{name}이 문득 멈춰 섰다. 천 번을 두드려도 꿈쩍 않던 벽이, 오늘 소리 없이 무너져 내렸다.',
+    byDisciple: {
+      'jang-cheol': {
+        line: '장철은 오래도록 제 두 손을 내려다보았다. 평생 밭을 갈고 벽을 버티던 손이, 오늘 처음으로 가벼웠다.',
+        quote: '지키는 것과 버티는 것이…… 같은 것이었어요, 사부님.',
+      },
+    },
+  },
+
   // ── 치명상 생환 — 즉사 없음 룰의 세 갈래(docs/29 생존 체인). 살린 경로마다 다른 컷 ──
   {
     eventId: 'fatal_rescue_elixir',

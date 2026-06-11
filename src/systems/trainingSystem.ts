@@ -18,6 +18,7 @@ import {
 } from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
 import { EFFICIENCY_MULTIPLIER, BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { playCutscene } from './cutsceneSystem';
 import { currentAge } from './discipleCtx';
 import {
   BASE_MAX_STAMINA,
@@ -440,6 +441,7 @@ function applyRealmTick(
           pity = 0;
           petitioned = false;
           cancelOverride(discipleId); // 폐관 해제 — 벽 넘음
+          playCutscene('enlightenment', { id: discipleId, name: d.name }); // 깨달음 컷씬 — docs/20
         } else {
           pity += 1;
           forcedFail = true; // 무리한 강행 실패 → 진기 흩어짐(심마·주화입마 위험)
@@ -534,6 +536,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   if (guaranteed || Math.random() < chance) {
     store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });
     realmUpToInbox(d, wallTarget);
+    playCutscene('enlightenment', { id: discipleId, name: d.name }); // 실전 깨달음 컷씬 — docs/20
     return wallTarget;
   }
   store.update(discipleId, {
