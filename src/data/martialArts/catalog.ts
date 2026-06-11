@@ -1073,8 +1073,10 @@ export const MARTIAL_ARTS: MartialArt[] = [
   },
 
   // ═══ 마교 — 역천의 무공 (흑화 게이트) ═════════════════════════════════════
-  // 트리: 섭혼술(하·뿌리) → 수라마공(상) → 흡성대법(절) / 섭혼술+화골면장 → 소수마공(상)
-  //       혈영신법(중·신법) / 사파 흑풍권 5성 → 혈마공(절) → 천마비전(절). 2026-06-11 하위 보강.
+  // 트리(11권): 섭혼술(하) → 미혼술(중) / 수라마공(상) → 화공대법(상) → 흡성대법(절)
+  //   섭혼술+화골면장 → 소수마공(상) / 혈영신법(중) → 천마군림보(절)
+  //   사파 흑풍권 5성 → 혈마공(절) → 천마비전(절) → (천마신공 — 신품, 출시 후 docs/21).
+  // 전부 장르 공용 클리셰(웹 검증 2026-06-11) — 개별 작품 전유 무공 배제 룰.
   {
     id: 'seophon-sul',
     name: '섭혼술',
@@ -1083,6 +1085,36 @@ export const MARTIAL_ARTS: MartialArt[] = [
     school: 'darkArts', grade: 'novice', path: 'ma',
     isSectArt: false, lineage: 'magyo', acquisition: 'quest',
     minDarkness: 1,
+  },
+  {
+    id: 'mihon-sul',
+    name: '미혼술',
+    hanjaName: '迷魂術',
+    description: '향과 음률, 눈빛으로 정신을 홀려 길을 잃게 한다. 섭혼의 결이 한층 깊어진 술법.',
+    school: 'darkArts', grade: 'apprentice', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'seophon-sul', minSeong: 3 }],
+    minDarkness: 1,
+  },
+  {
+    id: 'hwagong-daebeop',
+    name: '화공대법',
+    hanjaName: '化功大法',
+    description: '닿은 자의 내공을 물처럼 녹여 흩는다. 흡성대법으로 가는 길목의 금공(禁功).',
+    school: 'darkArts', grade: 'master', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'sura-magong', minSeong: 4 }],
+    minDarkness: 2,
+  },
+  {
+    id: 'cheonma-gunrim-bo',
+    name: '천마군림보',
+    hanjaName: '天魔君臨步',
+    description: '한 걸음마다 만마(萬魔)가 엎드린다. 천마의 위엄이 실린 마교 신법의 정점.',
+    school: 'lightness', grade: 'grandmaster', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'quest',
+    prerequisites: [{ artId: 'hyeolyeong-sinbeop', minSeong: 5 }],
+    minDarkness: 3,
   },
   {
     id: 'hwagol-myeonjang',
@@ -1153,7 +1185,7 @@ export const MARTIAL_ARTS: MartialArt[] = [
     description: '타인의 내공을 빨아들이는 금단의 마공. 이종진기가 충돌하면 심맥이 터진다.',
     school: 'darkArts', grade: 'grandmaster', path: 'ma',
     isSectArt: false, lineage: 'magyo', acquisition: 'quest',
-    prerequisites: [{ artId: 'sura-magong', minSeong: 6 }],
+    prerequisites: [{ artId: 'hwagong-daebeop', minSeong: 5 }],
     minDarkness: 2,
   },
 
