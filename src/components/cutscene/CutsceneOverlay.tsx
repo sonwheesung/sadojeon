@@ -9,8 +9,8 @@ import type { CutsceneTone } from '@/data/cutscenes';
 import { findCutsceneMedia } from '@/data/cutscenes/media';
 
 // 컷씬 오버레이 — docs/20. 쇼츠식 풀스크린(✅ 사용자 확정 2026-06-12):
-// 세로(9:16) 모션 컷이 화면 전체를 덮고, 그 위에 자막처럼 — 위에 사건명·큰 한자(페이드+축소),
-// 아래에 옅은 어둠을 깔고 이름·서사·한마디·탭 안내. 컷 자산은 세로 규격으로 제작(족자 구도).
+// 세로(9:16) 모션 컷이 화면 전체를 덮고, 아래에만 옅은 어둠 위 자막(이름·서사·한마디·탭 안내).
+// 그림 위(얼굴 영역) 텍스트는 전부 금지 — 한자·사건명 오버레이 제거(✅ 사용자 결정 2026-06-12, 얼굴 가림).
 // 모션 미디어 없는 컷은 먹색 바탕 + 점선 자리(그레이박스) 폴백. 탭 = 다음.
 
 const TONE_ACCENT: Record<CutsceneTone, string> = {
@@ -23,25 +23,17 @@ export function CutsceneOverlay() {
   const current = useCutsceneStore((s) => s.queue[0]);
   const pop = useCutsceneStore((s) => s.pop);
 
-  const hanziOpacity = useRef(new Animated.Value(0)).current;
-  const hanziScale = useRef(new Animated.Value(1.18)).current;
   const bodyOpacity = useRef(new Animated.Value(0)).current;
   const hintOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!current) return;
-    hanziOpacity.setValue(0);
-    hanziScale.setValue(1.18);
     bodyOpacity.setValue(0);
     hintOpacity.setValue(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     Animated.sequence([
-      Animated.parallel([
-        Animated.timing(hanziOpacity, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(hanziScale, { toValue: 1, duration: 900, useNativeDriver: true }),
-      ]),
       // 모션 컷(3~5초)이 흐를 시간을 주고 글이 자막처럼 내려앉는다.
-      Animated.delay(1400),
+      Animated.delay(1800),
       Animated.timing(bodyOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(hintOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
@@ -77,20 +69,7 @@ export function CutsceneOverlay() {
           </View>
         )}
 
-        {/* 위 — 사건명 + 큰 한자 (영상 위 오버레이) */}
-        <View style={styles.topArea} pointerEvents="none">
-          <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
-          <Animated.Text
-            style={[
-              styles.hanzi,
-              { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
-            ]}
-          >
-            {current.hanzi}
-          </Animated.Text>
-        </View>
-
-        {/* 아래 — 자막: 옅은 어둠 위에 이름·서사·한마디 + 탭 안내 */}
+        {/* 아래 — 자막: 옅은 어둠 위에 이름·서사·한마디 + 탭 안내 (그림 위 텍스트 금지) */}
         <View style={styles.bottomArea} pointerEvents="none">
           <Animated.View style={[styles.textBlock, { opacity: bodyOpacity }]}>
             <Text style={styles.name}>{current.discipleName}</Text>
@@ -149,28 +128,6 @@ const styles = StyleSheet.create({
     color: colors.paperBright,
     textAlign: 'center',
     opacity: 0.8,
-  },
-  topArea: {
-    position: 'absolute',
-    top: spacing['4xl'],
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  eventTitle: {
-    fontFamily: typography.serifBold,
-    fontSize: typography.sizes.md,
-    letterSpacing: typography.letterSpacing.wider,
-    opacity: 0.9,
-    ...TEXT_SHADOW,
-  },
-  hanzi: {
-    fontFamily: typography.serifCNBold,
-    fontSize: typography.sizes['4xl'] * 1.4,
-    letterSpacing: typography.letterSpacing.wider,
-    textAlign: 'center',
-    ...TEXT_SHADOW,
   },
   bottomArea: {
     position: 'absolute',
