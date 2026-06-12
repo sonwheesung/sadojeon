@@ -669,6 +669,123 @@ async function runFactorySweep(): Promise<void> {
   console.log(`서폿 연단공장 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과 · 내공단 ${(sumInternalDan / iters).toFixed(1)}과`);
 }
 
+// ── 적당 연단(무과금 현실 플레이) — 공장(혹사) 대비 화경 도달 검증 ──
+// factorysweep 과의 차이: 연단 서폿 1인(진소화)만 · 제조 시도 주 1회 · 카리 내공단 흡수 X.
+// 그 외(쌍벽 대련·의뢰 0.12·치료·재료 무한)는 동일 — 재료 수급·레시피 입수는 별도 축이라 고정.
+async function runModerateSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const years = Number(process.argv[3] ?? 15);
+  const iters = Number(process.argv[4] ?? 8);
+  const withDan = process.argv[5] === 'dan'; // 'dan' = 카리가 내공단도 챙겨 먹는 변형
+  const days = years * 336;
+  const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
+  const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
+  console.log(`=== 적당 연단(서폿 1·주 1회 제조${withDan ? '·내공단 복용' : '·내공단 X'}) · ${years}년 · ${iters}회 평균 ===`);
+  console.log('카리=yun-soso(검) + 대련 상대 장철 + 연단 진소화(주1 제조) + 의술 백연. 공장(factorysweep) 대비.\n');
+
+  let carryHwa = 0;
+  const realmTally: Record<string, number> = {};
+  let sumDivine = 0;
+  for (let it = 0; it < iters; it += 1) {
+    seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
+    useGameStore.getState().setPhase('playing');
+    setElixirBudget(0);
+    setByeokgokdanBudget(Infinity);
+    {
+      const sect = useSectStore.getState();
+      if (sect.sect) sect.setSect({ ...sect.sect, resources: 100_000 });
+    }
+    buildAlchemyLab();
+    for (const id of RECIPE_IDS) learnRecipe(id);
+    for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
+    const carryId = 'yun-soso';
+    const sparPartnerId = 'jang-cheol';
+    const alchemistId = 'jin-sohwa';
+    let questCount = 0;
+    let wasQuesting = false;
+    let divine = 0;
+
+    const roleMap: Record<string, string> = {
+      [carryId]: 'carry',
+      [sparPartnerId]: 'carry',
+      [alchemistId]: 'alchemy',
+      'baek-yeon': 'medicine',
+    };
+
+    for (let d = 0; d < days; d += 1) {
+      configurePartyDay(roleMap);
+      const upcoming = (useTimeStore.getState().current.day % 7) + 1;
+      if (upcoming === 1 || upcoming === 5) {
+        const sch = useScheduleStore.getState();
+        sch.setDailyChoice(carryId, 'martial', daeryeonChoiceValue(sparPartnerId));
+        sch.setDailyChoice(sparPartnerId, 'martial', daeryeonChoiceValue(carryId));
+      }
+      const dsNow = useDiscipleStore.getState();
+      // 연단 — 진소화 혼자, 주 1회만(적당히). 기본은 최고 등급, dan 변형은 구전대환단
+      // 3과 확보 후 내공단 위주(실플레이: 환골탈태분 챙기고 나면 내공 보급으로 돌림).
+      if (d % 7 === 2) {
+        const sd = dsNow.disciples[alchemistId];
+        if (sd && sd.status === 'training') {
+          const lv = sd.stats?.alchemy?.level ?? 0;
+          const stock = useItemStore.getState().items.find((i) => i.id === 'guzeon-daehwandan')?.count ?? 0;
+          const pick = withDan && stock >= 3
+            ? byReqDesc.find((r) => r.category === 'internal' && r.alchemyReq <= lv) ?? byReqDesc.find((r) => r.alchemyReq <= lv)
+            : byReqDesc.find((r) => r.alchemyReq <= lv);
+          if (pick && startCraft(alchemistId, pick.id)) {
+            if (pick.id === 'guzeon-daehwandan') divine += 1;
+          }
+        }
+      }
+      partyDispatch(carryId, roleMap, 0.12, 13);
+      rampQuest(carryId, 0.12);
+      {
+        const nowQuesting = useDiscipleStore.getState().disciples[carryId]?.status === 'questing';
+        if (nowQuesting && !wasQuesting) questCount += 1;
+        wasQuesting = nowQuesting;
+      }
+      // 내공단 — 기본 변형은 없음(심법 수련만), dan 변형은 있으면 흡수.
+      if (withDan) {
+        const carry = dsNow.disciples[carryId];
+        if (carry && carry.status === 'training' && !carry.elixirAbsorb) {
+          consumeInternalElixir(carryId, 'naegong-fire') || consumeInternalElixir(carryId, 'naegong-water');
+        }
+      }
+
+      advanceTurn();
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      const inbox = useInboxStore.getState();
+      for (const item of [...inbox.items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (isRespondable(item)) {
+          const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
+      }
+      useInboxStore.getState().reset();
+      healWithSalve(false);
+    }
+    const carry = useDiscipleStore.getState().disciples[carryId];
+    const realm = carry?.realm ?? 'samryu';
+    realmTally[realm] = (realmTally[realm] ?? 0) + 1;
+    if (realm === 'hwagyeong') carryHwa += 1;
+    sumDivine += divine;
+    {
+      const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
+      const seong = mainId ? (carry?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
+      const stock = useItemStore.getState().items.find((i) => i.id === 'guzeon-daehwandan')?.count ?? 0;
+      console.log(
+        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 의뢰 ${questCount}회 · 구전대환단 제조 ${divine}과(재고 ${stock}) · status ${carry?.status}`,
+      );
+    }
+  }
+  const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
+  console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 분포: ${dist}`);
+  console.log(`연단 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과`);
+}
+
 // 명성 램프업 파견 — 등급 무관 역량 되는 최고 의뢰에 솔로 파견(잡일·소무 포함).
 function rampQuest(id: string, rate: number): void {
   const ds = useDiscipleStore.getState();
@@ -1307,6 +1424,10 @@ async function main() {
   }
   if (process.argv[2] === 'factorysweep') {
     await runFactorySweep();
+    return;
+  }
+  if (process.argv[2] === 'moderatesweep') {
+    await runModerateSweep();
     return;
   }
   if (process.argv[2] === 'alchemysweep') {
