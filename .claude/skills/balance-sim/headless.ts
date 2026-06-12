@@ -870,50 +870,61 @@ async function runEconomySweep(): Promise<void> {
   const STARTS = [5000];
   const REWARDS = [1];
   const RATES = [0.1, 0.25, 0.5]; // 의뢰 가동률 — 가끔/보통/부지런
-  console.log(`=== 경제 그리드 — 연단실 ON · 의뢰 가동률 변주 · ${years}년 (제자 4명) ===`);
-  console.log('각 조합 최종 자금 + 연단실 가동(O=유지비 납부중) + 최저점. 단위 금/은/동.\n');
-  console.log('식비 | 유지비 | 시작 | 가동률 → 최종자금 | 가동 | 최저');
+  const reps = Number(process.argv[4] ?? 5); // 통계 룰(docs/36 §통계 3룰) — 조합당 반복 평균
+  console.log(`=== 경제 그리드 — 연단실 ON · 의뢰 가동률 변주 · ${years}년 (제자 4명) · 조합당 n=${reps} ===`);
+  console.log('각 조합 평균 최종 자금 + 연단실 가동(n중 납부중 횟수) + 최저점(평균/최악). 단위 금/은/동.\n');
+  console.log('식비 | 유지비 | 시작 | 가동률 → 평균최종 | 가동 | 최저(평균/최악)');
   for (const food of FOODS)
     for (const up of UPKEEPS)
       for (const start of STARTS)
         for (const rate of RATES) {
           const rw = REWARDS[0];
-          seedNewRun(SEED_POOL);
-          useGameStore.getState().setPhase('playing');
-          setFoodCost(food);
-          setLabUpkeep(up);
-          setQuestRewardMult(rw);
-          setPatronageMult(1);
-          const sect = useSectStore.getState();
-          if (sect.sect) sect.setSect({ ...sect.sect, resources: start });
-          buildAlchemyLab();
-          let minRes = start;
-          for (let d = 0; d < days; d += 1) {
-            configureOptimal();
-            incomeDispatch(rate, 13);
-            advanceTurn();
-            const s = useScheduleStore.getState();
-            if (s.pendingReport) s.resolveMonthlyReport();
-            if (s.pendingSetup) s.resolveMonthlySetup();
-            if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
-            const inbox = useInboxStore.getState();
-            for (const item of [...inbox.items]) {
-              const dom = (item.payload as { domain?: string } | undefined)?.domain;
-              if (isRespondable(item)) {
-          // 폐관 청원은 허락, 그 외(돌발 이벤트 등)는 첫 가용 선택 — 미응답 시 의뢰 결산이 영영 멈춘다.
-          const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
-          if (key) await resolveInboxItem(item, key);
-        }
+          let finSum = 0;
+          let minSum = 0;
+          let minWorst = Infinity;
+          let labOn = 0;
+          for (let rep = 0; rep < reps; rep += 1) {
+            seedNewRun(SEED_POOL);
+            useGameStore.getState().setPhase('playing');
+            setFoodCost(food);
+            setLabUpkeep(up);
+            setQuestRewardMult(rw);
+            setPatronageMult(1);
+            const sect = useSectStore.getState();
+            if (sect.sect) sect.setSect({ ...sect.sect, resources: start });
+            buildAlchemyLab();
+            let minRes = start;
+            for (let d = 0; d < days; d += 1) {
+              configureOptimal();
+              incomeDispatch(rate, 13);
+              advanceTurn();
+              const s = useScheduleStore.getState();
+              if (s.pendingReport) s.resolveMonthlyReport();
+              if (s.pendingSetup) s.resolveMonthlySetup();
+              if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+              const inbox = useInboxStore.getState();
+              for (const item of [...inbox.items]) {
+                const dom = (item.payload as { domain?: string } | undefined)?.domain;
+                if (isRespondable(item)) {
+                  // 폐관 청원은 허락, 그 외(돌발 이벤트 등)는 첫 가용 선택 — 미응답 시 의뢰 결산이 영영 멈춘다.
+                  const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+                  if (key) await resolveInboxItem(item, key);
+                }
+              }
+              healWithSalve(false);
+              useInboxStore.getState().reset();
+              const r = useSectStore.getState().sect?.resources ?? 0;
+              if (r < minRes) minRes = r;
             }
-            healWithSalve(false);
-            useInboxStore.getState().reset();
-            const r = useSectStore.getState().sect?.resources ?? 0;
-            if (r < minRes) minRes = r;
+            finSum += useSectStore.getState().sect?.resources ?? 0;
+            minSum += minRes;
+            if (minRes < minWorst) minWorst = minRes;
+            if (isLabOperational()) labOn += 1;
           }
-          const fin = useSectStore.getState().sect?.resources ?? 0;
-          const op = isLabOperational() ? 'O' : 'X';
           void rw;
-          console.log(`식비${food} | 유지${up} | ${coinStr(start)} | ${Math.round(rate * 100)}% → ${coinStr(fin)} | ${op} | 최저 ${coinStr(minRes)}`);
+          console.log(
+            `식비${food} | 유지${up} | ${coinStr(start)} | ${Math.round(rate * 100)}% → ${coinStr(finSum / reps)} | ${labOn}/${reps} | 최저 ${coinStr(minSum / reps)} / 최악 ${coinStr(minWorst)}`,
+          );
         }
 }
 

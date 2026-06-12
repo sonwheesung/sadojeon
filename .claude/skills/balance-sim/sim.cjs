@@ -77,9 +77,14 @@ function tickArt(d,inten,pm){const i=d.arts[d.main],a=ARTS[d.main],cap=Math.min(
 function realmTick(d,intent,pm,secl,sect){const eff=Math.max(0,pm);if(intent==='simbeop')d.internal+=10*eff;const c=ceil(d),ext=sl(d,'strength'),m=ms(d);
   for(;;){const t=nextR(d.realm);if(!t)break;if(ri(t)>ri(c))break;if(d.internal<RINT[t])break;if(ext<REXT[t])break;if(m<RSG[t])break;if(isW(t))break;d.realm=t;d.pity=0;}
   const wt=nextR(d.realm),aw=wt&&ri(wt)<=ri(c)&&d.internal>=RINT[wt]&&ext>=REXT[wt]&&m>=RSG[wt]&&isW(wt);
-  if(aw&&secl){ if(wt==='hwagyeong'){ if(sect.elixirs>0){sect.elixirs--;d.realm=wt;d.pity=0;d.seclusion=false;} } // 화경=영약 소모
+  if(aw&&secl){ if(wt==='hwagyeong'){ // 화경 = 대오(폐관 일일 굴림, 보장 없음 — 게임 GREAT_ENLIGHTENMENT 동기화 2026-06-12) + 영약
+      if(sect.elixirs>0&&Math.random()<GE_SEC_BASE+GE_SEC_INS*d.ins){sect.elixirs--;d.realm=wt;d.pity=0;d.seclusion=false;} }
     else{const ch=enl(d.ins,wt)+d.pity*.05;if(d.pity+1>=12||Math.random()<ch){d.realm=wt;d.pity=0;d.seclusion=false;}else d.pity++;} }
   else if(aw)d.seclusion=true;}
+// 대오(大悟) 상수 — 게임 data/realm.ts GREAT_ENLIGHTENMENT 와 동기(2026-06-12).
+const GE_SEC_BASE=0.0001,GE_SEC_INS=0.00004,GE_Q_BASE=0.007,GE_Q_INS=0.0035;
+// 화경 벽 도달 여부(세 기둥+천장) — 실전 대오 판정용.
+function atHwaWall(d){const wt=nextR(d.realm);return wt==='hwagyeong'&&ri(wt)<=ri(ceil(d))&&d.internal>=RINT[wt]&&sl(d,'strength')>=REXT[wt]&&ms(d)>=RSG[wt];}
 function planStep(d){for(const id of d.learn){if(d.arts[id])continue;const a=ARTS[id];if(ri(d.realm)<ri(glr(a.grade)))continue;if(!a.pr.every(([p,s])=>(d.arts[p]?.seong??0)>=s))continue;d.arts[id]={seong:Math.max(1,Math.min(RLF[d.realm],scap(a.grade),RSC[d.realm])),exp:0};}
   const[cur,u]=d.seq[d.stepIdx];if(d.stepIdx<d.seq.length-1){const nx=d.seq[d.stepIdx+1][0];if((d.arts[cur]?.seong??0)>=u&&d.arts[nx])d.stepIdx++;}const tg=d.seq[d.stepIdx][0];d.main=d.arts[tg]?tg:(d.arts[cur]?cur:d.main);}
 function intent(d,age,dow){if(d.seclusion)return'seclusion';if(d.stam/d.maxStam<.25)return'rest';
@@ -104,7 +109,10 @@ function resolve(party,q,day,sect,tot){let o=rollOut(party,q);const age=10+Math.
   const sc=OUT[o],st=DOMAIN_STAT[q.dom],mart=(q.dom==='duel'||q.dom==='grand');const vic=Math.floor(Math.random()*party.length);
   tot.money+=Math.round(q.money*sc.m);tot.fame+=Math.round(q.fame*sc.f*party.length);
   if(q.gr==='extreme'&&(o==='full'||o==='crisis')&&Math.random()<ELIXIR_DROP)sect.elixirs++;
-  party.forEach((d,i)=>{d.quests++;if(sc.g>0){if(st)addStat(d,st,Math.max(1,Math.round(35*sc.g)));else if(mart){gainSeong(d,Math.max(1,Math.round(60*sc.g)));addStat(d,'strength',Math.max(1,Math.round(QK*sc.g*BODY_EFF[d.eff['strength']??'보통']*BODY_AGE(age))));}}d.fame=Math.min(100,d.fame+Math.round(q.fame*sc.f));
+  party.forEach((d,i)=>{d.quests++;if(sc.g>0){if(st)addStat(d,st,Math.max(1,Math.round(35*sc.g)));else if(mart){gainSeong(d,Math.max(1,Math.round(60*sc.g)));addStat(d,'strength',Math.max(1,Math.round(QK*sc.g*BODY_EFF[d.eff['strength']??'보통']*BODY_AGE(age))));
+      // 실전 대오 — 결투·큰의뢰 생환 시 화경 벽 굴림(게임 attemptQuestEnlightenment 동기, 보장 없음).
+      if(o!=='disaster'&&atHwaWall(d)&&sect.elixirs>0&&Math.random()<GE_Q_BASE+GE_Q_INS*d.ins){sect.elixirs--;d.realm='hwagyeong';d.pity=0;}
+    }}d.fame=Math.min(100,d.fame+Math.round(q.fame*sc.f));
     if(o==='disaster'&&i===vic){ if(Math.random()<FATAL){d.status='dead';tot.deaths++;} else {d.status='injured';d.until=day+28;d.injuries++;} } // 재난→생존 굴림
     else if(o==='disaster'){d.status='injured';d.until=day+21;d.injuries++;}else if(o==='crisis'&&i===vic){d.status='injured';d.until=day+14;d.injuries++;}else d.status='idle';});}
 let FATAL=0.2; // 재난 시 사망 확률(반영됨)
@@ -132,8 +140,9 @@ const ALL=combos(FREE,2,4);
 
 // ═══ 스윕: 재난→사망 확률(FATAL) 별 어려움 정책 회당 사망률 ═══
 console.log('═══ FATAL 스윕 — 어려움(hard)만 전 조합('+ALL.length+'개) 회당 사망률 ═══');
+const REPS=100; // 통계 룰(2026-06-12): 회차 단위 측정 기본 100회+ (docs/36 §통계 3룰)
 for(const f of [1.0,0.35,0.3,0.25,0.2]){ FATAL=f; let nd=0,runs=0,deaths=0;
-  for(let rep=0;rep<8;rep++)for(const combo of ALL){const{tot}=run(combo,'hard',true);runs++;if(tot.deaths>0)nd++;deaths+=tot.deaths;}
+  for(let rep=0;rep<20;rep++)for(const combo of ALL){const{tot}=run(combo,'hard',true);runs++;if(tot.deaths>0)nd++;deaths+=tot.deaths;}
   console.log(`  FATAL ${f.toFixed(2)} → 회당 사망 ${Math.round(nd/runs*100)}% · 평균 사망자수 ${(deaths/runs).toFixed(2)} (n=${runs})`);
 }
 FATAL=0.2;
@@ -143,7 +152,7 @@ console.log('\n═══ 테스트 1&2: 난이도 정책 × 전 조합('+ALL.len
 console.log('정책      | 평균자금 | 평균명성합 | 회당사망% | 경지분포(삼/이/일/절/초/화) | 의뢰완수평균');
 for(const pol of ['easy','normal','hard']){
   let money=0,fame=0,deaths=0,runs=0,quests=0,nd=0;const realmCnt={};let chars=0;
-  for(const combo of ALL){const{ds,tot}=run(combo,pol,true);money+=tot.money;fame+=tot.fame;deaths+=tot.deaths;runs++;if(tot.deaths>0)nd++;
+  for(let rep=0;rep<2;rep++)for(const combo of ALL){const{ds,tot}=run(combo,pol,true);money+=tot.money;fame+=tot.fame;deaths+=tot.deaths;runs++;if(tot.deaths>0)nd++;
     for(const d of ds){chars++;quests+=d.quests;realmCnt[d.realm]=(realmCnt[d.realm]||0)+1;}}
   const rc=RO.slice(1).map(r=>realmCnt[r]||0);
   console.log(`${pol.padEnd(9)} | ${String(Math.round(money/runs)).padStart(7)} | ${String(Math.round(fame/runs)).padStart(9)} | ${String(Math.round(nd/runs*100)).padStart(8)} | ${rc.join('/').padStart(20)} | ${(quests/chars).toFixed(0)}`);
@@ -154,23 +163,32 @@ console.log('\n═══ 보상 vs 난이도 (등급별 대표 의뢰, 완전성
 for(const g of ['menial','minor','normal','dangerous','extreme']){const q=QUESTS.find(x=>x.gr===g);console.log(`  ${g.padEnd(10)} 자금 ${String(q.money).padStart(2)} · 명성 ${String(q.fame).padStart(2)} · minStat ${q.min} · 위험 ${GR_RISK[g].dth?'사망':GR_RISK[g].inj?'부상':'없음'}`);}
 
 // ═══ 테스트 2: 결투·큰의뢰 외공 보강(QK) 스윕 — 윤소소(검수) 의뢰 ON 경지 회복 ═══
-console.log('\n═══ 테스트 2: 결투·큰의뢰 외공 보강(QK) — 윤소소 의뢰병행 외공/경지 (normal, 30회 평균) ═══');
-QK=0; { let ext=0,realm=0; for(let r=0;r<30;r++){const{ds}=run(['yun','cheongha','jin'],'normal',false);const y=ds[0];ext+=sl(y,'strength');realm+=ri(y.realm);} console.log(`  [의뢰 OFF 기준]      윤소소 평균 외공 ${(ext/30).toFixed(0)} · 경지지수 ${(realm/30).toFixed(1)} (절정=4·초절정=5)`); }
-for(const qk of [0,15,20,30]){ QK=qk; let ext=0,realm=0,seong=0; for(let r=0;r<30;r++){const{ds}=run(['yun','cheongha','jin'],'normal',true);const y=ds[0];ext+=sl(y,'strength');realm+=ri(y.realm);seong+=ms(y);}
-  console.log(`  [의뢰 ON · QK=${String(qk).padStart(2)}] 윤소소 평균 외공 ${(ext/30).toFixed(0)} · 경지지수 ${(realm/30).toFixed(1)} · 성 ${(seong/30).toFixed(1)}`); }
+console.log(`\n═══ 테스트 2: 결투·큰의뢰 외공 보강(QK) — 윤소소 의뢰병행 외공/경지 (normal, ${REPS}회 평균) ═══`);
+QK=0; { let ext=0,realm=0; for(let r=0;r<REPS;r++){const{ds}=run(['yun','cheongha','jin'],'normal',false);const y=ds[0];ext+=sl(y,'strength');realm+=ri(y.realm);} console.log(`  [의뢰 OFF 기준]      윤소소 평균 외공 ${(ext/REPS).toFixed(0)} · 경지지수 ${(realm/REPS).toFixed(1)} (절정=4·초절정=5)`); }
+for(const qk of [0,15,20,30]){ QK=qk; let ext=0,realm=0,seong=0; for(let r=0;r<REPS;r++){const{ds}=run(['yun','cheongha','jin'],'normal',true);const y=ds[0];ext+=sl(y,'strength');realm+=ri(y.realm);seong+=ms(y);}
+  console.log(`  [의뢰 ON · QK=${String(qk).padStart(2)}] 윤소소 평균 외공 ${(ext/REPS).toFixed(0)} · 경지지수 ${(realm/REPS).toFixed(1)} · 성 ${(seong/REPS).toFixed(1)}`); }
 QK=20;
 
 // ═══ 테스트 3: 영약으로 1명 화경 (무과금 — 제련 제자 진소화 + 검수 윤소소) ═══
 console.log('\n═══ 테스트 3: 무과금 화경 경로 — 진소화(영약제련) + 윤소소(검수 수련집중) ═══');
-console.log('  화경 = 초절정 + 신품무공서 7성 + 신품영약 복용. 진소화가 제련, 윤소소가 복용. 30회 통계:');
+console.log(`  화경 = 초절정 + 신품무공서 7성 + 대오(보장 없음) + 신품영약 복용. 진소화가 제련, 윤소소가 복용. ${REPS}회 통계:`);
 {
   let hwa=0, choj=0, elixSum=0, alSum=0, extSum=0, seongSum=0;
-  for(let r=0;r<30;r++){ const{ds,sect}=run(['jin','yun','jang'],'easy',false); // 화경 후보는 수련 집중(의뢰 OFF)
+  for(let r=0;r<REPS;r++){ const{ds,sect}=run(['jin','yun','jang'],'easy',false); // 화경 후보는 수련 집중(의뢰 OFF)
     const y=ds.find(d=>d.id==='yun'); elixSum+=sect.elixirs; alSum+=sl(ds[0],'alchemy'); extSum+=sl(y,'strength'); seongSum+=ms(y);
     if(y.realm==='hwagyeong')hwa++; else if(y.realm==='chojeoljeong')choj++; }
-  console.log(`  진소화 영약제조 평균 ${(alSum/30).toFixed(0)} (제련임계 ${CRAFT_ALCHEMY_MIN}) · 회차당 잔여영약 평균 ${(elixSum/30).toFixed(1)}개`);
-  console.log(`  윤소소 평균 외공 ${(extSum/30).toFixed(0)} · 평균 주력성 ${(seongSum/30).toFixed(1)}`);
-  console.log(`  → 윤소소 화경 도달: ${hwa}/30회 (${Math.round(hwa/30*100)}%) · 초절정 ${choj}/30회 · 그 외 절정↓`);
+  console.log(`  진소화 영약제조 평균 ${(alSum/REPS).toFixed(0)} (제련임계 ${CRAFT_ALCHEMY_MIN}) · 회차당 잔여영약 평균 ${(elixSum/REPS).toFixed(1)}개`);
+  console.log(`  윤소소 평균 외공 ${(extSum/REPS).toFixed(0)} · 평균 주력성 ${(seongSum/REPS).toFixed(1)}`);
+  console.log(`  → [수련 집중·폐관만] 윤소소 화경: ${hwa}/${REPS}회 (${Math.round(hwa/REPS*100)}%) · 초절정 ${choj}/${REPS}회 — 앉아선 대오가 안 온다(소극 플레이 천장)`);
+}
+{ // 의뢰 병행 — 실전 대오가 주 무대(normal 정책). 대오 도입(2026-06-12) 후 무과금 화경의 정도(正道).
+  let hwa=0, choj=0;
+  for(let r=0;r<REPS;r++){ const{ds}=run(['jin','yun','jang'],'normal',true);
+    const y=ds.find(d=>d.id==='yun');
+    if(y.realm==='hwagyeong')hwa++; else if(y.realm==='chojeoljeong')choj++; }
+  console.log(`  → [의뢰 병행·실전 대오] 윤소소 화경: ${hwa}/${REPS}회 (${Math.round(hwa/REPS*100)}%) · 초절정 ${choj}/${REPS}회 — 강호에서 깨닫는다`);
+  console.log('  ※ 공식 시뮬은 근사 — 정책 프리셋이 "가끔 의뢰+수련+내공단"의 최적 중간을 못 잡아 화경 절대치가 과소.');
+  console.log('    화경 도달률 정본 = 실코드 스윕(moderatesweep·factorysweep, docs/36). 이 테스트는 영약 제련·게이트 레버 검증용.');
 }
 // 표본 1회 상세
 { const{ds,sect}=run(['jin','yun','jang'],'easy',true);
