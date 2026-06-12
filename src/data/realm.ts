@@ -57,7 +57,8 @@ export const REALM_INTERNAL_REQ: Record<Realm, number> = {
 // 고경지 외공 — str보통 도달선으로 현실화(project_realm_balance 화경 경로).
 // 화경 외공 70 = "화경의 몸"(결정 2026-06-10). 단 외공 보통 재능의 수련 한계가 ~65라 70은 스스로 못 채움 —
 // 마지막 8은 신품 영약의 **환골탈태**(BONE_REBIRTH_STRENGTH_BONUS)가 채운다. 즉 스스로 62(받침)까지
-// 단련한 몸이라야 영약이 화경의 몸(70)으로 다시 빚는다. 시뮬: 받침 62 기준 무과금 ~43%.
+// 단련한 몸이라야 영약이 화경의 몸(70)으로 다시 빚는다. 시뮬(2026-06-12 재검증): 무과금
+// 조합(제련+검수) 화경 63%(30회) · 실코드 게이트 trainsweep 화경 도달 확인(솔로 최악 15년 턱걸이).
 export const REALM_EXTERNAL_REQ: Record<Realm, number> = {
   none: 0,
   samryu: 10,
