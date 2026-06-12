@@ -425,6 +425,7 @@ function applyRealmTick(
           // 대오(大悟)가 오지 않았다 — 마음이 열리기 전엔 약도 몸도 소용없다. 보장 없음(운×실력).
           // 폐관은 매일 굴리되 확률이 아주 낮다 — 화경 돈오는 실전(위험·극험 의뢰)에서 잘 온다.
         } else if (attemptBoneRebirth(discipleId)) {
+          // 여기 도달 = 폐관 안에서 화경 대오가 터진 희귀 순간 — 업적 "면벽돈오"(docs/32) 발화 지점.
           consumeDivineElixir();
           realm = wallTarget;
           pity = 0;
