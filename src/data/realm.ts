@@ -171,11 +171,13 @@ export const ENLIGHTENMENT_PITY_GUARANTEE = 12; // 누적 12회 실패 → 다�
 // · 보장(pity) 없음 — 화경은 하늘이 허락해야 하는 영역. 다회차 누적으로도 확정 불가.
 // · 폐관(앉아서)은 매일 굴려도 확률이 아주 낮고, 실전(위험·극험 의뢰)에서 크게 높다 —
 //   "강호에서 깨닫는다". 위험을 감수하는 플레이(실력)가 운을 키운다. 🔧 그레이박스(시뮬 튜닝).
+// ✅ 목표 분포(사용자 확정 2026-06-12): 실력 없음(폐관만·오성 낮음) ≈ 10% / 적당한 실력+운 ≈ 50%
+// / 실력 최상+운 나쁨 ≈ 30% / 실력 최상+운 좋음 ≈ 80% (최상 실력 평균 ≈ 55~65%).
 export const GREAT_ENLIGHTENMENT = {
-  secludePerDayBase: 0.0003, // 폐관 1일당 기본 0.03% (폐관 28일 ≈ 결투 의뢰 1회 수준 — 안전한 대신 느림)
-  secludePerDayPerInsight: 0.00015, // + 오성×0.015%p (오성4 ≈ 0.09%/일)
-  questBase: 0.008, // 결투·큰의뢰 생환 1회당 기본 0.8%
-  questPerInsight: 0.004, // + 오성×0.4%p (오성4 = 2.4%/회)
+  secludePerDayBase: 0.0001, // 폐관 1일당 기본 0.01% — 폐관만 수년 돌려도 ~10%대(소극 플레이의 천장)
+  secludePerDayPerInsight: 0.00004, // + 오성×0.004%p (오성4 ≈ 0.026%/일)
+  questBase: 0.007, // 결투·큰의뢰 생환 1회당 기본 0.7% — 실전이 대오의 주 무대
+  questPerInsight: 0.0035, // + 오성×0.35%p (오성3 ≈ 1.75% · 오성4 ≈ 2.1% · 오성5 ≈ 2.45%/회)
 } as const;
 
 export function greatEnlightenmentChance(insight: number, mode: 'seclude' | 'quest'): number {
