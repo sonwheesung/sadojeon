@@ -8,7 +8,11 @@ import { useTimeStore } from '@/stores/timeStore';
 export function playCutscene(
   eventId: string,
   disciple: { id: string; name: string },
-  opts?: { mediaVariant?: 'default' | 'alt' },
+  opts?: {
+    mediaVariant?: 'default' | 'alt';
+    // [DEV] 시뮬랩 기기 비율 시뮬레이터 — 다른 폰·태블릿 비율 틀 안에서 재생해 잘림 확인
+    frame?: { aspect: number; label: string };
+  },
 ): void {
   const def = findCutscene(eventId);
   if (!def) return; // 미등록 사건 — 조용히 무시(트리거가 데이터보다 먼저 깔려도 안전)
@@ -25,5 +29,7 @@ export function playCutscene(
     line: (variant?.line ?? def.defaultLine).replaceAll('{name}', disciple.name),
     quote: variant?.quote,
     mediaVariant: opts?.mediaVariant,
+    frameAspect: opts?.frame?.aspect,
+    frameLabel: opts?.frame?.label,
   });
 }

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -22,6 +22,7 @@ const TONE_ACCENT: Record<CutsceneTone, string> = {
 export function CutsceneOverlay() {
   const current = useCutsceneStore((s) => s.queue[0]);
   const pop = useCutsceneStore((s) => s.pop);
+  const { width: winW, height: winH } = useWindowDimensions();
 
   const hanziOpacity = useRef(new Animated.Value(0)).current;
   const hanziScale = useRef(new Animated.Value(1.18)).current;
@@ -73,49 +74,68 @@ export function CutsceneOverlay() {
     </>
   );
 
+  const content = isCover && media ? (
+    <>
+      {/* 쇼츠 — 풀스크린 cover + 하단 자막(옅은 어둠) */}
+      <Image source={media.source} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <View style={styles.coverBottom} pointerEvents="none">
+        {subtitle}
+      </View>
+    </>
+  ) : (
+    <>
+      {/* 가로·그레이박스 — 위 띠(한자) / 그림 / 아래 띠(자막) 3단 */}
+      <View style={styles.topBand} pointerEvents="none">
+        <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
+        <Animated.Text
+          style={[
+            styles.hanzi,
+            { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
+          ]}
+        >
+          {current.hanzi}
+        </Animated.Text>
+      </View>
+
+      {media ? (
+        <Image source={media.source} style={styles.letterboxMedia} contentFit="cover" />
+      ) : (
+        <View style={styles.fallbackWrap}>
+          {/* 그레이박스 — 모션 미디어 미등록 컷. docs/20 */}
+          <View style={[styles.artSlot, { borderColor: accent }]}>
+            <Text style={styles.artSlotLabel}>
+              (모션 컷 자리 — {current.eventId}/{current.discipleId})
+            </Text>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.bottomBand} pointerEvents="none">
+        {subtitle}
+      </View>
+    </>
+  );
+
+  // [DEV] 기기 비율 시뮬레이터 — frameAspect(가로/세로)가 있으면 그 비율 틀에 맞춰
+  // 화면 안에 최대 크기로 띄우고, 밖은 빈 띠로 둔다. 잘림(cover) 검증용. docs/20.
+  let frame: { width: number; height: number } | undefined;
+  if (current.frameAspect) {
+    frame =
+      winW / winH > current.frameAspect
+        ? { width: Math.round(winH * current.frameAspect), height: winH }
+        : { width: winW, height: Math.round(winW / current.frameAspect) };
+  }
+
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>
       <Pressable style={styles.screen} onPress={pop} accessibilityRole="button" accessibilityLabel="컷씬 계속">
-        {isCover && media ? (
-          <>
-            {/* 쇼츠 — 풀스크린 cover + 하단 자막(옅은 어둠) */}
-            <Image source={media.source} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <View style={styles.coverBottom} pointerEvents="none">
-              {subtitle}
-            </View>
-          </>
+        {frame ? (
+          <View style={styles.frameCenter} pointerEvents="none">
+            <View style={[styles.frameBox, frame]}>{content}</View>
+            {current.frameLabel ? <Text style={styles.frameTag}>{current.frameLabel}</Text> : null}
+          </View>
         ) : (
-          <>
-            {/* 가로·그레이박스 — 위 띠(한자) / 그림 / 아래 띠(자막) 3단 */}
-            <View style={styles.topBand} pointerEvents="none">
-              <Text style={[styles.eventTitle, { color: accent }]}>{current.title}</Text>
-              <Animated.Text
-                style={[
-                  styles.hanzi,
-                  { color: accent, opacity: hanziOpacity, transform: [{ scale: hanziScale }] },
-                ]}
-              >
-                {current.hanzi}
-              </Animated.Text>
-            </View>
-
-            {media ? (
-              <Image source={media.source} style={styles.letterboxMedia} contentFit="cover" />
-            ) : (
-              <View style={styles.fallbackWrap}>
-                {/* 그레이박스 — 모션 미디어 미등록 컷. docs/20 */}
-                <View style={[styles.artSlot, { borderColor: accent }]}>
-                  <Text style={styles.artSlotLabel}>
-                    (모션 컷 자리 — {current.eventId}/{current.discipleId})
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.bottomBand} pointerEvents="none">
-              {subtitle}
-            </View>
-          </>
+          content
         )}
       </Pressable>
     </Modal>
@@ -133,6 +153,28 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+
+  // ── [DEV] 기기 비율 시뮬레이터 ──
+  frameCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  frameBox: {
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  frameTag: {
+    position: 'absolute',
+    top: spacing.lg,
+    alignSelf: 'center',
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.paperBright,
+    opacity: 0.6,
+    letterSpacing: typography.letterSpacing.wide,
   },
 
   // ── 쇼츠(cover) 레이아웃 ──

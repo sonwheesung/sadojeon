@@ -3,6 +3,7 @@
 // 상세 설정 → 실행 → 과정·결과를 본다. 그레이박스.
 
 import { router, type Href } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CutsceneOverlay } from '@/components/cutscene/CutsceneOverlay';
@@ -31,8 +32,18 @@ const SIMS = [
   },
 ] as const;
 
+// 기기 비율 시뮬레이터 — 9:16 쇼츠 컷이 기기마다 어떻게 잘리나 검증(피드백 대응). docs/20.
+// aspect = 가로/세로. undefined = 이 기기 화면 그대로.
+const PREVIEW_RATIOS = [
+  { key: 'device', label: '이 기기', aspect: undefined as number | undefined },
+  { key: 'tall', label: '폰 20:9', aspect: 9 / 20 },
+  { key: 'classic', label: '폰 16:9', aspect: 9 / 16 },
+  { key: 'tablet', label: '태블릿 4:3', aspect: 3 / 4 },
+] as const;
+
 export default function SimLabHub() {
   const dev = useDevAccess();
+  const [ratioKey, setRatioKey] = useState<(typeof PREVIEW_RATIOS)[number]['key']>('device');
   if (!dev) {
     return (
       <SafetyZone background={colors.paper}>
@@ -65,16 +76,30 @@ export default function SimLabHub() {
         onPress={() => {
           // 등록된 컷씬 전부 큐에 — 탭으로 한 장씩 넘기며 연출·미디어 확인. docs/20.
           // 보조판(가로 레거시 등)이 있는 컷은 두 버전 다 올린다(✅ 두 버전 보존).
+          const ratio = PREVIEW_RATIOS.find((r) => r.key === ratioKey);
+          const frame = ratio?.aspect ? { aspect: ratio.aspect, label: ratio.label } : undefined;
           for (const c of CUTSCENES) {
-            playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' });
+            playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' }, { frame });
             if (CUTSCENE_MEDIA_ALT[c.eventId]?.['jang-cheol']) {
-              playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' }, { mediaVariant: 'alt' });
+              playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' }, { mediaVariant: 'alt', frame });
             }
           }
         }}
       >
         <Text style={styles.cardTitle}>컷씬 미리보기</Text>
         <Text style={styles.cardDesc}>등록된 컷씬 전부 재생(장철 기준) — 쇼츠판+가로판 비교·전용 대사·폴백 확인</Text>
+        <View style={styles.ratioRow}>
+          {PREVIEW_RATIOS.map((r) => (
+            <Pressable
+              key={r.key}
+              style={[styles.ratioChip, ratioKey === r.key && styles.ratioChipOn]}
+              onPress={() => setRatioKey(r.key)}
+            >
+              <Text style={[styles.ratioChipText, ratioKey === r.key && styles.ratioChipTextOn]}>{r.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={styles.cardDesc}>비율 틀 — 다른 폰·태블릿에서 쇼츠 컷이 어디까지 잘리나 이 기기에서 확인</Text>
       </Pressable>
 
       <CutsceneOverlay />
@@ -104,6 +129,18 @@ const styles = StyleSheet.create({
   normal: { marginTop: spacing.base, opacity: 0.75 },
   cardTitle: { fontFamily: typography.serifMedium, fontSize: typography.sizes.base, color: colors.ink },
   cardDesc: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  ratioRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' },
+  ratioChip: {
+    borderWidth: 1,
+    borderColor: colors.inkSoft,
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    opacity: 0.7,
+  },
+  ratioChipOn: { borderColor: colors.ink, backgroundColor: colors.paperBright, opacity: 1 },
+  ratioChipText: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
+  ratioChipTextOn: { color: colors.ink },
   blocked: {
     margin: spacing.lg,
     fontFamily: typography.serif,
