@@ -122,6 +122,8 @@ export interface Disciple {
   qiAttribute?: QiAttribute;
   // 영단 흡수 상태 — 내공단 복용 시 until(totalDay)까지 매일 perDay 내공 흡수. 흡수 중엔 다른 영단 복용 불가.
   elixirAbsorb?: { until: number; perDay: number; attribute?: QiAttribute };
+  // 약발 내성 — 내공단 누적 복용 수(회차 내). 복용할수록 효과 체감(도배 방지). alchemySystem.
+  danTolerance?: number;
 
   // 하산 시 사부가 권한 강호 행로(직업 id, jobSystem). 졸업 후 평생 직책 궤적의 출발점. docs/28 §3·§4.
   graduatedJob?: string;

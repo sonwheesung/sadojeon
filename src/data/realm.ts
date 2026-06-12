@@ -162,8 +162,30 @@ export function enlightenmentChance(insight: number, target: Realm): number {
 }
 
 // 순수 RNG 방지(pity) — 폐관 굴림 실패마다 확률 누적, 보장치 도달 시 자동 성공. docs/23 §6.
+// ⚠️ pity 보장은 절정·초절정 벽까지만 — 화경의 대오(아래)는 보장 없음.
 export const ENLIGHTENMENT_PITY_STEP = 0.05; // 실패 1회당 +5%p
 export const ENLIGHTENMENT_PITY_GUARANTEE = 12; // 누적 12회 실패 → 다음은 보장
+
+// 대오(大悟) — 화경 벽 전용 큰 깨달음(✅ 사용자 결정 2026-06-12: "비급 전권이어도 화경이 확정이면
+// 재미없다 — 운과 실력이 받쳐야"). 환골탈태(몸·약) 전에 마음이 먼저 열려야 한다.
+// · 보장(pity) 없음 — 화경은 하늘이 허락해야 하는 영역. 다회차 누적으로도 확정 불가.
+// · 폐관(앉아서)은 매일 굴려도 확률이 아주 낮고, 실전(위험·극험 의뢰)에서 크게 높다 —
+//   "강호에서 깨닫는다". 위험을 감수하는 플레이(실력)가 운을 키운다. 🔧 그레이박스(시뮬 튜닝).
+export const GREAT_ENLIGHTENMENT = {
+  secludePerDayBase: 0.0003, // 폐관 1일당 기본 0.03% (폐관 28일 ≈ 결투 의뢰 1회 수준 — 안전한 대신 느림)
+  secludePerDayPerInsight: 0.00015, // + 오성×0.015%p (오성4 ≈ 0.09%/일)
+  questBase: 0.008, // 결투·큰의뢰 생환 1회당 기본 0.8%
+  questPerInsight: 0.004, // + 오성×0.4%p (오성4 = 2.4%/회)
+} as const;
+
+export function greatEnlightenmentChance(insight: number, mode: 'seclude' | 'quest'): number {
+  const i = Math.max(0, insight);
+  const raw =
+    mode === 'seclude'
+      ? GREAT_ENLIGHTENMENT.secludePerDayBase + i * GREAT_ENLIGHTENMENT.secludePerDayPerInsight
+      : GREAT_ENLIGHTENMENT.questBase + i * GREAT_ENLIGHTENMENT.questPerInsight;
+  return Math.max(0.0005, Math.min(0.5, raw));
+}
 
 // 폐관 청원 허락 시 기본 폐관 일수. 위험 의뢰(3주=21일)보다 길게 — 폐관은 느리지만 확실, 의뢰는
 // 빠르되 부상 위험. 28일 = 4주(극험 의뢰와 동급 기간) + 벽곡단 2/일 = 56개 소모(무거운 사슬). docs/28 §5.

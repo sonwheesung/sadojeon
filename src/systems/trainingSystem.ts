@@ -56,6 +56,7 @@ import {
   effectiveRealmCeiling,
   enlightenmentChance,
   externalSupportReq,
+  greatEnlightenmentChance,
   isWallTransition,
   nextRealm,
   realmCeiling,
@@ -420,6 +421,9 @@ function applyRealmTick(
           // 영약 없는 폐관(헛폐관) — 청원 자격 회복. 영약이 생기면 다시 청원하게 한다.
           // (없으면 "벽당 1회 청원" 룰 때문에 영약을 늦게 구한 회차가 영영 화경 기회를 잃는다.)
           petitioned = false;
+        } else if (Math.random() >= greatEnlightenmentChance(d.insight, 'seclude')) {
+          // 대오(大悟)가 오지 않았다 — 마음이 열리기 전엔 약도 몸도 소용없다. 보장 없음(운×실력).
+          // 폐관은 매일 굴리되 확률이 아주 낮다 — 화경 돈오는 실전(위험·극험 의뢰)에서 잘 온다.
         } else if (attemptBoneRebirth(discipleId)) {
           consumeDivineElixir();
           realm = wallTarget;
@@ -525,6 +529,10 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   const pity = d.realmProgress?.pity ?? 0;
   if (wallTarget === 'hwagyeong') {
     if (!hasDivineElixir()) return null; // 화경은 신품 영약 필수
+    // 대오(大悟) — 실전에서 크게 깨닫는다(폐관보다 잘 옴). 보장 없음 — 운×실력. docs/23 §6.
+    // chanceBonus(+0.3, 절정·초절정용 실전 보정)는 적용 X — 대오에 더하면 사실상 보장이 된다.
+    // "실전이 더 잘 됨"은 greatEnlightenmentChance 의 quest 모드 자체에 이미 들어 있다.
+    if (Math.random() >= greatEnlightenmentChance(d.insight, 'quest')) return null;
     if (!attemptBoneRebirth(discipleId)) return null; // 주화입마 — 영약 보존, 회복 후 재도전
     consumeDivineElixir();
     store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });

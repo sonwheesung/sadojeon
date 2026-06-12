@@ -210,6 +210,12 @@ function absorbFactor(disciple: QiAttribute | undefined, elixir: QiAttribute | u
   return 0.6;
 }
 
+// 약발 내성 — 내공단을 거듭 복용하면 몸이 약기운에 무뎌진다(도배로 내공 기둥 무력화 방지,
+// 정통무협 결: 영약은 기연이지 식량이 아니다). n번째 복용 효과 = ×DECAY^n (바닥 FLOOR).
+// 회차 내 누적. ✅ 도입 2026-06-12(시뮬: 내공단 도배 시 내공 12,000 — 요구 9배 인플레). 🔧 그레이박스.
+const DAN_TOLERANCE_DECAY = 0.8;
+const DAN_TOLERANCE_FLOOR = 0.2;
+
 // 내공단 복용 — 흡수 중이면 불가(false). 속성 매칭으로 흡수량 차등, absorbDays 동안 매일 흡수.
 export function consumeInternalElixir(discipleId: string, recipeId: string): boolean {
   const recipe = findElixirRecipe(recipeId);
@@ -222,8 +228,10 @@ export function consumeInternalElixir(discipleId: string, recipeId: string): boo
   const items = useItemStore.getState();
   if (!items.items.find((i) => i.id === recipeId && i.count > 0)) return false;
   items.adjustCount(recipeId, -1);
-  const total = (recipe.internalAmount ?? 0) * absorbFactor(d.qiAttribute, recipe.attribute);
+  const tolerance = Math.max(DAN_TOLERANCE_FLOOR, DAN_TOLERANCE_DECAY ** (d.danTolerance ?? 0));
+  const total = (recipe.internalAmount ?? 0) * absorbFactor(d.qiAttribute, recipe.attribute) * tolerance;
   ds.update(discipleId, {
+    danTolerance: (d.danTolerance ?? 0) + 1,
     elixirAbsorb: { until: today + recipe.absorbDays, perDay: total / recipe.absorbDays, attribute: recipe.attribute },
   });
   return true;
