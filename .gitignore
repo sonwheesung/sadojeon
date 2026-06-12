@@ -53,3 +53,6 @@ app-example
 
 # balance-sim 헤드리스 빌드 산출물
 .claude/skills/balance-sim/_headless.cjs
+
+# balance-sim 임시 출력
+.claude/skills/balance-sim/_last_*.txt
