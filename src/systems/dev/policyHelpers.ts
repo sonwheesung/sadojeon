@@ -13,6 +13,7 @@ import {
 } from '@/data/martialArts';
 import {
   REALM_EXTERNAL_REQ,
+  effectiveRealmCeiling,
   externalSupportReq,
   REALM_INTERNAL_REQ,
   REALM_SEONG_GATE,
@@ -145,6 +146,33 @@ function configureCarryTraining(id: string): boolean {
   if (goal) {
     const planned = canLearnArt(d, goal) || owns(d, goal.id) ? goal.id : planArtToward(d, goal);
     if (planned) trainId = planned;
+  }
+  // 천장 데드락 방지(2026-06-12 실측): 계획 무공이 저급 선행(예: 하품 초상비)이면 그 천장에
+  // 경지가 묶여 상위 무공 학습 게이트(절정 등)에 영영 못 닿는다 — 비급 전권 보유 시 재현.
+  // 격일로 "지금 배울 수 있는 최고 천장 무공"을 주력 삼아 경지를 병행 상승(실플레이 결:
+  // 절품 검보를 주력으로 두고 선행은 병습).
+  {
+    const nextR = nextRealm(d.realm);
+    const plannedArt = trainId ? findMartialArt(trainId) : undefined;
+    if (
+      nextR &&
+      plannedArt &&
+      realmIndex(effectiveRealmCeiling(plannedArt.grade)) < realmIndex(nextR) &&
+      useTimeStore.getState().totalDay % 2 === 1
+    ) {
+      const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
+      const ceilingArt = MARTIAL_ARTS.filter(
+        (a) =>
+          a.minDarkness == null &&
+          realmIndex(effectiveRealmCeiling(a.grade)) >= realmIndex(nextR) &&
+          (owns(d, a.id) || (chainOwned(a) && canLearnArt(d, a))),
+      ).sort((a, b) => {
+        const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
+        if (g !== 0) return g;
+        return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
+      })[0];
+      if (ceilingArt) trainId = ceilingArt.id;
+    }
   }
   if (trainId && trainId !== d.mainMartialArtId) ds.assignMainMartialArt(id, trainId);
 

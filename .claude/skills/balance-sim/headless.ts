@@ -30,7 +30,7 @@ import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
-import { findMartialArt } from '@/data/martialArts';
+import { findMartialArt, MARTIAL_ARTS } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { effectiveRealmCeiling, realmIndex, nextRealm as nextRealmOf, REALM_INTERNAL_REQ } from '@/data/realm';
 import { expToNextSeong } from '@/data/martialArts';
@@ -676,11 +676,12 @@ async function runModerateSweep(): Promise<void> {
   setAutoSaveEnabled(false);
   const years = Number(process.argv[3] ?? 15);
   const iters = Number(process.argv[4] ?? 8);
-  const withDan = process.argv[5] === 'dan'; // 'dan' = 카리가 내공단도 챙겨 먹는 변형
+  const withDan = process.argv.includes('dan'); // 'dan' = 카리가 내공단도 챙겨 먹는 변형
+  const fullCodex = process.argv.includes('all'); // 'all' = 비급 전권 보유 시작(후기 회차 가정 — 비급 영구 누적)
   const days = years * 336;
   const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
-  console.log(`=== 적당 연단(서폿 1·주 1회 제조${withDan ? '·내공단 복용' : '·내공단 X'}) · ${years}년 · ${iters}회 평균 ===`);
+  console.log(`=== 적당 연단(서폿 1·주 1회 제조${withDan ? '·내공단 복용' : '·내공단 X'}${fullCodex ? '·비급 전권' : ''}) · ${years}년 · ${iters}회 평균 ===`);
   console.log('카리=yun-soso(검) + 대련 상대 장철 + 연단 진소화(주1 제조) + 의술 백연. 공장(factorysweep) 대비.\n');
 
   let carryHwa = 0;
@@ -689,6 +690,7 @@ async function runModerateSweep(): Promise<void> {
   for (let it = 0; it < iters; it += 1) {
     seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
     useGameStore.getState().setPhase('playing');
+    if (fullCodex) for (const a of MARTIAL_ARTS) grantScroll(a.id); // 후기 회차 — 전권 보유
     setElixirBudget(0);
     setByeokgokdanBudget(Infinity);
     {
