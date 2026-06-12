@@ -19,6 +19,11 @@ const TONE_ACCENT: Record<CutsceneTone, string> = {
   blood: colors.seal,
 };
 
+// 쇼츠(9:16) 컷을 꽉 채워도 되는 화면 상한 — 16:9(0.5625)까지는 cover,
+// 그보다 넓은 화면(태블릿 등)은 잘라내지 않고 전체 보기(contain)로 자동 전환.
+// ✅ 사용자 확인 2026-06-12: 태블릿에선 쇼츠·가로판 둘 다 잘림 → 자르지 않는 게 정답.
+const COVER_MAX_ASPECT = 0.58;
+
 export function CutsceneOverlay() {
   const current = useCutsceneStore((s) => s.queue[0]);
   const pop = useCutsceneStore((s) => s.pop);
@@ -74,10 +79,24 @@ export function CutsceneOverlay() {
     </>
   );
 
+  // [DEV] 기기 비율 시뮬레이터 — frameAspect(가로/세로)가 있으면 그 비율 틀에 맞춰
+  // 화면 안에 최대 크기로 띄우고, 밖은 빈 띠로 둔다. 잘림(cover) 검증용. docs/20.
+  let frame: { width: number; height: number } | undefined;
+  if (current.frameAspect) {
+    frame =
+      winW / winH > current.frameAspect
+        ? { width: Math.round(winH * current.frameAspect), height: winH }
+        : { width: winW, height: Math.round(winW / current.frameAspect) };
+  }
+
+  // 넓은 화면(태블릿)에선 쇼츠 컷을 자르지 않고 전체 보기 — 남는 공간은 먹색 띠.
+  const viewportAspect = frame ? frame.width / frame.height : winW / winH;
+  const coverFit = viewportAspect > COVER_MAX_ASPECT ? 'contain' : 'cover';
+
   const content = isCover && media ? (
     <>
-      {/* 쇼츠 — 풀스크린 cover + 하단 자막(옅은 어둠) */}
-      <Image source={media.source} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {/* 쇼츠 — 풀스크린 cover + 하단 자막(옅은 어둠). 넓은 화면은 contain(잘림 0) */}
+      <Image source={media.source} style={StyleSheet.absoluteFill} contentFit={coverFit} />
       <View style={styles.coverBottom} pointerEvents="none">
         {subtitle}
       </View>
@@ -98,7 +117,8 @@ export function CutsceneOverlay() {
       </View>
 
       {media ? (
-        <Image source={media.source} style={styles.letterboxMedia} contentFit="cover" />
+        // contain — 가로판 그림이 띠(3:2)와 비율이 달라도 잘리지 않게(잘림 0 원칙)
+        <Image source={media.source} style={styles.letterboxMedia} contentFit="contain" />
       ) : (
         <View style={styles.fallbackWrap}>
           {/* 그레이박스 — 모션 미디어 미등록 컷. docs/20 */}
@@ -115,16 +135,6 @@ export function CutsceneOverlay() {
       </View>
     </>
   );
-
-  // [DEV] 기기 비율 시뮬레이터 — frameAspect(가로/세로)가 있으면 그 비율 틀에 맞춰
-  // 화면 안에 최대 크기로 띄우고, 밖은 빈 띠로 둔다. 잘림(cover) 검증용. docs/20.
-  let frame: { width: number; height: number } | undefined;
-  if (current.frameAspect) {
-    frame =
-      winW / winH > current.frameAspect
-        ? { width: Math.round(winH * current.frameAspect), height: winH }
-        : { width: winW, height: Math.round(winW / current.frameAspect) };
-  }
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={pop}>
