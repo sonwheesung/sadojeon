@@ -33,17 +33,18 @@ const SIMS = [
 ] as const;
 
 // 기기 비율 시뮬레이터 — 9:16 쇼츠 컷이 기기마다 어떻게 잘리나 검증(피드백 대응). docs/20.
-// aspect = 가로/세로. undefined = 이 기기 화면 그대로.
-const PREVIEW_RATIOS = [
-  { key: 'device', label: '이 기기', aspect: undefined as number | undefined },
-  { key: 'tall', label: '폰 20:9', aspect: 9 / 20 },
-  { key: 'classic', label: '폰 16:9', aspect: 9 / 16 },
-  { key: 'tablet', label: '태블릿 4:3', aspect: 3 / 4 },
+// 각 기기의 실제 논리 크기(dp)로 그린 뒤 통째로 축소 — 글자·띠 비율이 실물과 동일.
+// undefined = 이 기기 화면 그대로.
+const PREVIEW_DEVICES = [
+  { key: 'device', label: '이 기기', size: undefined as { width: number; height: number } | undefined },
+  { key: 'tall', label: '폰 20:9', size: { width: 360, height: 800 } },
+  { key: 'classic', label: '폰 16:9', size: { width: 360, height: 640 } },
+  { key: 'tablet', label: '태블릿 4:3', size: { width: 768, height: 1024 } },
 ] as const;
 
 export default function SimLabHub() {
   const dev = useDevAccess();
-  const [ratioKey, setRatioKey] = useState<(typeof PREVIEW_RATIOS)[number]['key']>('device');
+  const [ratioKey, setRatioKey] = useState<(typeof PREVIEW_DEVICES)[number]['key']>('device');
   if (!dev) {
     return (
       <SafetyZone background={colors.paper}>
@@ -76,8 +77,8 @@ export default function SimLabHub() {
         onPress={() => {
           // 등록된 컷씬 전부 큐에 — 탭으로 한 장씩 넘기며 연출·미디어 확인. docs/20.
           // 보조판(가로 레거시 등)이 있는 컷은 두 버전 다 올린다(✅ 두 버전 보존).
-          const ratio = PREVIEW_RATIOS.find((r) => r.key === ratioKey);
-          const frame = ratio?.aspect ? { aspect: ratio.aspect, label: ratio.label } : undefined;
+          const device = PREVIEW_DEVICES.find((r) => r.key === ratioKey);
+          const frame = device?.size ? { ...device.size, label: device.label } : undefined;
           for (const c of CUTSCENES) {
             playCutscene(c.eventId, { id: 'jang-cheol', name: '장철' }, { frame });
             if (CUTSCENE_MEDIA_ALT[c.eventId]?.['jang-cheol']) {
@@ -89,7 +90,7 @@ export default function SimLabHub() {
         <Text style={styles.cardTitle}>컷씬 미리보기</Text>
         <Text style={styles.cardDesc}>등록된 컷씬 전부 재생(장철 기준) — 쇼츠판+가로판 비교·전용 대사·폴백 확인</Text>
         <View style={styles.ratioRow}>
-          {PREVIEW_RATIOS.map((r) => (
+          {PREVIEW_DEVICES.map((r) => (
             <Pressable
               key={r.key}
               style={[styles.ratioChip, ratioKey === r.key && styles.ratioChipOn]}

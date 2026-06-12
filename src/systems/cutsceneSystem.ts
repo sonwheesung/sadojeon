@@ -10,8 +10,8 @@ export function playCutscene(
   disciple: { id: string; name: string },
   opts?: {
     mediaVariant?: 'default' | 'alt';
-    // [DEV] 시뮬랩 기기 비율 시뮬레이터 — 다른 폰·태블릿 비율 틀 안에서 재생해 잘림 확인
-    frame?: { aspect: number; label: string };
+    // [DEV] 시뮬랩 기기 비율 시뮬레이터 — 다른 폰·태블릿의 논리 크기(dp)로 그려 잘림 확인
+    frame?: { width: number; height: number; label: string };
   },
 ): void {
   const def = findCutscene(eventId);
@@ -29,7 +29,8 @@ export function playCutscene(
     line: (variant?.line ?? def.defaultLine).replaceAll('{name}', disciple.name),
     quote: variant?.quote,
     mediaVariant: opts?.mediaVariant,
-    frameAspect: opts?.frame?.aspect,
+    frameWidth: opts?.frame?.width,
+    frameHeight: opts?.frame?.height,
     frameLabel: opts?.frame?.label,
   });
 }

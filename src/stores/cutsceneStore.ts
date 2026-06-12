@@ -17,8 +17,10 @@ export interface PlayingCutscene {
   quote?: string; // 제자 전용 한마디
   // 보조 미디어판(가로 레거시 등) 재생 — 시뮬랩 미리보기 비교용. 기본 undefined = 기본판.
   mediaVariant?: 'default' | 'alt';
-  // [DEV] 기기 비율 시뮬레이터 — 시뮬랩 미리보기 전용. 설정 시 화면 대신 이 비율(가로/세로) 틀 안에서 재생.
-  frameAspect?: number;
+  // [DEV] 기기 비율 시뮬레이터 — 시뮬랩 미리보기 전용. 설정 시 그 기기의 실제 논리 크기(dp)로
+  // 그린 뒤 화면에 맞게 통째로 축소 — 글자·띠 비율이 실물과 동일하게 보인다.
+  frameWidth?: number;
+  frameHeight?: number;
   frameLabel?: string;
 }
 

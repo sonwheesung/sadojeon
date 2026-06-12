@@ -79,15 +79,13 @@ export function CutsceneOverlay() {
     </>
   );
 
-  // [DEV] 기기 비율 시뮬레이터 — frameAspect(가로/세로)가 있으면 그 비율 틀에 맞춰
-  // 화면 안에 최대 크기로 띄우고, 밖은 빈 띠로 둔다. 잘림(cover) 검증용. docs/20.
-  let frame: { width: number; height: number } | undefined;
-  if (current.frameAspect) {
-    frame =
-      winW / winH > current.frameAspect
-        ? { width: Math.round(winH * current.frameAspect), height: winH }
-        : { width: winW, height: Math.round(winW / current.frameAspect) };
-  }
+  // [DEV] 기기 비율 시뮬레이터 — 그 기기의 실제 논리 크기(dp)로 그린 뒤 화면에 맞게
+  // 통째로 축소(transform scale). 글자·띠·그림 비율이 실물 기기와 동일하게 보인다. docs/20.
+  const frame =
+    current.frameWidth && current.frameHeight
+      ? { width: current.frameWidth, height: current.frameHeight }
+      : undefined;
+  const frameScale = frame ? Math.min(winW / frame.width, winH / frame.height) : 1;
 
   // 넓은 화면(태블릿)에선 쇼츠 컷을 자르지 않고 전체 보기 — 남는 공간은 먹색 띠.
   const viewportAspect = frame ? frame.width / frame.height : winW / winH;
@@ -141,7 +139,9 @@ export function CutsceneOverlay() {
       <Pressable style={styles.screen} onPress={pop} accessibilityRole="button" accessibilityLabel="컷씬 계속">
         {frame ? (
           <View style={styles.frameCenter} pointerEvents="none">
-            <View style={[styles.frameBox, frame]}>{content}</View>
+            <View style={[styles.frameBox, frame, { transform: [{ scale: frameScale }] }]}>
+              {content}
+            </View>
             {current.frameLabel ? <Text style={styles.frameTag}>{current.frameLabel}</Text> : null}
           </View>
         ) : (
