@@ -5,7 +5,8 @@ import { simulateCombat } from '../../src/systems/combat/engine';
 import { makeNpcCombatant } from '../../src/systems/combat/npc';
 import type { Combatant, CombatArt } from '../../src/types/combat';
 
-const N = 2000;
+// 통계 룰(✅ 사용자 확정 2026-06-12, docs/36 §원칙): 통계는 최소 1만 판.
+const N = 10000;
 
 const art = (school: CombatArt['school'], seong = 4, grade: CombatArt['grade'] = 'apprentice', isMain = false): CombatArt =>
   ({ school, grade, path: 'jeong', seong, isMain });
