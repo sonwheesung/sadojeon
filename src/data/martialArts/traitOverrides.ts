@@ -44,4 +44,22 @@ export const ART_TRAIT_OVERRIDE: Record<string, MartialTrait[]> = {
   'salsu-muheun-sword': ['pierce', 'swift'], // 무흔검 — 절품 살수검(광역 아닌 정밀 단일·관통)
   'jeolmyeong-13-chim': ['pierce'], //    절명십삼침 — 절명혈 점혈(관통)
   // 비수·수전·표창·검(야행/무성)·보법(전부 swift 기본값)·도·심법 = 기본값 정확(생략)
+
+  // ═══ 절품 검 중 "정밀 단일" — 검강 광역이 아니라 일격·섬광·찌르기. 기본값(절품 검=광역) 보정 ═══
+  'hwasan-seoak-ilgeom': ['pierce'], //          서악일검 — 천 초식이 한 획으로(단 한 번의 관통 일격)
+  'jeomchang-gwanil-sword': ['pierce', 'swift'], // 관일검 — 해를 꿰뚫는 점창 쾌검
+  'sail-sword': ['pierce', 'swift'], //          사일검법 — 천하에서 가장 빠른 찌르기(관통·쾌)
+  'namgung-cheonroe-ilseom-sword': ['pierce', 'swift'], // 천뢰일섬검 — 한 섬광으로 모이는 뇌전
+  'moyong-hoecheon-seomyeong-sword': ['swift'], // 회천섬영검 — 빠름과 되돌림(섬영·쾌)
+  'doga-muwi-sword': ['pierce'], //              무위검 — 막을 길 없다(관통, 광역 아닌 흐름)
+  // 매화검·적하장천·만리청풍·만불조종·운룡승천·곤오신검·복마신검·현천무극·태극검·무극검·
+  // 천하무극·삼락검·제왕검형·대천강검·혈하검법 = 검강·만방 광역(기본값 sweep 정확, 유지)
+
+  // ═══ 쾌검 명가(점창·종남·모용) — 빠름이 곧 검. 단일·쾌속(상승은 관통 겸함) ═══
+  'jeomchang-yuseong-sword': ['swift'], //  유성검 — 한 번 떨어지는 쾌검
+  'jeomchang-ilseom-sword': ['pierce', 'swift'], // 일섬검 — 보면 이미 꿰뚫린 쾌검
+  'jongnam-yuseong-sword': ['swift'], //    낙성검 — 별똥 쾌검
+  'jongnam-cheonseong-sword': ['swift'], // 천성검 — 연달아 떨어지는 쾌검
+  'moyong-chupung-sword': ['swift'], //     추풍검 — 바람 뒤쫓는 기초 쾌검
+  'cheongseong-jukyeop-sword': ['swift'], // 죽엽검 — 잘고 빠른 검
 };
