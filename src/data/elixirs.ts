@@ -48,10 +48,19 @@ export const ELIXIR_RECIPES: readonly ElixirRecipe[] = [
   { id: 'geumchang-5', name: '금창약', category: 'heal', woundType: 'wound', grade: 5, alchemyReq: 10, craftDays: 2, materials: [{ id: 'herb-common', qty: 2 }], effect: '가벼운 외상(5등급)을 다스린다.' },
   { id: 'hwalhyeol-3', name: '활혈단', category: 'heal', woundType: 'wound', grade: 3, alchemyReq: 28, craftDays: 5, materials: [{ id: 'herb-common', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '베인 상처·타박(3등급)을 아문다.' },
   { id: 'saengsa-1', name: '생사인', category: 'heal', woundType: 'wound', grade: 1, alchemyReq: 55, craftDays: 14, materials: [{ id: 'herb-rare', qty: 3 }, { id: 'herb-divine', qty: 1 }], effect: '치명상(1등급)에서 끌어올린다.' },
-  // ── 치료(속성) ──
-  { id: 'cheongryang-4', name: '청량고', category: 'heal', woundType: 'burn', grade: 4, alchemyReq: 20, craftDays: 4, materials: [{ id: 'herb-fire', qty: 2 }], effect: '화상(4등급)을 식힌다.' },
+  // ── 치료(속성) — 각 속성 등급 사다리(5 응급 / 3~4 보통 / 1 치명). docs/29 §5-1 ──
+  // 중독(poison) — 독은 흔하다(당가·만천화우·살수 독침). 깊은 중독은 상급 해독약이라야.
+  { id: 'haedokcho-go', name: '해독초고', category: 'heal', woundType: 'poison', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-poison', qty: 2 }], effect: '해독초를 짓이긴 응급 해독고 — 가벼운 중독(5등급)을 다스린다.' },
   { id: 'haedok-3', name: '해독단', category: 'heal', woundType: 'poison', grade: 3, alchemyReq: 30, craftDays: 6, materials: [{ id: 'herb-poison', qty: 3 }], effect: '중독(3등급)을 푼다.' },
+  { id: 'mandok-bulchimdan', name: '만독불침단', category: 'heal', woundType: 'poison', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-poison', qty: 3 }, { id: 'herb-divine', qty: 1 }], effect: '만 가지 독을 누른다 — 치명 중독(1등급)까지 풀어내는 해독의 정점(당가·의가 비전).' },
+  // 화상(burn)
+  { id: 'bingsim-san', name: '빙심산', category: 'heal', woundType: 'burn', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-fire', qty: 2 }], effect: '서늘한 가루로 가벼운 화상(5등급)을 식힌다.' },
+  { id: 'cheongryang-4', name: '청량고', category: 'heal', woundType: 'burn', grade: 4, alchemyReq: 20, craftDays: 4, materials: [{ id: 'herb-fire', qty: 2 }], effect: '화상(4등급)을 식힌다.' },
+  { id: 'ongno-dan', name: '옥로단', category: 'heal', woundType: 'burn', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-fire', qty: 2 }, { id: 'herb-divine', qty: 1 }], effect: '타들어간 살을 옥 이슬로 되살린다 — 치명 화상(1등급)까지.' },
+  // 동상(frost)
+  { id: 'onyang-go', name: '온양고', category: 'heal', woundType: 'frost', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-cold', qty: 2 }], effect: '따뜻한 고약으로 가벼운 동상(5등급)을 녹인다.' },
   { id: 'onyang-3', name: '온양단', category: 'heal', woundType: 'frost', grade: 3, alchemyReq: 30, craftDays: 6, materials: [{ id: 'herb-cold', qty: 3 }], effect: '동상(3등급)을 녹인다.' },
+  { id: 'daeyang-singdan', name: '대양신단', category: 'heal', woundType: 'frost', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'herb-divine', qty: 1 }], effect: '꺼져가는 양기를 되살린다 — 치명 동상(1등급)까지.' },
   // ── 내공단(속성·흡수) ──
   { id: 'naegong-fire', name: '양화내단', category: 'internal', attribute: 'fire', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-fire', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '화속 내공 120 — 20일 흡수(흡수 중 다른 영단 X).' },
   { id: 'naegong-water', name: '현음내단', category: 'internal', attribute: 'water', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '수속 내공 120 — 20일 흡수.' },
