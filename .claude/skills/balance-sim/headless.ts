@@ -31,7 +31,7 @@ import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
-import { findMartialArt, MARTIAL_ARTS, canLearnArt } from '@/data/martialArts';
+import { findMartialArt, MARTIAL_ARTS, canLearnArt, constitutionTitles } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { effectiveRealmCeiling, realmIndex, nextRealm as nextRealmOf, REALM_INTERNAL_REQ } from '@/data/realm';
 import { expToNextSeong } from '@/data/martialArts';
@@ -1227,6 +1227,92 @@ const OUTCOME_BY_TITLE: [string, string][] = [
   ['의뢰 재난', 'disaster'],
 ];
 
+// 졸업 종합 진단 엔진 — 15년 양육 끝 상태 전부(경지·직업·능력치·무공·체질·명성·흑화). 계속 돌려 양육 결과 테스트.
+// 실행: run-headless.cjs gradsweep [reps] [optimal|party]
+async function runGradSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const reps = Number(process.argv[3] ?? 20);
+  const mode = process.argv[4] ?? 'optimal';
+  const ds = () => useDiscipleStore.getState();
+  const ROLES = ['carry', 'medicine', 'alchemy', 'formation'];
+  // 제자별 집계
+  type Acc = { realm: Record<string, number>; job: Record<string, number>; none: number;
+    ext: number; internal: number; seong: number; arts: number; fame: number; dark: number;
+    guarding: number; scouting: number; medicine: number; knowledge: number; alchemy: number;
+    constitution: Record<string, number>; n: number };
+  const acc: Record<string, Acc> = {};
+  const newAcc = (): Acc => ({ realm: {}, job: {}, none: 0, ext: 0, internal: 0, seong: 0, arts: 0, fame: 0, dark: 0, guarding: 0, scouting: 0, medicine: 0, knowledge: 0, alchemy: 0, constitution: {}, n: 0 });
+
+  console.log(`=== 졸업 종합 진단 — 15년 양육 × ${reps}회 (정책: ${mode}) ===`);
+  console.log('15년 끝 상태: 경지·직업·외공/내공·주력 성·무공 권수·비전투 스탯·체질·명성·흑화.\n');
+
+  for (let r = 0; r < reps; r += 1) {
+    seedNewRun(SEED_POOL);
+    useGameStore.getState().setPhase('playing');
+    setByeokgokdanBudget(Infinity);
+    setElixirBudget(1);
+    const roster = ds().order.slice(0, 4);
+    const roleMap: Record<string, string> = {};
+    roster.forEach((id, i) => { roleMap[id] = ROLES[i] ?? 'combat'; });
+    for (let d = 0; d < 15 * 336; d += 1) {
+      if (useGameStore.getState().phase === 'ended') break;
+      if (mode === 'party') configurePartyDay(roleMap); else configureOptimal();
+      optimalDispatch(0.05, 13);
+      advanceTurn();
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      for (const item of [...useInboxStore.getState().items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+      }
+      useInboxStore.getState().reset();
+    }
+    for (const id of roster) {
+      const d = ds().disciples[id];
+      if (!d) continue;
+      const a = (acc[d.name] ??= newAcc());
+      a.n += 1;
+      a.realm[REALM_LABEL[d.realm]] = (a.realm[REALM_LABEL[d.realm]] ?? 0) + 1;
+      const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+      a.seong += d.martialArts.find((x) => x.artId === mainId)?.seong ?? 0;
+      a.arts += d.martialArts.length;
+      a.ext += d.stats?.strength?.level ?? 0;
+      a.internal += d.realmProgress?.internal ?? 0;
+      a.fame += d.fame ?? 0;
+      a.dark += d.darknessLevel ?? 0;
+      a.guarding += d.stats?.guarding?.level ?? 0;
+      a.scouting += d.stats?.scouting?.level ?? 0;
+      a.medicine += d.stats?.medicine?.level ?? 0;
+      a.knowledge += d.stats?.knowledge?.level ?? 0;
+      a.alchemy += d.stats?.alchemy?.level ?? 0;
+      for (const t of constitutionTitles(d.martialArts)) a.constitution[t] = (a.constitution[t] ?? 0) + 1;
+      const jobs = evaluateJobs(d);
+      if (jobs.length === 0) a.none += 1;
+      else a.job[jobs[0].job.name] = (a.job[jobs[0].job.name] ?? 0) + 1;
+    }
+  }
+
+  const pctMap = (m: Record<string, number>, denom: number) =>
+    Object.entries(m).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${Math.round((v / denom) * 100)}%`).join('·');
+  const aggRealm: Record<string, number> = {}; const aggJob: Record<string, number> = {}; let totalN = 0;
+  for (const id of ds().order.slice(0, 4)) {
+    const nm = ds().disciples[id]?.name ?? id;
+    const a = acc[nm]; if (!a) continue;
+    totalN += a.n;
+    for (const [k, v] of Object.entries(a.realm)) aggRealm[k] = (aggRealm[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(a.job)) aggJob[k] = (aggJob[k] ?? 0) + v;
+    const consti = Object.keys(a.constitution).length ? ` · 체질 ${pctMap(a.constitution, a.n)}` : '';
+    console.log(`  [${nm}] 경지 ${pctMap(a.realm, a.n)} | 직업 ${pctMap(a.job, a.n)}${a.none ? `·미달${Math.round((a.none / a.n) * 100)}%` : ''}`);
+    console.log(`        외공 ${(a.ext / a.n).toFixed(0)}·내공 ${(a.internal / a.n).toFixed(0)}·주력 ${(a.seong / a.n).toFixed(1)}성·무공 ${(a.arts / a.n).toFixed(1)}권·명성 ${(a.fame / a.n).toFixed(0)}·흑화 ${(a.dark / a.n).toFixed(1)} | 비전투 호위${(a.guarding / a.n).toFixed(0)}·정탐${(a.scouting / a.n).toFixed(0)}·의술${(a.medicine / a.n).toFixed(0)}·지력${(a.knowledge / a.n).toFixed(0)}·연단${(a.alchemy / a.n).toFixed(0)}${consti}`);
+  }
+  console.log(`\n[전체 경지] ${pctMap(aggRealm, totalN)}`);
+  console.log(`[전체 직업] ${pctMap(aggJob, totalN)}`);
+  const hwa = aggRealm['화경'] ?? 0;
+  console.log(`[화경 도달] ${Math.round((hwa / totalN) * 100)}%`);
+}
+
 // 졸업 직업 분포 — 15년 양육 후 evaluateJobs로 제자별 최빈 직업·경지. 실행: run-headless.cjs jobsweep [reps]
 //  · 두 정책: optimal(4명 전투 경지 push) / party(carry 전투 + 의원·연단·진법 서폿 → 비전투 직업도 나옴).
 async function runJobSweep(): Promise<void> {
@@ -1797,6 +1883,10 @@ async function main() {
   }
   if (process.argv[2] === 'jobsweep') {
     await runJobSweep();
+    return;
+  }
+  if (process.argv[2] === 'gradsweep') {
+    await runGradSweep();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
