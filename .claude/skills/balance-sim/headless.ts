@@ -1246,7 +1246,7 @@ async function runJobSelect(): Promise<void> {
   };
   const A: Arch[] = [
     { label: '검수(절정·검7)', realm: 'jeoljeong', str: 50, arts: [['sword', 7], ['lightness', 4]], fame: 40 },
-    { label: '검성급(화경·검10)', realm: 'hwagyeong', str: 72, arts: [['sword', 10], ['qigong', 7]], stats: { knowledge: 72, guarding: 62 }, fame: 95 },
+    { label: '검성급(화경·검10)', realm: 'hwagyeong', str: 72, arts: [['sword', 10], ['qigong', 7]], stats: { knowledge: 72, guarding: 62 }, persona: { freedom: 62, integrity: 60, mercy: 58, ambition: 58 }, fame: 95 },
     { label: '외공무사(초절·외공8)', realm: 'chojeoljeong', str: 70, arts: [['external', 8], ['fist', 6]], fame: 35 },
     { label: '호위(절정·호위75)', realm: 'jeoljeong', str: 55, arts: [['saber', 6]], stats: { guarding: 75, etiquette: 65, knowledge: 55 }, fame: 50 },
     { label: '신의(절정·의술85)', realm: 'jeoljeong', str: 20, arts: [['medical', 6]], stats: { medicine: 85, knowledge: 72, alchemy: 55 }, fame: 60, persona: { warmth: 75, mercy: 70 } },

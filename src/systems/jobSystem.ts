@@ -1,8 +1,8 @@
-// 졸업 직업 판정 — docs/28 §3. 최소조건 필터 → 적합도 점수 → 확률 분포.
-// 적합도 = 능력 초과분(50%) + 인격 부합(35%) + 제자 의지(15%, 현재 인격 재사용).
-// 유대·명성은 후속(스토어 연결 시 가중치 재배분). 선택 UI도 후속 — 지금은 풀·확률만 산출.
+// 졸업 직업 판정 — docs/28 §3. 최소조건 필터 → (적합도 × 직업 격 가중 × 평판 × 흑화) 점수 → 확률 분포.
+// 적합도 = 능력 초과분 + 인격 부합 + 명성 + 제자 의지. 직업 격(tier) 가중으로 자격되는 최고 격을 우선.
+// 유대는 후속(스토어 연결 시 가중치 재배분). 선택 UI도 후속 — 지금은 풀·확률만 산출.
 
-import { JOB_POOL, type Job } from '@/data/jobs';
+import { JOB_POOL, type Job, type JobTier } from '@/data/jobs';
 import { JOB_ROUTE, ROUTE_FACTION } from '@/data/careers';
 import { repTier, type RepTier } from '@/data/factions';
 import { findMartialArt } from '@/data/martialArts';
@@ -96,6 +96,17 @@ function fitness(d: Disciple, job: Job): number {
   return 0.45 * a + 0.3 * p + 0.15 * fame + 0.1 * p;
 }
 
+// 직업 격(tier) 가중 — 자격이 되는 가장 높은 격의 직업을 우선 택한다. 2026-06-14:
+// 종전 점수는 "최소조건 초과분"만 봐서, 쉬운 하급 직업(야매의사 의술12)을 크게 웃도는 고수가
+// 간신히 자격되는 명품 직업(신의 의술80)보다 하급을 더 높게 쳤다(의술85 졸업생이 신의 대신 야매의사).
+// 격이 높을수록 강한 가중을 곱해, 자격만 되면 정점 직업을 강하게 선호하게 한다.
+const TIER_WEIGHT: Record<JobTier, number> = {
+  peak: 3.6,
+  upper: 2.2,
+  common: 1.2,
+  limited: 0.45,
+};
+
 // 졸업 진로 게이트 — 직업 노선의 연관 문파 평판이 적합도를 가중. docs/30.
 // 정파 직업인데 정파와 척졌으면 거의 안 열리고, 맹우면 잘 열린다. 문파 없는 노선=1.0.
 const REP_FACTOR: Record<RepTier, number> = {
@@ -139,7 +150,10 @@ export function evaluateJobs(d: Disciple): JobChance[] {
   const FALLBACK_ID = 'town-idler';
   const real = JOB_POOL.filter((j) => j.id !== FALLBACK_ID && meetsJob(d, j)).map((j) => ({
     job: j,
-    score: Math.max(0.02, fitness(d, j) * reputationFactor(d, j) * darknessFactor(d, j)),
+    score: Math.max(
+      0.02,
+      fitness(d, j) * TIER_WEIGHT[j.tier] * reputationFactor(d, j) * darknessFactor(d, j)
+    ),
   }));
   if (real.length === 0) {
     const fb = JOB_POOL.find((j) => j.id === FALLBACK_ID);
