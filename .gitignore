@@ -51,8 +51,9 @@ app-example
 /ios
 /android
 
-# balance-sim 헤드리스 빌드 산출물
+# balance-sim 헤드리스 빌드 산출물 (고정 + 프로세스별 고유 pid 번들)
 .claude/skills/balance-sim/_headless.cjs
+.claude/skills/balance-sim/_headless.*.cjs
 
 # balance-sim 임시 출력
 .claude/skills/balance-sim/_last_*.txt

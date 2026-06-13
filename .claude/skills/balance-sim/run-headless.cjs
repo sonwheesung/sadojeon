@@ -27,10 +27,17 @@ if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
   process.exit(1);
 }
 
+// 번들 출력은 **프로세스별 고유 경로**(_headless.<pid>.cjs) — 같은 폴더에 여러 sweep 를
+// 동시에 돌려도 번들 파일을 놓고 경쟁(race → "Unexpected end of input")하지 않게. 2026-06-13.
+// (external 모듈 resolution 이 프로젝트 node_modules 를 타도록 위치는 __dirname 유지, tmpdir X.)
+const outfile = path.join(__dirname, `_headless.${process.pid}.cjs`);
+const cleanup = () => { try { fs.unlinkSync(outfile); } catch {} };
+process.on('exit', cleanup);
+
 esbuild.build({
   entryPoints: [path.join(__dirname, 'headless.ts')],
   bundle: true, platform: 'node', format: 'cjs',
-  outfile: path.join(__dirname, '_headless.cjs'),
+  outfile,
   alias: {
     'react-native': path.join(__dirname, '_stubs/empty.ts'),
     '@react-native-async-storage/async-storage': path.join(__dirname, '_stubs/async-storage.ts'),
@@ -42,4 +49,4 @@ esbuild.build({
   tsconfig: path.join(root, 'tsconfig.json'),
   define: { __DEV__: 'false' },
   logLevel: 'error',
-}).then(() => { require('./_headless.cjs'); }).catch((e) => { console.error('build fail', e.message || e); process.exit(1); });
+}).then(() => { require(outfile); }).catch((e) => { console.error('build fail', e.message || e); process.exit(1); });
