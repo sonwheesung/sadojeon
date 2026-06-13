@@ -16,6 +16,7 @@ import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
+import { evaluateJobs } from '@/systems/jobSystem';
 import { QUEST_GRADE_ORDER, QUEST_POOL } from '@/data/quests';
 import type { Quest, MartialArtInstance } from '@/types';
 import { useQuestStore } from '@/stores/questStore';
@@ -1226,6 +1227,74 @@ const OUTCOME_BY_TITLE: [string, string][] = [
   ['의뢰 재난', 'disaster'],
 ];
 
+// 졸업 직업 분포 — 15년 양육 후 evaluateJobs로 제자별 최빈 직업·경지. 실행: run-headless.cjs jobsweep [reps]
+//  · 두 정책: optimal(4명 전투 경지 push) / party(carry 전투 + 의원·연단·진법 서폿 → 비전투 직업도 나옴).
+async function runJobSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const reps = Number(process.argv[3] ?? 15);
+  const mode = process.argv[4] ?? 'optimal'; // optimal | party
+  const ds = () => useDiscipleStore.getState();
+  // disciple명 → 직업명 → 횟수, 그리고 경지 분포.
+  const jobBy: Record<string, Record<string, number>> = {};
+  const realmBy: Record<string, Record<string, number>> = {};
+  const noneBy: Record<string, number> = {};
+  const agg: Record<string, number> = {};
+  const ROLES = ['carry', 'medicine', 'alchemy', 'formation']; // party 모드 역할
+
+  console.log(`=== 졸업 직업 분포 — 15년 양육 × ${reps}회 (정책: ${mode}) ===`);
+  console.log('각 회차 끝에 제자별 evaluateJobs 최빈 직업. optimal=전원 전투 경지 / party=carry+의원·연단·진법 서폿.\n');
+
+  for (let r = 0; r < reps; r += 1) {
+    seedNewRun(SEED_POOL);
+    useGameStore.getState().setPhase('playing');
+    setByeokgokdanBudget(Infinity);
+    setElixirBudget(1);
+    const roster = ds().order.slice(0, 4);
+    const roleMap: Record<string, string> = {};
+    roster.forEach((id, i) => { roleMap[id] = ROLES[i] ?? 'combat'; });
+    for (let d = 0; d < 15 * 336; d += 1) {
+      if (useGameStore.getState().phase === 'ended') break;
+      if (mode === 'party') configurePartyDay(roleMap);
+      else configureOptimal();
+      optimalDispatch(0.05, 13); // 약간의 의뢰 — 명성·외공 보강(직업 적합도에 명성 15%)
+      advanceTurn();
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      for (const item of [...useInboxStore.getState().items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+      }
+      useInboxStore.getState().reset();
+    }
+    for (const id of roster) {
+      const disc = ds().disciples[id];
+      if (!disc) continue;
+      const nm = disc.name;
+      (realmBy[nm] ??= {})[REALM_LABEL[disc.realm]] = ((realmBy[nm] ??= {})[REALM_LABEL[disc.realm]] ?? 0) + 1;
+      const jobs = evaluateJobs(disc);
+      if (jobs.length === 0) { noneBy[nm] = (noneBy[nm] ?? 0) + 1; continue; }
+      const top = jobs[0].job.name;
+      (jobBy[nm] ??= {})[top] = ((jobBy[nm] ??= {})[top] ?? 0) + 1;
+      agg[top] = (agg[top] ?? 0) + 1;
+    }
+  }
+
+  const fmt = (m: Record<string, number>, denom: number) =>
+    Object.entries(m).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${Math.round((v / denom) * 100)}%`).join(' · ');
+  console.log('[제자별 — 종착 경지 | 최빈 직업]');
+  for (const id of ds().order.slice(0, 4)) {
+    const nm = ds().disciples[id]?.name ?? id;
+    const realm = realmBy[nm] ? fmt(realmBy[nm], reps) : '-';
+    const job = jobBy[nm] ? fmt(jobBy[nm], reps) : '-';
+    const none = noneBy[nm] ? ` · 자격미달 ${Math.round((noneBy[nm] / reps) * 100)}%` : '';
+    console.log(`  ${nm.padEnd(6)} | 경지: ${realm}\n           직업: ${job}${none}`);
+  }
+  console.log(`\n[전체 직업 분포] ${fmt(agg, reps * 4)}`);
+  console.log('⚠️ optimal은 전투 경지 위주라 비전투 직업(의원·책사)은 적게 — 폭넓은 분포는 party 모드.');
+}
+
 // 의뢰 종합 시뮬 — ① 경지×난이도 ② 파티 1~4 ③ 상태이상 ④ 결과 분포. 실행: run-headless.cjs questsim [reps]
 async function runQuestSim(): Promise<void> {
   setAutoSaveEnabled(false);
@@ -1719,6 +1788,10 @@ async function main() {
   }
   if (process.argv[2] === 'questsim') {
     await runQuestSim();
+    return;
+  }
+  if (process.argv[2] === 'jobsweep') {
+    await runJobSweep();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
