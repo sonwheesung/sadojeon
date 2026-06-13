@@ -78,4 +78,34 @@ row('심마 59 (직전)', '폭주X (임계 미만)', { simma: 59 });
 row('심마 60 (폭주)', '공↑방↓ 트레이드', { simma: 60 });
 row('심마 100 (폭주)', '60과 동일(임계제)', { simma: 100 });
 
-console.log('\n측정 끝. 상처 심도·체력·심마(폭주) 반영 + 속성 종류별 결 차등(동상=신법↓·중독/화상=지속피해·내상=내공↓).');
+// 독 저항(천독불침·만독불침) — ① 이미 중독된 채 싸울 때 지속피해 차단 ② 독공 결정타가 중독을 못 입힘.
+console.log('\n[독 저항 — 중독 위중(sev2) 안고 싸울 때, 지속피해 차단]');
+row('저항 없음', '중독 먹힘', { woundSeverity: 2, woundType: 'poison', poisonResist: 0 });
+row('천독불침(1)', '일반독 면역', { woundSeverity: 2, woundType: 'poison', poisonResist: 1 });
+row('만독불침(2)', '완전 면역', { woundSeverity: 2, woundType: 'poison', poisonResist: 2 });
+row('외상 sev2(비교)', '독 아님', { woundSeverity: 2, woundType: 'wound' });
+
+// 독공 공격자의 결정타가 방어자에게 실제로 중독을 입히는가 — 저항별 중독 상처 비율.
+console.log('\n[독 저항 — 독공 절정 공격자 결정타 맞은 일류 방어자의 중독 상처 비율]');
+function poisonWoundRate(defResist: number): { downed: number; poisonPct: number } {
+  let downed = 0, poisoned = 0;
+  for (let i = 0; i < N; i += 1) {
+    const atk = make('atk', {
+      realm: 'jeoljeong', internal: 600, strength: 55,
+      arts: [{ school: 'hidden', grade: 'master', path: 'jung', seong: 7, isMain: true, traits: ['poison'] }],
+    });
+    const r = simulateCombat([atk], [make('def', { poisonResist: defResist })], { mode: 'real' });
+    const def = r.combatants.find((c) => c.id === 'def');
+    if (def && (def.state === 'downed' || def.state === 'dead') && def.wound) {
+      downed += 1;
+      if (def.wound.type === 'poison') poisoned += 1;
+    }
+  }
+  return { downed, poisonPct: downed ? (poisoned / downed) * 100 : 0 };
+}
+for (const [label, lv] of [['저항 없음', 0], ['천독불침(극독만 뚫림)', 1], ['만독불침', 2]] as const) {
+  const { poisonPct } = poisonWoundRate(lv);
+  console.log(`  ${label.padEnd(20)} 쓰러진 방어자 중 중독 상처 ${poisonPct.toFixed(1)}%`);
+}
+
+console.log('\n측정 끝. 상처 심도·체력·심마(폭주) 반영 + 속성 종류별 결 차등 + 독 저항(천독/만독불침) 차단.');

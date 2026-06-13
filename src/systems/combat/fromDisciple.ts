@@ -2,7 +2,7 @@
 // 호출 시점의 상태(체력·부상·심마)가 그대로 스냅샷에 박힌다 — 같은 제자라도 만전일 때와
 // 만신창이일 때 다른 전투원이 된다.
 
-import { findMartialArt, artTraits } from '@/data/martialArts';
+import { findMartialArt, artTraits, poisonResistLevel } from '@/data/martialArts';
 import type { Disciple } from '@/types';
 import type { CombatArt, Combatant } from '@/types/combat';
 
@@ -43,5 +43,6 @@ export function combatantFromDisciple(d: Disciple): Combatant {
     simma: d.simma ?? 0,
     woundSeverity: d.wound?.severity,
     woundType: d.wound?.type,
+    poisonResist: poisonResistLevel(d.martialArts),
   };
 }

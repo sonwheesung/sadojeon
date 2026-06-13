@@ -4,6 +4,7 @@
 // docs/04 영약 · docs/08 의뢰 결과.
 
 import { ELIXIR_RECIPES, findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
+import { poisonResistLevel, resistsPoison } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import type { Disciple, Wound, WoundType } from '@/types/disciple';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
@@ -40,6 +41,9 @@ export function inflictWound(discipleId: string, type: WoundType, severity: numb
   const ds = useDiscipleStore.getState();
   const d = ds.disciples[discipleId];
   if (!d) return;
+  // 독 면역(천독불침/만독불침) — 독공 고수는 중독에 안 걸린다. 전투·의뢰·환경 독 전부 이 관문을 거친다.
+  // 막히면 상처 자체가 안 남는다(독지에서도 멀쩡). docs/35 §6-1c.
+  if (type === 'poison' && resistsPoison(poisonResistLevel(d.martialArts), severity)) return;
   const prev = d.wound;
   const next: Wound =
     prev && prev.severity <= severity

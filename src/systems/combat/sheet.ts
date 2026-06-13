@@ -10,7 +10,7 @@ import type { CombatArt, Combatant } from '@/types/combat';
 import type { MartialArtGrade, MartialArtSchool, MartialTrait } from '@/types/martialArt';
 import { REALM_ORDER } from '@/types/realm';
 import { GRADE_COEF, kitPower } from '../combatPower';
-import { defaultArtTraits } from '@/data/martialArts';
+import { defaultArtTraits, resistsPoison } from '@/data/martialArts';
 
 // CombatArt 의 실효 특성 — 명시값 우선, 없으면 갈래·등급·노선 기본값(테스트 헬퍼 등 traits 미지정 대비).
 function traitsOf(a: CombatArt): MartialTrait[] {
@@ -99,8 +99,11 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
   const wd = woundDepth(c.woundSeverity);
   const frostSlow = c.woundType === 'frost' ? 1 - 0.25 * wd : 1; // 동상: 신법 최대 -25%
   const innerDrainMult = c.woundType === 'inner' ? 1 + 0.6 * wd : 1; // 내상: 내공 소모 최대 1.6배
-  const dotFrac =
-    c.woundType === 'poison' ? 0.015 * wd : c.woundType === 'burn' ? 0.01 * wd : 0; // 합당 지속 피해
+  // 독 면역(천독불침·만독불침)이면 중독 지속 피해가 안 먹힌다.
+  const poisonBites =
+    c.woundType === 'poison' &&
+    !resistsPoison((c.poisonResist ?? 0) as 0 | 1 | 2, c.woundSeverity ?? 5);
+  const dotFrac = poisonBites ? 0.015 * wd : c.woundType === 'burn' ? 0.01 * wd : 0; // 합당 지속 피해
 
   const main = mainArt(c);
   const isMa = main?.path === 'ma';

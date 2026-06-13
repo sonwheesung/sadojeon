@@ -94,6 +94,46 @@ export function artTraits(art: MartialArt): MartialTrait[] {
   return ART_TRAIT_OVERRIDE[art.id] ?? art.traits ?? defaultArtTraits(art);
 }
 
+// ─── 독 저항(천독불침·만독불침) — docs/35 §6-1c ──────────────────────────────
+// 독을 다루는 자는 독에 내성이 생긴다(무협 캔온). 당가 내공 사다리(어독심결→호심기공→백독불침공
+// →천독신공)가 정식 면역 경로. 0=없음 / 1=천독불침(千毒不侵) / 2=만독불침(萬毒不侵).
+//  · 만독불침(2): 천독신공(千毒神功) 보유 — 독으로 내력을 기르는 당가 비전. 모든 독 면역.
+//  · 천독불침(1): 백독불침공(百毒不侵功) 보유, 또는 임의 독공(poison 특성)을 소성(4성)+ 수련.
+//                 일반 독은 안 통하나, 치명 극독(severity 1)은 뚫는다.
+const ART_MANDOK = 'dangga-cheondok-singong'; // 천독신공 → 만독불침
+const ART_CHEONDOK = 'dangga-baekdok-bulchim-gong'; // 백독불침공 → 천독불침
+export type PoisonResist = 0 | 1 | 2;
+
+export function poisonResistLevel(insts: { artId: string; seong: number }[]): PoisonResist {
+  let hasMandok = false;
+  let hasCheondok = false;
+  let bestPoisonSeong = 0;
+  for (const inst of insts) {
+    if (inst.artId === ART_MANDOK) hasMandok = true;
+    if (inst.artId === ART_CHEONDOK) hasCheondok = true;
+    const art = findMartialArt(inst.artId);
+    if (art && artTraits(art).includes('poison')) {
+      bestPoisonSeong = Math.max(bestPoisonSeong, inst.seong);
+    }
+  }
+  if (hasMandok) return 2;
+  if (hasCheondok || bestPoisonSeong >= 4) return 1;
+  return 0;
+}
+
+// 이 저항 단계가 이 심도의 독을 막아내는가. 만독불침=전부, 천독불침=일반 독(치명 극독 sev1은 통함).
+export function resistsPoison(level: PoisonResist, severity: number): boolean {
+  if (level >= 2) return true;
+  if (level === 1) return severity >= 2;
+  return false;
+}
+
+export const POISON_RESIST_TITLE: Record<PoisonResist, string | null> = {
+  0: null,
+  1: '천독불침',
+  2: '만독불침',
+};
+
 // 미충족 선행 무공서 목록 — 스킬트리 게이트. 충족이면 빈 배열. docs/28 §5-2.
 export function unmetPrerequisites(disciple: Disciple, art: MartialArt): ArtPrerequisite[] {
   if (!art.prerequisites?.length) return [];
