@@ -61,6 +61,7 @@ import {
   nextRealm,
   realmCeiling,
   realmIndex,
+  wallInternalReq,
 } from '@/data/realm';
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
@@ -403,7 +404,7 @@ function applyRealmTick(
   const atWall =
     wallTarget != null &&
     realmIndex(wallTarget) <= realmIndex(ceiling) &&
-    internal >= REALM_INTERNAL_REQ[wallTarget] &&
+    internal >= wallInternalReq(wallTarget) && // 화경은 초절정 내공이면 벽에 선다(나머진 환골탈태)
     external >= externalSupportReq(wallTarget) &&
     mainSeong >= REALM_SEONG_GATE[wallTarget] &&
     isWallTransition(wallTarget);
@@ -427,6 +428,7 @@ function applyRealmTick(
         } else if (attemptBoneRebirth(discipleId)) {
           // 여기 도달 = 폐관 안에서 화경 대오가 터진 희귀 순간 — 업적 "면벽돈오"(docs/32) 발화 지점.
           consumeDivineElixir();
+          internal = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약(화경 내공)
           realm = wallTarget;
           pity = 0;
           petitioned = false;
@@ -520,7 +522,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   const external = d.stats?.strength?.level ?? 0;
   const mainSeong = mainId ? (d.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
   if (
-    internal < REALM_INTERNAL_REQ[wallTarget] ||
+    internal < wallInternalReq(wallTarget) || // 화경은 초절정 내공이면 벽에 선다(나머진 환골탈태)
     external < externalSupportReq(wallTarget) || // 화경은 받침 62 — 나머지 8은 환골탈태가 채움
     mainSeong < REALM_SEONG_GATE[wallTarget]
   ) {
@@ -536,7 +538,8 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
     if (Math.random() >= greatEnlightenmentChance(d.insight, 'quest')) return null;
     if (!attemptBoneRebirth(discipleId)) return null; // 주화입마 — 영약 보존, 회복 후 재도전
     consumeDivineElixir();
-    store.update(discipleId, { realm: wallTarget, realmProgress: { internal, pity: 0, petitioned: false } });
+    const boosted = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약
+    store.update(discipleId, { realm: wallTarget, realmProgress: { internal: boosted, pity: 0, petitioned: false } });
     realmUpToInbox(d, wallTarget);
     return wallTarget;
   }

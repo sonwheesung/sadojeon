@@ -42,15 +42,25 @@ export function realmIndex(r: Realm): number {
 }
 
 // targetRealm 으로 들어갈 때 요구되는 내공 누적치. 경지 높을수록 ↑. (그레이박스)
+// 내공 요구치 — 졸업(10세→~25세) 동안 정통 무협 속도로 경지가 열리게 재배치(2026-06-13, Approach A).
+// 내공은 두 길로 쌓인다: 심법 수련(internalPerDay) + 실전 의뢰(QUEST_INTERNAL_PER_WEEK, questSystem) → 은둔
+// 수련자·모험가 둘 다 성장. 화경=1300 유지(전투 qiEdge ÷1300 불변), 자연 내공은 ~초절정에서 멈추고
+// 화경 내공은 환골탈태(영약, 임독양맥 타통=내공 도약)가 채운다(wallInternalReq).
 export const REALM_INTERNAL_REQ: Record<Realm, number> = {
   none: 0,
   samryu: 0,
-  iryu: 100,
-  ilryu: 250,
-  jeoljeong: 500,
-  chojeoljeong: 850,
+  iryu: 260,
+  ilryu: 520,
+  jeoljeong: 870,
+  chojeoljeong: 1050,
   hwagyeong: 1300,
 };
+
+// 벽에 "서는 데" 필요한 내공 — 화경만 예외: 초절정 내공(1050)이면 선다. 화경 내공(1300)의 나머지는
+// 환골탈태가 채우므로(영약 게이트), 자연 내공을 정통 속도로 늦춰도 화경은 영약으로 도달한다. docs/23 §5.
+export function wallInternalReq(target: Realm): number {
+  return target === 'hwagyeong' ? REALM_INTERNAL_REQ.chojeoljeong : REALM_INTERNAL_REQ[target];
+}
 
 // targetRealm 진입 외공(체력·근골 ≈ strength level 0~100) 요구. docs/28 §5-1. 세 기둥 중 하나.
 // "체력만으론 경지 X" — 내공·무공서와 함께 충족해야. 가장 약한 기둥이 경지를 잡아끈다.
@@ -102,7 +112,7 @@ export function isWallTransition(target: Realm): boolean {
 
 // 일일 내공 적립 (그레이박스). 효율(체력비율)에 곱해진다.
 export const REALM_GAIN = {
-  internalPerDay: 10, // 심법 수련 1일 → 내공 +
+  internalPerDay: 2.5, // 심법 수련 1일 → 내공 + (10→2.5, 정통 속도 2026-06-13. 실전 의뢰도 내공 적립(questSystem))
 } as const;
 
 // 경지별 주력 무공 성(成) 상한 — 그 경지가 받쳐주는 무공 깊이. docs/26 · project_realm_seong_design.

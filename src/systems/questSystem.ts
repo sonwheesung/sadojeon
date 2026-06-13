@@ -482,9 +482,11 @@ function bodyToughnessMult(d: Disciple): number {
 
 // 실전 의뢰 경험 — **위험 등급 × 기간**에 비례. 위험(부상·사망)을 감수하는 경험 의뢰는 같은 기간
 // 훈련보다 값지게(주력 성·외공 프리미엄). 쉬운(잡일·소무) 의뢰는 거의 경험 안 됨. docs/28 §5-1·docs/29.
-// **단 내공(內功)은 의뢰로 오르지 않는다 — 훈련(심법) 전용.** 의뢰는 무공 성·외공·금전·명성만 준다.
+// **실전이 공력을 키운다(2026-06-13, 정통 페이싱)** — 강호 경험(생사 결투)에서 내공도 적립된다. 은둔 수련자는
+// 심법으로, 모험가는 실전으로 내공을 쌓아 둘 다 정통 속도로 경지가 오른다(느린 자연 내공이 의뢰형을 굶기던 문제 해소).
 const QUEST_SEONG_EXP_PER_WEEK = 55; // 주력 무공 성 EXP/주 (훈련 초식 ~56/주 대비, 등급배수로 우위)
 const QUEST_BODY_EXP_PER_WEEK = 45; //  외공(근력) EXP/주 (효율·나이 보정 별도)
+const QUEST_INTERNAL_PER_WEEK = 1.5; // 내공 적립/주 (위험등급×기간 비례, 심법과 보완 — 🔧 시뮬 튜닝 2026-06-13)
 const QUEST_STAT_EXP_PER_WEEK = 28; //  비전투(호위·정탐·의술) 능력치 EXP/주
 const QUEST_GRADE_GROWTH: Record<QuestGrade, number> = {
   menial: 0.2, //   잡일 — 경험 거의 없음(쉬운 의뢰)
@@ -926,13 +928,14 @@ function resolveQuest(active: ActiveQuest): Milestone {
     const d = ds.disciples[id];
     if (!d) continue;
     // 성장 — 능력치(호위·정탐·의술) 또는 무공 성(결투·큰의뢰).
+    let internalGain = 0;
     if (scale.growth > 0) {
       // 경험치 = 기간(주) × 위험등급 배수 × 성과. 위험·장기 의뢰일수록 훈련 대비 값지다.
       const expFactor = (q.weeks ?? 1) * (QUEST_GRADE_GROWTH[q.grade] ?? 1) * scale.growth;
       if (stat) {
         ds.addStatExp(id, stat, Math.max(1, Math.round(QUEST_STAT_EXP_PER_WEEK * expFactor)));
       } else if (isMartial) {
-        // 결투·큰의뢰 — 주력 무공 성(실전 깨우침) + 외공(근골). 내공은 적립 X(훈련 전용).
+        // 결투·큰의뢰 — 주력 무공 성(실전 깨우침) + 외공(근골).
         gainMainSeongExp(d, Math.max(1, Math.round(QUEST_SEONG_EXP_PER_WEEK * expFactor)));
         const bodyTier = d.efficiency?.strength ?? '보통';
         const bodyExp = Math.round(
@@ -940,11 +943,15 @@ function resolveQuest(active: ActiveQuest): Milestone {
         );
         if (bodyExp > 0) ds.addStatExp(id, 'strength', bodyExp);
       }
+      // 실전이 공력을 키운다 — 모든 성장 의뢰가 내공 적립(위험·장기일수록↑). 정통 페이싱: 모험가형도 경지 성장.
+      internalGain = Math.round(QUEST_INTERNAL_PER_WEEK * expFactor);
     }
     // 인격 변화 — 나이·관성 반영. docs/28 §6.
+    const baseRp = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
     const patch: Partial<Disciple> = {
       fame: (d.fame ?? 0) + Math.round(q.reward.fame * scale.fame * mult),
       personality: shiftPersona(d, personaDeltas(q, outcome)),
+      ...(internalGain > 0 ? { realmProgress: { ...baseRp, internal: baseRp.internal + internalGain } } : {}),
     };
     // 상태 — 재난 희생자=치명상. **즉사 없음** — 생존 체인(구급영약→신의급 의원→자력)으로 살리고,
     // 다 실패하면 그때 사망. 그 외 속성 상처(외상·화상·중독·동상)로 몸져눕는다. 심도는 결과에 비례.
