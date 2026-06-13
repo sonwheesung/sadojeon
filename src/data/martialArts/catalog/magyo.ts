@@ -85,6 +85,7 @@ export const MAGYO_ARTS: MartialArt[] = [
     isSectArt: false, lineage: 'magyo', acquisition: 'quest',
     prerequisites: [{ artId: 'sura-magong', minSeong: 4 }],
     minDarkness: 2,
+    traits: ['drain'], // 내공 소멸(흡성으로 가는 길목) — 엔진상 흡공으로 근사(적 내공을 깎는다).
   },
   {
     id: 'sosu-magong',
@@ -148,6 +149,7 @@ export const MAGYO_ARTS: MartialArt[] = [
     isSectArt: false, lineage: 'magyo', acquisition: 'quest',
     prerequisites: [{ artId: 'hwagong-daebeop', minSeong: 5 }],
     minDarkness: 2,
+    traits: ['drain'], // 흡공 — 적 내공을 빨아 자신을 채운다(이종진기 → 심마). 광역 아님(단일 흡착).
   },
 
   // ─── 권(fist) 4 — 마라권 → 혈수장 → 광마권, 화골면장(소수마공 선행) ───

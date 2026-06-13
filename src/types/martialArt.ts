@@ -90,7 +90,28 @@ export interface MartialArt {
   lineage?: string;
   // 깊은 마공 게이트 — 흑화 단계가 이 이상이라야 학습 가능(마도 무공의 적층, docs/04 §카테고리 4단계).
   minDarkness?: number;
+  // 무공 특성(트레이트) — 그 무공서만의 성질. 무공서 개체마다 지정. 안 적으면 갈래·등급·노선
+  // 기본값(defaultArtTraits). docs/35 §3-A·docs/04. 흡공은 심마와 묶인다(이종진기 → 주화입마).
+  traits?: MartialTrait[];
 }
+
+// 무공 특성 — 캔온대로 무공서에 부여. 대부분 엔진·시스템이 이미 하는 일을 "어느 무공이 쓰나"로 묶음.
+export type MartialTrait =
+  | 'sweep' //   다인기 — 한 수가 다수를 친다(검막·도강·장풍·만천화우). [엔진 cleave]
+  | 'drain' //   흡공 — 적 내공을 빨아 자신을 채운다 + 심마 누적(흡성대법·화공대법). [qi 흡수 + 주화입마]
+  | 'guard' //   호신강기·금강불괴 — 피격 피해 감쇄. [방어]
+  | 'poison' //  중독 — 독·약독(당가 암기·사천 독공). [중독 상처]
+  | 'swift' //   쾌(快) — 선공·연격(쾌검·신법). [신법↑]
+  | 'pierce'; // 파공(破功) — 상대 호신강기를 꿰뚫는다(육맥신검류). [방어 관통]
+
+export const MARTIAL_TRAIT_LABEL: Record<MartialTrait, string> = {
+  sweep: '광역',
+  drain: '흡공',
+  guard: '호신',
+  poison: '중독',
+  swift: '쾌속',
+  pierce: '파공',
+};
 
 // 제자가 익히고 있는 무공의 진행 상태. docs/26_무공_숙련도.md.
 // seong: 현재 숙련 성(1~10), exp: 현재 성 안에서 누적 경험치.

@@ -7,6 +7,7 @@ import {
   REALM_INTERNAL_REQ,
   REALM_SEONG_CAP,
 } from '@/data/realm';
+import { defaultArtTraits } from '@/data/martialArts';
 import type { Realm } from '@/types/realm';
 import type { MartialArtGrade, MartialArtSchool, MartialPath } from '@/types/martialArt';
 import type { CombatArt, Combatant } from '@/types/combat';
@@ -67,8 +68,16 @@ export function makeNpcCombatant(spec: NpcSpec): Combatant {
   // 주력 성 — 경지 상한 안에서 quality 만큼 영글었다.
   const cap = Math.max(1, REALM_SEONG_CAP[spec.realm]);
   const mainSeong = Math.max(1, Math.round(cap * (0.55 + 0.45 * q)));
+  const mainGrade = REALM_NPC_GRADE[spec.realm];
   const arts: CombatArt[] = [
-    { school: a.school, grade: REALM_NPC_GRADE[spec.realm], path: a.path, seong: mainSeong, isMain: true },
+    {
+      school: a.school,
+      grade: mainGrade,
+      path: a.path,
+      seong: mainSeong,
+      isMain: true,
+      traits: defaultArtTraits({ school: a.school, grade: mainGrade, path: a.path }),
+    },
   ];
   if (a.sub) {
     arts.push({
@@ -76,6 +85,7 @@ export function makeNpcCombatant(spec: NpcSpec): Combatant {
       grade: 'novice',
       path: a.path,
       seong: Math.max(1, mainSeong - 1),
+      traits: defaultArtTraits({ school: a.sub, grade: 'novice', path: a.path }),
     });
   }
 

@@ -5,6 +5,7 @@ import type {
   MartialArtGrade,
   MartialPath,
   MartialStage,
+  MartialTrait,
 } from '@/types';
 import {
   REALM_LEARN_FLOOR,
@@ -67,6 +68,27 @@ export function allLineageIds(): string[] {
 
 export function findMartialArt(id: string): MartialArt | undefined {
   return MARTIAL_ARTS.find((m) => m.id === id);
+}
+
+// 무공 특성 기본값 — 무공서에 traits 가 명시 안 됐을 때 갈래·등급·노선으로 추정. docs/35 §3-A.
+// 간판·캔온 무공은 카탈로그에 traits 직접 지정(이 기본값을 덮는다). 창작 사다리 비급은 이 규칙으로.
+//  · 광역(sweep): 도(횡베기)·권/장(장풍)·마공 + 절품↑ 검(검강 광역). 암기·검 하급은 단일(일인기).
+//  · 호신(guard): 외공(금강불괴류)·내공(호신강기).
+//  · 중독(poison): 사·마도 암기(사천·살수 결).
+export function defaultArtTraits(art: Pick<MartialArt, 'school' | 'grade' | 'path'>): MartialTrait[] {
+  const t: MartialTrait[] = [];
+  const highGrade = art.grade === 'grandmaster' || art.grade === 'legendary';
+  if (art.school === 'saber' || art.school === 'fist' || art.school === 'darkArts') t.push('sweep');
+  else if (art.school === 'sword' && highGrade) t.push('sweep'); // 절품+ 검 = 검강 광역
+  if (art.school === 'external' || art.school === 'qigong') t.push('guard');
+  if (art.school === 'hidden' && (art.path === 'sa' || art.path === 'ma')) t.push('poison');
+  if (art.school === 'lightness') t.push('swift');
+  return t;
+}
+
+// 무공의 실효 특성 — 명시값 우선, 없으면 기본값. 엔진 어댑터(fromDisciple)가 쓴다.
+export function artTraits(art: MartialArt): MartialTrait[] {
+  return art.traits ?? defaultArtTraits(art);
 }
 
 // 미충족 선행 무공서 목록 — 스킬트리 게이트. 충족이면 빈 배열. docs/28 §5-2.

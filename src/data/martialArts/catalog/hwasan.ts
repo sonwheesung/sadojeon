@@ -55,6 +55,7 @@ export const HWASAN_ARTS: MartialArt[] = [
     school: 'sword', grade: 'apprentice', path: 'jeong',
     isSectArt: false, lineage: 'hwasan', acquisition: 'quest',
     prerequisites: [{ artId: 'yukhap-sword', minSeong: 3 }],
+    traits: ['swift'], // 쾌검 — 한 호흡에 세 검. 선공·연격(신법↑), 단일.
   },
   {
     id: 'hwasan-yeonhwan-sword',

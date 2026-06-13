@@ -2,7 +2,7 @@
 // 호출 시점의 상태(체력·부상·심마)가 그대로 스냅샷에 박힌다 — 같은 제자라도 만전일 때와
 // 만신창이일 때 다른 전투원이 된다.
 
-import { findMartialArt } from '@/data/martialArts';
+import { findMartialArt, artTraits } from '@/data/martialArts';
 import type { Disciple } from '@/types';
 import type { CombatArt, Combatant } from '@/types/combat';
 
@@ -22,6 +22,7 @@ export function combatantFromDisciple(d: Disciple): Combatant {
         path: art.path,
         seong: inst.seong,
         isMain: inst.artId === mainId,
+        traits: artTraits(art),
       };
     })
     .filter((a): a is CombatArt => a != null);

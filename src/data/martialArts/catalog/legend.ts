@@ -10,6 +10,7 @@ export const LEGEND_ARTS: MartialArt[] = [
     description: '아홉 식으로 천하 만초를 깨뜨린다는 전설의 검. 초식이 없어 깨달은 자만 잇는다.',
     school: 'sword', grade: 'legendary', path: 'jung',
     isSectArt: false, lineage: 'legend', acquisition: 'achievement',
+    traits: ['pierce', 'swift'], // 파초(破招) — 만초를 깨뜨리는 단일 검의 정점(광역 아님, 일대일 최강).
   },
   {
     id: 'neungpa-mibo',
@@ -37,6 +38,7 @@ export const LEGEND_ARTS: MartialArt[] = [
     description: '손가락 한 번 튕김에 바위가 뚫린다. 천하제일의 지력(指力)이라 불리는 기연의 절학.',
     school: 'hidden', grade: 'grandmaster', path: 'jung',
     isSectArt: false, lineage: 'legend', acquisition: 'quest',
+    traits: ['pierce'], // 지력으로 바위를 뚫는다 — 호신강기 관통(파공).
   },
   {
     id: 'legend-ilyang-ji',
@@ -45,6 +47,7 @@ export const LEGEND_ARTS: MartialArt[] = [
     description: '한 가닥 양강의 기를 손끝에 모아 혈도를 제압하고 음독을 몰아내는 전설의 지법.',
     school: 'medical', grade: 'grandmaster', path: 'jeong',
     isSectArt: false, lineage: 'legend', acquisition: 'quest',
+    traits: ['pierce'], // 손끝 양강기로 혈도를 짚는다 — 원거리 지력 파공(점혈).
   },
   {
     id: 'legend-saja-hu',

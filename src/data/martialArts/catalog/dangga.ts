@@ -90,6 +90,7 @@ export const DANGGA_ARTS: MartialArt[] = [
     school: 'hidden', grade: 'master', path: 'jung',
     isSectArt: false, lineage: 'dangga', acquisition: 'quest',
     prerequisites: [{ artId: 'cheonnyeo-sanhwa', minSeong: 5 }],
+    traits: ['sweep', 'poison'], // 만방을 덮는 독 암기 — 광역 + 중독(당가 비전).
   },
   {
     id: 'manryu-gwijong',

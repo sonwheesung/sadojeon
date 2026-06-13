@@ -2,7 +2,7 @@
 // 엔진은 순수(스토어 의존 0): 전투원 스냅샷 → 결과 객체. 효과 적용(상처·관계·EXP)은 호출측 몫.
 // 1:1 ~ n:n, 모드는 대련(spar)/실전(real) 두 가지.
 
-import type { MartialArtGrade, MartialArtSchool, MartialPath } from './martialArt';
+import type { MartialArtGrade, MartialArtSchool, MartialPath, MartialTrait } from './martialArt';
 import type { Realm } from './realm';
 import type { WoundType } from './disciple';
 
@@ -15,6 +15,7 @@ export interface CombatArt {
   path: MartialPath;
   seong: number; // 1~10
   isMain?: boolean; // 주력 — 내공 소모·살초 결이 주력을 따른다
+  traits?: MartialTrait[]; // 무공 특성(광역·흡공·호신·중독·쾌·파공). 없으면 sheet가 갈래·등급 기본값.
 }
 
 // 전투원 스냅샷 — 제자(fromDisciple)·NPC(npc.ts) 공용. 엔진은 이것만 본다.
@@ -75,6 +76,7 @@ export interface CombatantResult {
   qiFrac: number; // 잔여 내공(뒷심) 비율 0~1
   dealtFrac: number; // 가한 피해 총량(상대 최대체력 비율 합) — 활약도
   takenFrac: number; // 받은 피해 총량
+  drainedQi?: number; // 흡공으로 흡수한 내공 — 호출측이 영구 내공 가산 + 심마 누적에 사용(흡성대법)
   wound?: SuggestedWound; // 입은 상처 제안 (없으면 무사)
 }
 

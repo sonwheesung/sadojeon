@@ -45,6 +45,9 @@ const MOOK_DMG_FLOOR = 0.004; //   2경지+ 아래 공격자의 피해 하한(�
 const DMG_FLOOR = 0.015; //        일반 피해 하한
 const CLEAVE_BASE = 2; //          2경지+ 위 공격자의 광역(검기) 기본 추가 타격 수 (+경지차)
 const CLEAVE_DMG_MULT = 0.9; //    광역 부차 타격 피해 배율(주 표적보다 약간 약하게)
+const SWEEP_BASE = 1; //           다인기(광역) 무공이 동급에서도 추가로 휩쓰는 적 수
+const DRAIN_QI = 10; //            흡공 1타당 흡수하는 적 내공(뒷심) — 자신을 채운다(흡성대법)
+const PIERCE_DEF_IGNORE = 0.3; //  파공 — 상대 방어(호신강기) 무시 비율
 const ACCIDENT_BASE = 0.02; //     대련 사고 기본율
 const ACCIDENT_CRUSH = 0.05; //    현격한 차(위력 2.2배↑) 가산
 const RETREAT_HP = 0.3; //         실전 패주 고려선 (진영 평균 체력)
@@ -61,6 +64,7 @@ interface Fighter {
   dealt: number; // 가한 피해 (상대 최대체력 비율 합)
   taken: number;
   burst: boolean; // 심마 폭주 중
+  drained: number; // 흡공으로 흡수한 내공 누적 — 결과로 보고(영구 내공·심마는 호출측이 적용)
   wound?: SuggestedWound;
 }
 
@@ -81,9 +85,9 @@ function effDef(f: Fighter): number {
   return f.sheet.def * (f.burst ? 0.85 : 1);
 }
 
-// 결정타의 상처 결 — 암기는 독, 심법·마공은 내상, 그 외는 외상.
+// 결정타의 상처 결 — 중독 무공·암기는 독, 심법·마공은 내상, 그 외는 외상.
 function woundTypeOf(finisher: Fighter, rng: () => number): WoundType {
-  if (finisher.sheet.hiddenDepth > 0 && rng() < 0.5) return 'poison';
+  if (finisher.sheet.poison || (finisher.sheet.hiddenDepth > 0 && rng() < 0.5)) return 'poison';
   if (finisher.sheet.qigongOrMaMain) return 'inner';
   return 'wound';
 }
@@ -142,6 +146,7 @@ export function simulateCombat(
       dealt: 0,
       taken: 0,
       burst: real && c.simma >= BURST_SIMMA,
+      drained: 0,
     };
   });
 
@@ -284,8 +289,10 @@ export function simulateCombat(
         continue;
       }
 
-      // 피해 — 공/방 비율의 체감 곡선 × 운 폭 × 살초. 2경지+ 아래 공격자는 하한이 낮다(호신강기).
-      const ratio = effAtk(actor) / Math.max(1, effDef(target));
+      // 피해 — 공/방 비율의 체감 곡선 × 운 폭 × 살초. 파공(pierce)은 상대 방어(호신강기)를 일부 무시.
+      // 2경지+ 아래 공격자는 하한이 낮다(잡졸 칼이 고수에게 거의 안 박힌다).
+      const defVal = Math.max(1, effDef(target) * (actor.sheet.pierce ? 1 - PIERCE_DEF_IGNORE : 1));
+      const ratio = effAtk(actor) / defVal;
       const crit = rng() < actor.sheet.critChance;
       let frac = BASE_DMG_FRAC * Math.pow(ratio, DMG_RATIO_EXP) * (0.85 + rng() * 0.3);
       if (crit) frac *= CRIT_MULT;
@@ -293,9 +300,23 @@ export function simulateCombat(
 
       applyStrike(actor, target, frac, crit, round);
 
-      // 광역(검기·검막) — 2경지+ 위면 한 수가 여러 잡졸을 함께 쓸어버린다(무쌍). docs/35 §3-A.
+      // 흡공(drain) — 적의 내공(뒷심)을 빨아 자신을 채운다(흡성대법류). 영구 내공 이전·심마 누적은
+      // 결과의 drained 를 보고 호출측이 적용(엔진은 순수). docs/35 §3-A.
+      if (actor.sheet.drain) {
+        const steal = Math.min(target.qi, DRAIN_QI);
+        target.qi -= steal;
+        actor.qi = Math.min(100, actor.qi + steal);
+        actor.drained += steal;
+      }
+
+      // 광역(검기·검막·장풍) — 다인기 무공이 다수를 함께 친다. 2경지+ 위면 잡졸 풀쓸기(무쌍).
+      // 일인기(비-광역) 무공도 고수면 잡졸을 솎되 광역의 6할만(정밀하게 하나씩). docs/35 §3-A.
+      let sweep = actor.sheet.sweep ? SWEEP_BASE : 0;
       if (gap >= GANG_IMMUNE_REALM_GAP) {
-        const sweep = CLEAVE_BASE + (gap - GANG_IMMUNE_REALM_GAP);
+        const gapBonus = CLEAVE_BASE + (gap - GANG_IMMUNE_REALM_GAP);
+        sweep += actor.sheet.sweep ? gapBonus : Math.ceil(gapBonus * 0.6);
+      }
+      if (sweep > 0) {
         const others = aliveOf(fighters, actor.side === 'A' ? 'B' : 'A')
           .filter((f) => f !== target)
           .sort((x, y) => x.hp / x.sheet.maxHp - y.hp / y.sheet.maxHp)
@@ -381,6 +402,7 @@ export function simulateCombat(
       qiFrac: clamp(f.qi / 100, 0, 1),
       dealtFrac: Math.round(f.dealt * 100) / 100,
       takenFrac: Math.round(f.taken * 100) / 100,
+      drainedQi: f.drained > 0 ? Math.round(f.drained) : undefined,
       wound: f.wound,
     };
   });
