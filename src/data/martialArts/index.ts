@@ -6,6 +6,7 @@ import type {
   MartialPath,
   MartialStage,
   MartialTrait,
+  WoundType,
 } from '@/types';
 import {
   REALM_LEARN_FLOOR,
@@ -94,47 +95,68 @@ export function artTraits(art: MartialArt): MartialTrait[] {
   return ART_TRAIT_OVERRIDE[art.id] ?? art.traits ?? defaultArtTraits(art);
 }
 
-// ─── 독 저항(천독불침·만독불침) — docs/35 §6-1c ──────────────────────────────
-// 독을 다루는 자는 독에 내성이 생긴다(무협 캔온). 당가 내공 사다리(어독심결→호심기공→백독불침공
-// →천독신공)가 정식 면역 경로. 0=없음 / 1=천독불침(千毒不侵) / 2=만독불침(萬毒不侵).
-//  · 만독불침(2): 천독신공(千毒神功) 보유 — 독으로 내력을 기르는 당가 비전. 모든 독 면역.
-//  · 천독불침(1): 백독불침공(百毒不侵功) 보유, 또는 임의 독공(poison 특성)을 소성(4성)+ 수련.
-//                 일반 독은 안 통하나, 치명 극독(severity 1)은 뚫는다.
-const ART_MANDOK = 'dangga-cheondok-singong'; // 천독신공 → 만독불침
-const ART_CHEONDOK = 'dangga-baekdok-bulchim-gong'; // 백독불침공 → 천독불침
-export type PoisonResist = 0 | 1 | 2;
+// ─── 체질(불침) — 한 속성 상처에 면역이 되는 몸. docs/35 §6-1c · 업적/칭호 docs/32 ──────
+// 무협 캔온(웹검증 2026-06-13): 특정 무공을 *깊이*(대성 7성+) 닦으면 몸이 변해 그 속성이 안 통한다.
+//   금강불괴=외공 극의로 도검불침 / 한서불침=양강 내공이 추위를 막음 / 화염불침=열양 내공 / 만독불침=독공의 정점.
+// 막는 상처는 종류마다 하나뿐 — 금강불괴라도 독·불엔 당한다(5속성 균형). level 0 없음 / 1 부분 / 2 완전.
+//   · 완전(2): 시그니처 무공 대성(7성)+ → 그 속성 완전 면역.
+//   · 부분(1, 당가 천독불침 전용): 백독불침공 보유 또는 독공 소성(4성)+ → 일반 독 면역, 치명 극독(sev1)만 통함.
+// 업적 발화 판정 지점: woundResistOf 가 0→1/2 로 오르는 순간(천독불침·금강불괴·한서불침·화염불침·만독불침).
+//   업적 런타임 미구현 — UI 칭호(DiscipleStatusPanel "체질")로 노출, 보상 인프라는 후속.
+const CONSTITUTION_SEONG = 7; // 대성 — 체질은 장기 수련으로 몸이 변하는 것(캔온)
 
-// 업적 발화 판정 지점(docs/32): 반환이 1로 오르면 "천독불침", 2면 "만독불침"(천독신공 통달).
-//   현재 업적 런타임 미구현 — UI 칭호(DiscipleStatusPanel "체질")로 노출, 보상 인프라는 후속.
-export function poisonResistLevel(insts: { artId: string; seong: number }[]): PoisonResist {
-  let hasMandok = false;
-  let hasCheondok = false;
-  let bestPoisonSeong = 0;
-  for (const inst of insts) {
-    if (inst.artId === ART_MANDOK) hasMandok = true;
-    if (inst.artId === ART_CHEONDOK) hasCheondok = true;
-    const art = findMartialArt(inst.artId);
-    if (art && artTraits(art).includes('poison')) {
-      bestPoisonSeong = Math.max(bestPoisonSeong, inst.seong);
-    }
+// 시그니처 무공(대성 7성+) → 완전 면역 속성. 한 속성에 여럿이면 하나만 충족해도 된다.
+const FULL_RESIST_ARTS: { artId: string; type: WoundType }[] = [
+  { artId: 'dangga-cheondok-singong', type: 'poison' }, //  천독신공 → 만독불침
+  { artId: 'geumgang-bulgoe', type: 'wound' }, //           금강불괴 → 금강불괴(외상)
+  { artId: 'sunyang-mugeuk-gong', type: 'frost' }, //       순양무극공 → 한서불침(동상)
+  { artId: 'paengga-yanggang-singong', type: 'frost' }, //  양강신공 → 한서불침(동상)
+  { artId: 'jeomchang-yeolyang-singong', type: 'burn' }, // 열양신공 → 화염불침(화상)
+];
+
+// 제자가 익힌 무공으로부터 속성별 저항 단계(0/1/2). 만전·일반 NPC는 빈 맵(저항 0).
+export function woundResistOf(insts: { artId: string; seong: number }[]): Partial<Record<WoundType, number>> {
+  const seongOf = (id: string) => insts.find((i) => i.artId === id)?.seong ?? 0;
+  const r: Partial<Record<WoundType, number>> = {};
+  for (const { artId, type } of FULL_RESIST_ARTS) {
+    if (seongOf(artId) >= CONSTITUTION_SEONG) r[type] = 2;
   }
-  if (hasMandok) return 2;
-  if (hasCheondok || bestPoisonSeong >= 4) return 1;
-  return 0;
+  if ((r.poison ?? 0) < 2) {
+    let bestPoisonSeong = 0;
+    for (const inst of insts) {
+      const art = findMartialArt(inst.artId);
+      if (art && artTraits(art).includes('poison')) bestPoisonSeong = Math.max(bestPoisonSeong, inst.seong);
+    }
+    if (seongOf('dangga-baekdok-bulchim-gong') >= 1 || bestPoisonSeong >= 4) r.poison = 1;
+  }
+  return r;
 }
 
-// 이 저항 단계가 이 심도의 독을 막아내는가. 만독불침=전부, 천독불침=일반 독(치명 극독 sev1은 통함).
-export function resistsPoison(level: PoisonResist, severity: number): boolean {
+// 이 저항 단계가 이 심도의 상처를 막는가. 완전(2)=전부, 부분(1)=일반(치명 sev1은 통함).
+export function resistsWound(level: number | undefined, severity: number): boolean {
+  if (!level) return false;
   if (level >= 2) return true;
-  if (level === 1) return severity >= 2;
-  return false;
+  return severity >= 2;
 }
 
-export const POISON_RESIST_TITLE: Record<PoisonResist, string | null> = {
-  0: null,
-  1: '천독불침',
-  2: '만독불침',
+// 칭호(체질) — 관찰 가능한 무공 성취. 완전 면역 우선, 중독만 부분(천독불침) 표기. UI·docs/32.
+const CONSTITUTION_TITLE: Record<string, { full: string; partial?: string }> = {
+  poison: { full: '만독불침', partial: '천독불침' },
+  wound: { full: '금강불괴' },
+  frost: { full: '한서불침' },
+  burn: { full: '화염불침' },
 };
+
+export function constitutionTitles(insts: { artId: string; seong: number }[]): string[] {
+  const r = woundResistOf(insts);
+  const out: string[] = [];
+  for (const [type, lv] of Object.entries(r)) {
+    const t = CONSTITUTION_TITLE[type];
+    if (!t || !lv) continue;
+    out.push(lv >= 2 ? t.full : t.partial ?? t.full);
+  }
+  return out;
+}
 
 // 미충족 선행 무공서 목록 — 스킬트리 게이트. 충족이면 빈 배열. docs/28 §5-2.
 export function unmetPrerequisites(disciple: Disciple, art: MartialArt): ArtPrerequisite[] {

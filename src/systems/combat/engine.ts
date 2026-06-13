@@ -22,7 +22,7 @@ import type {
 } from '@/types/combat';
 import type { WoundType } from '@/types/disciple';
 import { REALM_ORDER } from '@/types/realm';
-import { resistsPoison } from '@/data/martialArts';
+import { resistsWound } from '@/data/martialArts';
 import { buildSheet, type CombatSheet } from './sheet';
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -89,16 +89,22 @@ function effDef(f: Fighter): number {
 
 // 결정타의 상처 결 — 무공 속성을 따른다. 화염=화상·빙한=동상·중독=독·심법/마공=내상·그 외=외상.
 // (속성 상처는 같은 속성 해독·치료 영약이라야 낫는다 — docs/29 §5-1, 해독약 사다리.)
-// 독은 맞는 쪽이 천독불침/만독불침이면 안 박힌다(독공 고수는 독에 끄떡없다 — 외상으로 떨어짐). docs/35 §6-1c.
+// 체질(불침)이면 그 속성이 안 박힌다 — 외상으로, 외상마저 면역(금강불괴)이면 내상(충격)으로 떨어진다. docs/35 §6-1c.
 function woundTypeOf(finisher: Fighter, defender: Fighter, severity: number, rng: () => number): WoundType {
-  if (finisher.sheet.burn) return 'burn';
-  if (finisher.sheet.frost) return 'frost';
-  if (finisher.sheet.poison || (finisher.sheet.hiddenDepth > 0 && rng() < 0.5)) {
-    if (!resistsPoison((defender.sheet.ref.poisonResist ?? 0) as 0 | 1 | 2, severity)) return 'poison';
-    // 독 면역 — 독기가 안 퍼지고 타격 외상만 남는다(아래로 떨어진다).
-  }
-  if (finisher.sheet.qigongOrMaMain) return 'inner';
-  return 'wound';
+  const wr = defender.sheet.ref.woundResist;
+  const resisted = (t: WoundType) => resistsWound(wr?.[t], severity);
+  let t: WoundType = finisher.sheet.burn
+    ? 'burn'
+    : finisher.sheet.frost
+      ? 'frost'
+      : finisher.sheet.poison || (finisher.sheet.hiddenDepth > 0 && rng() < 0.5)
+        ? 'poison'
+        : finisher.sheet.qigongOrMaMain
+          ? 'inner'
+          : 'wound';
+  if ((t === 'burn' || t === 'frost' || t === 'poison') && resisted(t)) t = 'wound';
+  if (t === 'wound' && resisted('wound')) t = 'inner'; // 금강불괴 — 살은 안 베여도 충격은 속을 친다
+  return t;
 }
 
 function realmIdx(f: Fighter): number {

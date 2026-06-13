@@ -6,8 +6,7 @@ import {
   expToNextSeong,
   seongCap,
   seongToStage,
-  poisonResistLevel,
-  POISON_RESIST_TITLE,
+  constitutionTitles,
 } from '@/data/martialArts';
 import { PLATEAU } from '@/data/constants';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -100,8 +99,8 @@ export function DiscipleStatusPanel({ disciple }: Props) {
   const yearsIn = Math.max(1, currentYear - disciple.entryYear + 1);
   const art = mainArtScene(disciple);
   const mind = mindScene(disciple);
-  // 체질·칭호 — 관찰 가능한 무공 성취(숨은 변수 아님). 현재: 독 저항(천독불침·만독불침). docs/35 §6-1c.
-  const constitution = POISON_RESIST_TITLE[poisonResistLevel(disciple.martialArts)];
+  // 체질·칭호 — 관찰 가능한 무공 성취(숨은 변수 아님). 금강불괴·한서불침·화염불침·천독/만독불침. docs/35 §6-1c.
+  const constitution = constitutionTitles(disciple.martialArts).join(' · ') || null;
 
   return (
     <View style={styles.section}>
