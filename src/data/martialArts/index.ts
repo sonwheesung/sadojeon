@@ -104,6 +104,8 @@ const ART_MANDOK = 'dangga-cheondok-singong'; // 천독신공 → 만독불침
 const ART_CHEONDOK = 'dangga-baekdok-bulchim-gong'; // 백독불침공 → 천독불침
 export type PoisonResist = 0 | 1 | 2;
 
+// 업적 발화 판정 지점(docs/32): 반환이 1로 오르면 "천독불침", 2면 "만독불침"(천독신공 통달).
+//   현재 업적 런타임 미구현 — UI 칭호(DiscipleStatusPanel "체질")로 노출, 보상 인프라는 후속.
 export function poisonResistLevel(insts: { artId: string; seong: number }[]): PoisonResist {
   let hasMandok = false;
   let hasCheondok = false;
