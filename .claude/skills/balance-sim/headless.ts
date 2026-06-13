@@ -1180,6 +1180,7 @@ const PRESETS = {
   ilryu6: { label: '일류6성', realm: 'ilryu', internal: 400, str: 40, agi: 38, end: 40, arts: [inst('maehwa-sword', 6), inst('chosangbi', 4), inst('tonap-beop', 4), inst('geumjong-jo', 3)] },
   jeol7: { label: '절정7성', realm: 'jeoljeong', internal: 650, str: 50, agi: 45, end: 48, arts: [inst('maehwa-sword', 7), inst('chosangbi', 5), inst('tonap-beop', 5), inst('geumjong-jo', 4)] },
   cho8: { label: '초절8성', realm: 'chojeoljeong', internal: 900, str: 56, agi: 50, end: 54, arts: [inst('isipsa-maehwa-sword', 8), inst('chosangbi', 6), inst('tonap-beop', 6), inst('geumjong-jo', 5)] },
+  hwa10: { label: '화경10성', realm: 'hwagyeong', internal: 1300, str: 70, agi: 60, end: 60, arts: [inst('isipsa-maehwa-sword', 10), inst('chosangbi', 7), inst('tonap-beop', 7), inst('geumjong-jo', 6)] },
 } as const;
 type PresetKey = keyof typeof PRESETS;
 
@@ -1224,6 +1225,151 @@ const OUTCOME_BY_TITLE: [string, string][] = [
   ['의뢰 실패', 'fail'],
   ['의뢰 재난', 'disaster'],
 ];
+
+// 의뢰 종합 시뮬 — ① 경지×난이도 ② 파티 1~4 ③ 상태이상 ④ 결과 분포. 실행: run-headless.cjs questsim [reps]
+async function runQuestSim(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const reps = Number(process.argv[3] ?? 80);
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  setFoodCost(0);
+  setPatronageMult(0);
+  setGeumchangBudget(Infinity); // 구급영약 무한 — 생존 체인 1단 항상 열림(사망=영약으로도 못 막은 경우)
+  const ds = () => useDiscipleStore.getState();
+  const roster = ds().order.slice(0, 4);
+
+  // 한 의뢰 1회 실행 — 파티 멤버별 프리셋 적용(applyEach), 결과·사상 반환. (questmatrix 런루프 재사용)
+  async function once(
+    q: Quest,
+    party: string[],
+    applyEach: (id: string, idx: number, inParty: boolean) => void,
+  ): Promise<{ outcome: string; dead: number; fatal: number }> {
+    for (let m = 0; m < roster.length; m += 1) {
+      const id = roster[m];
+      const inParty = m < party.length;
+      applyEach(id, m, inParty);
+      if (!inParty) ds().update(id, { status: 'resting' });
+    }
+    const year = useTimeStore.getState().current.year;
+    for (const id of roster) ds().update(id, { age: 16, entryYear: year });
+    useMasterStore.getState().update({ yearsAsMaster: 0, age: 40 });
+    useReputationStore.getState().reset();
+    useGameStore.getState().setPhase('playing');
+    useQuestStore.setState({ board: [q], active: [] });
+    const carry = party[0];
+    if (!dispatchQuest(q.id, party)) return { outcome: 'gate', dead: 0, fatal: 0 };
+    let days = 0;
+    let outcome = '';
+    while (ds().disciples[carry]?.status === 'questing' && days < q.weeks * 7 + 14) {
+      advanceTurn();
+      days += 1;
+      for (const mi of usePendingStore.getState().milestones) {
+        if (mi.kind !== 'quest') continue;
+        for (const [t, o] of OUTCOME_BY_TITLE) if (mi.title === t) outcome = o;
+      }
+      const s = useScheduleStore.getState();
+      if (s.pendingReport) s.resolveMonthlyReport();
+      if (s.pendingSetup) s.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      for (const item of [...useInboxStore.getState().items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (isRespondable(item) && dom !== 'seclusion_petition') {
+          const key = responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+          if (key) await resolveInboxItem(item, key);
+        }
+      }
+    }
+    let dead = 0;
+    let fatal = 0;
+    for (const id of party) {
+      const d = ds().disciples[id];
+      if (d?.status === 'departed') dead += 1;
+      else if (d?.wound?.severity === 1) fatal += 1;
+    }
+    return { outcome, dead, fatal };
+  }
+
+  async function tally(
+    q: Quest,
+    party: string[],
+    applyEach: (id: string, idx: number, inParty: boolean) => void,
+  ): Promise<{ succ: number; full: number; partial: number; crisis: number; fail: number; disaster: number; dead: number; fatal: number }> {
+    const c = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0, gate: 0 } as Record<string, number>;
+    let dead = 0;
+    let fatal = 0;
+    for (let i = 0; i < reps; i += 1) {
+      const r = await once(q, party, applyEach);
+      if (r.outcome) c[r.outcome] = (c[r.outcome] ?? 0) + 1;
+      dead += r.dead;
+      fatal += r.fatal;
+    }
+    const pct = (n: number) => (n / reps) * 100;
+    return {
+      succ: pct(c.full + c.partial + c.crisis),
+      full: pct(c.full), partial: pct(c.partial), crisis: pct(c.crisis), fail: pct(c.fail), disaster: pct(c.disaster),
+      dead: pct(dead), fatal: pct(fatal),
+    };
+  }
+
+  // 등급별 대표 결투(duel) 의뢰 — 경지×난이도는 전투 도메인으로(엔진 결산, 난이도 또렷).
+  const GRADES: { g: string; label: string }[] = [
+    { g: 'minor', label: '소무(쉬움)' }, { g: 'normal', label: '보통' },
+    { g: 'dangerous', label: '위험' }, { g: 'extreme', label: '극험(어려움)' },
+  ];
+  const duelByGrade: Record<string, Quest> = {};
+  for (const q of QUEST_POOL) if (q.domain === 'duel' && !duelByGrade[q.grade]) duelByGrade[q.grade] = q;
+  const REALMS_P: PresetKey[] = ['samryu3', 'iryu4', 'ilryu6', 'jeol7', 'cho8', 'hwa10'];
+
+  console.log(`=== 의뢰 종합 시뮬 (실코드 결산, 행당 ${reps}회) — 결투 도메인 ===\n`);
+
+  // [1] 경지 × 난이도 — 솔로, 성공률%(완+성+위) / 괄호=재난% (사망 위험 신호)
+  console.log('[1] 경지 × 난이도 — 솔로 성공률%(재난%)');
+  console.log('         ' + GRADES.map((x) => x.label.padStart(12)).join(''));
+  for (const pk of REALMS_P) {
+    const cells: string[] = [];
+    for (const { g } of GRADES) {
+      const q = duelByGrade[g];
+      if (!q) { cells.push('—'.padStart(12)); continue; }
+      const r = await tally(q, [roster[0]], (id, _m, inP) => { if (inP) applyPreset(id, PRESETS[pk]); });
+      cells.push(`${r.succ.toFixed(0)}%(${r.disaster.toFixed(0)})`.padStart(12));
+    }
+    console.log(`  ${PRESETS[pk].label.padEnd(7)}` + cells.join(''));
+  }
+
+  // [2] 파티 1~4명 — 역량 합산 도메인(호위)에서 규모 효과. 결투(duel)는 대표 1인 싸움이라 규모 무의미 →
+  //     역량이 파티로 합산되는 호위 의뢰로 측정. (참고: 결투 의뢰는 1~4명 차이 거의 없음 — 대표만 싸움.)
+  console.log('\n[2] 파티 1~4명 — 일류(호위40), 위험 호위 의뢰 (완/성/위/실/재 % · 사망% · 치명생환%)');
+  {
+    const guardQ = QUEST_POOL.find((x) => x.domain === 'guard' && x.grade === 'dangerous')
+      ?? QUEST_POOL.find((x) => x.domain === 'scout' && x.grade === 'dangerous')
+      ?? duelByGrade['dangerous'];
+    for (const size of [1, 2, 3, 4]) {
+      const party = roster.slice(0, size);
+      const r = await tally(guardQ, party, (id, _m, inP) => { if (inP) applyPreset(id, PRESETS.ilryu6, { stat: 'guarding', level: 40 }); });
+      console.log(`  ${size}명: 완${r.full.toFixed(0)} 성${r.partial.toFixed(0)} 위${r.crisis.toFixed(0)} 실${r.fail.toFixed(0)} 재${r.disaster.toFixed(0)} · 사망${r.dead.toFixed(0)}% · 치명생환${r.fatal.toFixed(0)}%`);
+    }
+  }
+
+  // [3] 상태이상 — 일류 솔로, *극험* 결투(타이트한 매치업이라 부상 페널티가 드러남). 만전 vs 부상 출전.
+  console.log('\n[3] 상태이상 안고 출전 — 일류6성 솔로, 극험 결투 (성공%·재난%·사망%)');
+  {
+    const q = duelByGrade['extreme'];
+    const conds: { label: string; sev?: number; type?: string }[] = [
+      { label: '만전' }, { label: '경상(sev4)', sev: 4, type: 'wound' },
+      { label: '중상(sev2)', sev: 2, type: 'wound' }, { label: '중상·중독(sev2)', sev: 2, type: 'poison' },
+    ];
+    for (const c of conds) {
+      const r = await tally(q, [roster[0]], (id, _m, inP) => {
+        if (!inP) return;
+        applyPreset(id, PRESETS.ilryu6);
+        if (c.sev) ds().update(id, { wound: { type: c.type as never, severity: c.sev, daysRemaining: 20 } });
+      });
+      console.log(`  ${c.label.padEnd(16)} 성공 ${r.succ.toFixed(0)}% · 재난 ${r.disaster.toFixed(0)}% · 사망 ${r.dead.toFixed(0)}%`);
+    }
+  }
+
+  console.log('\n끝. [1] 경지가 난이도를 어디까지 감당 · [2] 파티 규모 효과 · [3] 부상 출전 페널티.');
+}
 
 async function runQuestMatrix(): Promise<void> {
   setAutoSaveEnabled(false);
@@ -1569,6 +1715,10 @@ async function main() {
   }
   if (process.argv[2] === 'questmatrix') {
     await runQuestMatrix();
+    return;
+  }
+  if (process.argv[2] === 'questsim') {
+    await runQuestSim();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
