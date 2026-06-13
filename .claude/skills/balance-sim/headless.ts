@@ -1227,6 +1227,62 @@ const OUTCOME_BY_TITLE: [string, string][] = [
   ['의뢰 재난', 'disaster'],
 ];
 
+// 직업 선택 시뮬 — 15년 키운 졸업생 원형(스탯·무공·성격·경지·명성·흑화)을 바꿔가며 evaluateJobs 후보(상위 4 = 플레이어 선택지)
+// 확인. 봇이 못 만드는 다양한 빌드(의원·정탐·사파·마인 등)까지 직업 매칭이 합당한지 테스트. 실행: run-headless.cjs jobselect
+async function runJobSelect(): Promise<void> {
+  setAutoSaveEnabled(false);
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  const ds = () => useDiscipleStore.getState();
+  const id = ds().order[0];
+  const SCHOOL_ART: Record<string, string> = {
+    sword: 'ami-manbul-jojong-sword', saber: 'common-pungroe-dobeop', fist: 'ami-hangma-singwon',
+    lightness: 'ami-neungun-yeonhwa-bo', hidden: 'common-yeonju-pyo', external: 'ami-yeonhwa-geumgang-che',
+    qigong: 'geumjeong-singong', medical: 'dangga-haedok-bigyeol', darkArts: 'heupseong-daebeop',
+  };
+  type Arch = {
+    label: string; realm: string; str: number; arts: [string, number][];
+    stats?: Record<string, number>; persona?: Record<string, number>; fame?: number; dark?: number;
+  };
+  const A: Arch[] = [
+    { label: '검수(절정·검7)', realm: 'jeoljeong', str: 50, arts: [['sword', 7], ['lightness', 4]], fame: 40 },
+    { label: '검성급(화경·검10)', realm: 'hwagyeong', str: 72, arts: [['sword', 10], ['qigong', 7]], stats: { knowledge: 72, guarding: 62 }, fame: 95 },
+    { label: '외공무사(초절·외공8)', realm: 'chojeoljeong', str: 70, arts: [['external', 8], ['fist', 6]], fame: 35 },
+    { label: '호위(절정·호위75)', realm: 'jeoljeong', str: 55, arts: [['saber', 6]], stats: { guarding: 75, etiquette: 65, knowledge: 55 }, fame: 50 },
+    { label: '신의(절정·의술85)', realm: 'jeoljeong', str: 20, arts: [['medical', 6]], stats: { medicine: 85, knowledge: 72, alchemy: 55 }, fame: 60, persona: { warmth: 75, mercy: 70 } },
+    { label: '강호의원(일류·의술60)', realm: 'ilryu', str: 15, arts: [['medical', 4]], stats: { medicine: 60, alchemy: 40 }, fame: 25 },
+    { label: '약왕(절정·약재82)', realm: 'jeoljeong', str: 20, arts: [['qigong', 5]], stats: { alchemy: 82, medicine: 58 }, fame: 55 },
+    { label: '그림자(절정·정탐85)', realm: 'jeoljeong', str: 35, arts: [['lightness', 7], ['hidden', 6]], stats: { scouting: 85 }, fame: 45 },
+    { label: '밀정(일류·정탐62)', realm: 'ilryu', str: 30, arts: [['lightness', 5]], stats: { scouting: 62 }, fame: 20 },
+    { label: '사파살수(절정·검8·냉혹)', realm: 'jeoljeong', str: 50, arts: [['sword', 8], ['hidden', 6]], stats: { scouting: 70 }, persona: { mercy: 18, integrity: 25 }, fame: 40 },
+    { label: '마인(초절·마공8·흑화)', realm: 'chojeoljeong', str: 55, arts: [['darkArts', 8], ['qigong', 6]], persona: { mercy: 10, integrity: 15 }, dark: 3, fame: 50 },
+    { label: '책사(절정·지력78)', realm: 'jeoljeong', str: 30, arts: [['sword', 5]], stats: { knowledge: 78, formation: 62 }, fame: 45 },
+    { label: '도가(초절·내공8·지력)', realm: 'chojeoljeong', str: 40, arts: [['qigong', 8], ['sword', 6]], stats: { knowledge: 72 }, persona: { prudence: 75, freedom: 70 }, fame: 55 },
+    { label: '범재(절정·검5·맨몸)', realm: 'jeoljeong', str: 45, arts: [['sword', 5]], fame: 10 },
+    { label: '삼류백수(삼류·검3)', realm: 'samryu', str: 12, arts: [['sword', 3]], fame: 0 },
+  ];
+
+  console.log('=== 직업 선택 시뮬 — 15년 졸업생 빌드별 직업 후보(상위 4 = 선택지) ===');
+  console.log('스탯·무공·성격·경지·명성을 바꿔가며 evaluateJobs. 후보가 빌드와 합당한지 확인.\n');
+  for (const a of A) {
+    const persona = { integrity: 50, freedom: 50, warmth: 50, prudence: 50, mercy: 50, ambition: 50, ...(a.persona ?? {}) };
+    const stats: Record<string, { level: number; exp: number }> = {
+      strength: { level: a.str, exp: 0 }, agility: { level: Math.round(a.str * 0.8), exp: 0 }, endurance: { level: Math.round(a.str * 0.9), exp: 0 },
+    };
+    for (const [k, v] of Object.entries(a.stats ?? {})) stats[k] = { level: v, exp: 0 };
+    const arts = a.arts.map(([sch, s]) => ({ artId: SCHOOL_ART[sch], seong: s, exp: 0, unlockedAt: 0 }));
+    ds().update(id, {
+      realm: a.realm as never, realmProgress: { internal: 1300, pity: 0, petitioned: false },
+      martialArts: arts as never, mainMartialArtId: arts[0]?.artId,
+      stats: stats as never, personality: persona as never,
+      fame: a.fame ?? 0, darknessLevel: (a.dark ?? 0) as never, status: 'training', wound: undefined,
+    });
+    const jobs = evaluateJobs(ds().disciples[id]!);
+    const top = jobs.slice(0, 4).map((j) => `${j.job.name} ${Math.round(j.prob * 100)}%`).join(' · ');
+    console.log(`  ${a.label.padEnd(22)} → ${top || '(자격 직업 없음)'}`);
+  }
+}
+
 // 졸업 종합 진단 엔진 — 15년 양육 끝 상태 전부(경지·직업·능력치·무공·체질·명성·흑화). 계속 돌려 양육 결과 테스트.
 // 실행: run-headless.cjs gradsweep [reps] [optimal|party]
 async function runGradSweep(): Promise<void> {
@@ -1887,6 +1943,10 @@ async function main() {
   }
   if (process.argv[2] === 'gradsweep') {
     await runGradSweep();
+    return;
+  }
+  if (process.argv[2] === 'jobselect') {
+    await runJobSelect();
     return;
   }
   const years = Number(process.argv[2] ?? 15);
