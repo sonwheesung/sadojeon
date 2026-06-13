@@ -1272,6 +1272,11 @@ async function runJobSweep(): Promise<void> {
       const disc = ds().disciples[id];
       if (!disc) continue;
       const nm = disc.name;
+      if (r === 0) {
+        const mainSchool = findMartialArt(disc.mainMartialArtId ?? '')?.school ?? '?';
+        const artStr = disc.martialArts.map((a) => `${findMartialArt(a.artId)?.school ?? '?'}:${a.seong}`).join(',');
+        console.log(`  [진단 ${nm}] ${REALM_LABEL[disc.realm]} · 주력갈래 ${mainSchool} · 무공[${artStr}] · 호위${disc.stats?.guarding?.level ?? 0}·정탐${disc.stats?.scouting?.level ?? 0}·의술${disc.stats?.medicine?.level ?? 0}·명성${disc.fame ?? 0}`);
+      }
       (realmBy[nm] ??= {})[REALM_LABEL[disc.realm]] = ((realmBy[nm] ??= {})[REALM_LABEL[disc.realm]] ?? 0) + 1;
       const jobs = evaluateJobs(disc);
       if (jobs.length === 0) { noneBy[nm] = (noneBy[nm] ?? 0) + 1; continue; }

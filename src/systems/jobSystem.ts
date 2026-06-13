@@ -18,14 +18,16 @@ function statLv(d: Disciple, id: StatId): number {
   return d.stats?.[id]?.level ?? 0;
 }
 
-// 주력 무공이 주어진 갈래 중 하나면 그 성, 아니면 0.
-function mainSeongInSchools(d: Disciple, schools: readonly MartialArtSchool[]): number {
-  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
-  const inst = mainId ? d.martialArts.find((a) => a.artId === mainId) : undefined;
-  if (!inst) return 0;
-  const art = findMartialArt(inst.artId);
-  if (!art) return 0;
-  return schools.includes(art.school) ? inst.seong : 0;
+// 보유 무공 중 주어진 갈래의 **최고 성**(주력 아니어도). 2026-06-14: 종전 "주력 한 갈래만" 판정은
+// 외공·내공을 주력 삼은 제자(최적 양육이 최고등급을 주력으로)가 익힌 검·도술을 무시해 전투 직업에
+// 전부 탈락(절정 고수 75%가 동네 한량) → 그 갈래의 가장 깊은 무공으로 판정(검을 7성까지 닦았으면 검객 자격).
+function bestSeongInSchools(d: Disciple, schools: readonly MartialArtSchool[]): number {
+  let best = 0;
+  for (const inst of d.martialArts) {
+    const art = findMartialArt(inst.artId);
+    if (art && schools.includes(art.school)) best = Math.max(best, inst.seong);
+  }
+  return best;
 }
 
 export function meetsJob(d: Disciple, job: Job): boolean {
@@ -34,7 +36,7 @@ export function meetsJob(d: Disciple, job: Job): boolean {
       if (v != null && statLv(d, k as StatId) < v) return false;
     }
   }
-  if (job.martial && mainSeongInSchools(d, job.martial.schools) < job.martial.minSeong) {
+  if (job.martial && bestSeongInSchools(d, job.martial.schools) < job.martial.minSeong) {
     return false;
   }
   if (job.personaMin) {
@@ -60,7 +62,7 @@ function abilityFit(d: Disciple, job: Job): number {
     }
   }
   if (job.martial) {
-    const s = mainSeongInSchools(d, job.martial.schools);
+    const s = bestSeongInSchools(d, job.martial.schools);
     parts.push(clamp01((s - job.martial.minSeong) / Math.max(1, 10 - job.martial.minSeong)));
   }
   return avg(parts);
@@ -130,14 +132,21 @@ export interface JobChance {
 }
 
 // 졸업 시점 가능 직업 + 확률(적합도×문파 평판 가중, 정규화). 조건 충족 직업만, 확률 내림차순.
+// 동네 한량(요구조건 0)은 **순수 최후 폴백** — 다른 직업이 하나라도 자격되면 경쟁에서 제외(2026-06-14).
+// (종전엔 무조건 직업이 avg([])=0.5의 공짜 적합도로 간신히 자격되는 실제 직업을 이겨 절정 고수가 동네 한량으로
+//  졸업하는 버그. 동네 한량은 "정말 아무 길도 못 찾은" 경우에만 나와야 한다.)
 export function evaluateJobs(d: Disciple): JobChance[] {
-  const scored = JOB_POOL.filter((j) => meetsJob(d, j)).map((j) => ({
+  const FALLBACK_ID = 'town-idler';
+  const real = JOB_POOL.filter((j) => j.id !== FALLBACK_ID && meetsJob(d, j)).map((j) => ({
     job: j,
     score: Math.max(0.02, fitness(d, j) * reputationFactor(d, j) * darknessFactor(d, j)),
   }));
-  if (scored.length === 0) return [];
-  const total = scored.reduce((s, x) => s + x.score, 0);
-  return scored
+  if (real.length === 0) {
+    const fb = JOB_POOL.find((j) => j.id === FALLBACK_ID);
+    return fb ? [{ job: fb, prob: 1 }] : [];
+  }
+  const total = real.reduce((s, x) => s + x.score, 0);
+  return real
     .map((x) => ({ job: x.job, prob: x.score / total }))
     .sort((a, b) => b.prob - a.prob);
 }
