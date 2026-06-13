@@ -34,4 +34,14 @@ export const ART_TRAIT_OVERRIDE: Record<string, MartialTrait[]> = {
   'dangga-bugol-jang': ['poison'],
   'dangga-mandok-su': ['poison'], // 만독수 — 절품 독장이나 광역 아님(독·단일)
   // 어독심결·호심기공·백독불침공·천독신공(내공)·암영보·무성보(보법)·용독술·해독비결(의가) = 기본값 정확(생략)
+
+  // ═══ 살수(salsu) — 암살 = 정밀 단일·은밀. 독은 약·침만, 검은 그림자 쾌검, 절품검도 광역 아님 ═══
+  'salsu-monghan-yakbeop': ['poison'], // 몽한약법 — 잠드는 약
+  'salsu-yau-bichim': ['poison'], //      야우비침 — 맞은 줄 모르는 독침
+  'salsu-janyeong-sword': ['swift'], //   잔영검 — 쾌검
+  'muyeong-geom': ['swift'], //           무영검 — 보였을 때 늦은 쾌검
+  'salsu-danhon-sword': ['swift'], //     단혼검 — 한 호흡의 쾌검
+  'salsu-muheun-sword': ['pierce', 'swift'], // 무흔검 — 절품 살수검(광역 아닌 정밀 단일·관통)
+  'jeolmyeong-13-chim': ['pierce'], //    절명십삼침 — 절명혈 점혈(관통)
+  // 비수·수전·표창·검(야행/무성)·보법(전부 swift 기본값)·도·심법 = 기본값 정확(생략)
 };

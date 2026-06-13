@@ -76,15 +76,15 @@ export function findMartialArt(id: string): MartialArt | undefined {
 //  · 광역(sweep): **단일이 기본**. 광역(검강·도강·장강이 면으로 터짐)은 고수의 경지 —
 //    **절품+(grandmaster·legendary) 타격 무공(검·도·권·마)만**. 하품~상품은 단일(점). 네임드 광역은 직접 지정.
 //  · 호신(guard): 외공(금강불괴류)·내공(호신강기) — 등급 무관 방어 받침.
-//  · 중독(poison): 사·마도 암기(사천·살수 결).
 //  · 쾌(swift): 보법.
+//  · 중독(poison)은 기본값 없음 — 독은 갈래·노선이 아니라 **계보 특성**(당가·오독문)이라 오버라이드로만.
+//    (사도=살수는 정밀 암살이지 독이 아니다. 옛 'hidden+사도=독' 규칙은 살수를 잘못 독칠 → 폐기.)
 export function defaultArtTraits(art: Pick<MartialArt, 'school' | 'grade' | 'path'>): MartialTrait[] {
   const t: MartialTrait[] = [];
   const highGrade = art.grade === 'grandmaster' || art.grade === 'legendary';
   const striker = art.school === 'sword' || art.school === 'saber' || art.school === 'fist' || art.school === 'darkArts';
   if (highGrade && striker) t.push('sweep'); // 절품+ 검·도·권·마 = 검강/도강/장강 광역. 그 외(하품~상품)는 단일.
   if (art.school === 'external' || art.school === 'qigong') t.push('guard');
-  if (art.school === 'hidden' && (art.path === 'sa' || art.path === 'ma')) t.push('poison');
   if (art.school === 'lightness') t.push('swift');
   return t;
 }
