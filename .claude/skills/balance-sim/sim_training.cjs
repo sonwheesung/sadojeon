@@ -13,7 +13,9 @@ const ENDURANCE_EXP_BASE = 18; // 암벽 (기존 16)
 const EFF = { 특화:1.0, 상성:0.6, 보통:0.35, 미숙:0.1, 상극:0.04 };
 const REALM_ORDER = ['none','samryu','iryu','ilryu','jeoljeong','chojeoljeong','hwagyeong'];
 const REALM_LABEL = { none:'미입문',samryu:'삼류',iryu:'이류',ilryu:'일류',jeoljeong:'절정',chojeoljeong:'초절정',hwagyeong:'화경' };
-const REALM_INTERNAL_REQ = { none:0,samryu:0,iryu:100,ilryu:250,jeoljeong:500,chojeoljeong:850,hwagyeong:1300 };
+// ⚠️ 정통 페이싱 재밸런스(2026-06-14)로 요구치 동기화. 단 이 공식 sim은 내공 일일적립(코드 10→2.5)·실전
+//    의뢰 내공 적립(QUEST_INTERNAL_PER_WEEK)을 아직 반영 안 함 — 경지 도달 속도는 근사. 정본은 헤드리스(실코드).
+const REALM_INTERNAL_REQ = { none:0,samryu:0,iryu:260,ilryu:520,jeoljeong:870,chojeoljeong:1050,hwagyeong:1300 };
 const REALM_EXTERNAL_REQ = { none:0,samryu:10,iryu:20,ilryu:35,jeoljeong:48,chojeoljeong:58,hwagyeong:68 }; // [레버] 고경지 외공 하향(무과금 화경 가능케)
 const REALM_SEONG_GATE   = { none:0,samryu:0,iryu:0,ilryu:0,jeoljeong:0,chojeoljeong:5,hwagyeong:7 };
 const REALM_SEONG_CAP    = { none:0,samryu:3,iryu:4,ilryu:6,jeoljeong:7,chojeoljeong:8,hwagyeong:10 };
