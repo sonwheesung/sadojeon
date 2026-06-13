@@ -48,7 +48,8 @@ export interface Job {
   personaMax?: Partial<Record<keyof PersonalityTraits, number>>;
 }
 
-// 그레이박스 풀 (32종). docs/28 §3·§4 노선×직책 사다리를 채운다. 수치 튜닝 대상.
+// 그레이박스 풀 (35종). docs/28 §3·§4 노선×직책 사다리를 채운다. 수치 튜닝 대상.
+// 마도 3종(마교 호법·마두·사파 무인) = 정탐 게이트 없는 순수 마공/사파 무력 — 어두운 인격(협의 낮음) 게이트.
 export const JOB_POOL: readonly Job[] = [
   // ── 정점 ──────────────────────────────────────────────
   {
@@ -109,6 +110,14 @@ export const JOB_POOL: readonly Job[] = [
     desc: '한 자루 검으로 강호를 가른 떠돌이 검의 정점.',
     martial: { schools: ['sword'], minSeong: 9 },
     personaMin: { freedom: 55 },
+  },
+  {
+    id: 'demon-protector',
+    name: '마교 호법(魔敎護法)',
+    tier: 'peak',
+    desc: '마교를 떠받치는 절정의 무력. 강호가 이름만으로 떤다.',
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 9 },
+    personaMax: { integrity: 40 }, // 사파엔 협의가 없다(어두운 인격 게이트)
   },
   {
     id: 'chivalrous-chief',
@@ -182,6 +191,14 @@ export const JOB_POOL: readonly Job[] = [
     desc: '강호에 이름을 떨친 떠돌이 검객.',
     martial: { schools: ['sword'], minSeong: 7 },
     personaMin: { freedom: 50 },
+  },
+  {
+    id: 'demon-head',
+    name: '마두(魔頭)',
+    tier: 'upper',
+    desc: '사파에 이름을 떨친 마공의 고수.',
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 7 },
+    personaMax: { integrity: 45 },
   },
   {
     id: 'shadow-captain',
@@ -279,6 +296,14 @@ export const JOB_POOL: readonly Job[] = [
     desc: '정파 문파에 몸담은 무사.',
     martial: { schools: ['sword', 'saber', 'fist'], minSeong: 4 },
     personaMin: { integrity: 50 },
+  },
+  {
+    id: 'sapa-warrior',
+    name: '사파 무인(邪派武人)',
+    tier: 'common',
+    desc: '협의에 매이지 않고 힘을 좇는 사파의 무인.',
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 4 },
+    personaMax: { integrity: 40 },
   },
   // ── 한계 ──────────────────────────────────────────────
   {

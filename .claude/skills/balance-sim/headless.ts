@@ -1256,6 +1256,7 @@ async function runJobSelect(): Promise<void> {
     { label: '밀정(일류·정탐62)', realm: 'ilryu', str: 30, arts: [['lightness', 5]], stats: { scouting: 62 }, fame: 20 },
     { label: '사파살수(절정·검8·냉혹)', realm: 'jeoljeong', str: 50, arts: [['sword', 8], ['hidden', 6]], stats: { scouting: 70 }, persona: { mercy: 18, integrity: 25 }, fame: 40 },
     { label: '마인(초절·마공8·흑화)', realm: 'chojeoljeong', str: 55, arts: [['darkArts', 8], ['qigong', 6]], persona: { mercy: 10, integrity: 15 }, dark: 3, fame: 50 },
+    { label: '마교호법급(화경·마공10·흑화)', realm: 'hwagyeong', str: 70, arts: [['darkArts', 10], ['fist', 7]], persona: { mercy: 8, integrity: 12, ambition: 70 }, dark: 4, fame: 90 },
     { label: '책사(절정·지력78)', realm: 'jeoljeong', str: 30, arts: [['sword', 5]], stats: { knowledge: 78, formation: 62 }, fame: 45 },
     { label: '도가(초절·내공8·지력)', realm: 'chojeoljeong', str: 40, arts: [['qigong', 8], ['sword', 6]], stats: { knowledge: 72 }, persona: { prudence: 75, freedom: 70 }, fame: 55 },
     { label: '범재(절정·검5·맨몸)', realm: 'jeoljeong', str: 45, arts: [['sword', 5]], fame: 10 },

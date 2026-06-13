@@ -127,7 +127,7 @@ function reputationFactor(d: Disciple, job: Job): number {
 }
 
 // 흑화 회귀 — 깊이 어두워진 제자는 졸업 시 사파/어둠 길로 기운다. docs/13.
-const DARK_ROUTES = new Set(['assassin', 'shadow', 'vigilante']);
+const DARK_ROUTES = new Set(['assassin', 'shadow', 'vigilante', 'demonic']);
 const LIGHT_ROUTES = new Set(['righteous', 'escort', 'healer', 'daoist']);
 function darknessFactor(d: Disciple, job: Job): number {
   if (d.darknessLevel < 3) return 1;
