@@ -14,6 +14,7 @@ import {
   realmIndex,
 } from '@/data/realm';
 import { MARTIAL_ARTS } from './catalog';
+import { ART_TRAIT_OVERRIDE } from './traitOverrides';
 
 export { MARTIAL_ARTS };
 
@@ -88,9 +89,9 @@ export function defaultArtTraits(art: Pick<MartialArt, 'school' | 'grade' | 'pat
   return t;
 }
 
-// 무공의 실효 특성 — 명시값 우선, 없으면 기본값. 엔진 어댑터(fromDisciple)가 쓴다.
+// 무공의 실효 특성 — 전수 오버라이드 맵 > 카탈로그 inline > 갈래·등급 기본값. 엔진 어댑터(fromDisciple)가 쓴다.
 export function artTraits(art: MartialArt): MartialTrait[] {
-  return art.traits ?? defaultArtTraits(art);
+  return ART_TRAIT_OVERRIDE[art.id] ?? art.traits ?? defaultArtTraits(art);
 }
 
 // 미충족 선행 무공서 목록 — 스킬트리 게이트. 충족이면 빈 배열. docs/28 §5-2.
