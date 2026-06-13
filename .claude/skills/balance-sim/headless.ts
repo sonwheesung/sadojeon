@@ -30,7 +30,7 @@ import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
 import { currentAge } from '@/systems/discipleCtx';
-import { findMartialArt, MARTIAL_ARTS } from '@/data/martialArts';
+import { findMartialArt, MARTIAL_ARTS, canLearnArt } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
 import { effectiveRealmCeiling, realmIndex, nextRealm as nextRealmOf, REALM_INTERNAL_REQ } from '@/data/realm';
 import { expToNextSeong } from '@/data/martialArts';
@@ -967,6 +967,102 @@ function sanityCheck(id: string, prev: Record<string, ArtSnap>, issues: string[]
   return now;
 }
 
+// ── 체질 달성 시점 — 시그니처 무공 7성(대성) 도달 시기 (최적 봇 15년) ──────────────
+// 각 체질 트리만 보유시켜 봇이 그 무공을 주력 삼아 등반 → 7성(=체질 달성)을 언제 찍는지 측정.
+function grantChain(artId: string): void {
+  const seen = new Set<string>();
+  const walk = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const art = findMartialArt(id);
+    if (!art) return;
+    for (const p of art.prerequisites ?? []) walk(p.artId);
+    grantScroll(id);
+  };
+  walk(artId);
+}
+
+function chainArtIds(artId: string): string[] {
+  const seen = new Set<string>();
+  const walk = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    for (const p of findMartialArt(id)?.prerequisites ?? []) walk(p.artId);
+  };
+  walk(artId);
+  return [...seen];
+}
+
+async function runConstitutionSweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const ds = () => useDiscipleStore.getState();
+  const carry = 'yun-soso';
+  const GR: Record<string, number> = { novice: 0, apprentice: 1, master: 2, grandmaster: 3, legendary: 4 };
+  const TARGETS = [
+    { title: '금강불괴(외상)', art: 'geumgang-bulgoe' },
+    { title: '한서불침(동상)', art: 'sunyang-mugeuk-gong' },
+    { title: '화염불침(화상)', art: 'jeomchang-yeolyang-singong' },
+    { title: '만독불침(중독)', art: 'dangga-cheondok-singong' },
+  ];
+  console.log('=== 체질 달성 시점 — 시그니처 절기 보유(=체질) 시기 (해당 트리 전념 등반 15년) ===');
+  console.log('체질 = 시그니처 절기 보유. 트리만 쥐여주고 매일 최고등급 학습가능 비급을 주력 삼아 등반.\n');
+  for (const t of TARGETS) {
+    seedNewRun(SEED_POOL);
+    useGameStore.getState().setPhase('playing');
+    setByeokgokdanBudget(Infinity);
+    setElixirBudget(2);
+    grantChain(t.art);
+    const chain = chainArtIds(t.art).map((id) => findMartialArt(id)!).filter(Boolean);
+    const name = findMartialArt(t.art)?.name ?? t.art;
+    let learnDay = 0;
+    const marks: string[] = [];
+    const ownedIds = new Set<string>();
+    for (let d = 0; d < 15 * 336; d += 1) {
+      if (useGameStore.getState().phase === 'ended') break;
+      configureOptimal(); // 폐관·영약·외공 등 무거운 처리. 주력·축은 아래서 덮어쓴다.
+      const me0 = ds().disciples[carry];
+      if (!me0) break;
+      // 트리 등반 — 지금 익힐 수 있는 최고등급 체질-트리 비급을 주력으로(선행 성 채우며 위로).
+      const target = chain
+        .filter((a) => canLearnArt(me0, a))
+        .sort((a, b) => GR[b.grade] - GR[a.grade])[0];
+      if (target && me0.mainMartialArtId !== target.id) ds().assignMainMartialArt(carry, target.id);
+      // 축 — 다음 경지 내공 모자라면 격일 심법, 아니면 초식(주력 비급 성 = 상위 선행 게이트).
+      const next = nextRealmOf(me0.realm);
+      const needInt = next ? (me0.realmProgress?.internal ?? 0) < (REALM_INTERNAL_REQ[next] ?? 0) : false;
+      useScheduleStore.getState().setDailyChoice(carry, 'martial', needInt && d % 2 === 0 ? 'simbeop' : 'chosik');
+      advanceTurn();
+      const sc = useScheduleStore.getState();
+      if (sc.pendingReport) sc.resolveMonthlyReport();
+      if (sc.pendingSetup) sc.resolveMonthlySetup();
+      if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+      const inbox = useInboxStore.getState();
+      for (const item of [...inbox.items]) {
+        const dom = (item.payload as { domain?: string } | undefined)?.domain;
+        if (dom === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
+      }
+      useInboxStore.getState().reset();
+      // 신규 학습 비급 기록(트리 등정 이정표).
+      const me = ds().disciples[carry];
+      if (!me) break;
+      for (const a of me.martialArts) {
+        if (!ownedIds.has(a.artId) && chain.some((c) => c.id === a.artId)) {
+          ownedIds.add(a.artId);
+          marks.push(`${findMartialArt(a.artId)?.name} ${((d + 1) / 336).toFixed(1)}년(${REALM_LABEL[me.realm]})`);
+          if (a.artId === t.art && !learnDay) learnDay = d + 1;
+        }
+      }
+      if (learnDay) break; // 시그니처 보유 = 체질 달성 — 시점 확보 후 종료
+    }
+    const me = ds().disciples[carry];
+    const head = learnDay
+      ? `✅ 체질 달성 ${(learnDay / 336).toFixed(1)}년차(${REALM_LABEL[me?.realm ?? 'samryu']})`
+      : `❌ 15년 내 미달(현 경지 ${REALM_LABEL[me?.realm ?? 'samryu']})`;
+    console.log(`  ${t.title.padEnd(14)} ${name.padEnd(10)} | ${head}`);
+    console.log(`      등정: ${marks.join(' → ')}`);
+  }
+}
+
 async function runTrainSweep(): Promise<void> {
   setAutoSaveEnabled(false);
   const ds = () => useDiscipleStore.getState();
@@ -1461,6 +1557,10 @@ async function main() {
   }
   if (process.argv[2] === 'trainsweep') {
     await runTrainSweep();
+    return;
+  }
+  if (process.argv[2] === 'constsweep') {
+    await runConstitutionSweep();
     return;
   }
   if (process.argv[2] === 'covertsweep') {

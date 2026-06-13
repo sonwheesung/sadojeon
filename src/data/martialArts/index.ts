@@ -96,16 +96,17 @@ export function artTraits(art: MartialArt): MartialTrait[] {
 }
 
 // ─── 체질(불침) — 한 속성 상처에 면역이 되는 몸. docs/35 §6-1c · 업적/칭호 docs/32 ──────
-// 무협 캔온(웹검증 2026-06-13): 특정 무공을 *깊이*(대성 7성+) 닦으면 몸이 변해 그 속성이 안 통한다.
+// 무협 캔온(웹검증 2026-06-13): 특정 무공을 깊이 닦으면 몸이 변해 그 속성이 안 통한다.
 //   금강불괴=외공 극의로 도검불침 / 한서불침=양강 내공이 추위를 막음 / 화염불침=열양 내공 / 만독불침=독공의 정점.
 // 막는 상처는 종류마다 하나뿐 — 금강불괴라도 독·불엔 당한다(5속성 균형). level 0 없음 / 1 부분 / 2 완전.
-//   · 완전(2): 시그니처 무공 대성(7성)+ → 그 속성 완전 면역.
-//   · 부분(1, 당가 천독불침 전용): 백독불침공 보유 또는 독공 소성(4성)+ → 일반 독 면역, 치명 극독(sev1)만 통함.
+//   · 완전(2): 시그니처 절기 **보유** → 그 속성 완전 면역. (시그니처 비급은 깊은 선행 사다리 + 높은
+//     학습 경지를 거쳐야 익혀지므로 "보유" 자체가 정점 성취 — 내공·외공 비급의 성(成)은 주력 삼아야만 자라
+//     일반 양육에선 7성까지 못 가므로, 7성 게이트는 사실상 도달 불가였다(2026-06-13 constsweep 발견 → 보유로 환원).
+//   · 부분(1, 당가 천독불침 전용): 백독불침공 보유 또는 독공(초식) 소성(4성)+ → 일반 독 면역, 치명 극독(sev1)만 통함.
 // 업적 발화 판정 지점: woundResistOf 가 0→1/2 로 오르는 순간(천독불침·금강불괴·한서불침·화염불침·만독불침).
 //   업적 런타임 미구현 — UI 칭호(DiscipleStatusPanel "체질")로 노출, 보상 인프라는 후속.
-const CONSTITUTION_SEONG = 7; // 대성 — 체질은 장기 수련으로 몸이 변하는 것(캔온)
 
-// 시그니처 무공(대성 7성+) → 완전 면역 속성. 한 속성에 여럿이면 하나만 충족해도 된다.
+// 시그니처 비급 보유 → 완전 면역 속성. 한 속성에 여럿이면 하나만 익혀도 된다.
 const FULL_RESIST_ARTS: { artId: string; type: WoundType }[] = [
   { artId: 'dangga-cheondok-singong', type: 'poison' }, //  천독신공 → 만독불침
   { artId: 'geumgang-bulgoe', type: 'wound' }, //           금강불괴 → 금강불괴(외상)
@@ -116,10 +117,10 @@ const FULL_RESIST_ARTS: { artId: string; type: WoundType }[] = [
 
 // 제자가 익힌 무공으로부터 속성별 저항 단계(0/1/2). 만전·일반 NPC는 빈 맵(저항 0).
 export function woundResistOf(insts: { artId: string; seong: number }[]): Partial<Record<WoundType, number>> {
-  const seongOf = (id: string) => insts.find((i) => i.artId === id)?.seong ?? 0;
+  const has = (id: string) => insts.some((i) => i.artId === id);
   const r: Partial<Record<WoundType, number>> = {};
   for (const { artId, type } of FULL_RESIST_ARTS) {
-    if (seongOf(artId) >= CONSTITUTION_SEONG) r[type] = 2;
+    if (has(artId)) r[type] = 2; // 시그니처 절기 보유 = 완전 면역
   }
   if ((r.poison ?? 0) < 2) {
     let bestPoisonSeong = 0;
@@ -127,7 +128,7 @@ export function woundResistOf(insts: { artId: string; seong: number }[]): Partia
       const art = findMartialArt(inst.artId);
       if (art && artTraits(art).includes('poison')) bestPoisonSeong = Math.max(bestPoisonSeong, inst.seong);
     }
-    if (seongOf('dangga-baekdok-bulchim-gong') >= 1 || bestPoisonSeong >= 4) r.poison = 1;
+    if (has('dangga-baekdok-bulchim-gong') || bestPoisonSeong >= 4) r.poison = 1;
   }
   return r;
 }
