@@ -38,10 +38,18 @@ const SPAR_YIELD_QI = 8; //        대련 승복선 (내공 잔량)
 const QI_LOW = 35; //              내공 부족 — 위력 ×0.8
 const QI_EMPTY = 12; //            내공 바닥 — 위력 ×0.55
 const GANG_SPD_PENALTY = 0.12; //  포위 — 추가 공격자 1인당 수비측 신법 −12%
-const GANG_IMMUNE_REALM_GAP = 2; // 경지 차 ≥2 면 포위 무효(군계일학)
+const GANG_IMMUNE_REALM_GAP = 2; // 경지 차 ≥2 면 포위 무효(군계일학) — 광역·잡졸 트리거도 겸함(docs/35 §3-A)
+// ── n:n 무쌍 모델 (docs/35 §3-A, 2026-06-13) — 란체스터 제곱→선형 교정 ──
+const ENGAGE_CAP = 2; //           한 표적을 한 합에 칠 수 있는 공격자 상한(초과는 분산·대기). 제곱→선형.
+const MOOK_DMG_FLOOR = 0.004; //   2경지+ 아래 공격자의 피해 하한(호신강기 — 잡졸 칼이 거의 안 박힌다)
+const DMG_FLOOR = 0.015; //        일반 피해 하한
+const CLEAVE_BASE = 2; //          2경지+ 위 공격자의 광역(검기) 기본 추가 타격 수 (+경지차)
+const CLEAVE_DMG_MULT = 0.9; //    광역 부차 타격 피해 배율(주 표적보다 약간 약하게)
 const ACCIDENT_BASE = 0.02; //     대련 사고 기본율
 const ACCIDENT_CRUSH = 0.05; //    현격한 차(위력 2.2배↑) 가산
 const RETREAT_HP = 0.3; //         실전 패주 고려선 (진영 평균 체력)
+const ROUT_CASUALTY_FRAC = 0.3; // 사상자 패주 — 자기 진영 3할 이상 쓰러지면 흩어질 수 있다
+const ROUT_CASUALTY_GAP = 0.25; // 단 상대 사상자가 내 쪽보다 이만큼 적을 때만(일방적 도륙)
 const BURST_SIMMA = 60; //         심마 폭주 임계 (실전)
 
 interface Fighter {
@@ -141,12 +149,63 @@ export function simulateCombat(
   for (const f of fighters) {
     if (f.burst) events.push({ round: 0, kind: 'burst', actorId: f.sheet.ref.id });
   }
+  // 진영별 시작 인원 — 사상자 패주(rout) 비율 계산용.
+  const initCount = { A: Math.max(1, sideA.length), B: Math.max(1, sideB.length) };
+
+  // 한 타격을 적용한다(주 표적·광역 부차 표적 공용). 피해·이벤트 + 모드별 승부처(대련 승복 / 실전
+  // 쓰러짐·사망 굴림)를 처리한다. 이미 쓰러진(서 있지 않은) 대상은 건너뛴다.
+  const applyStrike = (attacker: Fighter, defender: Fighter, frac: number, crit: boolean, rnd: number) => {
+    if (defender.state !== 'standing') return;
+    defender.hp -= frac * defender.sheet.maxHp;
+    attacker.dealt += frac;
+    defender.taken += frac;
+    events.push({
+      round: rnd,
+      kind: crit ? 'crit' : 'exchange',
+      actorId: attacker.sheet.ref.id,
+      targetId: defender.sheet.ref.id,
+      dmgFrac: frac,
+    });
+    if (!real) {
+      if (defender.hp / defender.sheet.maxHp <= SPAR_YIELD_HP || defender.qi <= SPAR_YIELD_QI) {
+        defender.state = 'yielded';
+        events.push({ round: rnd, kind: 'yield', actorId: defender.sheet.ref.id });
+      }
+      return;
+    }
+    if (defender.hp > 0) return;
+    // 실전 — 쓰러짐. 결정타 사망 굴림: 손속(자비)·마공 살기·넘친 힘·몸의 단단함. 🔧
+    defender.state = 'downed';
+    const overkill = Math.min(1, -defender.hp / defender.sheet.maxHp);
+    const mercyMult =
+      attacker.sheet.ref.mercy < 40 ? 1.3 : attacker.sheet.ref.mercy > 65 ? 0.45 : 1;
+    const deathChance = lethal
+      ? clamp(
+          (0.12 + overkill * 0.5) *
+            mercyMult *
+            (attacker.sheet.isMa ? 1.5 : 1) *
+            (1 - defender.sheet.ref.strength / 220),
+          0,
+          0.6,
+        )
+      : 0;
+    if (rng() < deathChance) {
+      defender.state = 'dead';
+      events.push({ round: rnd, kind: 'death', actorId: attacker.sheet.ref.id, targetId: defender.sheet.ref.id });
+    } else {
+      const severity = overkill > 0.3 ? 1 : 2;
+      defender.wound = { type: woundTypeOf(attacker, rng), severity, days: severity === 1 ? 30 : 21 };
+      events.push({ round: rnd, kind: 'down', actorId: attacker.sheet.ref.id, targetId: defender.sheet.ref.id });
+    }
+  };
 
   let round = 0;
   while (round < maxRounds && aliveOf(fighters, 'A').length > 0 && aliveOf(fighters, 'B').length > 0) {
     round += 1;
 
-    // ── 패주 — 실전, 3합 이후. 진영 평균 체력이 바닥이고 전력이 한참 밀리면 달아난다.
+    // ── 패주 — 실전, 3합 이후. ① 진영 평균 체력 바닥 + 전력 열세, 또는
+    // ② 사상자 폭주(동료가 일방적으로 베여 나가면 나머지가 흩어진다 — 한 명이 다수를 베는 무쌍의
+    //    완성. docs/35 §3-A). 잡졸 무리가 고수 하나에게 무너지는 결.
     if (real && allowRetreat && round >= 3) {
       for (const side of ['A', 'B'] as const) {
         const mine = aliveOf(fighters, side);
@@ -154,7 +213,11 @@ export function simulateCombat(
         if (mine.length === 0 || foes.length === 0) continue;
         const myPow = mine.reduce((a, f) => a + f.sheet.power, 0);
         const foePow = foes.reduce((a, f) => a + f.sheet.power, 0);
-        if (sideStrength(fighters, side) < RETREAT_HP && myPow < foePow * 0.6) {
+        const myCas = 1 - mine.length / initCount[side];
+        const foeCas = 1 - foes.length / initCount[side === 'A' ? 'B' : 'A'];
+        const overpowered = sideStrength(fighters, side) < RETREAT_HP && myPow < foePow * 0.6;
+        const slaughtered = myCas >= ROUT_CASUALTY_FRAC && foeCas <= myCas - ROUT_CASUALTY_GAP;
+        if (overpowered || slaughtered) {
           const fastestFoe = Math.max(...foes.map((f) => f.sheet.spd));
           for (const f of mine) {
             const p = clamp(0.3 + (f.sheet.spd - fastestFoe) / 200, 0.1, 0.9);
@@ -176,8 +239,13 @@ export function simulateCombat(
 
     for (const actor of order) {
       if (actor.state !== 'standing') continue;
-      const foes = aliveOf(fighters, actor.side === 'A' ? 'B' : 'A');
-      if (foes.length === 0) break;
+      const allFoes = aliveOf(fighters, actor.side === 'A' ? 'B' : 'A');
+      if (allFoes.length === 0) break;
+
+      // 교전 인원 제한 — 한 표적엔 한 합에 ENGAGE_CAP 명까지만 실제로 붙는다. 초과 공격자는
+      // 다른 적으로 분산되고, 붙을 적이 없으면 대기(물리적으로 못 붙음). 제곱→선형. docs/35 §3-A.
+      const foes = allFoes.filter((f) => (focusCount[f.sheet.ref.id] ?? 0) < ENGAGE_CAP);
+      if (foes.length === 0) continue;
 
       // 표적 — 약한(체력 낮은) 쪽으로 손이 간다(가중 무작위).
       const weights = foes.map((f) => 1.5 - f.hp / f.sheet.maxHp);
@@ -194,7 +262,8 @@ export function simulateCombat(
 
       // 포위 — 이번 합에 이미 공격받은 만큼 신법이 깎인다. 경지 2단계 위면 무시(군계일학).
       const extras = focusCount[target.sheet.ref.id] ?? 0;
-      const gangImmune = realmIdx(target) - realmIdx(actor) >= GANG_IMMUNE_REALM_GAP;
+      const gap = realmIdx(actor) - realmIdx(target);
+      const gangImmune = -gap >= GANG_IMMUNE_REALM_GAP;
       const targetSpd = target.sheet.spd * (gangImmune ? 1 : Math.max(0.4, 1 - GANG_SPD_PENALTY * extras));
       focusCount[target.sheet.ref.id] = extras + 1;
 
@@ -215,64 +284,29 @@ export function simulateCombat(
         continue;
       }
 
-      // 피해 — 공/방 비율의 체감 곡선 × 운 폭 × 살초.
+      // 피해 — 공/방 비율의 체감 곡선 × 운 폭 × 살초. 2경지+ 아래 공격자는 하한이 낮다(호신강기).
       const ratio = effAtk(actor) / Math.max(1, effDef(target));
       const crit = rng() < actor.sheet.critChance;
       let frac = BASE_DMG_FRAC * Math.pow(ratio, DMG_RATIO_EXP) * (0.85 + rng() * 0.3);
       if (crit) frac *= CRIT_MULT;
-      frac = clamp(frac, 0.015, 0.5);
+      frac = clamp(frac, gap <= -GANG_IMMUNE_REALM_GAP ? MOOK_DMG_FLOOR : DMG_FLOOR, 0.5);
 
-      const dmg = frac * target.sheet.maxHp;
-      target.hp -= dmg;
-      actor.dealt += frac;
-      target.taken += frac;
-      events.push({
-        round,
-        kind: crit ? 'crit' : 'exchange',
-        actorId: actor.sheet.ref.id,
-        targetId: target.sheet.ref.id,
-        dmgFrac: frac,
-      });
+      applyStrike(actor, target, frac, crit, round);
 
-      // ── 승부처 — 모드별.
-      if (!real) {
-        // 대련 — 승부가 갈리는 순간 승복. 다치지 않는다(사고는 별도 굴림).
-        if (target.hp / target.sheet.maxHp <= SPAR_YIELD_HP || target.qi <= SPAR_YIELD_QI) {
-          target.state = 'yielded';
-          events.push({ round, kind: 'yield', actorId: target.sheet.ref.id });
-        }
-        if (actor.qi <= SPAR_YIELD_QI) {
-          actor.state = 'yielded';
-          events.push({ round, kind: 'yield', actorId: actor.sheet.ref.id });
-        }
-      } else if (target.hp <= 0) {
-        // 실전 — 쓰러짐. 결정타 사망 굴림: 손속(자비)·마공 살기·넘친 힘·몸의 단단함. 🔧
-        target.state = 'downed';
-        const overkill = Math.min(1, -target.hp / target.sheet.maxHp);
-        const mercyMult =
-          actor.sheet.ref.mercy < 40 ? 1.3 : actor.sheet.ref.mercy > 65 ? 0.45 : 1;
-        const deathChance = lethal
-          ? clamp(
-              (0.12 + overkill * 0.5) *
-                mercyMult *
-                (actor.sheet.isMa ? 1.5 : 1) *
-                (1 - target.sheet.ref.strength / 220),
-              0,
-              0.6,
-            )
-          : 0;
-        if (rng() < deathChance) {
-          target.state = 'dead';
-          events.push({ round, kind: 'death', actorId: actor.sheet.ref.id, targetId: target.sheet.ref.id });
-        } else {
-          const severity = overkill > 0.3 ? 1 : 2;
-          target.wound = {
-            type: woundTypeOf(actor, rng),
-            severity,
-            days: severity === 1 ? 30 : 21,
-          };
-          events.push({ round, kind: 'down', actorId: actor.sheet.ref.id, targetId: target.sheet.ref.id });
-        }
+      // 광역(검기·검막) — 2경지+ 위면 한 수가 여러 잡졸을 함께 쓸어버린다(무쌍). docs/35 §3-A.
+      if (gap >= GANG_IMMUNE_REALM_GAP) {
+        const sweep = CLEAVE_BASE + (gap - GANG_IMMUNE_REALM_GAP);
+        const others = aliveOf(fighters, actor.side === 'A' ? 'B' : 'A')
+          .filter((f) => f !== target)
+          .sort((x, y) => x.hp / x.sheet.maxHp - y.hp / y.sheet.maxHp)
+          .slice(0, sweep);
+        for (const o of others) applyStrike(actor, o, frac * CLEAVE_DMG_MULT, false, round);
+      }
+
+      // 대련 — 휘두른 쪽이 내공 바닥나면 스스로 승복.
+      if (!real && actor.state === 'standing' && actor.qi <= SPAR_YIELD_QI) {
+        actor.state = 'yielded';
+        events.push({ round, kind: 'yield', actorId: actor.sheet.ref.id });
       }
     }
   }

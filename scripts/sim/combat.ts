@@ -112,6 +112,33 @@ const SCENARIOS: Scenario[] = [
     b: () => [make('b', { arts: [art('sword', 7, 'grandmaster'), art('saber', 4, 'novice', true)] })],
     bands: [['winA', 42, 62]],
   },
+  // ── n:n 무쌍 모델 (docs/35 §3-A, 2026-06-13) ──
+  {
+    label: 'n:n 거울 3:3 (공정)', mode: 'real',
+    a: () => [1, 2, 3].map((i) => npc('ilryu', 'orthodox', i)),
+    b: () => [11, 12, 13].map((i) => npc('ilryu', 'orthodox', i)),
+    bands: [['winA', 43, 58]],
+  },
+  {
+    label: 'n:n 수적 우위 3 vs 2', mode: 'real',
+    a: () => [1, 2, 3].map((i) => npc('ilryu', 'orthodox', i)),
+    b: () => [11, 12].map((i) => npc('ilryu', 'orthodox', i)),
+    bands: [['winA', 90, 100]],
+  },
+  {
+    // 영근 절정(q0.7)은 일류 셋을 감당하되 트레이드가 있는 진짜 싸움(군계일학 미적용 — 1경지차).
+    label: '질vs양 절정 1 vs 일류 3', mode: 'real',
+    a: () => [makeNpcCombatant({ id: 'a', name: '절정', realm: 'jeoljeong', archetype: 'orthodox', quality: 0.7 })],
+    b: () => [11, 12, 13].map((i) => npc('ilryu', 'orthodox', i)),
+    bands: [['winA', 60, 85]],
+  },
+  {
+    // 정점 화경(q1.0)이 일류 100을 검기로 쓸어버린다(무쌍). 2경지+차 광역·잡졸·군계일학 전부 작동.
+    label: '무쌍 화경 1 vs 일류 100', mode: 'real',
+    a: () => [makeNpcCombatant({ id: 'a', name: '화경', realm: 'hwagyeong', archetype: 'orthodox', quality: 1 })],
+    b: () => Array.from({ length: 100 }, (_, i) => npc('ilryu', 'orthodox', 100 + i)),
+    bands: [['winA', 88, 100]],
+  },
 ];
 
 let warn = 0;
