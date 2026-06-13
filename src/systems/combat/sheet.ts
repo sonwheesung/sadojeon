@@ -61,6 +61,15 @@ export interface CombatSheet {
   frost: boolean; // 빙한 속성 → 동상 상처
   pierce: boolean; // 파공(호신강기 관통)
   guard: boolean; // 호신강기 — 보유 무공 아무거나 guard면 방어(주력 아니어도)
+  dotFrac: number; // 합마다 받는 지속 피해(최대체력 비율) — 중독·화상 상처. 0이면 없음.
+}
+
+// 상처 종류별 추가 결 — 심도(severity 1치명~5경미)가 세기를 정한다. depth: 경미 0 ~ 치명 1.
+// 공통 공세 저하(woundMult)는 모든 종류에 이미 걸려 있고, 여기서 종류별 결을 얹는다(속성 상처가
+// 외상보다 독해 해독약을 서둘러야 하는 이유). docs/35 §6-1b.
+function woundDepth(severity?: number): number {
+  if (severity == null) return 0;
+  return Math.max(0, Math.min(1, (5 - severity) / 4));
 }
 
 // 내공 기세 — 상대 진영 평균 내공 대비. 내공이 크게 앞서면 합마다 찍어 누른다(±12%). 🔧
@@ -86,6 +95,13 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
   const staminaMult = 0.7 + 0.3 * Math.max(0, Math.min(1, c.staminaFrac));
   const woundMult = c.woundSeverity != null ? 0.55 + 0.09 * c.woundSeverity : 1;
 
+  // 상처 종류별 결 — 동상(신법↓)·내상(내공 소모↑)·중독/화상(지속 피해). 심도가 세기.
+  const wd = woundDepth(c.woundSeverity);
+  const frostSlow = c.woundType === 'frost' ? 1 - 0.25 * wd : 1; // 동상: 신법 최대 -25%
+  const innerDrainMult = c.woundType === 'inner' ? 1 + 0.6 * wd : 1; // 내상: 내공 소모 최대 1.6배
+  const dotFrac =
+    c.woundType === 'poison' ? 0.015 * wd : c.woundType === 'burn' ? 0.01 * wd : 0; // 합당 지속 피해
+
   const main = mainArt(c);
   const isMa = main?.path === 'ma';
   const mainTraits = main ? traitsOf(main) : [];
@@ -107,13 +123,15 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
   // 방어 — 외공서(금종조·역근경류)가 주 받침, 심법은 호신강기로 소폭. 🔧
   // 보법 우위 ↔ 외공 받아내기가 문파전에서 맞서도록 캘리브레이션(2026-06-11, docs/35 §6).
   const def = power * (0.5 + c.strength * 0.004 + extDepth * 0.03 + qigongDepth * 0.01);
-  // 쾌(swift) — 주력이 쾌속 무공이면 신법 가산(선공·회피). 🔧
-  const spd = (c.agility + lightDepth * 3.5 + realmIdx * 8) * (swift ? 1.12 : 1);
+  // 쾌(swift) — 주력이 쾌속 무공이면 신법 가산(선공·회피). 동상 상처면 몸이 굳어 신법이 깎인다. 🔧
+  const spd = (c.agility + lightDepth * 3.5 + realmIdx * 8) * (swift ? 1.12 : 1) * frostSlow;
   const maxHp = 70 + c.endurance;
 
-  // 내공 소모 — 주력이 무거울수록(상승 비급) 한 수가 크고, 심법이 깊으면 호흡이 길다. 🔧
-  const drainBase = 7 + (main ? GRADE_RANK[main.grade] * 1.5 : 0);
-  const qiDrain = Math.max(2, drainBase - Math.min(6, qigongDepth * 0.8));
+  // 내공 소모 — 주력이 무거울수록(상승 비급) 한 수가 크고, 심법이 깊으면 호흡이 길다.
+  // 내상 상처면 진기가 새어 같은 수에도 내공이 빨리 마른다(후반 위력 급감). 🔧
+  const qiDrain =
+    Math.max(2, (7 + (main ? GRADE_RANK[main.grade] * 1.5 : 0)) - Math.min(6, qigongDepth * 0.8)) *
+    innerDrainMult;
 
   // 살초 — 암기(허를 찌름)·마공(살기)·충동(무리수)이 올린다. 🔧
   const critChance =
@@ -139,5 +157,6 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
     frost: hasTrait('frost'),
     pierce: hasTrait('pierce'),
     guard,
+    dotFrac,
   };
 }

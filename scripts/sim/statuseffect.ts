@@ -48,9 +48,20 @@ row('중상 sev3', 'atk×0.82', { woundSeverity: 3 });
 row('위중 sev2', 'atk×0.73', { woundSeverity: 2 });
 row('치명상 sev1', 'atk×0.64', { woundSeverity: 1 });
 
-// 속성(화상/동상/중독/내상/외상)은 전투원 입력에 타입이 없다 — 같은 심도면 전부 동일.
-console.log('\n[속성별 상처 — 전투 영향 동일(타입은 엔진 입력 아님, 치료약만 구분)]');
-console.log('  화상/동상/중독/내상/외상 모두 sev3 → atk×0.82 → 위 "중상 sev3"과 동일 승률');
+// 속성별 상처 — 공통 공세 저하(심도)에 종류별 결을 얹는다. docs/35 §6-1b.
+// 동상=신법↓ / 중독·화상=합마다 지속 피해 / 내상=내공 빨리 마름 / 외상=공세만.
+console.log('\n[속성별 상처 — 같은 중상(sev3)이라도 종류별 결이 다르다]');
+row('외상 sev3', '공세만(기준)', { woundSeverity: 3, woundType: 'wound' });
+row('동상 sev3', '신법 -19%', { woundSeverity: 3, woundType: 'frost' });
+row('중독 sev3', '합당 지속피해', { woundSeverity: 3, woundType: 'poison' });
+row('화상 sev3', '합당 지속피해(약)', { woundSeverity: 3, woundType: 'burn' });
+row('내상 sev3', '내공 소모 1.3배', { woundSeverity: 3, woundType: 'inner' });
+console.log('  ── 치명상(sev1)일 때 종류별 결 (심도가 세기를 키운다) ──');
+row('외상 sev1', '공세만', { woundSeverity: 1, woundType: 'wound' });
+row('동상 sev1', '신법 -25%', { woundSeverity: 1, woundType: 'frost' });
+row('중독 sev1', '합당 1.5% 지속', { woundSeverity: 1, woundType: 'poison' });
+row('화상 sev1', '합당 1.0% 지속', { woundSeverity: 1, woundType: 'burn' });
+row('내상 sev1', '내공 소모 1.6배', { woundSeverity: 1, woundType: 'inner' });
 
 // staminaFrac → atk ×(0.7+0.3·frac) + 시작 내공 ×(0.6+0.4·frac). sheet.ts:86, engine.ts:148.
 console.log('\n[체력 — 공세 ×(0.7+0.3·체력) + 시작 내공 ×(0.6+0.4·체력)]');
@@ -67,4 +78,4 @@ row('심마 59 (직전)', '폭주X (임계 미만)', { simma: 59 });
 row('심마 60 (폭주)', '공↑방↓ 트레이드', { simma: 60 });
 row('심마 100 (폭주)', '60과 동일(임계제)', { simma: 100 });
 
-console.log('\n측정 끝. 상처 심도·체력·심마(폭주)는 전투에 반영됨. 속성 타입은 전투 무관(치료 경로만).');
+console.log('\n측정 끝. 상처 심도·체력·심마(폭주) 반영 + 속성 종류별 결 차등(동상=신법↓·중독/화상=지속피해·내상=내공↓).');

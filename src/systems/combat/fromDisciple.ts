@@ -42,5 +42,6 @@ export function combatantFromDisciple(d: Disciple): Combatant {
     mercy: d.personality?.mercy ?? 50,
     simma: d.simma ?? 0,
     woundSeverity: d.wound?.severity,
+    woundType: d.wound?.type,
   };
 }

@@ -212,6 +212,23 @@ export function simulateCombat(
   while (round < maxRounds && aliveOf(fighters, 'A').length > 0 && aliveOf(fighters, 'B').length > 0) {
     round += 1;
 
+    // ── 지속 피해(중독·화상 상처) — 합마다 진영 무관하게 제 몸이 깎인다(독이 퍼지고 상처가 곪는다).
+    //    공격자 없는 환경 피해라 절명은 없다(곪아 쓰러질 뿐). docs/35 §6-1b.
+    for (const f of fighters) {
+      if (f.state !== 'standing' || f.sheet.dotFrac <= 0) continue;
+      f.hp -= f.sheet.dotFrac * f.sheet.maxHp;
+      if (real) {
+        if (f.hp <= 0) {
+          f.state = 'downed';
+          events.push({ round, kind: 'down', targetId: f.sheet.ref.id });
+        }
+      } else if (f.hp / f.sheet.maxHp <= SPAR_YIELD_HP) {
+        f.state = 'yielded';
+        events.push({ round, kind: 'yield', actorId: f.sheet.ref.id });
+      }
+    }
+    if (aliveOf(fighters, 'A').length === 0 || aliveOf(fighters, 'B').length === 0) break;
+
     // ── 패주 — 실전, 3합 이후. ① 진영 평균 체력 바닥 + 전력 열세, 또는
     // ② 사상자 폭주(동료가 일방적으로 베여 나가면 나머지가 흩어진다 — 한 명이 다수를 베는 무쌍의
     //    완성. docs/35 §3-A). 잡졸 무리가 고수 하나에게 무너지는 결.
