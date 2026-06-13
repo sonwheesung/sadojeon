@@ -101,6 +101,14 @@ export const CUTSCENES: readonly CutsceneDef[] = [
     tone: 'blood',
     defaultLine: '{name}을 업고 밤길을 내달렸다. 마을 의원 문턱에서 — 숨이, 돌아왔다.',
   },
+  {
+    // 선천진기 — 영약도 의원도 없는 사경. 타고난 진원을 끌어올려 죽음을 떨친다. 대가는 근본의 손상.
+    eventId: 'fatal_rescue_innate',
+    hanzi: '眞',
+    title: '선천진기(先天眞氣) — 진원을 태우다',
+    tone: 'blood',
+    defaultLine: '영약도, 의원도 없었다. 단전 가장 깊은 곳 — 타고난 진원이 마지막으로 끓어올랐다. {name}은 피를 토하며 일어섰다. 죽음은 떨쳤으나, 근본이 상해 공력이 흩어졌다.',
+  },
 ] as const;
 
 export function findCutscene(eventId: string): CutsceneDef | undefined {

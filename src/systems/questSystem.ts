@@ -557,7 +557,12 @@ function villageSurviveChance(realm: Disciple['realm']): number {
 //  ② 의술 거의 최상위(신의급) 의원 동행(본인 제외 — 확정 소생)
 //  ③ 마을로 업고 달린다 — 생존 굴림(경지별 45~80%, 실패하면 그때 죽는다)
 // 반환: 살린 경로 또는 null(마을에서도 끝내).
-type RescueRoute = 'elixir' | 'medic' | 'village';
+// 선천진기 생환 대가 — 진원을 태운 근본 손상. 내공·체력 영구 하락(경지=깨달음은 유지, 공력만 잃음).
+// 일회성 정액(경지 페이싱과 독립). 거듭 쓰면 폐인(내공 바닥 → 더는 생환 불가 = 진짜 죽음). docs/23·29.
+const SEONCHEON_INTERNAL_COST = 150;
+const SEONCHEON_ENDURANCE_COST = 4;
+
+type RescueRoute = 'elixir' | 'medic' | 'innate' | 'village';
 function survivesFatalBlow(
   victim: Disciple,
   partyIds: string[],
@@ -570,6 +575,15 @@ function survivesFatalBlow(
     return Boolean(m && m.status !== 'departed' && (m.stats?.medicine?.level ?? 0) >= DIVINE_DOCTOR_MEDICINE);
   });
   if (hasDivineDoctor) return 'medic';
+  // 선천진기(자력) — 영약·의원 없는 사경. 타고난 진원(오성)과 살려는 의지(야망)가 받쳐주면 진원을 태워 산다.
+  // 내공이 영구 손상 최소치 미만이면 태울 진원이 없다 → 발동 불가(폐인 = 진짜 죽음). 대가는 호출측이 적용.
+  const internal = victim.realmProgress?.internal ?? 0;
+  if (internal >= SEONCHEON_INTERNAL_COST) {
+    const insight = victim.insight ?? 1;
+    const ambition = victim.personality?.ambition ?? 50;
+    const innateChance = Math.max(0.05, Math.min(0.5, 0.1 + insight * 0.05 + ((ambition - 50) / 100) * 0.15));
+    if (Math.random() < innateChance) return 'innate';
+  }
   return Math.random() < villageSurviveChance(victim.realm) ? 'village' : null;
 }
 
@@ -966,7 +980,16 @@ function resolveQuest(active: ActiveQuest): Milestone {
           inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다
           gravelyHurtName = d.name;
           rescueRoute = rescue;
-          // 구사일생 컷씬 — 살린 경로(영약/의술/마을)마다 다른 컷. docs/20.
+          // 선천진기(자력) — 진원을 태워 살았다. 내공·체력 영구 하락(근본 손상). 경지(깨달음)는 유지.
+          if (rescue === 'innate') {
+            const rp = patch.realmProgress ?? baseRp;
+            patch.realmProgress = { ...rp, internal: Math.max(0, rp.internal - SEONCHEON_INTERNAL_COST) };
+            const end = d.stats?.endurance;
+            if (end) {
+              patch.stats = { ...(d.stats ?? {}), endurance: { ...end, level: Math.max(0, end.level - SEONCHEON_ENDURANCE_COST) } };
+            }
+          }
+          // 구사일생 컷씬 — 살린 경로(영약/의술/선천진기/마을)마다 다른 컷. docs/20.
           playCutscene(`fatal_rescue_${rescue}`, { id: d.id, name: d.name });
         } else {
           patch.status = 'departed'; // 마을까지 업혀 갔으나 끝내 쓰러진다
@@ -1019,7 +1042,9 @@ function resolveQuest(active: ActiveQuest): Milestone {
         ? '최상급 구급영약이 끊어지던 숨을 붙들었다.'
         : rescueRoute === 'medic'
           ? '동행한 의원의 손이 죽음의 문턱에서 끌어냈다.'
-          : '동문들이 마을 의원까지 업고 달린 끝에 가까스로 살렸다.';
+          : rescueRoute === 'innate'
+            ? '영약도 의원도 없는 사경에서, 타고난 진원(先天眞氣)을 끌어올려 스스로 죽음을 떨쳤다. 허나 근본이 상해 공력을 잃었다.'
+            : '동문들이 마을 의원까지 업고 달린 끝에 가까스로 살렸다.';
     body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${gravelyHurtName}이(가) 치명상을 입었으나 ${rescueNote} 오래 몸져눕는다.`;
   } else {
     const reward = `자금 ${Math.round(q.reward.money * scale.money)}${
