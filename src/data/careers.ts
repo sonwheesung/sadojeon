@@ -98,6 +98,34 @@ export const JOB_ROUTE: Record<string, RouteId> = {
   'sapa-warrior': 'demonic',
 };
 
+// 직업 id → 노선 내 직책 순서(0 말단 → 클수록 윗자리). 2026-06-14.
+// **한 노선 안에서 순서는 전부 달라야 한다**(같은 직종·같은 직급 금지). 졸업 시 같은 노선에
+// 여러 자격이 되면 **확률로 가르지 않고 가장 높은 직책 하나로 수렴**(jobSystem.evaluateJobs).
+// 강호 의원 자격이면서 신의 자격이면 신의만 후보 — 강호 의원으로 시작해 신의로 오르는 건 졸업 후 careerSystem 몫.
+// (tier 와 결을 맞춘다: 높은 tier 일수록 높은 순서. tier 가 같아도 순서는 서로 달리 매겨 충돌 제거.)
+export const JOB_RANK: Record<string, number> = {
+  // 정파
+  'sect-warrior': 0, strategist: 1, 'orthodox-protector': 2, 'murim-lord': 3,
+  // 의원
+  'quack-doctor': 0, 'village-physician': 1, 'wandering-physician': 2, 'medicine-king': 3, 'divine-healer': 4,
+  // 정탐
+  'spy-scout': 0, 'shadow-captain': 1, 'ganghos-shadow': 2,
+  // 살수
+  'petty-assassin': 0, 'assassin-leader': 1, 'dark-blade': 2,
+  // 도가
+  'wandering-daoist': 0, 'daoist-priest': 1, 'daoist-master': 2,
+  // 호위
+  gatekeeper: 0, 'escort-warrior': 1, 'village-guardian': 2, 'escort-house-master': 3, 'caravan-guard-captain': 4, 'caravan-master': 5,
+  // 떠돌이
+  wanderer: 0, 'bounty-hunter': 1, 'blade-master': 2, 'sword-saint': 3,
+  // 의적
+  'roving-hero': 0, 'righteous-bandit': 1, 'chivalrous-chief': 2,
+  // 마도
+  'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2,
+  // 야인
+  'town-idler': 0,
+};
+
 // 노선 → 연관 문파 id(factions.ts). 졸업 시 그 문파 평판↑(제자가 그 길에 든다). docs/30.
 // 깔끔히 대응되는 노선만 — 호위·떠돌이·의원·야인·의적은 특정 문파 없음(매핑 X).
 export const ROUTE_FACTION: Partial<Record<RouteId, string>> = {

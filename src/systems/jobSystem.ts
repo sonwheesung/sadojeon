@@ -3,7 +3,7 @@
 // 유대는 후속(스토어 연결 시 가중치 재배분). 선택 UI도 후속 — 지금은 풀·확률만 산출.
 
 import { JOB_POOL, type Job, type JobTier } from '@/data/jobs';
-import { JOB_ROUTE, ROUTE_FACTION } from '@/data/careers';
+import { JOB_ROUTE, JOB_RANK, ROUTE_FACTION } from '@/data/careers';
 import { repTier, type RepTier } from '@/data/factions';
 import { findMartialArt } from '@/data/martialArts';
 import { useReputationStore } from '@/stores/reputationStore';
@@ -142,25 +142,34 @@ export interface JobChance {
   prob: number; // 0~1
 }
 
-// 졸업 시점 가능 직업 + 확률(적합도×문파 평판 가중, 정규화). 조건 충족 직업만, 확률 내림차순.
-// 동네 한량(요구조건 0)은 **순수 최후 폴백** — 다른 직업이 하나라도 자격되면 경쟁에서 제외(2026-06-14).
-// (종전엔 무조건 직업이 avg([])=0.5의 공짜 적합도로 간신히 자격되는 실제 직업을 이겨 절정 고수가 동네 한량으로
-//  졸업하는 버그. 동네 한량은 "정말 아무 길도 못 찾은" 경우에만 나와야 한다.)
+// 졸업 시점 가능 직업 + 확률(적합도×격 가중×문파 평판×흑화, 정규화). 조건 충족 직업만, 확률 내림차순.
+// **같은 노선(직종)은 확률로 가르지 않는다**(2026-06-14): 자격되는 직업을 노선별로 묶어 **가장 높은 직책 하나**로
+//  수렴 → 후보는 "노선마다 대표 1개". 강호 의원·신의 둘 다 자격이면 신의만(강호 의원→신의 승급은 졸업 후 careerSystem).
+//  확률/선택은 **서로 다른 노선 사이**에서만 일어난다(의원 길 vs 정파 길 vs 호위 길…).
+// 동네 한량(요구조건 0)은 **순수 최후 폴백** — 다른 직업이 하나라도 자격되면 경쟁에서 제외.
 export function evaluateJobs(d: Disciple): JobChance[] {
   const FALLBACK_ID = 'town-idler';
-  const real = JOB_POOL.filter((j) => j.id !== FALLBACK_ID && meetsJob(d, j)).map((j) => ({
+  const qualified = JOB_POOL.filter((j) => j.id !== FALLBACK_ID && meetsJob(d, j));
+  if (qualified.length === 0) {
+    const fb = JOB_POOL.find((j) => j.id === FALLBACK_ID);
+    return fb ? [{ job: fb, prob: 1 }] : [];
+  }
+  // 노선별 최고 직책으로 수렴 — 같은 노선 안에서는 직책 순서(JOB_RANK)가 큰 것만 남긴다.
+  const topPerRoute = new Map<string, Job>();
+  for (const j of qualified) {
+    const route = JOB_ROUTE[j.id] ?? j.id;
+    const cur = topPerRoute.get(route);
+    if (!cur || (JOB_RANK[j.id] ?? 0) > (JOB_RANK[cur.id] ?? 0)) topPerRoute.set(route, j);
+  }
+  const winners = [...topPerRoute.values()].map((j) => ({
     job: j,
     score: Math.max(
       0.02,
       fitness(d, j) * TIER_WEIGHT[j.tier] * reputationFactor(d, j) * darknessFactor(d, j)
     ),
   }));
-  if (real.length === 0) {
-    const fb = JOB_POOL.find((j) => j.id === FALLBACK_ID);
-    return fb ? [{ job: fb, prob: 1 }] : [];
-  }
-  const total = real.reduce((s, x) => s + x.score, 0);
-  return real
+  const total = winners.reduce((s, x) => s + x.score, 0);
+  return winners
     .map((x) => ({ job: x.job, prob: x.score / total }))
     .sort((a, b) => b.prob - a.prob);
 }
