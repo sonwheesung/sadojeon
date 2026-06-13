@@ -62,4 +62,12 @@ export const ART_TRAIT_OVERRIDE: Record<string, MartialTrait[]> = {
   'jongnam-cheonseong-sword': ['swift'], // 천성검 — 연달아 떨어지는 쾌검
   'moyong-chupung-sword': ['swift'], //     추풍검 — 바람 뒤쫓는 기초 쾌검
   'cheongseong-jukyeop-sword': ['swift'], // 죽엽검 — 잘고 빠른 검
+
+  // ═══ 속성·광폭 — 무공 속성이 상처를 남긴다(화염→화상·빙한→동상). 광폭은 아군 오사 ═══
+  // 곤륜(빙·설) — 빙공 검·권이 동상을 입힌다.
+  'gollyun-bingha-sword': ['frost'], //   빙하검 — 만년 빙하의 검
+  'gollyun-seolsan-geombeop': ['frost'], // 설산검법 — 설산의 한기
+  'gollyun-seolsan-gwon': ['frost'], //   설산권 — 빙한 권
+  // 마교 혈마공 — 피로 기를 기르는 막무가내 마공(광역+아군오사+흡공).
+  'hyeolma-gong': ['sweep', 'wild', 'drain'],
 };

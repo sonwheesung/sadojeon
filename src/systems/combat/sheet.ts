@@ -52,10 +52,13 @@ export interface CombatSheet {
   isMa: boolean; // 주력이 마공 — 손속에 살기
   hiddenDepth: number; // 암기 깊이 — 상처 결(독) 판정
   qigongOrMaMain: boolean; // 내상 결 판정(심법·마공 결정타)
-  // 주력 무공 특성(트레이트) — 공격 성질. 광역·흡공·중독·파공·쾌는 주력을 따른다. docs/35 §3-A.
-  sweep: boolean; // 다인기(광역)
+  // 주력 무공 특성(트레이트) — 공격 성질. 광역·흡공·속성·파공·쾌는 주력을 따른다. docs/35 §3-A·§3-B.
+  sweep: boolean; // 다인기(광역, 적만)
+  wild: boolean; // 광폭 — 광역이 아군까지 휩쓴다(난전 오사)
   drain: boolean; // 흡공(내공 흡수)
-  poison: boolean; // 중독
+  poison: boolean; // 중독 속성 → 중독 상처
+  burn: boolean; // 화염 속성 → 화상 상처
+  frost: boolean; // 빙한 속성 → 동상 상처
   pierce: boolean; // 파공(호신강기 관통)
   guard: boolean; // 호신강기 — 보유 무공 아무거나 guard면 방어(주력 아니어도)
 }
@@ -129,8 +132,11 @@ export function buildSheet(c: Combatant, foeMeanInternal: number): CombatSheet {
     hiddenDepth,
     qigongOrMaMain: isMa || main?.school === 'qigong',
     sweep: hasTrait('sweep'),
+    wild: hasTrait('wild'),
     drain: hasTrait('drain'),
     poison: hasTrait('poison'),
+    burn: hasTrait('burn'),
+    frost: hasTrait('frost'),
     pierce: hasTrait('pierce'),
     guard,
   };

@@ -45,6 +45,7 @@ const MOOK_DMG_FLOOR = 0.004; //   2경지+ 아래 공격자의 피해 하한(�
 const DMG_FLOOR = 0.015; //        일반 피해 하한
 const CLEAVE_BASE = 2; //          2경지+ 위 공격자의 광역(검기) 기본 추가 타격 수 (+경지차)
 const CLEAVE_DMG_MULT = 0.9; //    광역 부차 타격 피해 배율(주 표적보다 약간 약하게)
+const FRIENDLY_FIRE_MULT = 0.5; // 광폭(wild) 광역에 아군이 휘말릴 때 — 빗겨 맞아 절반 피해
 const SWEEP_BASE = 1; //           다인기(광역) 무공이 동급에서도 추가로 휩쓰는 적 수
 const DRAIN_QI = 10; //            흡공 1타당 흡수하는 적 내공(뒷심) — 자신을 채운다(흡성대법)
 const PIERCE_DEF_IGNORE = 0.3; //  파공 — 상대 방어(호신강기) 무시 비율
@@ -85,8 +86,11 @@ function effDef(f: Fighter): number {
   return f.sheet.def * (f.burst ? 0.85 : 1);
 }
 
-// 결정타의 상처 결 — 중독 무공·암기는 독, 심법·마공은 내상, 그 외는 외상.
+// 결정타의 상처 결 — 무공 속성을 따른다. 화염=화상·빙한=동상·중독=독·심법/마공=내상·그 외=외상.
+// (속성 상처는 같은 속성 해독·치료 영약이라야 낫는다 — docs/29 §5-1, 해독약 사다리.)
 function woundTypeOf(finisher: Fighter, rng: () => number): WoundType {
+  if (finisher.sheet.burn) return 'burn';
+  if (finisher.sheet.frost) return 'frost';
   if (finisher.sheet.poison || (finisher.sheet.hiddenDepth > 0 && rng() < 0.5)) return 'poison';
   if (finisher.sheet.qigongOrMaMain) return 'inner';
   return 'wound';
@@ -322,6 +326,14 @@ export function simulateCombat(
           .sort((x, y) => x.hp / x.sheet.maxHp - y.hp / y.sheet.maxHp)
           .slice(0, sweep);
         for (const o of others) applyStrike(actor, o, frac * CLEAVE_DMG_MULT, false, round);
+        // 광폭(wild) — 휩쓰는 기세에 같은 편도 휘말린다(난전 오사). 빗겨 맞아 절반 피해. docs/35 §3-B.
+        if (actor.sheet.wild) {
+          const allies = aliveOf(fighters, actor.side)
+            .filter((f) => f !== actor)
+            .sort((x, y) => x.hp / x.sheet.maxHp - y.hp / y.sheet.maxHp)
+            .slice(0, sweep);
+          for (const a of allies) applyStrike(actor, a, frac * CLEAVE_DMG_MULT * FRIENDLY_FIRE_MULT, false, round);
+        }
       }
 
       // 대련 — 휘두른 쪽이 내공 바닥나면 스스로 승복.

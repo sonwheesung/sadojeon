@@ -96,19 +96,26 @@ export interface MartialArt {
 }
 
 // 무공 특성 — 캔온대로 무공서에 부여. 대부분 엔진·시스템이 이미 하는 일을 "어느 무공이 쓰나"로 묶음.
+// 포켓몬 기술 모델(대상 범위 + 속성)의 무협판: sweep/wild=범위, poison/burn/frost=속성(→상처).
 export type MartialTrait =
-  | 'sweep' //   다인기 — 한 수가 다수를 친다(검막·도강·장풍·만천화우). [엔진 cleave]
+  | 'sweep' //   다인기 — 한 수가 다수를 친다(검막·도강·장풍·만천화우). [엔진 cleave, 적만]
+  | 'wild' //    막무가내 광역 — 휩쓸 때 아군까지 휘말린다(장풍·폭렬 마공·도강 난전). [cleave 아군 포함]
   | 'drain' //   흡공 — 적 내공을 빨아 자신을 채운다 + 심마 누적(흡성대법·화공대법). [qi 흡수 + 주화입마]
   | 'guard' //   호신강기·금강불괴 — 피격 피해 감쇄. [방어]
-  | 'poison' //  중독 — 독·약독(당가 암기·사천 독공). [중독 상처]
+  | 'poison' //  중독 속성 — 독·약독(당가 암기·사천 독공). [중독 상처]
+  | 'burn' //    화염 속성 — 열양·화공(화염도·열화장). [화상 상처]
+  | 'frost' //   빙한 속성 — 한음·빙공(빙백검·한빙장). [동상 상처]
   | 'swift' //   쾌(快) — 선공·연격(쾌검·신법). [신법↑]
   | 'pierce'; // 파공(破功) — 상대 호신강기를 꿰뚫는다(육맥신검류). [방어 관통]
 
 export const MARTIAL_TRAIT_LABEL: Record<MartialTrait, string> = {
   sweep: '광역',
+  wild: '광폭',
   drain: '흡공',
   guard: '호신',
   poison: '중독',
+  burn: '화염',
+  frost: '빙한',
   swift: '쾌속',
   pierce: '파공',
 };
