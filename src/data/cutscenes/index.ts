@@ -109,6 +109,36 @@ export const CUTSCENES: readonly CutsceneDef[] = [
     tone: 'blood',
     defaultLine: '영약도, 의원도 없었다. 단전 가장 깊은 곳 — 타고난 진원이 마지막으로 끓어올랐다. {name}은 피를 토하며 일어섰다. 죽음은 떨쳤으나, 근본이 상해 공력이 흩어졌다.',
   },
+
+  // ── 전용 아크 컷 — 캐릭터별 정점·시그니처(docs/20 ②). 노선/사건에 도달한 제자만 발화, 칸 비면 폴백 ──
+  // 호위 노선 정점 — 상단 총관(호위 사다리 끝) 등극. 성인 컷. 트리거: careerSystem 직책 정점(후속).
+  {
+    eventId: 'career_peak_escort',
+    hanzi: '守',
+    title: '호위의 정점 — 상단 총관',
+    tone: 'gold',
+    defaultLine: '{name}이 상단의 깃발 아래 섰다. 평생 누군가의 뒤를 지켜 온 길이, 마침내 수백 명의 앞을 지키는 자리에 닿았다.',
+    byDisciple: {
+      'jang-cheol': {
+        line: '장철은 상단의 큰 깃발 아래 우뚝 섰다. 어릴 적 벽을 버티던 그 손으로, 이제 한 상단의 앞을 지킨다.',
+        quote: '지키는 자리에 끝이 있다면…… 여기까지 와도 되겠지요, 사부님.',
+      },
+    },
+  },
+  // 고향을 지키다 — 도적떼에게서 고향 마을을 구함(가족 위협·호위 의뢰). 청소년 시그니처 컷.
+  {
+    eventId: 'hometown_defense',
+    hanzi: '鄕',
+    title: '고향을 지키다',
+    tone: 'ink',
+    defaultLine: '{name}이 제 손으로 고향 어귀를 막아섰다. 어릴 적 매일 지나던 그 길목이었다.',
+    byDisciple: {
+      'jang-cheol': {
+        line: '장철은 도적떼 앞에 홀로 고향 어귀를 막아섰다. 등 뒤로, 어릴 적 빵을 나눠 먹던 골목이 있었다.',
+        quote: '여기 사람들은…… 제가 지킵니다. 그러려고 배운 무공이니까요.',
+      },
+    },
+  },
 ] as const;
 
 export function findCutscene(eventId: string): CutsceneDef | undefined {
