@@ -46,7 +46,7 @@ function weightedSample<T>(items: readonly T[], weightFn: (x: T) => number, coun
 const PEACEFUL = new Set<QuestGrade>(['menial', 'minor']); // 평화 잡일
 const CRISIS = new Set<QuestGrade>(['dangerous', 'extreme']); // 무력·위기
 const BOARD = 6; // 게시판 기본 건수
-const N = 5000; // 표본
+const N = 10000; // 표본(통계 3룰 ① 1만+)
 
 interface Row {
   threat: number;

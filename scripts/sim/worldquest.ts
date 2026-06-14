@@ -86,7 +86,7 @@ for (let season = 0; season < 60; season += 1) {
 }
 
 // ── 집계 — 여러 회차(한 격동 회차의 편향 피함): 상관 + 사건 의뢰 공급 ─────────
-const RUNS = 200;
+const RUNS = 10000; // 통계 3룰 ① 1만+ (순수 코어)
 let calmPeace = 0, calmN = 0, turbPeace = 0, turbN = 0;
 let calmCrisisCover = 0, calmCoverN = 0, turbCrisisCover = 0, turbCoverN = 0; // 게시판에 위기 의뢰 ≥1 깔린 비율
 const evtCount: Record<string, number> = {}; // 사건 의뢰(world-evt) 종류별 총 발생

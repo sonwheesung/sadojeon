@@ -20,7 +20,7 @@ function mulberry32(seed: number): () => number {
 }
 
 const SEASONS = 60; // 15년 × 4계절
-const RUNS = 200;
+const RUNS = 10000; // 통계 3룰 ① 표본 1만+ (순수 코어라 회차 풀시뮬도 1만 가능 — 실게임 양육과 달리 빠름)
 const MAX_ACTIVE = 4; // worldSystem 의 동시 진행 상한(비공개 const 와 일치해야 함)
 
 // ── 불변식·금지 케이스 위반 카운터(0이어야 PASS) ─────────────────────────────
