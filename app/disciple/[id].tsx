@@ -12,6 +12,7 @@ import {
   MoodPanel,
   StatGrowthPanel,
 } from '@/components/disciple';
+import { DiscipleArt } from '@/components/dialogue/DiscipleArt';
 import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
 import { useDiscipleStore } from '@/stores';
 import { colors, spacing, typography } from '@/theme';
@@ -52,6 +53,9 @@ export default function DiscipleDetailScreen() {
 
   const name = fromStore?.name ?? starting?.name ?? '제자';
   const hanjaName = fromStore?.hanjaName ?? starting?.hanjaName ?? '?';
+  // 나이 따라 초상 단계 — 어릴 땐 유년, 자라면 청소년→성년(양육 10→25세). 자산 없으면 그레이박스 폴백.
+  const age = fromStore?.age ?? 15;
+  const artStage: 'child' | 'teen' | 'adult' = age < 13 ? 'child' : age >= 20 ? 'adult' : 'teen';
   // 풍경 텍스트 — 추후 통찰 차등 + 시나리오 풀에서. 그레이박스: 고정 placeholder.
   const moods = PLACEHOLDER_MOODS;
 
@@ -64,6 +68,13 @@ export default function DiscipleDetailScreen() {
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* 제자 초상 — 나이 단계별 일러스트(자산 있는 캐릭터만, 없으면 그레이박스) */}
+          {id && (
+            <View style={styles.portrait}>
+              <DiscipleArt poolId={id} name={name} active stage={artStage} size={200} height={260} />
+            </View>
+          )}
+
           {/* 시안 결 */}
           <DiscipleHeader name={name} hanjaName={hanjaName} />
           {fromStore && <DiscipleStatusPanel disciple={fromStore} />}
@@ -172,6 +183,7 @@ const styles = StyleSheet.create({
   // Body -----------------------------------------------------------------
   body: { flex: 1 },
   bodyContent: { paddingBottom: spacing.sm, gap: spacing.base },
+  portrait: { alignItems: 'center', paddingTop: spacing.xs },
 
   // Section --------------------------------------------------------------
   section: { gap: spacing.sm },

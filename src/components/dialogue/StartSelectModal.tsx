@@ -131,7 +131,7 @@ function GalleryCard({
       accessibilityRole="button"
       accessibilityLabel={`${name} 상세 보기${isSelected ? ' (선택됨)' : ''}`}
     >
-      <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={96} height={120} />
+      <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={96} height={120} stage="child" />
       <Text style={[styles.figureName, isSelected && styles.nameSelected]} numberOfLines={1}>
         {name}
       </Text>
@@ -176,7 +176,7 @@ function DetailView({
 
       <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.detailHead}>
-          <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={120} height={150} />
+          <DiscipleArt poolId={candidate.poolId} name={name} active={isSelected} size={120} height={150} stage="child" />
           <Text style={[styles.detailName, isSelected && styles.nameSelected]}>{name}</Text>
           <Text style={styles.detailHanja}>{pool?.hanjaName ?? '?'}</Text>
         </View>
