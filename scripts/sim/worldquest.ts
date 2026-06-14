@@ -85,18 +85,34 @@ for (let season = 0; season < 60; season += 1) {
   );
 }
 
-// ── 상관 — 여러 회차에 걸쳐 집계(한 격동 회차의 편향 피함) ───────────────────
+// ── 집계 — 여러 회차(한 격동 회차의 편향 피함): 상관 + 사건 의뢰 공급 ─────────
+const RUNS = 200;
 let calmPeace = 0, calmN = 0, turbPeace = 0, turbN = 0;
-for (let seed = 2000; seed < 2120; seed += 1) {
+let calmCrisisCover = 0, calmCoverN = 0, turbCrisisCover = 0, turbCoverN = 0; // 게시판에 위기 의뢰 ≥1 깔린 비율
+const evtCount: Record<string, number> = {}; // 사건 의뢰(world-evt) 종류별 총 발생
+let evtRuns = 0; // 사건 의뢰가 한 번이라도 뜬 회차
+for (let seed = 2000; seed < 2000 + RUNS; seed += 1) {
   const r2 = mulberry32(seed); const w = seedWorldState(r2); const b2 = mulberry32(seed + 99);
+  let evtThisRun = 0;
   for (let i = 0; i < 60; i += 1) {
-    tickWorldState(w, r2);
+    const rp = tickWorldState(w, r2);
     const th = worldThreat(w);
-    const peace = sampleBoard(th, b2, 6).filter((q) => PEACEFUL.has(q.grade)).length;
-    if (th < 0.45) { calmPeace += peace; calmN += 6; } else { turbPeace += peace; turbN += 6; }
+    // 큰 사건 결말 → 정파 낀 사건만 의뢰화(worldDriver 와 동일 규칙).
+    for (const q of rp.questSeeds) {
+      if (q.kind === 'war' && !q.blocs.includes('orthodox')) continue;
+      if (!WORLD_QUEST_TITLE[q.kind]) continue;
+      evtCount[q.kind] = (evtCount[q.kind] ?? 0) + 1; evtThisRun += 1;
+    }
+    const board = sampleBoard(th, b2, 6);
+    const peace = board.filter((q) => PEACEFUL.has(q.grade)).length;
+    const hasPeace = peace > 0 ? 1 : 0; // 게시판에 평화 잡일이 한 건이라도 깔렸나
+    if (th < 0.45) { calmPeace += peace; calmN += 6; calmCrisisCover += hasPeace; calmCoverN += 1; }
+    else { turbPeace += peace; turbN += 6; turbCrisisCover += hasPeace; turbCoverN += 1; }
   }
+  if (evtThisRun > 0) evtRuns += 1;
 }
-console.log(`\n── 상관 요약 (게시판 평화 잡일 비중, 120회차 집계) ──`);
-console.log(`  평온기(위기<0.45): 평화 잡일 ${calmN ? Math.round((calmPeace / calmN) * 100) : 0}%`);
-console.log(`  난세(위기≥0.45):   평화 잡일 ${turbN ? Math.round((turbPeace / turbN) * 100) : 0}%`);
-console.log(`  → 정세가 험할수록 평화 잡일이 줄고 무력·위기 의뢰가 게시판을 채운다.\n`);
+console.log(`\n── 집계 (${RUNS}회차 × 60계절) ──`);
+console.log(`  [게시판 평화 잡일] 평온기(위기<0.45) ${Math.round((calmPeace / calmN) * 100)}%  vs  난세(≥0.45) ${Math.round((turbPeace / turbN) * 100)}%`);
+console.log(`  [게시판에 평화 잡일 깔린 계절] 평온기 ${Math.round((calmCrisisCover / calmCoverN) * 100)}%  vs  난세 ${Math.round((turbCrisisCover / turbCoverN) * 100)}%`);
+console.log(`  [사건 의뢰 공급] 발생 회차 ${Math.round((evtRuns / RUNS) * 100)}% · 종류별 총: ${Object.entries(evtCount).map(([k, v]) => `${WORLD_QUEST_TITLE[k]} ${v}`).join(' · ')}`);
+console.log(`  → 정세가 험할수록 평화 잡일↓·위기 의뢰↑, 큰 사건엔 전용 의뢰(★)가 따라 붙는다.\n`);
