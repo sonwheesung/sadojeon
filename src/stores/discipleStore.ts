@@ -252,6 +252,7 @@ export const useDiscipleStore = create<DiscipleStore>()(
 
       setRelation: (id, otherId, level) =>
         set((s) => {
+          if (id === otherId) return s; // 자기 자신과의 관계 금지(엣지 케이스 가드 — docs/37 §관계)
           const current = s.disciples[id];
           if (!current) return s;
           return {
