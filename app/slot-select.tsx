@@ -6,6 +6,7 @@ import { useDevAccess } from '@/systems/dev/devAccess';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
 import { runs as runsRepo, type RunRecord } from '@/data/repositories';
 import {
@@ -54,6 +55,7 @@ export default function SlotSelectScreen() {
   // 개발 계정은 사문 선택 대신 시뮬레이션 실험실로 — ?game=1 이면 일반 게임 진입 허용.
   const devAccess = useDevAccess();
   const { game } = useLocalSearchParams<{ game?: string }>();
+  const confirm = useConfirm();
 
   // 뒤로가기 → 게임 종료 확인.
   useBackConfirm(
@@ -115,6 +117,27 @@ export default function SlotSelectScreen() {
     else startNew(slot);
   };
 
+  // 사문 삭제 — 영구 삭제(되돌릴 수 없음). 확인창 필수(파괴적 → danger).
+  const removeRun = useCallback(
+    async (run: RunRecord) => {
+      const sectName = field(run.sect, 'name', '무명산문');
+      const ok = await confirm({
+        title: '사문 삭제',
+        message: `${sectName} 사문을 영구히 지웁니다. 졸업 제자·비급 누적 등 이 사문의 모든 기록이 사라지며 되돌릴 수 없습니다.`,
+        confirmLabel: '삭제',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      try {
+        await runsRepo.delete(run.id);
+        await load();
+      } catch (e) {
+        if (typeof console !== 'undefined') console.warn('[slot-select] 사문 삭제 실패', e);
+      }
+    },
+    [confirm, load],
+  );
+
   // 개발 계정 — 시뮬레이션 실험실로. (훅 호출 뒤의 분기라 훅 순서 안전.)
   if (devAccess && game !== '1') return <Redirect href={'/simlab' as Href} />;
 
@@ -129,7 +152,7 @@ export default function SlotSelectScreen() {
         ) : (
           <View style={styles.slotsRow}>
             {SLOTS.map((slot) => (
-              <SlotCard key={slot} slot={slot} run={bySlot[slot]} onPick={onPick} />
+              <SlotCard key={slot} slot={slot} run={bySlot[slot]} onPick={onPick} onDelete={removeRun} />
             ))}
           </View>
         )}
@@ -164,10 +187,12 @@ function SlotCard({
   slot,
   run,
   onPick,
+  onDelete,
 }: {
   slot: number;
   run?: RunRecord;
   onPick: (slot: number) => void;
+  onDelete: (run: RunRecord) => void;
 }) {
   const isEmpty = !run;
   return (
@@ -179,6 +204,17 @@ function SlotCard({
     >
       <SlotSeal slot={slot} dim={isEmpty} />
       {run ? <ActiveBody run={run} /> : <EmptyBody />}
+      {run && (
+        <Pressable
+          style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
+          onPress={() => onDelete(run)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`슬롯 ${slot} 사문 삭제`}
+        >
+          <Text style={styles.deleteBtnLabel}>✕</Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -326,6 +362,29 @@ const styles = StyleSheet.create({
   },
   cardEmpty: {
     opacity: 0.7,
+  },
+
+  // 삭제 버튼 — 사용 슬롯 우상단
+  deleteBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.inkSoft,
+    backgroundColor: colors.paperBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnPressed: { borderColor: colors.seal, opacity: 0.85 },
+  deleteBtnLabel: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+    lineHeight: 16,
   },
 
   // Slot seal

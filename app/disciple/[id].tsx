@@ -71,7 +71,7 @@ export default function DiscipleDetailScreen() {
           {/* 제자 초상 — 나이 단계별 일러스트(자산 있는 캐릭터만, 없으면 그레이박스) */}
           {id && (
             <View style={styles.portrait}>
-              <DiscipleArt poolId={id} name={name} active stage={artStage} size={200} height={260} />
+              <DiscipleArt poolId={id} name={name} active stage={artStage} crop="upper" size={200} height={240} />
             </View>
           )}
 
