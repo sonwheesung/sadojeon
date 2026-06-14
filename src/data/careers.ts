@@ -3,6 +3,7 @@
 // 그레이박스: 노선 9종 × 직책 4단(0 말단 → 3 정점). 수치 튜닝 대상.
 
 import { JOB_POOL, type JobTier } from './jobs';
+import type { WorldBloc } from '@/types/world';
 
 export type RouteId =
   | 'righteous' //  정파
@@ -124,6 +125,22 @@ export const JOB_RANK: Record<string, number> = {
   'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2,
   // 야인
   'town-idler': 0,
+};
+
+// 노선 → 강호 세력 블록(worldPowers). 졸업 제자가 강호 정세에 영향받는 통로 — 자기 세력이 전쟁·토벌
+// 중이면 위험↑, 융성하면 출세↑. docs/08. 정파 계열=정파, 사파/암살=사파, 마도=마교, 나머지(의적·호위·
+// 떠돌이·의원·야인)=중도(정세에 비교적 둔감 — 무파·실용 노선).
+export const ROUTE_BLOC: Record<RouteId, WorldBloc> = {
+  righteous: 'orthodox',
+  daoist: 'orthodox',
+  assassin: 'unorthodox',
+  shadow: 'unorthodox',
+  demonic: 'demonic',
+  vigilante: 'neutral',
+  escort: 'neutral',
+  wanderer: 'neutral',
+  healer: 'neutral',
+  commoner: 'neutral',
 };
 
 // 노선 → 연관 문파 id(factions.ts). 졸업 시 그 문파 평판↑(제자가 그 길에 든다). docs/30.

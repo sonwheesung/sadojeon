@@ -193,6 +193,23 @@ export function stanceLabel(st: Stance): string {
   return STANCE_LABEL[st];
 }
 
+// 한 세력의 졸업 제자에게 가는 정세 압력 — careerSystem 이 읽어 사망·출세를 보정. docs/08.
+// danger: 그 세력이 전쟁·충돌이면 제자가 휘말려 죽을 위험↑. fortune: 세력이 융성(base 초과)이면 출세↑·쇠퇴면 좌절↑.
+export function blocPressure(s: WorldState | null, bloc: WorldBloc): { danger: number; fortune: number } {
+  if (!s) return { danger: 0, fortune: 0 };
+  const p = s.powers[bloc];
+  if (!p) return { danger: 0, fortune: 0 };
+  const atWar = s.events.some((e) => !e.done && e.kind === 'war' && e.blocs.includes(bloc));
+  let danger = 0;
+  if (atWar) danger = 0.06;
+  else if (p.stance === 'clash') danger = 0.03;
+  else if (p.stance === 'tension') danger = 0.01;
+  // 출세 보정 — 세력의 **절대 강함**(중립 50 기준). 강한 세력=좋은 출셋길(정파 두터움). 봉기로 융성하면
+  // 그 세력 제자가 덕 보고, 토벌당해 쇠하면 손해 본다. ±0.12 클램프.
+  const fortune = clamp((p.power - 50) / 150, -0.12, 0.12);
+  return { danger, fortune };
+}
+
 // 강호 위기도 0~1 — 의뢰 게시판 구성 등 "정세에 닿는" 시스템이 읽는다. docs/08·29.
 // = 라이벌 쌍 최고 긴장(정규화) + 진행 중 공격적 사건(봉기·준동·충돌·토벌·전쟁) 가산.
 // 평온(0)이면 평화 잡일도 자연스럽고, 높을수록(사파 습격·전쟁) 무력·위기 의뢰로 기운다.

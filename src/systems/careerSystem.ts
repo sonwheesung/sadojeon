@@ -3,6 +3,7 @@
 // tickCareers: 매년(timeSystem 연 경계) 호출 → 능력 완만 성장 + 강호 굴림(승급·좌절·은거·사망) → 강호 풍문 서신.
 
 import {
+  ROUTE_BLOC,
   ROUTE_DANGER,
   ROUTE_FACTION,
   ROUTE_LABEL,
@@ -10,6 +11,9 @@ import {
   careerStartFromJob,
   type RouteId,
 } from '@/data/careers';
+import { useJianghuStore } from '@/stores/jianghuStore';
+import { blocPressure } from './worldSystem';
+import { BLOC_LABEL } from '@/data/worldPowers';
 import { findFaction } from '@/data/factions';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -91,8 +95,14 @@ function deathLine(g: GraduateRecord, status: GraduateStatus): string {
 // 매년 1회. 각 졸업 제자의 한 해를 굴린다.
 export function tickCareers(): void {
   const gs = useGraduateStore.getState();
+  const world = useJianghuStore.getState().world; // 강호 정세 — 제자 세력의 전쟁·융성이 운명을 가른다. docs/08.
   for (const g of gs.records) {
     if (g.status === 'dead' || g.status === 'missing' || g.status === 'retired') continue;
+
+    // 정세 압력 — 제자 노선이 속한 세력의 기조·세력으로 위험·출세 보정.
+    const bloc = ROUTE_BLOC[g.route];
+    const pressure = blocPressure(world, bloc);
+    const blocAtWar = pressure.danger >= 0.06;
 
     const ladder = ROUTE_LADDER[g.route];
     const top = ladder.length - 1;
@@ -110,20 +120,24 @@ export function tickCareers(): void {
     power = clamp(power + randInt(0, 3));
     fame = clamp(fame + randInt(-1, 3));
 
-    // 1) 사망·실종 굴림 — 노선 위험도.
-    if (Math.random() < ROUTE_DANGER[g.route]) {
+    // 1) 사망·실종 굴림 — 노선 위험도 + 정세 압력(자기 세력이 전쟁·충돌이면 휘말려 죽을 위험↑). docs/08.
+    if (Math.random() < ROUTE_DANGER[g.route] + pressure.danger) {
       const lethal: RouteId[] = ['assassin', 'vigilante'];
-      const dead = lethal.includes(g.route) ? Math.random() < 0.6 : Math.random() < 0.4;
+      const baseDead = lethal.includes(g.route) ? 0.6 : 0.4;
+      const dead = Math.random() < baseDead + (blocAtWar ? 0.2 : 0); // 전란 중엔 더 치명적
       status = dead ? 'dead' : 'missing';
       gs.update(g.id, { power, fame, status });
-      pushNews(`${g.name} — 비보`, deathLine({ ...g, power, fame }, status));
+      const line = blocAtWar
+        ? `${g.name}이 ${BLOC_LABEL[bloc]}의 전란에 몸을 던졌다가 끝내 돌아오지 못했다. ${ROUTE_LABEL[g.route]}의 길이었다.`
+        : deathLine({ ...g, power, fame }, status);
+      pushNews(`${g.name} — 비보`, line);
       continue;
     }
 
-    // 2) 직책 굴림 — 노선 역량(무공계열=전투력/의원=의술·정탐=정탐술)·명성이 높을수록 오름, 낮을수록 밀림.
+    // 2) 직책 굴림 — 역량·명성이 높을수록 오름 + 정세 압력(세력 융성→출세↑·쇠퇴→좌절↑). docs/08.
     const perf = (power / 100) * 0.5 + (fame / 100) * 0.5; // 0~1
-    const up = 0.15 + perf * 0.45; // 0.15~0.6
-    const down = 0.12 * (1 - perf); // 0~0.12
+    const up = Math.max(0.05, Math.min(0.85, 0.15 + perf * 0.45 + pressure.fortune));
+    const down = Math.max(0, 0.12 * (1 - perf) - pressure.fortune);
     const r = Math.random();
 
     if (r < up) {
