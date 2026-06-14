@@ -78,16 +78,20 @@ export function healWound(discipleId: string, recipeId: string): boolean {
 }
 
 // 자연 치유 tick — 매일 1일. 0 이 되면 상처 해소·복귀. (영약 없이도 시간이 약.)
+// R3(2026-06-14): **wound 가 있으면 status 무관하게 회복 진행**. 종전엔 status==='injured' 일 때만
+// 줄여서, 다른 경로(탈진 healing override 만료 등)가 status 를 먼저 'training'으로 돌리면 상처가
+// 영영 안 사라지고 박제됐다. 이제 wound 가 단일 진실 — 줄다 0이면 상처 해소.
 export function tickWoundRecovery(): void {
   const ds = useDiscipleStore.getState();
   for (const id of ds.order) {
     const d = ds.disciples[id];
-    if (!d || d.status !== 'injured' || !d.wound) continue;
+    if (!d || !d.wound) continue;
     const left = d.wound.daysRemaining - 1;
     if (left <= 0) {
       ds.update(id, { status: 'training', wound: undefined, injuryDaysRemaining: 0 });
     } else {
-      ds.update(id, { wound: { ...d.wound, daysRemaining: left }, injuryDaysRemaining: left });
+      // 상처가 남아 있으면 injured 유지(다른 경로가 training 으로 돌려놨어도 되돌림).
+      ds.update(id, { status: 'injured', wound: { ...d.wound, daysRemaining: left }, injuryDaysRemaining: left });
     }
   }
 }

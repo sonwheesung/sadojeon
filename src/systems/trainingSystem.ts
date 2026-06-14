@@ -558,6 +558,9 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
   return null;
 }
 
+// 부상 중 휴식 시 하루 체력 회복량(수련 진척은 없음). docs/37 R1.
+const INJURED_REST_STAMINA = 12;
+
 export function tickDailyTraining(): DiscipleTickReport[] {
   const store = useDiscipleStore.getState();
   const day = useTimeStore.getState().current.day; // 1~7
@@ -567,7 +570,7 @@ export function tickDailyTraining(): DiscipleTickReport[] {
   for (const id of store.order) {
     const d = store.disciples[id];
     if (!d) continue;
-    // 졸업·하산·파견(의뢰) 제자는 사문 일과에 포함되지 않는다.
+    // 졸업·하산·파견(의뢰)·연단 제자는 사문 일과(수련)에 포함되지 않는다.
     if (
       d.status === 'graduated' ||
       d.status === 'departed' ||
@@ -575,6 +578,13 @@ export function tickDailyTraining(): DiscipleTickReport[] {
       d.status === 'crafting'
     )
       continue;
+
+    // 부상(injured) 중엔 수련 대신 회복에 전념 — 진척 없이 쉬며 체력만 회복(상처 회복 자체는
+    // woundSystem.tickWoundRecovery / 탈진은 override 만료). 다쳐도 평소처럼 수련하던 구멍 차단(R1). docs/37.
+    if (d.status === 'injured') {
+      store.adjustStamina(id, INJURED_REST_STAMINA);
+      continue;
+    }
 
     const plan = resolveDayPlan(d, day);
 
