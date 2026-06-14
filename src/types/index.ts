@@ -13,3 +13,4 @@ export * from './sectAtmosphere';
 export * from './moralEvent';
 export * from './event';
 export * from './quest';
+export * from './world';

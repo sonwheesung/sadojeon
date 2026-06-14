@@ -11,6 +11,7 @@ interface QuestStore {
   active: ActiveQuest[]; // 파견 중
 
   setBoard: (board: Quest[]) => void;
+  addToBoard: (q: Quest) => void; // 단건 추가(중복 id 무시) — 강호 사건 의뢰 시드용
   removeFromBoard: (questId: string) => void;
   addActive: (a: ActiveQuest) => void;
   updateActive: (questId: string, patch: Partial<ActiveQuest>) => void;
@@ -24,6 +25,8 @@ export const useQuestStore = create<QuestStore>()(
       board: [],
       active: [],
       setBoard: (board) => set({ board }),
+      addToBoard: (q) =>
+        set((s) => (s.board.some((x) => x.id === q.id) ? s : { board: [q, ...s.board] })),
       removeFromBoard: (questId) =>
         set((s) => ({ board: s.board.filter((q) => q.id !== questId) })),
       addActive: (a) => set((s) => ({ active: [...s.active, a] })),

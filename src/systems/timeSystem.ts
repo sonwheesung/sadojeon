@@ -10,6 +10,7 @@ import type { Season } from '@/types/game';
 import { isMonthStart, monthOfYear, weekOfMonth } from './calendar';
 import { buildTickArtifacts } from './dailyLogSystem';
 import { tickCareers } from './careerSystem';
+import { tickWorld } from './worldDriver';
 import { runYoungTalentsTournament } from './tournamentSystem';
 import { tickReputationInfluence } from './reputationSystem';
 import { checkGraduations } from './graduationSystem';
@@ -68,6 +69,12 @@ export function advanceTurn() {
     // 문파 평판 영향 — 맹우 후의·적대 자객. docs/30.
     tickReputationInfluence();
     // (옛 자동 영약 제련 제거 — 이제 연단은 alchemySystem(연단실·레시피·재료·경제)으로만.)
+  }
+
+  // 강호 정세 한 계절 진행 — 세력 긴장·사건(봉기·토벌·전쟁 등)이 살아 움직인다. docs/08.
+  // 계절 경계는 월 시작과 겹치고 아래 월 시작 블록이 early-return 하므로, 반드시 그 앞에서 돌린다.
+  if (time.season !== before.season) {
+    tickWorld();
   }
 
   // 회차 종결 — 사부 수명 도달 시 phase='ended' (그레이박스 99 = 비활성).

@@ -1,54 +1,54 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { WORLD_BLOCS } from '@/data/worldPowers';
+import { seedWorldState } from '@/systems/worldSystem';
+import type { WorldEvent, WorldPower, WorldState } from '@/types/world';
 import { slotAwareStorage } from './persistStorage';
 
-// 강호 상태 — 회차(사문)별. 세력 정세 + 진행 중 사건.
-// 그레이박스: 현재는 정적 기본값. 추후 강호 시스템이 이 store 를 갱신.
+// 강호 정세 — 회차(사문) 스코프. 살아있는 정세 엔진(worldSystem) 상태를 든다.
+// world = 엔진 전체 상태(세력치·긴장·계절·사건). factions/events = 화면 표시용 파생 배열.
+// 매 계절 worldDriver.tickWorld 가 world 를 갱신 → setWorld 로 파생 재계산. docs/08.
 
-export interface JianghuFaction {
-  id: string;
-  label: string;
-  outlook: string;
+// 화면(world.tsx)이 쓰던 타입명 보존 — 이제 살아있는 모델.
+export type JianghuFaction = WorldPower;
+export type JianghuEvent = WorldEvent;
+
+// world.powers → 표시 순서대로 배열.
+function deriveFactions(w: WorldState): WorldPower[] {
+  return WORLD_BLOCS.map((b) => w.powers[b]).filter(Boolean);
 }
-
-export interface JianghuEvent {
-  id: string;
-  headline: string;
-  sub: string;
+// 진행 중(결말 처리 안 된) 사건만, 최근 시작 순.
+function deriveEvents(w: WorldState): WorldEvent[] {
+  return w.events.filter((e) => !e.done).sort((a, b) => b.startedSeason - a.startedSeason);
 }
 
 interface JianghuStore {
-  factions: JianghuFaction[];
-  events: JianghuEvent[];
-  hydrate: (factions: JianghuFaction[], events: JianghuEvent[]) => void;
-  seedDefaults: () => void;
+  world: WorldState | null;
+  factions: WorldPower[]; // 파생(표시용)
+  events: WorldEvent[]; //   파생(표시용)
+  setWorld: (w: WorldState) => void; // 엔진 tick 후 갱신
+  hydrateWorld: (w: WorldState) => void; // 영속 로드
+  seedDefaults: () => void; // 회차 시작 정세 시드
   reset: () => void;
 }
-
-// 회차 시작 시 주입할 기본 정세 (구 world.tsx 더미).
-export const DEFAULT_FACTIONS: JianghuFaction[] = [
-  { id: 'right', label: '정파', outlook: '무림맹 평온' },
-  { id: 'sapa', label: '사파', outlook: '강남 봉기 조짐' },
-  { id: 'magyo', label: '마교', outlook: '잠잠' },
-  { id: 'middle', label: '중도', outlook: '표국 활발' },
-];
-
-export const DEFAULT_EVENTS: JianghuEvent[] = [
-  { id: 'ev-1', headline: '강남 사파 연합 봉기', sub: '이번 분기 · 정파 대응 미정' },
-  { id: 'ev-2', headline: '마교 잔당 추적', sub: '지난 계절부터 · 관아 주도' },
-  { id: 'ev-3', headline: '무림첩보 갱신', sub: '매주 · 정파 시각 보고' },
-];
 
 export const useJianghuStore = create<JianghuStore>()(
   persist(
     (set) => ({
+      world: null,
       factions: [],
       events: [],
-      hydrate: (factions, events) => set({ factions, events }),
-      seedDefaults: () =>
-        set({ factions: [...DEFAULT_FACTIONS], events: [...DEFAULT_EVENTS] }),
-      reset: () => set({ factions: [], events: [] }),
+      setWorld: (w) => set({ world: w, factions: deriveFactions(w), events: deriveEvents(w) }),
+      hydrateWorld: (w) => set({ world: w, factions: deriveFactions(w), events: deriveEvents(w) }),
+      seedDefaults: () => {
+        const w = seedWorldState();
+        set({ world: w, factions: deriveFactions(w), events: deriveEvents(w) });
+      },
+      reset: () => {
+        const w = seedWorldState();
+        set({ world: w, factions: deriveFactions(w), events: deriveEvents(w) });
+      },
     }),
     {
       name: 'jianghu',

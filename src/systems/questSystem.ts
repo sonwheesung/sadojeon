@@ -145,7 +145,77 @@ export function generateBoard(): void {
   const baseCount = Math.max(2, 6 - Math.min(3, hostileRight));
   const base = [...pool].sort(() => Math.random() - 0.5).slice(0, baseCount);
   const sponsored = sponsoredQuests(maxIdx, activeIds);
-  useQuestStore.getState().setBoard([...sponsored, ...base]);
+  // 강호 사건 의뢰(world-evt-*)는 매월 재생성 때도 보존 — 강호 정세가 띄운 일감이 한 달 만에 증발하지 않게.
+  const worldQuests = useQuestStore.getState().board.filter((q) => q.id.startsWith(WORLD_QUEST_PREFIX));
+  useQuestStore.getState().setBoard([...worldQuests, ...sponsored, ...base]);
+}
+
+// ─── 강호 정세 → 의뢰 시드 (worldDriver 가 큰 사건 결말 시 호출) ──────────────
+const WORLD_QUEST_PREFIX = 'world-evt-';
+const MAX_WORLD_QUESTS = 2; // 게시판에 동시에 떠 있는 강호 사건 의뢰 상한
+
+interface WorldQuestSeed {
+  kind: string; // 사건 종류 id
+  headline: string; // 사건 제목(풍문)
+}
+
+// 사건 종류 → 의뢰 틀(도메인·기본 등급·의뢰 문구). 정파가 동원되는 사건만 의뢰화된다.
+const WORLD_QUEST_TEMPLATE: Record<
+  string,
+  { domain: QuestDomain; grade: QuestGrade; title: string; client: string; preview: string }
+> = {
+  uprising: {
+    domain: 'guard', grade: 'dangerous', title: '사파 봉기 — 변경 방비', client: '무림맹',
+    preview: '봉기한 흑도가 길목을 위협한다. 일대 방비에 손을 보탤 의협을 구한다.',
+  },
+  subjugation: {
+    domain: 'duel', grade: 'dangerous', title: '사파 토벌 동참', client: '무림맹',
+    preview: '토벌대가 사파 거점으로 향한다. 무위 있는 이의 동참을 청한다.',
+  },
+  war: {
+    domain: 'grand', grade: 'extreme', title: '대전 — 정예 차출', client: '무림맹',
+    preview: '강호를 가른 대전에 정예가 모인다. 사문의 이름을 걸 자를 부른다.',
+  },
+};
+
+const GRADE_REWARD: Record<QuestGrade, { money: number; fame: number; minStat: number; weeks: number }> = {
+  menial: { money: 60, fame: 1, minStat: 0, weeks: 1 },
+  minor: { money: 150, fame: 4, minStat: 20, weeks: 2 },
+  normal: { money: 280, fame: 8, minStat: 35, weeks: 3 },
+  dangerous: { money: 480, fame: 14, minStat: 55, weeks: 4 },
+  extreme: { money: 1000, fame: 28, minStat: 72, weeks: 6 },
+};
+
+// 큰 강호 사건 결말 → 관련 의뢰를 게시판에 띄운다. 사문 평판 등급으로 상한(약한 사문엔 극험 안 뜸).
+export function seedWorldQuests(seeds: WorldQuestSeed[]): void {
+  if (seeds.length === 0) return;
+  const qs = useQuestStore.getState();
+  const rep = useSectStore.getState().sect?.reputation ?? 10;
+  const maxIdx = QUEST_GRADE_ORDER.indexOf(maxGradeForReputation(rep));
+
+  for (const seed of seeds) {
+    const tpl = WORLD_QUEST_TEMPLATE[seed.kind];
+    if (!tpl) continue;
+    const live = qs.board.filter((q) => q.id.startsWith(WORLD_QUEST_PREFIX)).length;
+    if (live >= MAX_WORLD_QUESTS) break;
+    // 등급 상한 — 사문 평판이 낮으면 사건 등급을 낮춰 띄운다.
+    const gradeIdx = Math.min(QUEST_GRADE_ORDER.indexOf(tpl.grade), Math.max(0, maxIdx));
+    const grade = QUEST_GRADE_ORDER[gradeIdx];
+    const r = GRADE_REWARD[grade];
+    const id = `${WORLD_QUEST_PREFIX}${seed.kind}-${useTimeStore.getState().totalDay}`;
+    qs.addToBoard({
+      id,
+      domain: tpl.domain,
+      grade,
+      title: tpl.title,
+      client: tpl.client,
+      preview: tpl.preview,
+      weeks: r.weeks,
+      reward: { money: r.money, fame: r.fame },
+      recommended: grade === 'extreme' ? 2 : 1,
+      minStat: r.minStat,
+    });
+  }
 }
 
 // ─── 파견 ─────────────────────────────────────────────────────────────────
