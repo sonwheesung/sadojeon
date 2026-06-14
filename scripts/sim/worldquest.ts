@@ -60,17 +60,12 @@ const bench = mulberry32(7); // 게시판 샘플용 rng(정세와 분리, 계절
 console.log(`\n=== 정세 → 의뢰 엔드투엔드 (데모 회차 seed=${demoSeed}, 15년) ===`);
 console.log(`연계절 | 위기 | 정세(진행 중 사건/기조) | 게시판 평화/위기 | 샘플 | 사건의뢰\n`);
 
-let calmPeace = 0, calmN = 0, turbPeace = 0, turbN = 0;
-
 for (let season = 0; season < 60; season += 1) {
   const rep = tickWorldState(s, rng);
   const threat = worldThreat(s);
   const board = sampleBoard(threat, bench, 6);
   const peace = board.filter((q) => PEACEFUL.has(q.grade)).length;
   const crisis = board.filter((q) => CRISIS.has(q.grade)).length;
-
-  // 상관 집계 — 위기도 0.45 기준 평온/난세 분리.
-  if (threat < 0.45) { calmPeace += peace; calmN += 6; } else { turbPeace += peace; turbN += 6; }
 
   // 사건 의뢰(world-evt) — 큰 사건 결말 시.
   const evtQuests = rep.questSeeds.map((q) => WORLD_QUEST_TITLE[q.kind]).filter(Boolean);
@@ -90,7 +85,18 @@ for (let season = 0; season < 60; season += 1) {
   );
 }
 
-console.log(`\n── 상관 요약 (게시판 평화 잡일 비중) ──`);
+// ── 상관 — 여러 회차에 걸쳐 집계(한 격동 회차의 편향 피함) ───────────────────
+let calmPeace = 0, calmN = 0, turbPeace = 0, turbN = 0;
+for (let seed = 2000; seed < 2120; seed += 1) {
+  const r2 = mulberry32(seed); const w = seedWorldState(r2); const b2 = mulberry32(seed + 99);
+  for (let i = 0; i < 60; i += 1) {
+    tickWorldState(w, r2);
+    const th = worldThreat(w);
+    const peace = sampleBoard(th, b2, 6).filter((q) => PEACEFUL.has(q.grade)).length;
+    if (th < 0.45) { calmPeace += peace; calmN += 6; } else { turbPeace += peace; turbN += 6; }
+  }
+}
+console.log(`\n── 상관 요약 (게시판 평화 잡일 비중, 120회차 집계) ──`);
 console.log(`  평온기(위기<0.45): 평화 잡일 ${calmN ? Math.round((calmPeace / calmN) * 100) : 0}%`);
 console.log(`  난세(위기≥0.45):   평화 잡일 ${turbN ? Math.round((turbPeace / turbN) * 100) : 0}%`);
 console.log(`  → 정세가 험할수록 평화 잡일이 줄고 무력·위기 의뢰가 게시판을 채운다.\n`);

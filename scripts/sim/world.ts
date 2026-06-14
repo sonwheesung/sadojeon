@@ -42,6 +42,8 @@ let warRuns = 0;
 let totalRumors = 0;
 let warResolved = 0;
 let tensionDropAfterWar = 0; // 전쟁 결말 직후 그 쌍 긴장이 떨어졌나(탈진)
+let nonOrthWarIgnite = 0; //   비정파 전쟁(사마대전·관사 등) 발발 수 — 독립 분쟁 축이 살아있나
+let divergeCalmWar = 0; //     정파 평온 中 어둠(사파·마교) 전쟁 — 세계가 한 덩어리로 안 움직이나
 const finalPower: Record<WorldBloc, number[]> = {
   orthodox: [], unorthodox: [], demonic: [], neutral: [], imperial: [],
 };
@@ -95,6 +97,13 @@ for (let run = 0; run < RUNS; run += 1) {
 
     for (const k of rep.ignited) kindCount[k] = (kindCount[k] ?? 0) + 1;
     if (rep.ignited.includes('war')) warThisRun = true;
+    // 비정파 전쟁 발발(사마대전·관사 등) + 기조 발산(정파 평온 中 어둠 전쟁).
+    for (const e of s.events) {
+      if (e.kind === 'war' && e.phase === 1 && !e.blocs.includes('orthodox')) nonOrthWarIgnite += 1;
+    }
+    if (s.powers.orthodox.stance === 'calm' && (s.powers.demonic.stance === 'war' || s.powers.unorthodox.stance === 'war')) {
+      divergeCalmWar += 1;
+    }
     totalRumors += rep.rumors.length;
     if (rep.resolved.includes('war')) {
       warResolved += 1;
@@ -147,6 +156,9 @@ band('정파가 최강 세력', orthodoxIsTop, `정파 ${orthodoxAvg}`, '전 세
 band('풍문 밀도', rumorsPerSeason >= 0.3 && rumorsPerSeason <= 0.8, `${rumorsPerSeason}/계절`, '0.3~0.8');
 band('전쟁 후 긴장 탈진', warResolved === 0 || tensionDropAfterWar / warResolved >= 0.9,
   `${warResolved ? Math.round((tensionDropAfterWar / warResolved) * 100) : 0}%`, '≥90%');
+// 독립 분쟁 축 — 세계가 정파 중심 한 덩어리가 아님(비정파 전쟁 가능 + 기조 발산 가능).
+band('비정파 전쟁 발발 가능', nonOrthWarIgnite > 0, `${nonOrthWarIgnite}건`, '>0');
+band('기조 발산 가능(정파 평온 中 어둠 전쟁)', divergeCalmWar > 0, `${divergeCalmWar}계절`, '>0');
 
 const fails = checks.filter((c) => !c.pass && !c.warn);
 const warns = checks.filter((c) => c.warn);

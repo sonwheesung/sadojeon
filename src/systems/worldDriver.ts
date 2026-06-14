@@ -43,8 +43,10 @@ function applyReport(report: WorldTickReport): void {
   for (const r of report.rumors) pushRumor(r.title, r.body, r.priority);
   for (const sw of report.repSwings) applyRepSwing(sw.up, sw.down);
   // 큰 사건(봉기·토벌·전쟁) → 관련 의뢰를 게시판에 띄운다. docs/29·30.
-  if (report.questSeeds.length > 0) {
-    seedWorldQuests(report.questSeeds.map((q) => ({ kind: q.kind, headline: q.headline })));
+  // 단, 전쟁은 정파가 낀 전쟁만 의뢰화(무림맹 정예 차출) — 사마대전·관사 토벌은 사문과 무관한 배경.
+  const seeds = report.questSeeds.filter((q) => q.kind !== 'war' || q.blocs.includes('orthodox'));
+  if (seeds.length > 0) {
+    seedWorldQuests(seeds.map((q) => ({ kind: q.kind, headline: q.headline })));
   }
 }
 

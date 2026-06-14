@@ -47,11 +47,12 @@ export interface Rivalry {
 }
 
 export const RIVALRIES: readonly Rivalry[] = [
-  { a: 'orthodox', b: 'demonic', drift: 4.5, label: '정마대립' }, // 강호 최대 적대
-  { a: 'orthodox', b: 'unorthodox', drift: 3, label: '정사항쟁' },
-  { a: 'unorthodox', b: 'demonic', drift: 1.6, label: '사마견제' },
+  // 기본 긴장은 낮게 깔린다(평온이 기본) — 갈등은 사건이 만든다. 그래서 한 축이 전쟁이어도 다른 축은 평온할 수 있다.
+  { a: 'orthodox', b: 'demonic', drift: 2.8, label: '정마대립' }, // 마교 준동이 끌어올림
+  { a: 'orthodox', b: 'unorthodox', drift: 2.4, label: '정사항쟁' }, // 사파 봉기가 끌어올림
+  { a: 'unorthodox', b: 'demonic', drift: 1.9, label: '사마견제' }, // 독립 축 — 사마 패권 다툼이 키운다(드물게 사마대전)
   { a: 'orthodox', b: 'imperial', drift: 0.8, label: '관무알력' }, // 관과 강호의 미묘한 거리
-  { a: 'unorthodox', b: 'imperial', drift: 1.4, label: '관적토벌' }, // 관이 사파를 친다
+  { a: 'unorthodox', b: 'imperial', drift: 1.7, label: '관적토벌' }, // 독립 축 — 관의 사파 토벌이 키운다
 ] as const;
 
 // 라이벌 쌍 키(순서 무관) — tensions 맵 키.

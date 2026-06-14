@@ -29,6 +29,11 @@ export interface WorldEventKind {
 
 // ── 공통 작은 유틸 ──────────────────────────────────────────────────────────
 const noise = (rng: Rng, mag: number) => (rng() - 0.5) * 2 * mag;
+// 진행 중(미결말) 특정 종류 사건이 있나.
+const hasActive = (s: WorldState, kind: string) => s.events.some((e) => !e.done && e.kind === kind);
+// 진행 중 전쟁이 두 진영 사이인가.
+const hasActiveWar = (s: WorldState, a: WorldBloc, b: WorldBloc) =>
+  s.events.some((e) => !e.done && e.kind === 'war' && e.blocs.includes(a) && e.blocs.includes(b));
 
 // ── 사건 종류들 ─────────────────────────────────────────────────────────────
 
@@ -99,17 +104,20 @@ const demonicStir: WorldEventKind = {
   weight: 0.9,
   ignite(s, rng) {
     if (s.powers.demonic.power > 58) return null; // 이미 세를 키웠으면 더 준동하지 않음(자기억제)
+    // 마교가 사파와 패권 다툼/대전 중이면 정파를 건드리지 않는다(한 번에 한 적). → 그동안 정마 식어 정파 평온.
+    if (hasActive(s, 'sapa-magyo-feud') || hasActiveWar(s, 'demonic', 'unorthodox')) return null;
     const t = getTension(s, 'orthodox', 'demonic');
-    return rng() < 0.05 + t / 800 ? ['demonic', 'orthodox'] : null;
+    return rng() < 0.06 + t / 700 ? ['demonic', 'orthodox'] : null;
   },
   effect(s, ev) {
+    // 기본 정마 긴장이 낮으니, 준동이 정마 갈등을 끌어올리는 주역 — 충분히 밀어 전쟁까지 갈 수 있게.
     if (ev.phase === 1) {
       addPower(s, 'demonic', 5);
-      addTension(s, 'orthodox', 'demonic', 10);
+      addTension(s, 'orthodox', 'demonic', 15);
       addTension(s, 'unorthodox', 'demonic', 5);
     } else {
       addPower(s, 'demonic', 3);
-      addTension(s, 'orthodox', 'demonic', 6);
+      addTension(s, 'orthodox', 'demonic', 11);
     }
   },
   text(_ev, phase) {
@@ -225,6 +233,11 @@ const war: WorldEventKind = {
   },
   effect(s, ev, rng) {
     const [a, b] = ev.blocs;
+    // 정파가 끼지 않은 대전(사마대전 등)은 정파에 데탕트 — 어둠이 서로 소모하니 정파는 평온해진다.
+    if (!ev.blocs.includes('orthodox')) {
+      addTension(s, 'orthodox', 'demonic', -8);
+      addTension(s, 'orthodox', 'unorthodox', -8);
+    }
     if (ev.phase === 1) {
       addTension(s, a, b, 6);
     } else if (ev.phase === 2) {
@@ -272,6 +285,66 @@ const risingSect: WorldEventKind = {
   repSwing: () => ({ up: 'neutral' }),
 };
 
+// 9. 사마 패권 다툼 — 사파·마교가 둘 다 세를 갖추면 강호의 그늘을 두고 맞붙는다. 사마 긴장↑.
+//    정파 없이 굴러가는 독립 축 → "정파는 평온한데 사파·마교가 대전중"이 가능해진다.
+const sapaMagyoFeud: WorldEventKind = {
+  id: 'sapa-magyo-feud',
+  label: '사마 패권 다툼',
+  phasesTotal: 2,
+  weight: 0.8,
+  ignite(s, rng) {
+    if (s.powers.unorthodox.power < 45 || s.powers.demonic.power < 45) return null;
+    // 마교가 정파와 대전 중이면 사파에 신경 못 씀(한 번에 한 적).
+    if (hasActiveWar(s, 'demonic', 'orthodox')) return null;
+    const t = getTension(s, 'unorthodox', 'demonic');
+    if (t >= 86) return null;
+    return rng() < 0.07 + t / 900 ? ['unorthodox', 'demonic'] : null;
+  },
+  effect(s, ev) {
+    // 사파·마교가 서로 싸우면 정파는 한숨 돌린다(데탕트) — 정마·정사 긴장이 식는다.
+    addTension(s, 'orthodox', 'demonic', -10);
+    addTension(s, 'orthodox', 'unorthodox', -8);
+    if (ev.phase === 1) {
+      addTension(s, 'unorthodox', 'demonic', 10);
+      addPower(s, 'unorthodox', 2);
+      addPower(s, 'demonic', 2);
+    } else {
+      addTension(s, 'unorthodox', 'demonic', 7);
+    }
+  },
+  text(_ev, phase) {
+    return phase === 1
+      ? { headline: '사마 패권 다툼', sub: '사파와 마교가 강호의 그늘을 두고 맞붙는다' }
+      : { headline: '사마 갈등 격화', sub: '두 어둠이 서로의 목을 노린다' };
+  },
+};
+
+// 10. 관의 사파 토벌 — 관·군이 비대해진 사파를 친다. 관사 긴장↑·사파 세력↓. 독립 축.
+const imperialPurge: WorldEventKind = {
+  id: 'imperial-purge',
+  label: '관의 사파 토벌',
+  phasesTotal: 2,
+  weight: 0.7,
+  ignite(s, rng) {
+    if (s.powers.unorthodox.power < 52) return null;
+    const t = getTension(s, 'imperial', 'unorthodox');
+    return rng() < 0.06 + t / 900 ? ['imperial', 'unorthodox'] : null;
+  },
+  effect(s, ev) {
+    if (ev.phase === 1) {
+      addTension(s, 'imperial', 'unorthodox', 10);
+    } else {
+      addPower(s, 'unorthodox', -7);
+      addTension(s, 'imperial', 'unorthodox', -8);
+    }
+  },
+  text(_ev, phase) {
+    return phase === 1
+      ? { headline: '관의 사파 토벌령', sub: '관아가 사파 소탕에 나섰다' }
+      : { headline: '사파 소탕', sub: '관군이 사파 거점을 쳤다' };
+  },
+};
+
 export const WORLD_EVENT_KINDS: readonly WorldEventKind[] = [
   uprising,
   subjugation,
@@ -281,6 +354,8 @@ export const WORLD_EVENT_KINDS: readonly WorldEventKind[] = [
   truce,
   war,
   risingSect,
+  sapaMagyoFeud,
+  imperialPurge,
 ] as const;
 
 export function findEventKind(id: string): WorldEventKind | undefined {
