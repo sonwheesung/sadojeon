@@ -18,6 +18,13 @@ export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> 
       fit: 'cover',
     },
   },
+  tournament_champion: {
+    // 세로 9:16 — 정파 본산 전각 앞 우승, 손 흔드는 환호(v11). 2026-06-14.
+    'jang-cheol': {
+      source: require('../../../assets/images/cutscenes/tournament_champion/jang-cheol.webp'),
+      fit: 'cover',
+    },
+  },
 };
 
 // 보조판(가로 등 다른 비율) — 두 버전 다 보존(✅ 사용자 결정 2026-06-12).
