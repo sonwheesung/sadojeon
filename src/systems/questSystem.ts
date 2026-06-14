@@ -25,6 +25,8 @@ import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { FACTIONS, repTier } from '@/data/factions';
 import { useReputationStore } from '@/stores/reputationStore';
+import { useJianghuStore } from '@/stores/jianghuStore';
+import { worldThreat } from './worldSystem';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation, applyCovertReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
 import { applyPrereqTrickle } from './martialExp';
@@ -143,11 +145,54 @@ export function generateBoard(): void {
     (f) => f.alignment === 'right' && repTier(repMap[f.id] ?? 0) === 'hostile',
   ).length;
   const baseCount = Math.max(2, 6 - Math.min(3, hostileRight));
-  const base = [...pool].sort(() => Math.random() - 0.5).slice(0, baseCount);
+  // 강호 정세 반영 — 위기도(봉기·전쟁 등)가 높을수록 평화 잡일(menial·minor)을 억누르고
+  // 무력·위기 의뢰(토벌·정찰·구원, dangerous+)를 띄운다. 사파가 마을 습격 중인데 '마을 청소'가 뜨는 일 방지. docs/08·29.
+  const threat = worldThreat(useJianghuStore.getState().world);
+  const base = weightedSample(pool, (q) => questThreatWeight(q.grade, q.domain, threat), baseCount);
   const sponsored = sponsoredQuests(maxIdx, activeIds);
   // 강호 사건 의뢰(world-evt-*)는 매월 재생성 때도 보존 — 강호 정세가 띄운 일감이 한 달 만에 증발하지 않게.
   const worldQuests = useQuestStore.getState().board.filter((q) => q.id.startsWith(WORLD_QUEST_PREFIX));
   useQuestStore.getState().setBoard([...worldQuests, ...sponsored, ...base]);
+}
+
+// 의뢰 한 건의 게시 가중 — 위기도(threat 0~1)에 따라. 평온(0)이면 전 등급 균등(종전 동작 유지).
+// 위기↑: 평화 잡일↓(마을 청소·짐 운반), 위험·극험·무력 도메인↑. 계약·기대 분포는 docs/37 §B6.
+function questThreatWeight(grade: QuestGrade, domain: QuestDomain, threat: number): number {
+  const gradeW: Record<QuestGrade, number> = {
+    menial: 1 - 0.85 * threat, //   평화 잡일 — 위기엔 거의 사라짐
+    minor: 1 - 0.4 * threat,
+    normal: 1,
+    dangerous: 1 + 1.2 * threat, // 토벌·정찰·호행
+    extreme: 1 + 1.5 * threat, //   대형 위기(평판 상한 별도)
+  };
+  // 무력·위기 도메인은 난세에 더, 의술은 전장 부상자로 약간↑, 청부(gray)는 정세 무관.
+  const domainW: Record<QuestDomain, number> = {
+    duel: 1 + 0.6 * threat,
+    grand: 1 + 0.6 * threat,
+    scout: 1 + 0.4 * threat,
+    guard: 1 + 0.3 * threat,
+    medicine: 1 + 0.2 * threat,
+    assassin: 1,
+  };
+  return Math.max(0.0001, gradeW[grade] * domainW[domain]);
+}
+
+// 가중 무복원 추출 — 가중치 비례로 count 개 뽑는다(중복 없음).
+function weightedSample<T>(items: readonly T[], weightFn: (x: T) => number, count: number): T[] {
+  const pool = items.map((x) => ({ x, w: Math.max(0.0001, weightFn(x)) }));
+  const picked: T[] = [];
+  for (let i = 0; i < count && pool.length > 0; i += 1) {
+    const total = pool.reduce((s, p) => s + p.w, 0);
+    let r = Math.random() * total;
+    let idx = 0;
+    for (; idx < pool.length - 1; idx += 1) {
+      r -= pool[idx].w;
+      if (r <= 0) break;
+    }
+    picked.push(pool[idx].x);
+    pool.splice(idx, 1);
+  }
+  return picked;
 }
 
 // ─── 강호 정세 → 의뢰 시드 (worldDriver 가 큰 사건 결말 시 호출) ──────────────

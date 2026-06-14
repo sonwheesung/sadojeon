@@ -192,3 +192,16 @@ export function tickWorldState(s: WorldState, rng: Rng = Math.random): WorldTick
 export function stanceLabel(st: Stance): string {
   return STANCE_LABEL[st];
 }
+
+// 강호 위기도 0~1 — 의뢰 게시판 구성 등 "정세에 닿는" 시스템이 읽는다. docs/08·29.
+// = 라이벌 쌍 최고 긴장(정규화) + 진행 중 공격적 사건(봉기·준동·충돌·토벌·전쟁) 가산.
+// 평온(0)이면 평화 잡일도 자연스럽고, 높을수록(사파 습격·전쟁) 무력·위기 의뢰로 기운다.
+const AGGRESSIVE_EVENTS = new Set(['uprising', 'demonic-stir', 'war', 'subjugation', 'clash']);
+export function worldThreat(s: WorldState | null): number {
+  if (!s) return 0;
+  let maxT = 0;
+  for (const k of Object.keys(s.tensions)) maxT = Math.max(maxT, s.tensions[k] ?? 0);
+  let threat = maxT / 100;
+  if (s.events.some((e) => !e.done && AGGRESSIVE_EVENTS.has(e.kind))) threat = Math.min(1, threat + 0.15);
+  return clamp(threat, 0, 1);
+}
