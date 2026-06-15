@@ -65,19 +65,14 @@ export function worstWound(d: Disciple): Wound | undefined {
   );
 }
 
-// 상처 묶음의 레거시 잔여일(가장 긴 것) — injuryDaysRemaining 동기화용.
-function maxDays(wounds: Wound[]): number {
-  return wounds.reduce((m, w) => Math.max(m, w.daysRemaining), 0);
-}
-
-// 상처 묶음을 제자에 반영 — 비었으면 회복(training), 남았으면 injured 유지 + 레거시 잔여일 동기화.
+// 상처 묶음을 제자에 반영 — 비었으면 회복(training), 남았으면 injured 유지.
 // 남은 상처가 있으면 status 를 injured 로 강제(다른 경로가 training 으로 돌려놨어도 되돌림 — R3).
 function applyWoundSet(discipleId: string, wounds: Wound[]): void {
   const ds = useDiscipleStore.getState();
   if (wounds.length === 0) {
-    ds.update(discipleId, { status: 'training', wounds: undefined, injuryDaysRemaining: 0 });
+    ds.update(discipleId, { status: 'training', wounds: undefined });
   } else {
-    ds.update(discipleId, { status: 'injured', wounds, injuryDaysRemaining: maxDays(wounds) });
+    ds.update(discipleId, { status: 'injured', wounds });
   }
 }
 
