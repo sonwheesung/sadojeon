@@ -77,7 +77,7 @@ export function tickOverrideExpiry(): void {
       // R3(2026-06-14): 상처(wound)가 아직 남았으면 training 으로 강제 복귀시키지 않는다 —
       // woundSystem 이 마무리하도록 injured 유지(두 회복 경로 경합으로 wound 박제되던 버그 방지).
       const d = useDiscipleStore.getState().disciples[id];
-      const stillWounded = Boolean(d?.wound) && (d?.injuryDaysRemaining ?? 0) > 0;
+      const stillWounded = (d?.wounds?.length ?? 0) > 0;
       useDiscipleStore.getState().update(id, { status: stillWounded ? 'injured' : 'training' });
     }
   }

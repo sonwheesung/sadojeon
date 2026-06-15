@@ -114,9 +114,11 @@ export interface Disciple {
 
   status: DiscipleStatus;
   currentActivity?: DailyActivity;
-  injuryDaysRemaining?: number; // (레거시) 잔여일 — 이제 wound.daysRemaining 이 정본. 호환 위해 같이 채움.
-  // 입은 상처 — 속성·심도. status==='injured' 일 때 존재. 영약(속성·등급 매칭)으로 치료 or 자연 치유.
-  wound?: Wound;
+  injuryDaysRemaining?: number; // (레거시) 잔여일 — 이제 wounds 중 가장 긴 잔여일. 호환 위해 같이 채움.
+  // 입은 상처들 — 속성별로 최대 1개씩 동시 보유(외상·화상·중독·동상·내상 = 최대 5개). 같은 속성은 더 깊은
+  // 쪽으로 합쳐진다(검상 치명상 + 독 = 둘 다 따로 남아 각각 치료해야 회복). status==='injured' = 상처 1개+ 보유.
+  // 영약(속성·등급 매칭)으로 한 속성씩 치료하거나 자연 치유(각 상처 잔여일 따로 차감).
+  wounds?: Wound[];
 
   // 내공 속성(오행) — 내공단 흡수 매칭. 영단 속성과 같으면 흡수 효율↑(상극이면↓). 미지정=무속성.
   qiAttribute?: QiAttribute;

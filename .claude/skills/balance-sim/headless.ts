@@ -296,7 +296,8 @@ function tickInjuryRecovery(): void {
     const d = ds.disciples[id];
     if (d?.status !== 'injured') continue;
     const rem = (d.injuryDaysRemaining ?? 0) - 1;
-    if (rem <= 0) ds.update(id, { status: 'training', injuryDaysRemaining: 0 });
+    // 회복 시 wounds 도 함께 비운다 — 안 비우면 묵은 상처가 남아 재부상 때 잘못 합쳐진다(박제 방지).
+    if (rem <= 0) ds.update(id, { status: 'training', injuryDaysRemaining: 0, wounds: undefined });
     else ds.update(id, { injuryDaysRemaining: rem });
   }
 }
@@ -1211,7 +1212,7 @@ function applyPreset(id: string, p: (typeof PRESETS)[PresetKey], statOverride?: 
     mainMartialArtId: p.arts[0]?.artId,
     stats: stats as never,
     status: 'training',
-    wound: undefined,
+    wounds: undefined,
     injuryDaysRemaining: 0,
     stamina: d.maxStamina,
     stress: 0,
@@ -1276,7 +1277,7 @@ async function runJobSelect(): Promise<void> {
       realm: a.realm as never, realmProgress: { internal: 1300, pity: 0, petitioned: false },
       martialArts: arts as never, mainMartialArtId: arts[0]?.artId,
       stats: stats as never, personality: persona as never,
-      fame: a.fame ?? 0, darknessLevel: (a.dark ?? 0) as never, status: 'training', wound: undefined,
+      fame: a.fame ?? 0, darknessLevel: (a.dark ?? 0) as never, status: 'training', wounds: undefined,
     });
     const jobs = evaluateJobs(ds().disciples[id]!);
     const top = jobs.slice(0, 4).map((j) => `${j.job.name} ${Math.round(j.prob * 100)}%`).join(' · ');
@@ -1501,7 +1502,7 @@ async function runQuestSim(): Promise<void> {
     for (const id of party) {
       const d = ds().disciples[id];
       if (d?.status === 'departed') dead += 1;
-      else if (d?.wound?.severity === 1) fatal += 1;
+      else if (d?.wounds?.some((w) => w.severity === 1)) fatal += 1;
     }
     return { outcome, dead, fatal };
   }
@@ -1579,7 +1580,7 @@ async function runQuestSim(): Promise<void> {
       const r = await tally(q, [roster[0]], (id, _m, inP) => {
         if (!inP) return;
         applyPreset(id, PRESETS.ilryu6);
-        if (c.sev) ds().update(id, { wound: { type: c.type as never, severity: c.sev, daysRemaining: 20 } });
+        if (c.sev) ds().update(id, { wounds: [{ type: c.type as never, severity: c.sev, daysRemaining: 20 }] });
       });
       console.log(`  ${c.label.padEnd(16)} 성공 ${r.succ.toFixed(0)}% · 재난 ${r.disaster.toFixed(0)}% · 사망 ${r.dead.toFixed(0)}%`);
     }
@@ -1712,7 +1713,7 @@ async function runQuestMatrix(): Promise<void> {
           for (const id of party) {
             const d = ds().disciples[id];
             if (d?.status === 'departed') dead += 1;
-            else if (d?.wound?.severity === 1) fatalSurvived += 1;
+            else if (d?.wounds?.some((w) => w.severity === 1)) fatalSurvived += 1;
           }
           moneySum += (useSectStore.getState().sect?.resources ?? 0) - money0;
           if (useCodexStore.getState().scrolls.length > scrolls0) dropCount += 1;
