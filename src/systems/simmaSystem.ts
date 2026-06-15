@@ -11,7 +11,7 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple } from '@/types/disciple';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
-import { inflictWound } from './woundSystem';
+import { clearWoundType, inflictWound } from './woundSystem';
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
@@ -127,14 +127,10 @@ export function consumeAnsinElixir(discipleId: string): boolean {
   if (!d) return false;
   if (elixirItemCount(ANSIN_ID) < 1) return false;
   if (!consumeElixirItem(ANSIN_ID, 1)) return false;
-  const patch: Partial<Disciple> = { simma: Math.max(0, (d.simma ?? 0) - 45) };
-  // 내상 회복 — 안신단은 심신을 다스려 주화입마 내상을 가라앉힌다(외상엔 안 듣는다).
-  if (d.wound?.type === 'inner') {
-    patch.status = 'training';
-    patch.wound = undefined;
-    patch.injuryDaysRemaining = 0;
-  }
-  ds.update(discipleId, patch);
+  ds.update(discipleId, { simma: Math.max(0, (d.simma ?? 0) - 45) });
+  // 내상 회복 — 안신단은 심신을 다스려 주화입마 내상을 가라앉힌다(외상·중독 등 다른 상처엔 안 듣는다).
+  // 내상 속성만 제거하고 나머지 상처는 그대로 둔다(clearWoundType 이 status·잔여일 정리).
+  clearWoundType(discipleId, 'inner');
   return true;
 }
 

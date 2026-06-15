@@ -3,6 +3,7 @@
 // 만신창이일 때 다른 전투원이 된다.
 
 import { findMartialArt, artTraits, woundResistOf } from '@/data/martialArts';
+import { worstWound } from '@/systems/woundSystem';
 import type { Disciple } from '@/types';
 import type { CombatArt, Combatant } from '@/types/combat';
 
@@ -41,8 +42,8 @@ export function combatantFromDisciple(d: Disciple): Combatant {
     prudence: d.personality?.prudence ?? 50,
     mercy: d.personality?.mercy ?? 50,
     simma: d.simma ?? 0,
-    woundSeverity: d.wound?.severity,
-    woundType: d.wound?.type,
+    woundSeverity: worstWound(d)?.severity,
+    woundType: worstWound(d)?.type,
     woundResist: woundResistOf(d.martialArts),
   };
 }

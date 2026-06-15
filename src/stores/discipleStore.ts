@@ -8,6 +8,7 @@ import type {
   PersonalityTraits,
   RelationLevel,
   StatId,
+  Wound,
 } from '@/types';
 import { BASE_MAX_STAMINA, deriveMaxStamina, expToNext, statCap } from '@/data/training';
 import { expToNextSeong, findMartialArt, initialSeong } from '@/data/martialArts';
@@ -111,8 +112,13 @@ interface DiscipleStore {
 
 // 누락 필드(구버전 영속·시드 누락) 안전 보정.
 function withDefaults(d: Disciple): Disciple {
+  // 레거시 단일 상처(wound) → 속성별 배열(wounds) 마이그레이션(v4→v5). 안 하면 부상 제자가
+  // wounds 없이 status='injured' 로 갇혀 회복 루프가 영영 스킵(소프트락). 잔재 wound 필드는 제거.
+  const { wound: legacyWound, ...rest } = d as Disciple & { wound?: Wound };
+  const wounds = rest.wounds?.length ? rest.wounds : legacyWound ? [legacyWound] : rest.wounds;
   return {
-    ...d,
+    ...rest,
+    wounds,
     personality: normalizePersonality(d.personality),
     martialArts: (d.martialArts ?? []).map(normalizeMartialInstance),
     maxStamina: d.maxStamina ?? BASE_MAX_STAMINA,
@@ -298,7 +304,7 @@ export const useDiscipleStore = create<DiscipleStore>()(
     {
       name: 'disciple',
       storage: createJSONStorage(() => slotAwareStorage),
-      version: 4, // v3→v4: 성격 5축→인격 6축 (withDefaults→normalizePersonality 가 매핑)
+      version: 5, // v4→v5: 단일 상처(wound)→속성별 배열(wounds) (withDefaults 가 마이그레이션)
       partialize: (s) => ({ disciples: s.disciples, order: s.order }),
       migrate: (persisted: unknown) => {
         const p = (persisted ?? {}) as {

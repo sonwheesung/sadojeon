@@ -26,7 +26,7 @@ import {
   sellElixir,
   startCraft,
 } from '@/systems/alchemySystem';
-import { healWound, listWounded, treatableElixirsFor, woundLabel } from '@/systems/woundSystem';
+import { healWound, listWounded, treatableElixirsFor, woundLabel, woundsOf } from '@/systems/woundSystem';
 import { consumeAnsinElixir, hasAnsinElixir } from '@/systems/simmaSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
@@ -196,46 +196,48 @@ export default function AlchemyScreen() {
             <>
               <SectionLabel>상처 치료</SectionLabel>
               <View style={styles.panel}>
-                {wounded.map((d) => {
-                  const wound = d.wound!;
-                  // 내상(주화입마 후유)은 안신단(심신 안정)으로만 다스린다. 그 외 속성 상처는 매칭 치료약.
-                  const isInner = wound.type === 'inner';
-                  const salves = isInner ? [] : treatableElixirsFor(wound);
-                  const ansin = isInner && hasAnsinElixir();
-                  const noCure = salves.length === 0 && !ansin;
-                  return (
-                    <View key={d.id} style={styles.woundRow}>
-                      <View style={styles.woundInfo}>
-                        <Text style={styles.line}>
-                          {d.name} — <Text style={styles.woundTag}>{woundLabel(wound)}</Text>
-                        </Text>
-                        <Text style={styles.recipeMeta}>
-                          자연 치유 {wound.daysRemaining}일 남음
-                          {noCure ? ' · 맞는 영약 없음(자연 치유 대기)' : ''}
-                        </Text>
+                {wounded.flatMap((d) =>
+                  // 제자는 속성별로 상처를 여러 개 가질 수 있다 — 상처마다 한 줄씩, 각각 매칭 영약으로 치료.
+                  woundsOf(d).map((wound) => {
+                    // 내상(주화입마 후유)은 안신단(심신 안정)으로만 다스린다. 그 외 속성 상처는 매칭 치료약.
+                    const isInner = wound.type === 'inner';
+                    const salves = isInner ? [] : treatableElixirsFor(wound);
+                    const ansin = isInner && hasAnsinElixir();
+                    const noCure = salves.length === 0 && !ansin;
+                    return (
+                      <View key={`${d.id}-${wound.type}`} style={styles.woundRow}>
+                        <View style={styles.woundInfo}>
+                          <Text style={styles.line}>
+                            {d.name} — <Text style={styles.woundTag}>{woundLabel(wound)}</Text>
+                          </Text>
+                          <Text style={styles.recipeMeta}>
+                            자연 치유 {wound.daysRemaining}일 남음
+                            {noCure ? ' · 맞는 영약 없음(자연 치유 대기)' : ''}
+                          </Text>
+                        </View>
+                        <View style={styles.elixirBtns}>
+                          {salves.map((r) => (
+                            <Pressable
+                              key={r.id}
+                              onPress={onTreat(d.id, d.name, r.id, r.name)}
+                              style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
+                            >
+                              <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>{r.name}</Text>
+                            </Pressable>
+                          ))}
+                          {ansin && (
+                            <Pressable
+                              onPress={onCalm(d.id, d.name)}
+                              style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
+                            >
+                              <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>안신단</Text>
+                            </Pressable>
+                          )}
+                        </View>
                       </View>
-                      <View style={styles.elixirBtns}>
-                        {salves.map((r) => (
-                          <Pressable
-                            key={r.id}
-                            onPress={onTreat(d.id, d.name, r.id, r.name)}
-                            style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
-                          >
-                            <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>{r.name}</Text>
-                          </Pressable>
-                        ))}
-                        {ansin && (
-                          <Pressable
-                            onPress={onCalm(d.id, d.name)}
-                            style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
-                          >
-                            <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>안신단</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
+                    );
+                  }),
+                )}
               </View>
             </>
           )}

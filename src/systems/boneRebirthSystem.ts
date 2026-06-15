@@ -45,8 +45,8 @@ export function attemptBoneRebirth(discipleId: string): boolean {
     simma: 0, // 탁기·마장 일소
     stress: 0, // 심신이 갓난아기처럼 맑아짐
     boneReborn: true, // 젊은 육체 회귀 — 근골이 다시 자란다(나이 보정 하한 ×2.4)
-    // 상처·내상 완치 — 묵은 상처까지 씻겨 나간다.
-    wound: undefined,
+    // 상처·내상 완치 — 묵은 상처까지 씻겨 나간다(모든 속성 상처 일소).
+    wounds: undefined,
     injuryDaysRemaining: 0,
     ...(d.status === 'injured' ? { status: 'training' as const } : {}),
   });

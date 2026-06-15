@@ -15,7 +15,7 @@ import { OVERRIDE_LABEL } from '@/systems/overrideSystem';
 import { staminaSceneLabel } from '@/systems/staminaSystem';
 import { trustSceneLabel } from '@/systems/trustSystem';
 import { combatRumor } from '@/systems/combatPower';
-import { woundLabel } from '@/systems/woundSystem';
+import { woundsLabel } from '@/systems/woundSystem';
 import type { Disciple, DiscipleStatus } from '@/types';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 import { REALM_LABEL } from '@/types/realm';
@@ -112,8 +112,8 @@ export function DiscipleStatusPanel({ disciple }: Props) {
           value={
             onLeave
               ? `${OVERRIDE_LABEL[override!.command]} 중`
-              : disciple.status === 'injured' && disciple.wound
-                ? `치료 중 (${woundLabel(disciple.wound)})`
+              : disciple.status === 'injured' && disciple.wounds?.length
+                ? `치료 중 (${woundsLabel(disciple.wounds)})`
                 : STATUS_LABEL[disciple.status]
           }
           valueStyle={onLeave ? styles.rowValueHeavy : undefined}
