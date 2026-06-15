@@ -1135,8 +1135,9 @@ function resolveQuest(active: ActiveQuest): Milestone {
     if (isMartial && patch.status !== 'departed' && scale.growth > 0) {
       attemptQuestEnlightenment(id, QUEST_ENLIGHTENMENT_BONUS);
     }
-    // 약초 채집 — 생존자 중 약초 지식 있는 동문이 길에서 연단 재료를 캔다(의원 동행 = 재료 수급).
-    if (patch.status !== 'departed') gatherHerbs(d, q);
+    // 약초 채집 — 채집 의뢰(forages)에 한해, 생존자 중 약초 지식 있는 동문이 재료를 캔다.
+    // 일반 의뢰(호위·정탐·결투 등)는 그 본업에 집중하느라 약초를 못 캔다(2026-06-15).
+    if (patch.status !== 'departed' && q.forages) gatherHerbs(d, q);
   }
 
   // 친밀도 — 함께 살아 돌아온 동문은 가까워진다.
