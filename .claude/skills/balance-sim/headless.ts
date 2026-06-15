@@ -23,6 +23,7 @@ import { useQuestStore } from '@/stores/questStore';
 import { useCodexStore } from '@/stores/codexStore';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
 import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir, isLabOperational } from '@/systems/alchemySystem';
+import { tickWoundRecovery } from '@/systems/woundSystem';
 import { setFoodCost, setLabUpkeep, setPatronageMult } from '@/systems/economySystem';
 import { setQuestRewardMult } from '@/systems/questSystem';
 import { ELIXIR_RECIPES } from '@/data/elixirs';
@@ -289,17 +290,10 @@ async function runQuestSweep(): Promise<void> {
 // ── 빌드 비교 sweep — 유년기 훈련 → 청소년기(13세) 의뢰, 3경로 × 과금 ──
 // 메커니즘: 의뢰=실전 깨달음(폐관보다 높은 확률로 벽 돌파)+무공·외공·금전·명성, 내공은 훈련 전용.
 // 폐관=벽곡단 2/일·28일(느림·확실). 의뢰 치명상=생존체인(구급영약/신의의원/자력) 실패 시만 사망.
-// 부상은 자연 회복(injuryDaysRemaining 차감 — 그 기간 훈련·의뢰 못 함).
+// 부상 자연 회복 — 실게임과 동일하게 상처별 잔여일을 독립 차감(다중 상처 충실도). 종전엔 sim 자체
+// 루프(injuryDaysRemaining 일괄 차감)였으나, 속성별 누적 상처는 상처마다 다른 속도로 나아야 정확하다.
 function tickInjuryRecovery(): void {
-  const ds = useDiscipleStore.getState();
-  for (const id of ds.order) {
-    const d = ds.disciples[id];
-    if (d?.status !== 'injured') continue;
-    const rem = (d.injuryDaysRemaining ?? 0) - 1;
-    // 회복 시 wounds 도 함께 비운다 — 안 비우면 묵은 상처가 남아 재부상 때 잘못 합쳐진다(박제 방지).
-    if (rem <= 0) ds.update(id, { status: 'training', injuryDaysRemaining: 0, wounds: undefined });
-    else ds.update(id, { injuryDaysRemaining: rem });
-  }
+  tickWoundRecovery();
 }
 
 async function fastDayBuild(rate: number, minAge: number): Promise<void> {
@@ -1213,7 +1207,6 @@ function applyPreset(id: string, p: (typeof PRESETS)[PresetKey], statOverride?: 
     stats: stats as never,
     status: 'training',
     wounds: undefined,
-    injuryDaysRemaining: 0,
     stamina: d.maxStamina,
     stress: 0,
     simma: 0,

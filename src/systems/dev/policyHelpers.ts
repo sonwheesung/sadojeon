@@ -329,10 +329,10 @@ export function healWithSalve(includeDeath: boolean): { healed: number; saved: n
     const d = ds.disciples[id];
     if (!d) continue;
     if (d.status === 'injured') {
-      ds.update(id, { status: 'training', injuryDaysRemaining: 0, wounds: undefined });
+      ds.update(id, { status: 'training', wounds: undefined });
       healed += 1;
     } else if (includeDeath && d.status === 'departed') {
-      ds.update(id, { status: 'training', injuryDaysRemaining: 0, wounds: undefined });
+      ds.update(id, { status: 'training', wounds: undefined });
       saved += 1;
     }
   }
