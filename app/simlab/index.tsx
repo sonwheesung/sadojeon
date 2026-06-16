@@ -1,4 +1,4 @@
-// [DEV] 시뮬레이션 실험실 허브 — 개발 계정 전용. docs/36.
+// [DEV] 시뮬레이션 실험실 허브 — 개발/테스트 환경 전용(빌드 환경 게이트, devAccess). docs/36.
 // 사문 선택 대신 여기로 착지 — 도메인별 시뮬(전투·관계·직업)을 골라
 // 상세 설정 → 실행 → 과정·결과를 본다. 그레이박스.
 
@@ -53,7 +53,7 @@ export default function SimLabHub() {
   if (!dev) {
     return (
       <SafetyZone background={colors.paper}>
-        <Text style={styles.blocked}>개발 계정 전용 화면입니다.</Text>
+        <Text style={styles.blocked}>개발/테스트 환경 전용 화면입니다.</Text>
       </SafetyZone>
     );
   }
@@ -62,7 +62,7 @@ export default function SimLabHub() {
     <SafetyZone background={colors.paper}>
       <View style={styles.header}>
         <Text style={styles.title}>시뮬레이션 실험실</Text>
-        <Text style={styles.sub}>개발 계정 전용 — 수정·업데이트 후 여기서 바로 확인</Text>
+        <Text style={styles.sub}>개발/테스트 환경 전용 — 수정·업데이트 후 여기서 바로 확인</Text>
       </View>
 
       {SIMS.map((s) => (

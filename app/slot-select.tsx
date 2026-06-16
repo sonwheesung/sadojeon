@@ -52,7 +52,7 @@ export default function SlotSelectScreen() {
   const setSaveSlot = useGameStore((s) => s.setSaveSlot);
   const [loading, setLoading] = useState(true);
   const [bySlot, setBySlot] = useState<Record<number, RunRecord>>({});
-  // 개발 계정은 사문 선택 대신 시뮬레이션 실험실로 — ?game=1 이면 일반 게임 진입 허용.
+  // 개발/테스트 환경은 사문 선택 대신 시뮬레이션 실험실로 — ?game=1 이면 일반 게임 진입 허용.
   const devAccess = useDevAccess();
   const { game } = useLocalSearchParams<{ game?: string }>();
   const confirm = useConfirm();
@@ -138,7 +138,7 @@ export default function SlotSelectScreen() {
     [confirm, load],
   );
 
-  // 개발 계정 — 시뮬레이션 실험실로. (훅 호출 뒤의 분기라 훅 순서 안전.)
+  // 개발/테스트 환경 — 시뮬레이션 실험실로. (훅 호출 뒤의 분기라 훅 순서 안전.)
   if (devAccess && game !== '1') return <Redirect href={'/simlab' as Href} />;
 
   return (
