@@ -82,6 +82,15 @@ export default function SectScreen() {
             <SectionLabel>사문 시설</SectionLabel>
             <Pressable
               style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+              onPress={() => router.push('/activity' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="활동"
+            >
+              <Text style={styles.settingLabel}>활동 — 제자 파견·채집·제작</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
               onPress={() => router.push('/alchemy' as Href)}
               accessibilityRole="button"
               accessibilityLabel="연단실"

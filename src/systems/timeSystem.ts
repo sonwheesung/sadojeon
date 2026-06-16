@@ -19,6 +19,7 @@ import { tickOverrideExpiry } from './overrideSystem';
 import { captureSnapshot } from './reportSystem';
 import { tickDailyTraining } from './trainingSystem';
 import { generateBoard, tickQuests } from './questSystem';
+import { tickActivities } from './activitySystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
@@ -106,6 +107,7 @@ export function advanceTurn() {
   // 의뢰 결산은 setDailyTick **뒤에** — setDailyTick 이 마일스톤 큐를 교체하므로, 앞서 부르면
   // 의뢰 결산 서신이 그대로 증발한다(🐛 2026-06-11 questmatrix 시뮬이 발견 — 결산 서신 미발송 버그).
   tickQuests(); // 기한 도래 의뢰 결산 → 마일스톤(서신함)
+  tickActivities(); // 기한 도래 활동(채집 등) 결산 → 재료·상처·서신. docs/38
 
   // 정산 모달 set — 사용자가 [다음 ▶] 누를 때까지 일상 모달 trigger 대기.
   // llmDebugBuffer 는 이전 turn 응답 시 누적된 LLM 호출 정보.

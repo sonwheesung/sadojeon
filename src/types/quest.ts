@@ -33,8 +33,6 @@ export interface Quest {
   gray?: boolean; // 도덕 회색 의뢰
   faction?: string; // 후원 문파 id(있으면 우호 문파 후원 의뢰) — 완수 시 그 문파 평판↑. docs/30
   woundType?: WoundType; // 환경 위험 상처 속성(화공·설산·맹독 등). 없으면 도메인 기본(대개 외상). docs/04
-  forages?: boolean; // 약초 채집 의뢰 — 이 의뢰라야 연단 재료를 캔다. 일반 의뢰(호위·정탐·결투 등)는
-  // 그 본업에 집중하느라 약초를 못 캔다. 재료 등급은 채집 의뢰 난이도로 결정(진귀초=위험 채집, 신품초=극험 채집). docs/29 §5-1
 }
 
 export interface ActiveQuest {

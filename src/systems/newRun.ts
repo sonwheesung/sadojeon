@@ -19,6 +19,7 @@ import {
   useGraduateStore,
   useReputationStore,
   useLlmSettingsStore,
+  useActivityStore,
   useMasterStore,
   useQuestStore,
   useScheduleStore,
@@ -208,6 +209,8 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   // 의뢰 — 회차 초기화 + 사문 명성 기반 게시판 생성.
   useQuestStore.getState().reset();
   generateBoard();
+  // 활동(채집 등 파견) — 회차 초기화. docs/38.
+  useActivityStore.getState().reset();
   // 졸업 제자 평생 궤적 — 회차 스코프 초기화. docs/28 §4.
   useGraduateStore.getState().reset();
   // 문파 평판 — 회차 스코프 초기화(전원 평범). docs/30.
