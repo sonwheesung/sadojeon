@@ -62,6 +62,8 @@ export function advanceTurn() {
         age: m.age + 1,
       });
     }
+    // 제자 나이는 여기서 안 올린다 — currentAge(d) = d.age(입문나이) + 경과연차로 동적 계산.
+    // (여기서 d.age 를 올리면 경과연차와 이중 합산돼 나이가 2배 속도로 간다. discipleCtx.currentAge)
     // 졸업 제자 평생 궤적 한 해 진행(승급·좌절·전직·사망) → 강호 풍문. docs/28 §4.
     tickCareers();
     // 용봉지회 — 또래 제자 전투력 겨룸(자격 제자 있을 때만) → 명성·풍문. docs/27 §5.

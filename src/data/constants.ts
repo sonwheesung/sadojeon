@@ -63,6 +63,13 @@ export const MASTER = {
   STARTING_AGE: 52,
 } as const;
 
+// 하산(졸업) — 양육은 기간제. 입문(10세) 후 RAISING_YEARS 가 지나면 실력·신뢰와 무관하게 하산한다.
+// "한 판 = 15년 양육" 타임박스: 잘 키웠든(전설) 못 키웠든(실패) 25세에 강호로 나선다.
+// (옛 실력 게이트 '무공 천장 + 신뢰 60' 폐기 — 조기 졸업·영영 미졸업 문제. docs/06)
+export const GRADUATION = {
+  RAISING_YEARS: 15,
+} as const;
+
 // 회차 — docs/16_회차_다회차.md, docs/23_경지_시스템.md
 export const RUN = {
   AVG_YEARS: 25, // 양육 20~30년 (사부가 제자를 직접 키우는 한 일생). 정확한 값은 플레이테스트로 확정

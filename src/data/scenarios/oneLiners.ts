@@ -1,6 +1,8 @@
 // 한 마디 풀 — docs/12_인박스_면담.md "단계 1: 일상 한 마디"
 // 매일 진행 시 무작위 제자 1명이 사부에게 한 마디. 사부는 4문장 중 하나로 응답.
 
+import { GRADUATION } from '@/data/constants';
+
 export type OneLinerCategory = 'training' | 'daily' | 'relation' | 'worry';
 export type OneLinerTone = 'encourage' | 'nod' | 'caution' | 'ignore';
 
@@ -76,6 +78,18 @@ export interface OneLinerCtx {
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
 
+// 나이 조건 스케일 — 면담·한마디의 ageMin/ageMax 는 "10세 입문 → 15세 하산" 옛 5년 호로 작성됨
+// (child≤10 · growth 10-12 · turmoil 13-14 · departure 15+). 실제 양육은 RAISING_YEARS(15년, 10→25세)라,
+// 실제 나이를 옛 스케일로 눌러 같은 인생 곡선을 15년에 그대로 펼친다. 데이터(생성물 포함)는 손대지 않는다. docs/06·12.
+// 마지막 DEPARTURE_LEAD(2년)은 departure(출도전기)로 비워, "곧 하산" 대사가 하산 직전부터 뜨게 한다.
+const CONTENT_ENTRY_AGE = 10; // 입문 나이(압축 기준점)
+const CONTENT_ARC = 5; // 옛 콘텐츠 호 길이(10→15세)
+const DEPARTURE_LEAD = 2; // 하산 직전 출도전기 길이(년)
+const RAISING_ARC = GRADUATION.RAISING_YEARS - DEPARTURE_LEAD; // 콘텐츠 호를 펼칠 실제 구간(10→23세)
+function toContentAge(realAge: number): number {
+  return CONTENT_ENTRY_AGE + (realAge - CONTENT_ENTRY_AGE) * (CONTENT_ARC / RAISING_ARC);
+}
+
 // 상황 조건 매처 — 한마디·면담 공용.
 export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean {
   if (!w) return true;
@@ -86,8 +100,11 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   if (w.trustMax != null && c.trust > w.trustMax) return false;
   if (w.darknessRiskMin != null && RISK_RANK[c.darknessRisk] < RISK_RANK[w.darknessRiskMin]) return false;
   if (w.hasEnemy != null && c.hasEnemy !== w.hasEnemy) return false;
-  if (w.ageMin != null && c.age < w.ageMin) return false;
-  if (w.ageMax != null && c.age > w.ageMax) return false;
+  if (w.ageMin != null || w.ageMax != null) {
+    const a = toContentAge(c.age); // 실제 나이 → 옛 5년 호 스케일로 압축해 비교
+    if (w.ageMin != null && a < w.ageMin) return false;
+    if (w.ageMax != null && a > w.ageMax) return false;
+  }
   if (w.seongMin != null && c.mainSeong < w.seongMin) return false;
   if (w.needsRival && !c.rivalName) return false;
   if (w.isWeakest != null && c.isWeakest !== w.isWeakest) return false;
