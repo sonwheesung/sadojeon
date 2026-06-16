@@ -92,6 +92,7 @@ export default function RootLayout() {
               <Stack.Screen name="simlab/relations" options={{ presentation: 'modal' }} />
               <Stack.Screen name="simlab/career" options={{ presentation: 'modal' }} />
               <Stack.Screen name="alchemy/index" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="activity/index" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!authed}>
               <Stack.Screen name="login" />

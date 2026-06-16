@@ -76,7 +76,7 @@ export function maxGradeForReputation(rep: number): QuestGrade {
 export const QUEST_POOL: readonly Quest[] = [
   // ── 잡일 ──
   { id: 'q-market', domain: 'guard', grade: 'menial', title: '시장 짐 운반', client: '마을 노점', preview: '사흘간 짐 옮길 일손이 필요합니다.', weeks: 1, days: 3, reward: { money: 12, fame: 1 }, recommended: 1, minStat: 0 },
-  { id: 'q-herb', domain: 'medicine', grade: 'menial', title: '약초 채집 동행', client: '마을 의원', preview: '약초꾼을 따라 며칠 산을 돈다.', weeks: 1, reward: { money: 8, fame: 1 }, recommended: 1, minStat: 0, forages: true },
+  // (약초 채집은 의뢰가 아니라 활동(activitySystem·app/activity)으로 이관 — 2026-06-16. docs/38)
   // ── 소무 ──
   { id: 'q-patrol', domain: 'guard', grade: 'minor', title: '마을 야경', client: '촌장', preview: '밤마다 마을을 지킨다.', weeks: 1, reward: { money: 20, fame: 2 }, recommended: 1, minStat: 5 },
   { id: 'q-scout-village', domain: 'scout', grade: 'minor', title: '인근 마을 정탐', client: '행상', preview: '옆 마을 사정을 살펴봐 주오.', weeks: 1, reward: { money: 20, fame: 2 }, recommended: 1, minStat: 5 },
