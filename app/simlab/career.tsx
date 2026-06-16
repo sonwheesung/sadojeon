@@ -45,7 +45,7 @@ export default function CareerSimScreen() {
   if (!dev) {
     return (
       <SafetyZone variant="modal" background={colors.paper}>
-        <Text style={styles.blocked}>개발 계정 전용 화면입니다.</Text>
+        <Text style={styles.blocked}>개발/테스트 환경 전용 화면입니다.</Text>
       </SafetyZone>
     );
   }
