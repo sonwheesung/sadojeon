@@ -14,6 +14,7 @@ import {
 } from '@/components/disciple';
 import { DiscipleArt } from '@/components/dialogue/DiscipleArt';
 import { STARTING_DISCIPLE_POOL } from '@/data/disciples/startingPool';
+import { currentAge } from '@/systems/discipleCtx';
 import { useDiscipleStore } from '@/stores';
 import { colors, spacing, typography } from '@/theme';
 
@@ -54,7 +55,8 @@ export default function DiscipleDetailScreen() {
   const name = fromStore?.name ?? starting?.name ?? '제자';
   const hanjaName = fromStore?.hanjaName ?? starting?.hanjaName ?? '?';
   // 나이 따라 초상 단계 — 어릴 땐 유년, 자라면 청소년→성년(양육 10→25세). 자산 없으면 그레이박스 폴백.
-  const age = fromStore?.age ?? 15;
+  // 나이는 입문나이+경과연차(currentAge) — 정적 d.age(=입문 10세)가 아니라 실제 나이로.
+  const age = fromStore ? currentAge(fromStore) : 15;
   const artStage: 'child' | 'teen' | 'adult' = age < 13 ? 'child' : age >= 20 ? 'adult' : 'teen';
   // 풍경 텍스트 — 추후 통찰 차등 + 시나리오 풀에서. 그레이박스: 고정 placeholder.
   const moods = PLACEHOLDER_MOODS;
