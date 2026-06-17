@@ -31,6 +31,7 @@ import { worldThreat } from './worldSystem';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation, applyCovertReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
 import { gainMainSeongExpArts } from './martialExp';
+import { recordQuestResult } from './questTally';
 import { isResearchInstant } from './researchSystem';
 import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat, type NpcArchetype } from './combat';
 import { playCutscene } from './cutsceneSystem';
@@ -530,9 +531,9 @@ const DOMAIN_SCHOOL_AFFINITY: Record<QuestDomain, MartialArtSchool[]> = {
   grand: ['sword', 'saber', 'fist', 'qigong', 'external'],
 };
 
-function maybeDropScroll(q: Quest): void {
+function maybeDropScroll(q: Quest): boolean {
   const rule = SCROLL_DROP[q.grade];
-  if (!rule || Math.random() >= rule.chance) return;
+  if (!rule || Math.random() >= rule.chance) return false;
   const codex = useCodexStore.getState();
   // 풀 = 의뢰 등급에 맞는 비급 ∪ **다음 권**(선행 비급을 모두 보유한 무공 — 등급 무관).
   // 트리가 깊어진 카탈로그(640권)에서 고급 의뢰만 돌면 사다리 중간 권이 영영 안 모이는 문제 봉합:
@@ -546,7 +547,7 @@ function maybeDropScroll(q: Quest): void {
       a.prerequisites!.every((pr) => codex.hasScroll(pr.artId))
     );
   });
-  if (pool.length === 0) return;
+  if (pool.length === 0) return false;
   const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
   // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×8**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
   // 잘 나온다 — "한 문파의 비급은 함께 강호를 돈다". 트리가 자연히 완성되는 장치(보장 정점 폐기 보완).
@@ -582,6 +583,7 @@ function maybeDropScroll(q: Quest): void {
     resolved: false,
     payload: { domain: 'jianghu_news' },
   });
+  return true;
 }
 
 // 재난(disaster) 발생 시 희생자가 *사망*할 확률. 나머지는 중상으로 생존. docs/29.
@@ -975,11 +977,13 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
 
   // 신품 영약 드랍 — 극험(extreme) 의뢰를 온전히/위기 끝에 완수 시 낮은 확률(운). 화경의 열쇠. docs/28 §5-1.
+  let divineElixir = false;
   if (
     q.grade === 'extreme' &&
     (outcome === 'full' || outcome === 'crisis') &&
     Math.random() < DIVINE_ELIXIR_DROP_RATE
   ) {
+    divineElixir = true;
     grantDivineElixir();
     const day = useTimeStore.getState().totalDay;
     useInboxStore.getState().add({
@@ -997,7 +1001,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
 
   // 비급 드랍 — 의뢰 성공(완수·위기) 시 등급·도메인에 맞는 미보유 비급을 얻을 수 있다. docs/05·04·09.
-  if (outcome === 'full' || outcome === 'crisis') maybeDropScroll(q);
+  const scrollFound = (outcome === 'full' || outcome === 'crisis') ? maybeDropScroll(q) : false;
 
   // 결투 의뢰는 싸운 당사자(대표)가 위험을 진다 — 그 외엔 무작위.
   const victimIdx = duel
@@ -1126,6 +1130,18 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
   // 결투 의뢰 — 엔진이 굴린 실제 싸움의 풍경을 싣는다(docs/35 §7).
   if (duel) body += `\n\n${duel.note}`;
+
+  // 업적 집계 — 결산 결과 한 건을 계정 누적에 적립(단일 seam). docs/32.
+  recordQuestResult({
+    outcome,
+    quest: q,
+    partySize: active.discipleIds.length, // 파견 인원(단신/합공 판정)
+    death: !!lostName,
+    fatalSurvived: rescueRoute != null, // 치명상에서 살아 돌아옴
+    scrollFound,
+    divineElixir,
+    noble: active.rewardFlag === 'noble',
+  });
 
   return {
     id: `quest-${q.id}-${active.dueDay}`,
