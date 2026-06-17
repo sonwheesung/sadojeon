@@ -5,7 +5,7 @@
 //   ① 시간 전진 → 도달한 사부 전갈 판정  ② 정세 4계절 진행  ③ 졸업 궤적+동문 사건  ④ 어둠 노선에 호출
 import './_storageShim';
 import { useDiscipleStore } from '../../src/stores/discipleStore';
-import { useGraduateStore, type GraduateStatus } from '../../src/stores/graduateStore';
+import { useGraduateStore } from '../../src/stores/graduateStore';
 import { useInboxStore } from '../../src/stores/inboxStore';
 import { useJianghuStore } from '../../src/stores/jianghuStore';
 import { useOutreachStore } from '../../src/stores/outreachStore';
