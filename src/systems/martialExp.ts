@@ -10,11 +10,40 @@ import {
   seongCap,
 } from '@/data/martialArts';
 import { REALM_SEONG_CAP } from '@/data/realm';
-import type { MartialArtInstance } from '@/types';
+import type { Disciple, MartialArtInstance } from '@/types';
 import type { Realm } from '@/types/realm';
 
 // 낙수 비율 — 본 적립의 30%가 직계 선행들에 나뉘어 흐른다(1단계만 — 뿌리의 뿌리까지는 공짜 없음). 🔧
 export const TRICKLE_RATE = 0.3;
+
+// 주력 무공 성 EXP 적립(상한 = min(무공서 등급, 경지)) + 낙수 — 순수 변환(스토어 무관).
+// 실전(의뢰·강호 출행)에서 주력을 휘둘러 얻은 경험을 무공 instance 배열에 반영해 돌려준다.
+// 반환: 갱신된 martialArts 배열(no-op이면 null) — 호출측이 스토어에 쓴다.
+export function gainMainSeongExpArts(d: Disciple, expIn: number): MartialArtInstance[] | null {
+  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
+  if (!mainId || expIn <= 0) return null;
+  const art = findMartialArt(mainId);
+  if (!art) return null;
+  // 하품 비급은 금방 뗀다 — 등급별 학습 속도(디딤돌 가속). docs/26.
+  const exp = Math.max(1, Math.round(expIn * GRADE_LEARN_MULT[art.grade]));
+  const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm]);
+  const martialArts = d.martialArts.map((a) => {
+    if (a.artId !== mainId) return a;
+    let seong = a.seong;
+    let e = a.exp + exp;
+    while (seong < cap && e >= expToNextSeong(seong)) {
+      e -= expToNextSeong(seong);
+      seong += 1;
+    }
+    if (seong >= cap) {
+      seong = cap;
+      e = 0;
+    }
+    return { ...a, seong, exp: e };
+  });
+  // 수련 낙수 — 실전에서 주력을 쓰면 그 뿌리도 단련된다. docs/26 §낙수.
+  return applyPrereqTrickle(martialArts, mainId, exp, d.realm);
+}
 
 // sourceArtId 에 exp 만큼 본 적립이 일어난 직후 호출 — 배운(보유 instance) 직계 선행에만 낙수.
 // 선행 책 자신의 등급 학습 속도(GRADE_LEARN_MULT — 하품은 금방 뗀다)가 그대로 적용된다.

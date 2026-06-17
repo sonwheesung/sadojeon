@@ -29,7 +29,7 @@ import { useJianghuStore } from '@/stores/jianghuStore';
 import { worldThreat } from './worldSystem';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation, applyCovertReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
-import { applyPrereqTrickle } from './martialExp';
+import { applyPrereqTrickle, gainMainSeongExpArts } from './martialExp';
 import { isResearchInstant } from './researchSystem';
 import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat, type NpcArchetype } from './combat';
 import { playCutscene } from './cutsceneSystem';
@@ -727,31 +727,9 @@ function questWoundType(q: Quest): WoundType {
 }
 
 function gainMainSeongExp(d: Disciple, expIn: number): void {
-  const mainId = d.mainMartialArtId ?? d.martialArts[0]?.artId;
-  if (!mainId || expIn <= 0) return;
-  const art = findMartialArt(mainId);
-  if (!art) return;
-  // 하품 비급은 금방 뗀다 — 등급별 학습 속도(디딤돌 가속). docs/26.
-  const exp = Math.max(1, Math.round(expIn * GRADE_LEARN_MULT[art.grade]));
-  const cap = Math.min(seongCap(art.grade), REALM_SEONG_CAP[d.realm]);
-  const martialArts = d.martialArts.map((a) => {
-    if (a.artId !== mainId) return a;
-    let seong = a.seong;
-    let e = a.exp + exp;
-    while (seong < cap && e >= expToNextSeong(seong)) {
-      e -= expToNextSeong(seong);
-      seong += 1;
-    }
-    if (seong >= cap) {
-      seong = cap;
-      e = 0;
-    }
-    return { ...a, seong, exp: e };
-  });
-  // 수련 낙수 — 실전에서 주력을 쓰면 그 뿌리도 단련된다. docs/26 §낙수.
-  useDiscipleStore.getState().update(d.id, {
-    martialArts: applyPrereqTrickle(martialArts, mainId, exp, d.realm),
-  });
+  // 순수 계산은 martialExp(스토어·RN 무관)에 — 의뢰·강호 출행 공용. 여기선 스토어 반영만.
+  const martialArts = gainMainSeongExpArts(d, expIn);
+  if (martialArts) useDiscipleStore.getState().update(d.id, { martialArts });
 }
 
 // 의뢰 수행 → 인격 6축 미세 변화. 도메인·회색·결과가 사람을 빚는다. docs/28 §6.

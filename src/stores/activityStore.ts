@@ -9,6 +9,7 @@ import { slotAwareStorage } from './persistStorage';
 interface ActivityStore {
   active: ActiveActivity[];
   add: (a: ActiveActivity) => void;
+  updateActive: (id: string, patch: Partial<ActiveActivity>) => void;
   remove: (id: string) => void;
   reset: () => void;
 }
@@ -18,6 +19,8 @@ export const useActivityStore = create<ActivityStore>()(
     (set) => ({
       active: [],
       add: (a) => set((s) => ({ active: [...s.active, a] })),
+      updateActive: (id, patch) =>
+        set((s) => ({ active: s.active.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       remove: (id) => set((s) => ({ active: s.active.filter((x) => x.id !== id) })),
       reset: () => set({ active: [] }),
     }),
