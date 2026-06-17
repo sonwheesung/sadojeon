@@ -31,6 +31,7 @@ import {
 } from '@/stores';
 import { captureSnapshot } from './reportSystem';
 import { resetAlchemy } from './alchemySystem';
+import { seedUnlockedArts } from './achievementSystem';
 import { generateBoard } from './questSystem';
 import { RUN_CHILD_SLICES } from './runSlices';
 import type {
@@ -196,6 +197,8 @@ export function seedNewRun(selectedPoolIds: string[]): void {
       codex.addScroll(scroll);
     }
   }
+  // 업적으로 영구 해금된 무공서(천마신공·독고구검·역근경 등)를 새 회차 서고에. docs/32.
+  seedUnlockedArts();
   // 회차 격리 store 리셋 — docs/16 회차 누적 정책 + project_run_loop_carryover.
   useSectAtmosphereStore.getState().reset();
   resetAlchemy(); // 연단 상태(학습 레시피·재료·진행 중 제조) 회차 초기화
