@@ -15,13 +15,13 @@ import { useJianghuStore } from '@/stores/jianghuStore';
 import { blocPressure } from './worldSystem';
 import { BLOC_LABEL } from '@/data/worldPowers';
 import { findFaction } from '@/data/factions';
-import { useDiscipleStore } from '@/stores/discipleStore';
 import { useSectStore } from '@/stores/sectStore';
 import { adjustDiscipleRep, adjustSectRep } from './reputationSystem';
 import { combatRating } from './combatPower';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
-import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { pushJianghuNews } from './jianghuNews';
+import { tickGraduateEvents } from './graduateEvents';
 import type { Disciple } from '@/types';
 import type { StatId } from '@/types/training';
 
@@ -44,21 +44,8 @@ function routeCompetence(route: RouteId, d: Disciple): number {
   }
 }
 
-function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'normal'): void {
-  const day = useTimeStore.getState().totalDay;
-  useInboxStore.getState().add({
-    id: `jianghu-${day}-${Math.floor(Math.random() * 1e6)}`,
-    kind: 'rumor',
-    title,
-    preview: body,
-    body,
-    priority,
-    createdAtDay: day,
-    read: false,
-    resolved: false,
-    payload: { domain: 'jianghu_news' },
-  });
-}
+// 강호 풍문 서신 — 공용 헬퍼(jianghuNews) 재사용. graduateEvents 와 같은 경로.
+const pushNews = pushJianghuNews;
 
 // 하산 직업 선택 확정 → 졸업 제자 레코드 + 첫 소식. inboxResolve(graduation)에서 호출.
 export function graduateToCareer(d: Disciple, jobId: string): void {
@@ -195,19 +182,12 @@ export function tickCareers(): void {
     gs.update(g.id, { level, power, fame, status, title, route });
   }
 
-  // 졸업 동문 간 강호 사건 — 옛 관계(친밀·적대)가 펼쳐진다. docs/08.
-  tickGraduateInteractions();
+  // 졸업 동문 간 강호 사건 — 옛 관계(친밀·적대)가 펼쳐진다. 레지스트리 plug-in. docs/08.
+  tickGraduateEvents();
 }
-
-// 두 졸업 제자 사이 관계(양방향). 졸업해도 discipleStore 에 status='graduated'로 남아 관계 보존.
-function relBetween(aId: string, bId: string): string | undefined {
-  const ds = useDiscipleStore.getState();
-  return ds.disciples[aId]?.relationships?.[bId] ?? ds.disciples[bId]?.relationships?.[aId];
-}
-
-const LETHAL_ROUTES = new Set<RouteId>(['assassin', 'vigilante']);
 
 // 노선 정렬 — 환멸(정→사)·개심(사→정) 전환의 양극. docs/28 §4 "배신·흑화·환멸 → 노선 전환".
+// (졸업 동문 간 강호 사건은 graduateEvents 레지스트리로 분리 — 충돌·노선갈등·의기투합·의거·소원·해후·복수.)
 const LIGHT_ROUTES = new Set<RouteId>(['righteous', 'escort', 'healer', 'daoist']);
 const DARK_ROUTES = new Set<RouteId>(['assassin', 'shadow']);
 
@@ -252,66 +232,4 @@ function maybeRouteShift(
     };
   }
   return null;
-}
-
-// 매년: 살아있는 졸업 제자 쌍의 관계가 강호에서 충돌·합류로 터진다. 연 최대 2건.
-function tickGraduateInteractions(): void {
-  const gs = useGraduateStore.getState();
-  const live = gs.records.filter((g) => g.status === 'active' || g.status === 'injured');
-  if (live.length < 2) return;
-  let fired = 0;
-  for (let i = 0; i < live.length && fired < 2; i += 1) {
-    for (let j = i + 1; j < live.length && fired < 2; j += 1) {
-      const a = live[i];
-      const b = live[j];
-      const rel = relBetween(a.id, b.id);
-      if (rel === 'enemy') {
-        if (Math.random() < 0.5) { resolveClash(a, b); fired += 1; }
-      } else if (rel === 'friend' || rel === 'sworn') {
-        if (Math.random() < 0.4) { resolveAlliance(a, b); fired += 1; }
-      } else if (a.route === b.route && Math.random() < 0.15) {
-        resolveEncounter(a, b); fired += 1;
-      }
-    }
-  }
-}
-
-// 적대 → 강호에서 칼을 겨눈다. 능력·명성 높은 쪽이 이기고, 진 쪽은 부상(위험 노선이면 사망).
-function resolveClash(a: GraduateRecord, b: GraduateRecord): void {
-  const gs = useGraduateStore.getState();
-  const sa = a.power + a.fame + randInt(0, 30);
-  const sb = b.power + b.fame + randInt(0, 30);
-  const winner = sa >= sb ? a : b;
-  const loser = sa >= sb ? b : a;
-  const fatal = LETHAL_ROUTES.has(loser.route) ? Math.random() < 0.45 : Math.random() < 0.2;
-  gs.update(winner.id, { fame: clamp(winner.fame + 6) });
-  gs.update(loser.id, fatal ? { status: 'dead' } : { status: 'injured', fame: clamp(loser.fame - 4) });
-  pushNews(
-    `${winner.name} ↔ ${loser.name} — 은원`,
-    fatal
-      ? `${winner.name}과 ${loser.name}이 강호에서 끝내 칼을 겨눴다. ${loser.name}은(는) 돌아오지 못했다.`
-      : `${winner.name}과 ${loser.name}이 칼을 겨눴다. ${loser.name}이 상처를 입고 물러났다 한다.`,
-  );
-}
-
-// 친밀 → 손을 잡는다. 둘 다 이름을 더 떨친다.
-function resolveAlliance(a: GraduateRecord, b: GraduateRecord): void {
-  const gs = useGraduateStore.getState();
-  gs.update(a.id, { fame: clamp(a.fame + 5) });
-  gs.update(b.id, { fame: clamp(b.fame + 5) });
-  pushNews(
-    `${a.name} · ${b.name} — 의기투합`,
-    `옛 동문 ${a.name}과 ${b.name}이 강호에서 손을 잡았다는 흐뭇한 소식. 둘의 이름이 함께 오른다.`,
-  );
-}
-
-// 같은 노선 우연한 마주침 — 가벼운 자극.
-function resolveEncounter(a: GraduateRecord, b: GraduateRecord): void {
-  const gs = useGraduateStore.getState();
-  gs.update(a.id, { fame: clamp(a.fame + 2) });
-  gs.update(b.id, { fame: clamp(b.fame + 2) });
-  pushNews(
-    `${a.name} · ${b.name} — 해후`,
-    `같은 ${ROUTE_LABEL[a.route]}의 길을 걷는 ${a.name}과 ${b.name}이 강호에서 마주쳐 한 수 겨뤘다 한다.`,
-  );
 }

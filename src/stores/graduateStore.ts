@@ -24,6 +24,7 @@ export interface GraduateRecord {
   fame: number; // 명성
   status: GraduateStatus;
   graduatedYear: number;
+  slainBy?: string; // 다른 졸업 동문에게 살해당했으면 그 가해자 id — 복수(연쇄) 사건의 씨앗. docs/08
 }
 
 interface GraduateStore {
