@@ -10,6 +10,7 @@ export type { PendingOneLiner, PendingWish } from './pendingStore';
 export { useScheduleStore } from './scheduleStore';
 export { useQuestStore } from './questStore';
 export { useActivityStore } from './activityStore';
+export { useOutreachStore } from './outreachStore';
 export { useGraduateStore } from './graduateStore';
 export type { GraduateRecord, GraduateStatus } from './graduateStore';
 export { useJianghuStore } from './jianghuStore';
