@@ -20,6 +20,7 @@ import { captureSnapshot } from './reportSystem';
 import { tickDailyTraining } from './trainingSystem';
 import { generateBoard, tickQuests } from './questSystem';
 import { tickActivities } from './activitySystem';
+import { tickMasterOutreach } from './masterOutreachSystem';
 import { triggerDailyOneLiner } from './oneLinerSystem';
 import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
@@ -108,6 +109,7 @@ export function advanceTurn() {
   // 의뢰 결산 서신이 그대로 증발한다(🐛 2026-06-11 questmatrix 시뮬이 발견 — 결산 서신 미발송 버그).
   tickQuests(); // 기한 도래 의뢰 결산 → 마일스톤(서신함)
   tickActivities(); // 기한 도래 활동(채집 등) 결산 → 재료·상처·서신. docs/38
+  tickMasterOutreach(); // 도달한 사부 서신·호출 판정(수용/무시) → 풍문 서신. docs/08
 
   // 정산 모달 set — 사용자가 [다음 ▶] 누를 때까지 일상 모달 trigger 대기.
   // llmDebugBuffer 는 이전 turn 응답 시 누적된 LLM 호출 정보.

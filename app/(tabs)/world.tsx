@@ -1,12 +1,14 @@
 import { router, type Href } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { MasterOutreachModal } from '@/components/dialogue/MasterOutreachModal';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { ROUTE_LABEL } from '@/data/careers';
+import { useOutreachStore } from '@/stores/outreachStore';
 import {
   FACTION_GROUP_LABEL,
   FACTION_GROUP_ORDER,
@@ -53,6 +55,8 @@ export default function WorldScreen() {
   const seedDefaults = useJianghuStore((s) => s.seedDefaults);
   const graduates = useGraduateStore((s) => s.records);
   const insightStat = useMasterStore((s) => s.master?.stats.insight ?? 3);
+  const outreach = useOutreachStore((s) => s.pending);
+  const [outreachTarget, setOutreachTarget] = useState<string | null>(null);
 
   // 정세가 비어 있으면(구 회차 등) 기본값 시드 — 화면이 비지 않게.
   useEffect(() => {
@@ -75,7 +79,11 @@ export default function WorldScreen() {
           <FactionRelations />
 
           <SectionLabel>하산 제자</SectionLabel>
-          <GraduateList graduates={graduates} />
+          <GraduateList
+            graduates={graduates}
+            pendingIds={new Set(outreach.map((m) => m.graduateId))}
+            onSelect={setOutreachTarget}
+          />
 
           <SectionLabel>강호 정세</SectionLabel>
           <FactionColumns factions={factions} />
@@ -84,6 +92,7 @@ export default function WorldScreen() {
           <EventList events={events} />
         </ScrollView>
       </PaperCard>
+      <MasterOutreachModal graduateId={outreachTarget} onClose={() => setOutreachTarget(null)} />
     </SafetyZone>
   );
 }
@@ -154,7 +163,15 @@ function FactionRelations() {
   );
 }
 
-function GraduateList({ graduates }: { graduates: GraduateRecord[] }) {
+function GraduateList({
+  graduates,
+  pendingIds,
+  onSelect,
+}: {
+  graduates: GraduateRecord[];
+  pendingIds: Set<string>;
+  onSelect: (id: string) => void;
+}) {
   if (graduates.length === 0) {
     return (
       <View style={styles.graduateEmpty}>
@@ -166,20 +183,34 @@ function GraduateList({ graduates }: { graduates: GraduateRecord[] }) {
     <View style={styles.graduateList}>
       {graduates.map((g) => {
         const gone = g.status === 'dead' || g.status === 'missing';
+        const reachable = g.status === 'active' || g.status === 'injured';
+        const pending = pendingIds.has(g.id);
         return (
-          <View key={g.id} style={[styles.graduateRow, gone && styles.graduateGone]}>
+          <Pressable
+            key={g.id}
+            onPress={() => reachable && onSelect(g.id)}
+            disabled={!reachable}
+            style={({ pressed }) => [
+              styles.graduateRow,
+              gone && styles.graduateGone,
+              reachable && pressed && styles.pressed,
+            ]}
+            accessibilityRole={reachable ? 'button' : undefined}
+            accessibilityLabel={reachable ? `${g.name}에게 서신·호출` : undefined}
+          >
             <View style={styles.graduateMain}>
               <Text style={styles.graduateName} numberOfLines={1}>
                 {g.name}
+                {reachable ? ' ›' : ''}
               </Text>
               <Text style={styles.graduateTitle} numberOfLines={1}>
                 {ROUTE_LABEL[g.route]} · {g.title}
               </Text>
             </View>
             <Text style={[styles.graduateStatus, gone && styles.graduateStatusGone]}>
-              {GRADUATE_STATUS_LABEL[g.status]}
+              {pending ? '전갈 중' : GRADUATE_STATUS_LABEL[g.status]}
             </Text>
-          </View>
+          </Pressable>
         );
       })}
     </View>
