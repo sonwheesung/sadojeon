@@ -34,6 +34,7 @@ import { tickWoundRecovery } from './woundSystem';
 import { tickMonthlyEconomy } from './economySystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
+import { checkAchievements } from './achievementSystem';
 
 // [진행] 1회 = 하루
 // 순서:
@@ -149,6 +150,7 @@ export function triggerPostSettlement(): void {
   triggerDailyMediation(); // 중재 면담·상담 기회 — 응어리 쌍이 있을 때. docs/33 §3
   tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
   tickSimma(); // 심마 누적·진정 + 주화입마 발작 굴림. docs/13·26
+  checkAchievements(); // 업적 스캔 — 신규 "첫 X" 달성 기록 + 무공서 해금 + 알림. docs/32
 
   // 변곡점(승급/탈진/졸업) — 모달 대신 서신함 알림으로. pending 큐 비움.
   const milestones = usePendingStore.getState().milestones;

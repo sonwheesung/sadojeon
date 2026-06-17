@@ -112,6 +112,14 @@ function Header({ insight }: { insight: number }) {
       </View>
       <View style={styles.headerRight}>
         <Pressable
+          onPress={() => router.push('/achievements' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="업적"
+          style={({ pressed }) => [styles.codexBtn, pressed && styles.pressed]}
+        >
+          <Text style={styles.codexBtnLabel}>업적 ▶</Text>
+        </Pressable>
+        <Pressable
           onPress={() => router.push('/npc' as Href)}
           accessibilityRole="button"
           accessibilityLabel="강호 도감"
