@@ -19,6 +19,7 @@ const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0.5
 const COMBAT = ['sword', 'saber', 'fist', 'lightness', 'hidden', 'external', 'darkArts'];
 const JOBS = [
   // peak
+  { id: 'demon-god', name: '천마(天魔)', tier: 'peak', martial: { schools: COMBAT, minSeong: 9 }, personaMin: { ambition: 70 }, personaMax: { integrity: 25, mercy: 25 }, darknessMin: 4 },
   { id: 'murim-lord', name: '무림맹주', tier: 'peak', statReq: { knowledge: 70, guarding: 60 }, martial: { schools: ['sword', 'saber', 'fist'], minSeong: 8 }, personaMin: { integrity: 70, mercy: 55, ambition: 55 } },
   { id: 'divine-healer', name: '신의', tier: 'peak', statReq: { medicine: 80, knowledge: 70, alchemy: 50 }, personaMin: { mercy: 60 } },
   { id: 'medicine-king', name: '약왕', tier: 'peak', statReq: { alchemy: 80, medicine: 55 } },
@@ -70,7 +71,7 @@ const JOB_ROUTE = {
   'caravan-guard-captain': 'escort', 'escort-house-master': 'escort', 'escort-warrior': 'escort', 'village-guardian': 'escort', 'caravan-master': 'escort', gatekeeper: 'escort',
   'righteous-bandit': 'vigilante', 'chivalrous-chief': 'vigilante', 'roving-hero': 'vigilante',
   wanderer: 'wanderer', 'sword-saint': 'wanderer', 'blade-master': 'wanderer', 'bounty-hunter': 'wanderer',
-  'demon-protector': 'demonic', 'demon-head': 'demonic', 'sapa-warrior': 'demonic',
+  'demon-god': 'demonic', 'demon-protector': 'demonic', 'demon-head': 'demonic', 'sapa-warrior': 'demonic',
   'town-idler': 'commoner',
 };
 const JOB_RANK = {
@@ -82,7 +83,7 @@ const JOB_RANK = {
   gatekeeper: 0, 'escort-warrior': 1, 'village-guardian': 2, 'escort-house-master': 3, 'caravan-guard-captain': 4, 'caravan-master': 5,
   wanderer: 0, 'bounty-hunter': 1, 'blade-master': 2, 'sword-saint': 3,
   'roving-hero': 0, 'righteous-bandit': 1, 'chivalrous-chief': 2,
-  'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2,
+  'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2, 'demon-god': 3,
   'town-idler': 0,
 };
 const ROUTE_LABEL = { righteous: '정파', vigilante: '의적', escort: '호위', wanderer: '떠돌이', assassin: '살수', shadow: '정탐', demonic: '마도', healer: '의원', daoist: '도가', commoner: '야인' };
@@ -90,14 +91,15 @@ const ROUTE_LADDER = {
   righteous: ['정파 무사', '분파 호법', '무림맹 호법', '무림맹주'], vigilante: ['뜨내기 협객', '의협', '의적', '의적 거두'],
   escort: ['문지기', '표국 무사', '호위장', '상단 총관'], wanderer: ['낭인', '이름난 검객', '일대 명숙', '강호 명사'],
   assassin: ['말단 살수', '살수', '살수 단장', '어둠의 절세'], shadow: ['세작', '정탐꾼', '밀정 두목', '강호의 그림자'],
-  demonic: ['마졸', '사파 무인', '마두', '마교 호법'], healer: ['돌팔이', '마을 의원', '강호 의원', '신의'],
+  demonic: ['마졸', '사파 무인', '마두', '마교 호법', '천마(天魔)'], healer: ['돌팔이', '마을 의원', '강호 의원', '신의'],
   daoist: ['행자', '도사', '도가 명숙', '도가 명사'], commoner: ['한량', '마을 무사', '마을 유지', '지방 명망가'],
 };
 const TIER_TO_LEVEL = { peak: 3, upper: 2, common: 1, limited: 0 };
+const JOB_START_LEVEL = { 'demon-god': 4 }; // 천마 = demonic 사다리 최상단
 function careerStartFromJob(jobId, tier) {
   const route = JOB_ROUTE[jobId] ?? 'commoner';
   const ladder = ROUTE_LADDER[route];
-  const level = Math.min(ladder.length - 1, TIER_TO_LEVEL[tier]);
+  const level = Math.min(ladder.length - 1, JOB_START_LEVEL[jobId] ?? TIER_TO_LEVEL[tier]);
   return { route, level, title: ladder[level] };
 }
 
@@ -109,6 +111,7 @@ function meetsJob(d, job) {
   if (job.martial && bestSeong(d, job.martial.schools) < job.martial.minSeong) return false;
   if (job.personaMin) for (const [k, v] of Object.entries(job.personaMin)) if (d.persona[k] < v) return false;
   if (job.personaMax) for (const [k, v] of Object.entries(job.personaMax)) if (d.persona[k] > v) return false;
+  if (job.darknessMin != null && (d.darkness ?? 0) < job.darknessMin) return false;
   return true;
 }
 function abilityFit(d, job) {

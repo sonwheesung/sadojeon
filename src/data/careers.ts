@@ -38,7 +38,7 @@ export const ROUTE_LADDER: Record<RouteId, readonly string[]> = {
   wanderer: ['낭인', '이름난 검객', '일대 명숙', '강호 명사'],
   assassin: ['말단 살수', '살수', '살수 단장', '어둠의 절세'],
   shadow: ['세작', '정탐꾼', '밀정 두목', '강호의 그림자'],
-  demonic: ['마졸', '사파 무인', '마두', '마교 호법'],
+  demonic: ['마졸', '사파 무인', '마두', '마교 호법', '천마(天魔)'],
   healer: ['돌팔이', '마을 의원', '강호 의원', '신의'],
   daoist: ['행자', '도사', '도가 명숙', '도가 명사'],
   commoner: ['한량', '마을 무사', '마을 유지', '지방 명망가'],
@@ -94,6 +94,7 @@ export const JOB_ROUTE: Record<string, RouteId> = {
   'sect-warrior': 'righteous',
   'petty-assassin': 'assassin',
   // ── 마도(사파 무력) — 정탐 게이트 없는 순수 마공/사파 고수 ──
+  'demon-god': 'demonic', // 천마 — 마도의 정점(마교 호법 위)
   'demon-protector': 'demonic',
   'demon-head': 'demonic',
   'sapa-warrior': 'demonic',
@@ -121,8 +122,8 @@ export const JOB_RANK: Record<string, number> = {
   wanderer: 0, 'bounty-hunter': 1, 'blade-master': 2, 'sword-saint': 3,
   // 의적
   'roving-hero': 0, 'righteous-bandit': 1, 'chivalrous-chief': 2,
-  // 마도
-  'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2,
+  // 마도 (천마 = 마교 호법 위 정점)
+  'sapa-warrior': 0, 'demon-head': 1, 'demon-protector': 2, 'demon-god': 3,
   // 야인
   'town-idler': 0,
 };
@@ -161,6 +162,11 @@ export const TIER_TO_LEVEL: Record<JobTier, number> = {
   limited: 0,
 };
 
+// 같은 tier 라도 사다리 최상단(정점 위 정점)에서 출발하는 직업의 명시 레벨. 천마=마교 호법(3) 위 4단.
+const JOB_START_LEVEL: Record<string, number> = {
+  'demon-god': 4, // 천마 — demonic 사다리 5단의 최상단
+};
+
 // 직업 id → 노선 + 시작 직책 레벨 + 직책명.
 export function careerStartFromJob(jobId: string): {
   route: RouteId;
@@ -170,6 +176,9 @@ export function careerStartFromJob(jobId: string): {
   const route = JOB_ROUTE[jobId] ?? 'commoner';
   const job = JOB_POOL.find((j) => j.id === jobId);
   const ladder = ROUTE_LADDER[route];
-  const level = Math.min(ladder.length - 1, job ? TIER_TO_LEVEL[job.tier] : 0);
+  const level = Math.min(
+    ladder.length - 1,
+    JOB_START_LEVEL[jobId] ?? (job ? TIER_TO_LEVEL[job.tier] : 0),
+  );
   return { route, level, title: ladder[level] };
 }

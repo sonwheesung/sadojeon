@@ -49,6 +49,8 @@ export function meetsJob(d: Disciple, job: Job): boolean {
       if (v != null && d.personality[k as keyof PersonalityTraits] > v) return false;
     }
   }
+  // 흑화 게이트 — 천마처럼 어둠에 완전히 삼켜져야만(darknessLevel ≥) 가는 길. docs/13·21.
+  if (job.darknessMin != null && (d.darknessLevel ?? 0) < job.darknessMin) return false;
   return true;
 }
 

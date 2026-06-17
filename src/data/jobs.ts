@@ -46,12 +46,26 @@ export interface Job {
   // 인격 6축 최소(≥) / 최대(≤). docs/28 §6.
   personaMin?: Partial<Record<keyof PersonalityTraits, number>>;
   personaMax?: Partial<Record<keyof PersonalityTraits, number>>;
+  // 흑화 최소 단계(≥). 천마처럼 어둠에 완전히 삼켜져야만 가는 길. docs/13·21.
+  darknessMin?: number;
 }
 
 // 그레이박스 풀 (35종). docs/28 §3·§4 노선×직책 사다리를 채운다. 수치 튜닝 대상.
 // 마도 3종(마교 호법·마두·사파 무인) = 정탐 게이트 없는 순수 마공/사파 무력 — 어두운 인격(협의 낮음) 게이트.
 export const JOB_POOL: readonly Job[] = [
   // ── 정점 ──────────────────────────────────────────────
+  {
+    id: 'demon-god',
+    name: '천마(天魔)',
+    tier: 'peak',
+    desc: '마(魔)의 정점에 선 자. 만마(萬魔)가 그 앞에 엎드린다. 마교를 호령하는 절대자.',
+    // 마공의 극성(9성) + 어둠에 완전히 삼켜진 자(흑화 최대) + 협의·자비를 버리고 천하를 삼키려는 야망.
+    // 마교 호법(협의≤40)보다 한 단계 위 — 양육으로 닿는 마도의 진짜 정점. docs/21·13·28 §3.
+    martial: { schools: COMBAT_SCHOOLS, minSeong: 9 },
+    personaMin: { ambition: 70 },
+    personaMax: { integrity: 25, mercy: 25 },
+    darknessMin: 4,
+  },
   {
     id: 'murim-lord',
     name: '무림맹주',
