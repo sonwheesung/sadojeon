@@ -8,6 +8,7 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { GATHER_REGIONS, GATHER_TIER_LABEL, findGatherRegion } from '@/data/activities';
+import { EXPEDITION_DESTS, findExpeditionDest } from '@/data/expeditions';
 import { MATERIAL_LABEL } from '@/data/elixirs';
 import {
   activeActivityLabels,
@@ -16,6 +17,7 @@ import {
   isAvailable,
   loreOf,
 } from '@/systems/activitySystem';
+import { canExpedition, dispatchExpedition } from '@/systems/expeditionSystem';
 import { useActivityStore } from '@/stores/activityStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import type { Disciple } from '@/types';
@@ -24,7 +26,13 @@ import { colors, radius, spacing, typography } from '@/theme';
 // 활동 허브(그레이박스) — 일과 외 임시 파견/제작. docs/38.
 // Phase 1: 강호 출행(준비중) · 약초 채집(구현) · 영단 제작(연단실 링크) · 도구 제작(준비중).
 
-type Mode = 'hub' | 'gather';
+type Mode = 'hub' | 'gather' | 'expedition';
+
+const MODE_TITLE: Record<Mode, string> = {
+  hub: '활동',
+  gather: '약초 채집',
+  expedition: '강호 출행',
+};
 
 export default function ActivityHubScreen() {
   const confirm = useConfirm();
@@ -35,13 +43,16 @@ export default function ActivityHubScreen() {
 
   const [mode, setMode] = useState<Mode>('hub');
   const [regionId, setRegionId] = useState<string | null>(null);
+  const [destId, setDestId] = useState<string | null>(null);
   const [party, setParty] = useState<string[]>([]);
 
   const roster: Disciple[] = order.map((id) => disciples[id]).filter((d): d is Disciple => Boolean(d));
   const available = roster.filter(isAvailable);
   const region = regionId ? findGatherRegion(regionId) : undefined;
+  const dest = destId ? findExpeditionDest(destId) : undefined;
   const partyDisciples = party.map((id) => disciples[id]).filter((d): d is Disciple => Boolean(d));
-  const gate = region ? canGather(region, partyDisciples) : { ok: false, reason: '지역을 고르세요.' };
+  const gatherGate = region ? canGather(region, partyDisciples) : { ok: false, reason: '지역을 고르세요.' };
+  const expGate = dest ? canExpedition(dest, partyDisciples) : { ok: false, reason: '행선을 고르세요.' };
   const ongoing = activeActivityLabels();
 
   const toggle = (id: string) =>
@@ -49,17 +60,31 @@ export default function ActivityHubScreen() {
 
   const reset = () => {
     setRegionId(null);
+    setDestId(null);
     setParty([]);
   };
 
-  const onDispatch = async () => {
-    if (!region || !gate.ok) return;
+  const onDispatchGather = async () => {
+    if (!region || !gatherGate.ok) return;
     const ok = await confirm({
       title: '채집 파견',
       message: `${region.name}으로 ${partyDisciples.map((d) => d.name).join('·')}을(를) ${region.days}일간 보냅니다.`,
       confirmLabel: '보낸다',
     });
     if (ok && dispatchGather(region.id, party)) {
+      reset();
+      setMode('hub');
+    }
+  };
+
+  const onDispatchExpedition = async () => {
+    if (!dest || !expGate.ok) return;
+    const ok = await confirm({
+      title: '강호 출행',
+      message: `${dest.name}으로 ${partyDisciples.map((d) => d.name).join('·')}을(를) ${dest.days}일간 내보냅니다. 무엇과 마주칠지는 강호의 뜻입니다.`,
+      confirmLabel: '내보낸다',
+    });
+    if (ok && dispatchExpedition(dest.id, party)) {
       reset();
       setMode('hub');
     }
@@ -72,7 +97,7 @@ export default function ActivityHubScreen() {
           <Pressable onPress={() => (mode === 'hub' ? router.back() : (reset(), setMode('hub')))} hitSlop={12}>
             <Text style={styles.back}>‹</Text>
           </Pressable>
-          <Text style={styles.title}>{mode === 'hub' ? '활동' : '약초 채집'}</Text>
+          <Text style={styles.title}>{MODE_TITLE[mode]}</Text>
           <View style={styles.backSpacer} />
         </View>
 
@@ -96,8 +121,7 @@ export default function ActivityHubScreen() {
               <ActivityCard
                 title="강호 출행"
                 desc="경험을 쌓으러 잠시 강호로. 무엇과 마주칠지 모른다."
-                badge="준비 중"
-                disabled
+                onPress={() => setMode('expedition')}
               />
               <ActivityCard
                 title="약초 채집"
@@ -111,7 +135,7 @@ export default function ActivityHubScreen() {
               />
               <ActivityCard title="도구 제작" desc="무기·방어구를 벼린다." badge="준비 중" disabled />
             </View>
-          ) : (
+          ) : mode === 'gather' ? (
             <>
               {/* 지역 선택 */}
               <View style={styles.section}>
@@ -161,13 +185,69 @@ export default function ActivityHubScreen() {
                       </Pressable>
                     );
                   })}
-                  {!gate.ok && gate.reason && <Text style={styles.reason}>{gate.reason}</Text>}
+                  {!gatherGate.ok && gatherGate.reason && <Text style={styles.reason}>{gatherGate.reason}</Text>}
                   <Pressable
-                    onPress={onDispatch}
-                    disabled={!gate.ok}
-                    style={[styles.dispatch, !gate.ok && styles.dispatchOff]}
+                    onPress={onDispatchGather}
+                    disabled={!gatherGate.ok}
+                    style={[styles.dispatch, !gatherGate.ok && styles.dispatchOff]}
                   >
                     <Text style={styles.dispatchText}>채집 보내기</Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              {/* 행선 선택 */}
+              <View style={styles.section}>
+                <SectionLabel>행선</SectionLabel>
+                {EXPEDITION_DESTS.map((x) => {
+                  const sel = x.id === destId;
+                  return (
+                    <Pressable
+                      key={x.id}
+                      onPress={() => {
+                        setDestId(x.id);
+                        setParty([]);
+                      }}
+                      style={[styles.regionRow, sel && styles.regionSel]}
+                    >
+                      <View style={styles.regionHead}>
+                        <Text style={styles.regionName}>{x.name}</Text>
+                        <Text style={styles.regionTier}>{x.days}일</Text>
+                      </View>
+                      <Text style={styles.regionPreview}>{x.preview}</Text>
+                      <Text style={styles.regionMeta}>
+                        {x.needsCombatParty ? '전투원 동행 권장' : '홀로도 무방'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* 동행 구성 */}
+              {dest && (
+                <View style={styles.section}>
+                  <SectionLabel>동행 (추천 {dest.recommendedParty}명)</SectionLabel>
+                  {available.length === 0 && <Text style={styles.empty}>보낼 수 있는 제자가 없습니다.</Text>}
+                  {available.map((d) => {
+                    const sel = party.includes(d.id);
+                    return (
+                      <Pressable key={d.id} onPress={() => toggle(d.id)} style={[styles.discRow, sel && styles.discSel]}>
+                        <Text style={styles.discName}>
+                          {sel ? '✓ ' : ''}
+                          {d.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                  {!expGate.ok && expGate.reason && <Text style={styles.reason}>{expGate.reason}</Text>}
+                  <Pressable
+                    onPress={onDispatchExpedition}
+                    disabled={!expGate.ok}
+                    style={[styles.dispatch, !expGate.ok && styles.dispatchOff]}
+                  >
+                    <Text style={styles.dispatchText}>출행 보내기</Text>
                   </Pressable>
                 </View>
               )}

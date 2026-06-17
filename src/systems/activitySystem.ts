@@ -12,6 +12,8 @@ import type { Disciple, Milestone } from '@/types';
 import type { ActiveActivity, GatherRegion } from '@/types/activity';
 import { addMaterial } from './alchemySystem';
 import { inflictWound } from './woundSystem';
+import { findExpeditionDest } from '@/data/expeditions';
+import { tickExpedition } from './expeditionSystem';
 
 // 약 지식 = 연단·의술 레벨 중 높은 쪽(채집 지식 게이트). docs/29 §5-1 계승.
 export function loreOf(d: Disciple): number {
@@ -127,16 +129,23 @@ function settleGather(act: ActiveActivity): Milestone | null {
   };
 }
 
-// advanceTurn 훅 — 기한 도래 활동 결산.
+// advanceTurn 훅 — 활동 진행/결산.
+//  · 채집(gather): 기한 도래 시 결산·귀환.
+//  · 강호 출행(expedition): 매 tick 위임 — 예정 사건 발동(서신 강제선택)·기한 도래 시 귀환 결산.
 export function tickActivities(): void {
   const today = useTimeStore.getState().totalDay;
-  const due = useActivityStore.getState().active.filter((a) => today >= a.dueDay);
-  if (due.length === 0) return;
   const milestones: Milestone[] = [];
-  for (const a of due) {
-    const m = a.kind === 'gather' ? settleGather(a) : null;
-    if (m) milestones.push(m);
-    useActivityStore.getState().remove(a.id);
+  for (const a of [...useActivityStore.getState().active]) {
+    if (a.kind === 'gather') {
+      if (today < a.dueDay) continue;
+      const m = settleGather(a);
+      if (m) milestones.push(m);
+      useActivityStore.getState().remove(a.id);
+    } else if (a.kind === 'expedition') {
+      const { milestone, done } = tickExpedition(a);
+      if (milestone) milestones.push(milestone);
+      if (done) useActivityStore.getState().remove(a.id);
+    }
   }
   if (milestones.length > 0) usePendingStore.getState().pushMilestones(milestones);
 }
@@ -146,10 +155,13 @@ export function activeActivityLabels(): { id: string; label: string; remaining: 
   const today = useTimeStore.getState().totalDay;
   const ds = useDiscipleStore.getState();
   return useActivityStore.getState().active.map((a) => {
-    const region = a.regionId ? findGatherRegion(a.regionId) : undefined;
+    const place =
+      a.kind === 'gather'
+        ? a.regionId && findGatherRegion(a.regionId)?.name
+        : a.destId && findExpeditionDest(a.destId)?.name;
     const names = a.discipleIds.map((id) => ds.disciples[id]?.name ?? '?').join('·');
     const remaining = Math.max(0, a.dueDay - today);
-    return { id: a.id, label: `${region?.name ?? '활동'} — ${names}`, remaining };
+    return { id: a.id, label: `${place || '활동'} — ${names}`, remaining };
   });
 }
 

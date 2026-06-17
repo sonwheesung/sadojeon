@@ -17,6 +17,7 @@ import { graduateToCareer } from './careerSystem';
 import { applyMeetingChoice } from './meetingSystem';
 import type { MeetingOption } from '@/data/scenarios/meetings';
 import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
+import { applyExpeditionEventChoice, type ExpeditionChoiceView } from './expeditionSystem';
 import { resolveMoralChoice } from './moralEventSystem';
 import { counselChoices, mediationChoices, resolveCounsel, resolveMediation } from './mediationSystem';
 import { issueOverride } from './overrideSystem';
@@ -51,6 +52,7 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'moral' ||
     d === 'seclusion_petition' ||
     d === 'quest_event' ||
+    d === 'expedition_event' ||
     d === 'graduation' ||
     d === 'meeting' ||
     d === 'mediation' ||
@@ -97,6 +99,14 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   }
   if (p.domain === 'quest_event') {
     const choices = (p.choices ?? []) as QuestEventChoiceView[];
+    return choices.map((c) => ({
+      key: c.key,
+      label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
+      disabled: !c.available,
+    }));
+  }
+  if (p.domain === 'expedition_event') {
+    const choices = (p.choices ?? []) as ExpeditionChoiceView[];
     return choices.map((c) => ({
       key: c.key,
       label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
@@ -175,6 +185,12 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
     const choices = (p.choices ?? []) as QuestEventChoiceView[];
     const choice = choices.find((c) => c.key === key);
     if (choice) applyQuestEventChoice(questId, choice);
+  } else if (p.domain === 'expedition_event') {
+    // 강호 출행 중 사건 — 선택 효과(전투·인연·횡재·위기) 적용 후 다음 사건/귀환 진행.
+    const activityId = String(p.activityId ?? '');
+    const choices = (p.choices ?? []) as ExpeditionChoiceView[];
+    const choice = choices.find((c) => c.key === key);
+    if (choice) applyExpeditionEventChoice(activityId, choice);
   } else if (p.domain === 'graduation') {
     // 사부가 권한 강호 행로 확정 → 졸업 제자 레코드 생성(평생 직책 궤적, docs/28 §4).
     const ds = useDiscipleStore.getState();
