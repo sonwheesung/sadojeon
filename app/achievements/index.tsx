@@ -11,7 +11,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 // 업적 목록(그레이박스) — 달성/미달성, 카테고리별. 숨김 업적은 미달성 시 가림. docs/32.
 // 계정 단위 영속(achievementStore). 보상·해금은 표시만 — 실제 효과는 achievementSystem.
 
-const CATEGORY_ORDER: AchCategory[] = ['martial', 'mind', 'activity', 'career', 'ganghos'];
+const CATEGORY_ORDER: AchCategory[] = ['quest', 'martial', 'mind', 'activity', 'career', 'ganghos'];
 
 export default function AchievementsScreen() {
   const unlocked = useAchievementStore((s) => s.unlocked);

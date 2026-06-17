@@ -10,6 +10,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGraduateStore } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useItemStore } from '@/stores/itemStore';
+import { useTallyStore } from '@/stores/tallyStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple } from '@/types';
 
@@ -17,7 +18,8 @@ function buildCtx(): AchCtx {
   const disciples = Object.values(useDiscipleStore.getState().disciples) as Disciple[];
   const graduates = useGraduateStore.getState().records;
   const divineHerbs = useItemStore.getState().items.find((i) => i.id === 'herb-divine')?.count ?? 0;
-  return { disciples, graduates, divineHerbs };
+  const tally = useTallyStore.getState();
+  return { disciples, graduates, divineHerbs, n: tally.n, streak: tally.streak };
 }
 
 // 업적 해금 무공서를 현 회차 codex 에 (이미 있으면 무시). 보상은 즉시 연구 완료 상태.

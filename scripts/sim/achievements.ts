@@ -7,9 +7,13 @@ import { useDiscipleStore } from '../../src/stores/discipleStore';
 import { useGraduateStore } from '../../src/stores/graduateStore';
 import { useInboxStore } from '../../src/stores/inboxStore';
 import { useItemStore } from '../../src/stores/itemStore';
+import { useTallyStore } from '../../src/stores/tallyStore';
 import { useTimeStore } from '../../src/stores/timeStore';
+import { TALLY, STREAK } from '../../src/data/tallyKeys';
 import { checkAchievements, seedUnlockedArts } from '../../src/systems/achievementSystem';
+import { recordQuestResult } from '../../src/systems/questTally';
 import type { Disciple } from '../../src/types/disciple';
+import type { Quest } from '../../src/types/quest';
 
 let pass = 0;
 let fail = 0;
@@ -20,12 +24,20 @@ function check(label: string, cond: boolean, detail = ''): void {
 
 function reset(): void {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] });
+  useTallyStore.getState().reset();
   useDiscipleStore.getState().reset();
   useGraduateStore.getState().reset();
   useItemStore.setState({ items: [] });
   useCodexStore.setState({ scrolls: [] });
   useInboxStore.getState().reset();
   useTimeStore.getState().reset();
+}
+// 의뢰 결산 한 건 — 등급·도메인·결과를 받아 집계 적립(recordQuestResult 경유).
+function quest(over: Partial<Quest> = {}): Quest {
+  return { id: 'q1', domain: 'guard', grade: 'normal', title: '의뢰', client: '아무개', preview: '', weeks: 2, reward: { money: 100, fame: 5 }, recommended: 1, minStat: 0, ...over } as Quest;
+}
+function settle(outcome: string, q: Partial<Quest> = {}, extra: Record<string, unknown> = {}): void {
+  recordQuestResult({ outcome: outcome as never, quest: quest(q), partySize: 1, death: false, fatalSurvived: false, scrollFound: false, divineElixir: false, noble: false, ...extra } as never);
 }
 function addDisc(patch: Partial<Disciple>): void {
   useDiscipleStore.getState().add({ id: patch.id ?? 'd1', name: '제자', status: 'training', relationships: {}, martialArts: [], realm: 'samryu', darknessLevel: 0, ...patch } as unknown as Disciple);
@@ -81,6 +93,47 @@ useCodexStore.setState({ scrolls: [] }); // 새 회차 codex 비움
 seedUnlockedArts();
 check('회차 리셋해도 업적 누적 유지', ach().unlocked.length === keptUnlocked.length && keptUnlocked.length > 0);
 check('해금 무공 새 회차 codex 재시드', keptArts.length > 0 && keptArts.every((a) => hasArt(a)), keptArts.join(','));
+
+// C7 의뢰 첫 완수 → 강호초행 + 누적 카운트.
+reset();
+settle('full', { domain: 'guard' });
+checkAchievements();
+check('의뢰 첫 완수 → 강호초행', ach().has('ach-quest-first'));
+check('첫 호행 도메인 달성', ach().has('ach-quest-guard'));
+check('완벽 완수 → 흠 없이', ach().has('ach-quest-flawless'));
+check('완수 카운터 1', useTallyStore.getState().n(TALLY.questDone) === 1);
+
+// C8 연속 무사고 5 → 무결의 행보(스트릭은 full 만 잇고, 비-full 에 끊김).
+reset();
+for (let i = 0; i < 5; i += 1) settle('full');
+checkAchievements();
+check('연속 5 완벽 → 무결의 행보', ach().has('ach-quest-flawless-streak5'), `streak=${useTallyStore.getState().streak(STREAK.flawless)}`);
+settle('partial'); // 끊김
+settle('full');
+check('비-full 후 스트릭 리셋', useTallyStore.getState().streak(STREAK.flawless) === 5, '최고는 유지');
+
+// C9 실패는 완수로 안 잡힘 + questFail 누적.
+reset();
+settle('fail');
+settle('disaster', {}, { death: true });
+checkAchievements();
+check('실패·재난은 완수 0', useTallyStore.getState().n(TALLY.questDone) === 0);
+check('동문 사망 → 잃어버린 동문(숨은)', ach().has('ach-quest-death'));
+
+// C10 극험·청부·신품영약·생환·육예 통달.
+reset();
+settle('full', { grade: 'extreme', domain: 'duel' });
+checkAchievements();
+check('극험 완수 → 사지를 넘다', ach().has('ach-quest-extreme'));
+reset();
+settle('crisis', { grade: 'extreme' }, { divineElixir: true, fatalSurvived: true });
+checkAchievements();
+check('신품 영약 → 천운(숨은)', ach().has('ach-quest-divine-elixir'));
+check('치명상 생환 → 사지에서 돌아오다(숨은)', ach().has('ach-quest-fatal-survived'));
+reset();
+(['guard', 'scout', 'duel', 'medicine', 'assassin', 'grand'] as const).forEach((domain) => settle('full', { domain }));
+checkAchievements();
+check('6도메인 완수 → 육예 통달', ach().has('ach-quest-all-domains'));
 
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);
