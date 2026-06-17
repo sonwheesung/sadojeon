@@ -1,5 +1,5 @@
 // 마교 무공서 — docs/04. 간판은 정통 캔온, 사다리는 다리 비급(일반명 창작).
-// 구성(30권): 마공 14 · 권 4 · 보법 4 · 심법 4 · 도 2 · 검 2 / 하품 7 · 중품 10 · 상품 8 · 절품 5(기존 유지).
+// 구성(31권): 마공 15 · 권 4 · 보법 4 · 심법 4 · 도 2 · 검 2 / 하품 7 · 중품 10 · 상품 8 · 절품 5 · 신품 1(천마신공, 마도 정점).
 // 전 항목 흑화 게이트(minDarkness): 하·중품 1 / 상품 1~2 / 절품 2~3. 건곤대나이만 path 'jung'.
 // 뿌리(하품): 섭혼술·역혈공·마라권·마기심법 (+마영보는 초상비 뿌리).
 // 외부 연결: 혈마공 ← 사파 흑풍권(heukpung-fist) 5성.
@@ -150,6 +150,21 @@ export const MAGYO_ARTS: MartialArt[] = [
     prerequisites: [{ artId: 'hwagong-daebeop', minSeong: 5 }],
     minDarkness: 2,
     traits: ['drain'], // 흡공 — 적 내공을 빨아 자신을 채운다(이종진기 → 심마). 광역 아님(단일 흡착).
+  },
+  {
+    id: 'cheonma-singong',
+    name: '천마신공',
+    hanjaName: '天魔神功',
+    description:
+      '마교 교주에게만 잇는 마(魔)의 정점. 천하의 마기를 한 몸에 거느려 만마(萬魔)를 굴복시킨다 — 사람이 천마가 되어야 비로소 완성되는 신공(神功).',
+    school: 'darkArts', grade: 'legendary', path: 'ma',
+    isSectArt: false, lineage: 'magyo', acquisition: 'achievement', // 첫 천마(졸업) 업적으로 영구 해금. docs/32·21.
+    prerequisites: [
+      { artId: 'cheonma-bijeon', minSeong: 8 }, // 절품 마공 비전을 깊이 — 천마로 가는 길목
+      { artId: 'magyo-manma-simgong', minSeong: 6 }, // 만마를 거느릴 심법 그릇
+    ],
+    minDarkness: 4, // 어둠에 완전히 삼켜진 자만 완성한다(천마 직업과 같은 게이트). docs/13·21.
+    traits: ['drain', 'sweep'], // 흡공(이종진기 → 심마) + 만마 광역 — 마의 정점.
   },
 
   // ─── 권(fist) 4 — 마라권 → 혈수장 → 광마권, 화골면장(소수마공 선행) ───
