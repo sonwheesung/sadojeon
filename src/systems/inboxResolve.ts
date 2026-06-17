@@ -13,7 +13,7 @@ import type {
   PendingMoralEvent,
 } from '@/types';
 import { SECLUSION_PETITION_DAYS } from '@/data/realm';
-import { graduateToCareer } from './careerSystem';
+import { resolveGraduationPick, resolveGraduationConflict } from './graduationChoice';
 import { applyMeetingChoice } from './meetingSystem';
 import type { MeetingOption } from '@/data/scenarios/meetings';
 import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
@@ -54,6 +54,7 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'quest_event' ||
     d === 'expedition_event' ||
     d === 'graduation' ||
+    d === 'graduation_conflict' ||
     d === 'meeting' ||
     d === 'mediation' ||
     d === 'counsel'
@@ -113,7 +114,7 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
       disabled: !c.available,
     }));
   }
-  if (p.domain === 'graduation') {
+  if (p.domain === 'graduation' || p.domain === 'graduation_conflict') {
     const choices = (p.choices ?? []) as GraduationChoiceView[];
     return choices.map((c) => ({ key: c.key, label: c.label }));
   }
@@ -192,13 +193,16 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
     const choice = choices.find((c) => c.key === key);
     if (choice) applyExpeditionEventChoice(activityId, choice);
   } else if (p.domain === 'graduation') {
-    // 사부가 권한 강호 행로 확정 → 졸업 제자 레코드 생성(평생 직책 궤적, docs/28 §4).
-    const ds = useDiscipleStore.getState();
-    const d = ds.disciples[discipleId];
-    if (d) {
-      ds.update(discipleId, { graduatedJob: key });
-      graduateToCareer(d, key);
-    }
+    // 사부가 권한 강호 행로 — 제자 의지와 어긋나면 갈등 이벤트로, 아니면 확정. docs/28 §3·§3④.
+    resolveGraduationPick(discipleId, key);
+  } else if (p.domain === 'graduation_conflict') {
+    // 엇갈린 뜻 — 설득(사부의 길)/존중(제자의 길)으로 최종 확정. docs/28 §3④.
+    resolveGraduationConflict(
+      discipleId,
+      String(p.userPickId ?? ''),
+      String(p.willJobId ?? ''),
+      key === 'respect' ? 'respect' : 'persuade',
+    );
   } else if (p.domain === 'meeting') {
     // 면담 응답 — 선택지 효과(인격·신뢰·흑화·노선) 적용.
     const options = (p.options ?? []) as MeetingOption[];

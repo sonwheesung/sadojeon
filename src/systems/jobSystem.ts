@@ -144,6 +144,42 @@ export interface JobChance {
   prob: number; // 0~1
 }
 
+// ─── 제자 의지 — docs/28 §3④ ────────────────────────────────────────────────
+// 인격이 **뚜렷**하면 제자는 후보 중 본인이 가장 끌리는 길을 원한다(자비90→의원·정파).
+// **밋밋**(전 축 ~50)하면 방향이 없어 "스승님이 정해주십시오"(의지 없음 → null).
+const PERSONA_AXES: (keyof PersonalityTraits)[] = [
+  'integrity', 'freedom', 'warmth', 'prudence', 'mercy', 'ambition',
+];
+const WILL_AXIS_THRESHOLD = 25; // 가장 두드러진 축이 중립(50)에서 이만큼은 벗어나야 "뚜렷"
+const WILL_MARGIN = 0.15; //      의지 직업이 사용자 선택보다 인격 부합 이만큼 높아야 갈등(살짝 차이는 수용)
+
+// 후보 중 제자가 인격으로 가장 원하는 직업. 인격이 밋밋하면 null.
+export function discipleWill(d: Disciple, jobs: Job[]): Job | null {
+  const maxDev = Math.max(0, ...PERSONA_AXES.map((a) => Math.abs((d.personality[a] ?? 50) - 50)));
+  if (maxDev < WILL_AXIS_THRESHOLD) return null;
+  let best: Job | null = null;
+  let bestFit = -1;
+  for (const j of jobs) {
+    const f = personaFit(d, j);
+    if (f > bestFit) {
+      bestFit = f;
+      best = j;
+    }
+  }
+  return best;
+}
+
+// 사용자 선택이 제자의 뚜렷한 의지와 어긋나는가 — 어긋나는 의지 직업 반환(아니면 null).
+// 갈등 = 의지 직업이 별도로 있고(≠선택), 인격 부합이 선택보다 WILL_MARGIN 이상 높을 때.
+export function graduationWillConflict(d: Disciple, candidates: Job[], chosenId: string): Job | null {
+  const will = discipleWill(d, candidates);
+  if (!will || will.id === chosenId) return null;
+  const chosen = candidates.find((j) => j.id === chosenId);
+  if (!chosen) return null;
+  if (personaFit(d, will) - personaFit(d, chosen) < WILL_MARGIN) return null;
+  return will;
+}
+
 // 졸업 시점 가능 직업 + 확률(적합도×격 가중×문파 평판×흑화, 정규화). 조건 충족 직업만, 확률 내림차순.
 // **같은 노선(직종)은 확률로 가르지 않는다**(2026-06-14): 자격되는 직업을 노선별로 묶어 **가장 높은 직책 하나**로
 //  수렴 → 후보는 "노선마다 대표 1개". 강호 의원·신의 둘 다 자격이면 신의만(강호 의원→신의 승급은 졸업 후 careerSystem).
