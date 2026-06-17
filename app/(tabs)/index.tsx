@@ -8,6 +8,7 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { DailyChoiceModal } from '@/components/dialogue/DailyChoiceModal';
 import { DailySettlementModal } from '@/components/dialogue/DailySettlementModal';
+import { FieldEventOverlay } from '@/components/dialogue/FieldEventOverlay';
 import { MilestoneModal } from '@/components/dialogue/MilestoneModal';
 import { MonthlyReportModal } from '@/components/dialogue/MonthlyReportModal';
 import { MonthlyScheduleModal } from '@/components/dialogue/MonthlyScheduleModal';
@@ -85,6 +86,8 @@ export default function SectScreen() {
       <DailySettlementModal />
       <MilestoneModal />
       <CutsceneOverlay />
+      {/* 강호 출행·의뢰 중 급보 — 정산 닫힌 뒤 컷씬+선택 모달로(서신함 아님). docs/20·38 */}
+      <FieldEventOverlay />
     </SafetyZone>
   );
 }

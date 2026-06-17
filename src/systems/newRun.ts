@@ -14,6 +14,7 @@ import { deriveMaxStamina, START_ENDURANCE_LEVEL } from '@/data/training';
 import {
   useCodexStore,
   useCutsceneStore,
+  useFieldEventStore,
   useDiscipleStore,
   useEventHistoryStore,
   useGraduateStore,
@@ -200,6 +201,7 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   useEventHistoryStore.getState().reset();
   useLlmSettingsStore.getState().resetCounter();
   useCutsceneStore.getState().clear(); // 재생 못 한 컷씬 잔여 큐 — 새 회차로 안 넘김
+  useFieldEventStore.getState().clear(); // 미해소 현장 급보 잔여 큐 — 새 회차로 안 넘김
   // 자식 도메인(서신함·강호·물품·NPC) 회차 초기 상태로 — 각 슬라이스가 알아서 비우거나 시드.
   RUN_CHILD_SLICES.forEach((slice) => slice.reset());
 

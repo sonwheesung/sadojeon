@@ -126,7 +126,9 @@ export function triggerPostSettlement(): void {
   // 졸업 체크 — 조건 만족 제자 status='graduated' + milestone 큐 + phase='ended' (전원 완주 시).
   checkGraduations();
 
-  // 진행 중 발생 이벤트는 모두 서신함에 적재 — 화면에 모달을 띄우지 않는다.
+  // 한가한 이벤트(도덕·희망·한마디·면담 등)는 서신함에 적재(비동기 응답).
+  // 단, 강호 출행·의뢰 중 **현장 급보**는 예외 — tickQuests/tickActivities 가 fieldEventStore 에
+  // 쌓고, 정산 모달이 닫힌 뒤 FieldEventOverlay 가 컷씬+선택 모달로 그 자리에서 처리한다. docs/20·38.
 
   // 도덕 갈등 이벤트 — 엔진이 pending 에 세팅한 걸 서신함으로 옮기고 pending 비움.
   triggerDailyMoralEvent();

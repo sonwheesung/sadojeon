@@ -21,3 +21,5 @@ export { useEventHistoryStore } from './eventHistoryStore';
 export { useLlmSettingsStore } from './llmSettingsStore';
 export { useCutsceneStore } from './cutsceneStore';
 export type { PlayingCutscene } from './cutsceneStore';
+export { useFieldEventStore } from './fieldEventStore';
+export type { FieldEvent } from './fieldEventStore';

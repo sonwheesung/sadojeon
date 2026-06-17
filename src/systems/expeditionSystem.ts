@@ -12,6 +12,7 @@ import {
 } from '@/data/expeditionEvents';
 import { useActivityStore } from '@/stores/activityStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useFieldEventStore, type FieldEventChoiceView } from '@/stores/fieldEventStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -37,10 +38,21 @@ import type {
   ExpeditionDest,
   ExpeditionEffect,
   ExpeditionEvent,
+  ExpeditionEventCategory,
   ExpeditionRoll,
 } from '@/types/activity';
+import type { CutsceneTone } from '@/data/cutscenes';
 import type { Realm } from '@/types/realm';
 import type { StatId } from '@/types/training';
+
+// 사건 결 → 컷씬 한자·톤(그레이박스). 전투·위기=혈(붉음), 인연·횡재=금, 풍문=먹.
+const EXP_CAT_SCENE: Record<ExpeditionEventCategory, { hanzi: string; tone: CutsceneTone }> = {
+  combat: { hanzi: '戰', tone: 'blood' },
+  crisis: { hanzi: '危', tone: 'blood' },
+  bond: { hanzi: '緣', tone: 'gold' },
+  fortune: { hanzi: '財', tone: 'gold' },
+  rumor: { hanzi: '聞', tone: 'ink' },
+};
 
 // ─── 가용·게이트 ─────────────────────────────────────────────────────────
 function isFree(d: Disciple): boolean {
@@ -171,7 +183,6 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
     return;
   }
   const ds = useDiscipleStore.getState();
-  const leadName = ds.disciples[active.discipleIds[0]]?.name ?? '제자';
   const names = active.discipleIds.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const choices: ExpeditionChoiceView[] = event.choices.map((c) => {
     const { available, note } = evalRequire(active, c);
@@ -186,20 +197,22 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
       cost: c.require?.money ?? 0,
     };
   });
-  const itemId = `xevent-${active.id}-${event.id}-${fired}`;
-  useInboxStore.getState().add({
-    id: itemId,
-    kind: 'event',
-    eventId: event.id,
-    title: `${leadName} — 출행 중 급보`,
-    preview: `[강호 출행·${dest.name}] (${names})\n${event.prompt}`,
-    priority: 'high',
-    createdAtDay: useTimeStore.getState().totalDay,
-    read: false,
-    resolved: false,
-    payload: { domain: 'expedition_event', activityId: active.id, choices },
+  // 현장 급보 — 서신함이 아니라 컷씬+모달로 그 자리에서 선택. 사건 결마다 한자·톤. docs/20·38.
+  const scene = EXP_CAT_SCENE[event.category];
+  const evId = `xevent-${active.id}-${event.id}-${fired}`;
+  useFieldEventStore.getState().push({
+    id: evId,
+    source: 'expedition',
+    refId: active.id,
+    title: `강호 출행 — ${dest.name}`,
+    hanzi: scene.hanzi,
+    tone: scene.tone,
+    sceneLine: `${names}의 여정 중, 길 위에서 일이 벌어졌다.`,
+    prompt: event.prompt,
+    who: names,
+    choices: choices as unknown as FieldEventChoiceView[],
   });
-  useActivityStore.getState().updateActive(active.id, { firedCount: fired, pendingEventId: itemId });
+  useActivityStore.getState().updateActive(active.id, { firedCount: fired, pendingEventId: evId });
 }
 
 // ─── 선택 효과 적용 ───────────────────────────────────────────────────────
