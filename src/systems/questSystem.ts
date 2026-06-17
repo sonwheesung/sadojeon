@@ -13,13 +13,14 @@ import {
   maxGradeForReputation,
 } from '@/data/quests';
 import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
-import { MARTIAL_ARTS, findMartialArt, expToNextSeong, seongCap, GRADE_LEARN_MULT } from '@/data/martialArts';
+import { MARTIAL_ARTS } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
-import { REALM_SEONG_CAP, realmIndex } from '@/data/realm';
+import { realmIndex } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useQuestStore } from '@/stores/questStore';
+import { useFieldEventStore, type FieldEventChoiceView } from '@/stores/fieldEventStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -29,7 +30,7 @@ import { useJianghuStore } from '@/stores/jianghuStore';
 import { worldThreat } from './worldSystem';
 import { adjustDiscipleRep, adjustSectRep, applyAlignmentReputation, applyCovertReputation } from './reputationSystem';
 import { shiftPersona } from './personaShift';
-import { applyPrereqTrickle, gainMainSeongExpArts } from './martialExp';
+import { gainMainSeongExpArts } from './martialExp';
 import { isResearchInstant } from './researchSystem';
 import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat, type NpcArchetype } from './combat';
 import { playCutscene } from './cutsceneSystem';
@@ -364,7 +365,6 @@ function maybeFireEvent(active: ActiveQuest): void {
   const event = pickEvent(active);
   if (!event) return;
   const ds = useDiscipleStore.getState();
-  const leadName = ds.disciples[active.discipleIds[0]]?.name ?? '제자';
   const names = active.discipleIds.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const choices: QuestEventChoiceView[] = event.choices.map((c) => {
     const { available, note } = evalRequire(active, c);
@@ -379,20 +379,21 @@ function maybeFireEvent(active: ActiveQuest): void {
       cost: c.require?.money ?? 0,
     };
   });
-  const itemId = `qevent-${active.quest.id}-${event.id}`;
-  useInboxStore.getState().add({
-    id: itemId,
-    kind: 'event',
-    eventId: event.id,
-    title: `${leadName} — 의뢰 중 급보`,
-    preview: `[${QUEST_GRADE_LABEL[active.quest.grade]}·${QUEST_DOMAIN_LABEL[active.quest.domain]}] ${active.quest.title} (${names})\n${event.prompt}`,
-    priority: 'high',
-    createdAtDay: useTimeStore.getState().totalDay,
-    read: false,
-    resolved: false,
-    payload: { domain: 'quest_event', questId: active.quest.id, choices },
+  // 현장 급보 — 서신함이 아니라 컷씬+모달로 그 자리에서 선택(턴 진행 흐름 안). docs/20·38.
+  const evId = `qevent-${active.quest.id}-${event.id}`;
+  useFieldEventStore.getState().push({
+    id: evId,
+    source: 'quest',
+    refId: active.quest.id,
+    title: `의뢰 중 급보 — ${QUEST_GRADE_LABEL[active.quest.grade]}·${QUEST_DOMAIN_LABEL[active.quest.domain]}`,
+    hanzi: '急',
+    tone: 'ink',
+    sceneLine: `「${active.quest.title}」 도중, ${names}에게 뜻밖의 일이 닥쳤다.`,
+    prompt: event.prompt,
+    who: names,
+    choices: choices as unknown as FieldEventChoiceView[],
   });
-  useQuestStore.getState().updateActive(active.quest.id, { pendingEventId: itemId });
+  useQuestStore.getState().updateActive(active.quest.id, { pendingEventId: evId });
 }
 
 // 구한 이의 정체 공개 — 평민/명문(정파)/사파 무작위. 명문·사파는 그 문파 평판↑(동행 제자 인연도).

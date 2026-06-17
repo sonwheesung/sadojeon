@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useInboxStore } from '@/stores/inboxStore';
+import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import type { LlmDebugEntry } from '@/stores/pendingStore';
 import { triggerPostSettlement } from '@/systems/timeSystem';
@@ -38,7 +39,10 @@ export function DailySettlementModal() {
   const onClose = () => {
     clearStore();
     triggerPostSettlement();
-    // 진행 결과 사문함에 응답 필수(이벤트·면담·의뢰제안) 항목이 생겼으면 바로 사문함으로 이동.
+    // 강호/의뢰 현장 급보가 대기 중이면 사문함으로 보내지 않는다 — FieldEventOverlay 가
+    // 컷씬+선택 모달로 먼저 처리(서신함 아님). docs/20·38.
+    if (useFieldEventStore.getState().queue.length > 0) return;
+    // 그 외 응답 필수(면담·희망·도덕 등) 항목이 생겼으면 바로 사문함으로 이동.
     if (useInboxStore.getState().decisionPendingCount() > 0) {
       router.push('/inbox');
     }
