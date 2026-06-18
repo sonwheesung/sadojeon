@@ -50,6 +50,7 @@ import { runs as runsRepo } from '@/data/repositories';
 // 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
 import { newRun as serverNewRun, advance as serverAdvance, type TurnResult } from '@/engine/serverEngine';
 import { getGameApi } from '@/engine/gameApi';
+import { captureGameState, commitGameState } from '@/engine/gameState';
 
 const SEED_POOL = ['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon'];
 
@@ -1948,6 +1949,15 @@ async function serverTurnDemo(): Promise<void> {
   serverNewRun(SERVER_PARTY, 1, accA); // A 다시 적재(싱글톤에 A 잔류 상태)
   const noIso = serverAdvance(baseA.state, baseA.rngState); // account 생략 → 직전 유저 잔류(격리 필요성)
   ck('account 미전달 시 직전(A) 잔류 → 격리 필요성 확인', noIso.account.achievement.unlocked.includes('ach-jeoljeong'));
+
+  // 7) 세이브 라운드트립 — 실제로 플레이한 회차 상태를 DB처럼 JSON 직렬화→역직렬화→commit→capture.
+  //    비-JSON 값(undefined/Date/Map/Set/함수/NaN)이 섞이면 라운드트립서 상태가 달라진다(영속 손상 검출).
+  const real = runChain(2024, 120).state;
+  const realJson = J(real);
+  const roundTripped = JSON.parse(realJson); // DB 저장→로드 모사(undefined 키 소실 등 노출)
+  ck('실 회차 상태 JSON 라운드트립 항등(직렬화 안전)', J(roundTripped) === realJson);
+  commitGameState(roundTripped as never);
+  ck('역직렬화 상태 commit→capture 항등', J(captureGameState()) === realJson);
 
   console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
   console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);
