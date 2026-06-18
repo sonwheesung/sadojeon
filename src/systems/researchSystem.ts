@@ -26,8 +26,8 @@ export const RESEARCH_DURATION_MS: Record<MartialArtGrade, number> = {
   legendary: 24 * HOUR,
 };
 
-// 다이아 즉시 완료 비용 — 남은 시간 30분당 1 (최소 1). 🔧
-export const DIAMOND_PER_30MIN = 1;
+// 다이아 즉시 완료 비용 — 남은 시간 **1분당 1** (최소 1). 🔧 (2026-06-18)
+export const DIAMOND_PER_MIN = 1;
 
 // 헤드리스 시뮬·개발용 — 연구를 즉시 완료(실시간 타이머는 시뮬과 양립 불가).
 let researchInstant = false;
@@ -123,7 +123,8 @@ export function researchProgressPct(artId: string): number {
 export function diamondCostFor(artId: string): number {
   const remain = remainingMs(artId);
   if (remain <= 0) return 0;
-  return Math.max(1, Math.ceil(remain / (30 * MIN)) * DIAMOND_PER_30MIN);
+  return Math.max(1, Math.ceil(remain / MIN) * DIAMOND_PER_MIN); // 남은 시간 1분당 1
+
 }
 
 // 다이아 즉시 완료 — 잔액 부족이면 false. 호출측(UI)이 확인창(useConfirm)을 먼저 띄울 것.
