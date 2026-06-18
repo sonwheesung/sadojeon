@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
@@ -35,8 +35,10 @@ export default function SectScreen() {
   // 사용자가 풀에서 2~4명 선택 + 시작 → seedNewRun 호출 → master 채워짐 → 자동 숨김.
   const isFresh = useMasterStore((s) => s.master == null);
 
-  // 진행 → 일일 세부 선택 모달 → 확정 시 advanceTurn.
+  // 진행 → 일일 세부 선택 모달 → 확정 시 하루 진행(GameApi).
   const [choiceOpen, setChoiceOpen] = useState(false);
+  // 진행 중복 방지 — 원격(서버) 왕복 중 재확정 시 두 번 진행되는 것 차단. 로컬은 동기라 즉시 해제.
+  const advancingRef = useRef(false);
 
   // 사부 사망 → phase='ended' 전환 시 회차 종결 화면으로 자동 진입.
   const phase = useGameStore((s) => s.phase);
@@ -77,7 +79,14 @@ export default function SectScreen() {
         onCancel={() => setChoiceOpen(false)}
         onConfirm={() => {
           setChoiceOpen(false);
-          void getGameApi().advance(); // 하루 진행 — 서버 인터페이스 경유(로컬 어댑터=기존 동작)
+          if (advancingRef.current) return; // 진행 중이면 무시(원격 왕복 중 중복 진행 차단)
+          advancingRef.current = true;
+          getGameApi()
+            .advance() // 하루 진행 — 서버 인터페이스 경유(로컬 어댑터=기존 동작)
+            .catch((e) => console.warn('[advance] 진행 실패', e))
+            .finally(() => {
+              advancingRef.current = false;
+            });
         }}
       />
       <StartSelectModal visible={isFresh} onComplete={() => saveCurrentRunSilently()} />

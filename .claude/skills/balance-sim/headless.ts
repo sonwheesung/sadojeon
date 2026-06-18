@@ -1938,12 +1938,13 @@ async function serverTurnDemo(): Promise<void> {
   ck('api.advance+settle 30회 → 상태 진행', J(last.state) !== before);
 
   // 6) 계정 격리 — 서버 warm 인스턴스 유저 누수 차단(docs/37 C10). account 전달 시 격리.
-  const accA = { achievement: { unlocked: ['ach-jeoljeong'], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} } } as never;
-  const accB = { achievement: { unlocked: [] as string[], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} } } as never;
+  const accA = { achievement: { unlocked: ['ach-jeoljeong'], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} }, diamonds: 999 } as never;
+  const accB = { achievement: { unlocked: [] as string[], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} }, diamonds: 0 } as never;
   const baseA = serverNewRun(SERVER_PARTY, 1, accA);
-  ck('계정 로드 — A 업적 적재', baseA.account.achievement.unlocked.includes('ach-jeoljeong'));
+  ck('계정 로드 — A 업적·다이아 적재', baseA.account.achievement.unlocked.includes('ach-jeoljeong') && baseA.account.diamonds === 999);
   const runB = serverAdvance(baseA.state, baseA.rngState, accB); // 유저 B(빈) 로드
   ck('계정 격리 — B 턴에 A 업적 안 샘', !runB.account.achievement.unlocked.includes('ach-jeoljeong'));
+  ck('계정 격리 — B 턴에 A 다이아 안 샘', runB.account.diamonds === 0);
   serverNewRun(SERVER_PARTY, 1, accA); // A 다시 적재(싱글톤에 A 잔류 상태)
   const noIso = serverAdvance(baseA.state, baseA.rngState); // account 생략 → 직전 유저 잔류(격리 필요성)
   ck('account 미전달 시 직전(A) 잔류 → 격리 필요성 확인', noIso.account.achievement.unlocked.includes('ach-jeoljeong'));
