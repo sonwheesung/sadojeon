@@ -49,6 +49,7 @@ import { REALM_LABEL } from '@/types/realm';
 import { runs as runsRepo } from '@/data/repositories';
 // 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
 import { newRun as serverNewRun, advance as serverAdvance, type TurnResult } from '@/engine/serverEngine';
+import { getGameApi } from '@/engine/gameApi';
 
 const SEED_POOL = ['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon'];
 
@@ -1922,6 +1923,16 @@ async function serverTurnDemo(): Promise<void> {
   ck('한 턴 진행됨', J(s1.state) !== J(mid.state));
   const s3 = serverAdvance(mid.state, (mid.rngState ^ 0x1234) >>> 0); // 다른 시드상태
   ck('다른 시드상태 → 다른 결과', J(s1.state) !== J(s3.state));
+
+  // 5) GameApi 인터페이스(로컬 어댑터) — 앱이 쓸 계약이 Node에서 구동·진행·이벤트 반환.
+  const api = getGameApi();
+  ck('getGameApi → 로컬 어댑터(비권위)', api.authoritative === false);
+  const r1 = await api.newRun(SERVER_PARTY);
+  ck('api.newRun 구동 + events', !!r1.state && ['pending', 'field', 'cutscene', 'moral'].every((k) => k in r1.events));
+  const before = J(r1.state);
+  let last = r1;
+  for (let i = 0; i < 30; i += 1) last = await api.advance();
+  ck('api.advance 30회 → 상태 진행', J(last.state) !== before);
 
   console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
   console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);
