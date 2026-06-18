@@ -1,0 +1,16 @@
+{
+  "name": "sadojeon-server",
+  "private": true,
+  "type": "module",
+  "description": "사도전 서버 권위 엔진 — Vercel 서버리스 함수(docs/31). 앱이 호출, 서버가 전 상태·시뮬 소유.",
+  "scripts": {
+    "build": "node build-engine.mjs",
+    "verify": "node build-engine.mjs && node verify.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
