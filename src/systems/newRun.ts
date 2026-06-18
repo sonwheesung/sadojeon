@@ -190,8 +190,11 @@ export function seedNewRun(selectedPoolIds: string[]): void {
     .filter((d): d is Disciple => d != null);
   seedStartingRelations(list); // docs/15 시작 적대·친밀
   useDiscipleStore.getState().setAll(list);
-  // 사문 비급 시드 — 기존 보유 비급은 회차 영속이지만 첫 회차이므로 추가.
+  // 비급 연구 회차 리셋 — 비급 원본은 영속이나 **연구 진행도는 회차마다 0**(새 사부가 다시 푼다, docs/16).
+  // seedNewRun 자체에 둔다 — 서버/헤드리스 경로는 endRun 을 안 거쳐 이전 회차 완료연구가 그대로 새던 누수 차단.
   const codex = useCodexStore.getState();
+  codex.resetForNewRun();
+  // 사문 비급 시드 — 기존 보유 비급은 회차 영속이지만 첫 회차이므로 추가.
   for (const scroll of sectScrolls()) {
     if (!codex.hasScroll(scroll.artId)) {
       codex.addScroll(scroll);
