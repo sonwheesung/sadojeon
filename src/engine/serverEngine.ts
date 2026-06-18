@@ -15,6 +15,7 @@ import { seedNewRun } from '@/systems/newRun';
 import { setAutoSaveEnabled } from '@/systems/runSync';
 import { seedAmbient, ambientCursor } from '@/systems/rng';
 import { captureGameState, commitGameState, cloneGameState, type GameState } from './gameState';
+import { captureAccountState, commitAccountState, resetAccountState, type AccountState } from './accountState';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { useCutsceneStore } from '@/stores/cutsceneStore';
@@ -30,9 +31,18 @@ export interface TurnEvents {
 }
 
 export interface TurnResult {
-  state: GameState; //   영속 — DB 저장
-  rngState: number; //   전진된 시드 상태 — DB 저장(유저 비공개)
-  events: TurnEvents; // 응답 — 클라 렌더(영속 X)
+  state: GameState; //     영속 — DB 저장(회차)
+  account: AccountState; // 영속 — DB 저장(유저 단위: 업적·집계)
+  rngState: number; //     전진된 시드 상태 — DB 저장(유저 비공개)
+  events: TurnEvents; //   응답 — 클라 렌더(영속 X)
+}
+
+// 요청 클린 슬레이트 — 유저 account 를 로드(없으면 빈 상태). 서버 유저 간 누수 차단. docs/37 C10.
+// 안 넘기면 현 계정 스토어 유지(로컬·테스트 호환).
+function loadAccount(account?: AccountState): void {
+  if (!account) return;
+  resetAccountState();
+  commitAccountState(account);
 }
 
 function pickData<T extends object>(state: T): Record<string, unknown> {
@@ -70,23 +80,35 @@ function ensureServerMode(): void {
   configured = true;
 }
 
-// 새 회차 — 서버가 생성한 초기 시드로 시드 고정 후 시드. 시작 상태 + 시드상태 반환.
-export function newRun(party: string[], seed: number): TurnResult {
+// 새 회차 — 서버가 생성한 초기 시드로 시드 고정 후 시드. account 넘기면 그 유저로 격리.
+export function newRun(party: string[], seed: number, account?: AccountState): TurnResult {
   ensureServerMode();
   resetEphemeral();
+  loadAccount(account);
   seedAmbient(seed);
   seedNewRun(party);
-  return { state: cloneGameState(captureGameState()), rngState: ambientCursor(), events: captureEvents() };
+  return {
+    state: cloneGameState(captureGameState()),
+    account: captureAccountState(),
+    rngState: ambientCursor(),
+    events: captureEvents(),
+  };
 }
 
-// 하루 진행 — 로드된 상태 + 현재 시드상태로 한 턴(정산 포함). 새 상태·시드상태·이벤트 반환.
-// 같은 (state, rngState) → 항상 같은 결과(serverturn 실증) → 세이브 스커밍 봉쇄.
-export function advance(state: GameState, rngState: number): TurnResult {
+// 하루 진행 — 로드된 상태 + 현재 시드상태로 한 턴(정산 포함). account 넘기면 그 유저로 격리(누수 차단).
+// 같은 (state, account, rngState) → 항상 같은 결과(serverturn 실증) → 세이브 스커밍 봉쇄.
+export function advance(state: GameState, rngState: number, account?: AccountState): TurnResult {
   ensureServerMode();
   resetEphemeral();
+  loadAccount(account); // 유저 계정 격리(업적·집계) — docs/37 C10
   commitGameState(cloneGameState(state)); // 스토어 통째 덮기(클린 슬레이트)
   seedAmbient(rngState);
   advanceTurn();
   triggerPostSettlement();
-  return { state: cloneGameState(captureGameState()), rngState: ambientCursor(), events: captureEvents() };
+  return {
+    state: cloneGameState(captureGameState()),
+    account: captureAccountState(),
+    rngState: ambientCursor(),
+    events: captureEvents(),
+  };
 }

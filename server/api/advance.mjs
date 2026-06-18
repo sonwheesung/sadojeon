@@ -19,6 +19,10 @@ export default async function handler(req, res) {
     .from('run_secrets').select('rng_state, turn').eq('run_id', run.id).single();
 
   // ── 엔진 (동기 critical section — yield 없음 → 요청 간 무오염) ──
+  // ⚠️ 컷오버 시: 유저 계정 상태(업적·집계)를 DB에서 로드해 3번째 인자로 넘겨야 한다
+  //   (warm 인스턴스 유저 간 누수 차단 — docs/37 C10). 엔진은 account 받으면 reset+load 격리.
+  //   예: const account = await loadUserAccount(admin, user.id); advance(run.state, rng, account);
+  //   그리고 result.account 를 유저 계정 테이블에 저장. (계정 DB 테이블 신설 필요 — 미구현)
   const result = advance(run.state, Number(secret?.rng_state ?? 0));
 
   // ── 저장 (await) ──

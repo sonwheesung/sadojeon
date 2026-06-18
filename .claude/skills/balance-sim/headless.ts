@@ -1937,6 +1937,17 @@ async function serverTurnDemo(): Promise<void> {
   }
   ck('api.advance+settle 30회 → 상태 진행', J(last.state) !== before);
 
+  // 6) 계정 격리 — 서버 warm 인스턴스 유저 누수 차단(docs/37 C10). account 전달 시 격리.
+  const accA = { achievement: { unlocked: ['ach-jeoljeong'], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} } } as never;
+  const accB = { achievement: { unlocked: [] as string[], unlockedArts: [] as string[] }, tally: { counts: {}, streaks: {}, maxStreaks: {} } } as never;
+  const baseA = serverNewRun(SERVER_PARTY, 1, accA);
+  ck('계정 로드 — A 업적 적재', baseA.account.achievement.unlocked.includes('ach-jeoljeong'));
+  const runB = serverAdvance(baseA.state, baseA.rngState, accB); // 유저 B(빈) 로드
+  ck('계정 격리 — B 턴에 A 업적 안 샘', !runB.account.achievement.unlocked.includes('ach-jeoljeong'));
+  serverNewRun(SERVER_PARTY, 1, accA); // A 다시 적재(싱글톤에 A 잔류 상태)
+  const noIso = serverAdvance(baseA.state, baseA.rngState); // account 생략 → 직전 유저 잔류(격리 필요성)
+  ck('account 미전달 시 직전(A) 잔류 → 격리 필요성 확인', noIso.account.achievement.unlocked.includes('ach-jeoljeong'));
+
   console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
   console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);
   console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);

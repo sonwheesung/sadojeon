@@ -15105,11 +15105,11 @@ init_gameStore();
 var MIN = 6e4;
 var HOUR = 60 * MIN;
 var RESEARCH_DURATION_MS = {
-  novice: 5 * MIN,
-  apprentice: 30 * MIN,
-  master: 2 * HOUR,
-  grandmaster: 6 * HOUR,
-  legendary: 12 * HOUR
+  novice: 10 * MIN,
+  apprentice: 60 * MIN,
+  master: 4 * HOUR,
+  grandmaster: 12 * HOUR,
+  legendary: 24 * HOUR
 };
 var researchInstant = false;
 function isResearchInstant() {
@@ -28483,7 +28483,40 @@ function cloneGameState(state) {
   return JSON.parse(JSON.stringify(state));
 }
 
+// src/engine/accountState.ts
+var ACCOUNT_STORES = {
+  achievement: useAchievementStore,
+  tally: useTallyStore
+};
+function dataOnly2(state) {
+  const out = {};
+  for (const [k, v] of Object.entries(state)) if (typeof v !== "function") out[k] = v;
+  return out;
+}
+function captureAccountState() {
+  const acc = {};
+  for (const key of Object.keys(ACCOUNT_STORES)) {
+    acc[key] = dataOnly2(ACCOUNT_STORES[key].getState());
+  }
+  return acc;
+}
+function commitAccountState(state) {
+  for (const key of Object.keys(ACCOUNT_STORES)) {
+    const store2 = ACCOUNT_STORES[key];
+    store2.setState(state[key]);
+  }
+}
+function resetAccountState() {
+  useAchievementStore.setState({ unlocked: [], unlockedArts: [] });
+  useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} });
+}
+
 // src/engine/serverEngine.ts
+function loadAccount(account) {
+  if (!account) return;
+  resetAccountState();
+  commitAccountState(account);
+}
 function pickData(state) {
   const out = {};
   for (const [k, v] of Object.entries(state)) if (typeof v !== "function") out[k] = v;
@@ -28519,21 +28552,33 @@ function ensureServerMode() {
   setAutoSaveEnabled(false);
   configured = true;
 }
-function newRun(party, seed) {
+function newRun(party, seed, account) {
   ensureServerMode();
   resetEphemeral();
+  loadAccount(account);
   seedAmbient(seed);
   seedNewRun(party);
-  return { state: cloneGameState(captureGameState()), rngState: ambientCursor(), events: captureEvents() };
+  return {
+    state: cloneGameState(captureGameState()),
+    account: captureAccountState(),
+    rngState: ambientCursor(),
+    events: captureEvents()
+  };
 }
-function advance(state, rngState) {
+function advance(state, rngState, account) {
   ensureServerMode();
   resetEphemeral();
+  loadAccount(account);
   commitGameState(cloneGameState(state));
   seedAmbient(rngState);
   advanceTurn();
   triggerPostSettlement();
-  return { state: cloneGameState(captureGameState()), rngState: ambientCursor(), events: captureEvents() };
+  return {
+    state: cloneGameState(captureGameState()),
+    account: captureAccountState(),
+    rngState: ambientCursor(),
+    events: captureEvents()
+  };
 }
 export {
   advance,
