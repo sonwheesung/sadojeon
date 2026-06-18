@@ -8,6 +8,12 @@
     "scheme": "shidao",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/08f9ecbe-9a3d-4c94-a415-1529db03a82c"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.shidao.app"
