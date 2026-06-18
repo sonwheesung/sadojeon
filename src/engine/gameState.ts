@@ -86,10 +86,15 @@ export function captureGameState(): GameState {
 // GameState 를 스토어들에 반영(서버 응답 적용·로드). setState 얕은 병합 → 데이터만 덮고 메서드는 보존.
 export function commitGameState(state: GameState): void {
   for (const key of Object.keys(RUN_STORES) as (keyof RunStores)[]) {
-    // 각 스토어의 setState — 데이터 슬라이스로 덮어쓴다(액션 메서드는 그대로).
+    // 전방호환 — 옛 세이브엔 나중 추가된 스토어 키가 없다(undefined). 그때 건너뛰어 기본값을 지킨다.
+    // (zustand setState 는 비-객체 인자를 replace 로 보아 undefined 전달 시 그 스토어를 통째 날린다 →
+    //  출시 후 RUN_STORES 에 스토어를 추가하면 기존 플레이어 DB 세이브 로드가 그 스토어를 지워 크래시.)
+    const slice = (state as Record<string, unknown> | null | undefined)?.[key];
+    if (slice == null || typeof slice !== 'object') continue;
+    // 각 스토어의 setState — 데이터 슬라이스로 덮어쓴다(객체 → 얕은 병합, 액션 메서드·미제공 필드 보존).
     // 18종 스토어의 setState 시그니처 유니온은 단일 호출로 안 잡혀 최소 형태로 캐스팅.
     const store = RUN_STORES[key] as unknown as { setState: (partial: unknown) => void };
-    store.setState(state[key]);
+    store.setState(slice);
   }
 }
 

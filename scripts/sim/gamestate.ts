@@ -66,5 +66,38 @@ useItemStore.setState({ items: [] }); // 스토어 변경
 useTimeStore.getState().advanceDay();
 check('클론은 이후 스토어 변경에 불변', J(clone) === cloneBefore);
 
+// 5) 전방호환(옛 세이브 로드) — 라이브에서 스토어/필드가 늘어나도 기존 플레이어 세이브가 깨지면 안 됨.
+//    DB의 옛 GameState 는 나중 추가된 스토어·필드가 없다 → commit 이 크래시 없이 기본값을 지켜야 한다.
+useTimeStore.getState().reset();
+useDiscipleStore.getState().reset();
+useSectStore.getState().setSect({ name: '구판문', hanjaName: '舊版門', reputation: 7, resources: 4200, facilities: [] } as never);
+addDisc('old1');
+const fullSave = cloneGameState(captureGameState());
+
+// (a) 스토어 통째 누락 — 'inbox'·'alchemy'·'jianghu' 가 없는 옛 세이브.
+const noStores = cloneGameState(fullSave) as Record<string, unknown>;
+delete noStores.inbox; delete noStores.alchemy; delete noStores.jianghu;
+useInboxStore.getState().add({ id: 'pre', kind: 'rumor', read: false } as never); // commit 전 값 — 누락분은 현재값 유지돼야
+let crashed = false;
+try { commitGameState(noStores as never); } catch { crashed = true; }
+check('옛 세이브(스토어 3종 누락) commit 크래시 없음', !crashed);
+check('누락 스토어는 현재 기본값 유지(undefined 아님)', !crashed && Array.isArray(useInboxStore.getState().items) && useInboxStore.getState().items.length === 1);
+check('존재하는 스토어는 정상 반영(자금 4200)', useSectStore.getState().sect?.resources === 4200);
+
+// (b) 스토어는 있으나 필드 누락 — sect 객체에 신규 필드가 없던 옛 세이브.
+const missingField = cloneGameState(fullSave) as Record<string, Record<string, unknown>>;
+const sectSlice = missingField.sect.sect as Record<string, unknown>;
+delete sectSlice.facilities; // 나중 추가됐다 치고 제거
+let crashed2 = false;
+try { commitGameState(missingField as never); } catch { crashed2 = true; }
+check('옛 세이브(필드 누락) commit 크래시 없음', !crashed2);
+check('필드 누락 시 자금은 보존(4200)', useSectStore.getState().sect?.resources === 4200);
+
+// (c) 빈 세이브({}) commit — 최악(완전 빈 DB row) 도 크래시 없이 전 스토어 기본값.
+let crashed3 = false;
+try { commitGameState({} as never); } catch { crashed3 = true; }
+check('빈 세이브({}) commit 크래시 없음', !crashed3);
+check('빈 세이브 후에도 스토어 정상 동작(자금 4200 유지)', useSectStore.getState().sect?.resources === 4200);
+
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);
