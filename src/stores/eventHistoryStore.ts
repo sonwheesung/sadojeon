@@ -24,8 +24,8 @@ export const useEventHistoryStore = create<EventHistoryStore>()(
 
       push: (r) =>
         set((s) => ({
-          // 최신이 앞에 오도록 prepend. (sliceFor 가 처음 N개만 읽으면 됨)
-          records: [r, ...s.records],
+          // 최신이 앞에 오도록 prepend. sliceFor 는 처음 N개만 읽으므로 200개로 상한(장기 회차 무한증가 방지).
+          records: [r, ...s.records].slice(0, 200),
         })),
 
       sliceFor: (templateId, category) => {

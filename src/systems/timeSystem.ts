@@ -6,6 +6,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { moralToInbox, milestonesToInbox } from './eventInbox';
+import { useInboxStore } from '@/stores/inboxStore';
 import type { Season } from '@/types/game';
 import { isMonthStart, monthOfYear, weekOfMonth } from './calendar';
 import { buildTickArtifacts } from './dailyLogSystem';
@@ -53,6 +54,9 @@ export function advanceTurn() {
   tickCraft(); // 연단 완료 처리(제조 기간 도래)
   tickElixirAbsorb(); // 내공단 흡수 진행(매일 perDay 내공)
   tickWoundRecovery(); // 상처 자연 치유(매일 1일, 0 시 복귀)
+  // 서신함 적체 정리 — 만료분 제거 + 상한 초과 시 처리된 풍문·보고 정리(장기 회차 무한증가 방지). docs/37.
+  useInboxStore.getState().clearExpired(useTimeStore.getState().totalDay);
+  useInboxStore.getState().prune();
 
   const time = useTimeStore.getState().current;
 

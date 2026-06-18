@@ -12021,6 +12021,19 @@ var useInboxStore = create()(
           return true;
         })
       })),
+      // 적체 방지 — 상한 초과 시 **이미 본 + 처리됐거나 읽기전용(풍문·보고·서신)** 항목만 오래된 것부터 제거.
+      // 미읽음·미해소(결정 대기) 항목은 절대 안 지운다(결정 유실·동결 방지). 매일 advanceTurn 에서 호출.
+      // 15년×365일 누적 풍문/보고가 무한 증가해 메모리·매턴 직렬화(GameState)·서버 전송을 부풀리던 것 차단. docs/37.
+      prune: (max = 120) => set((s) => {
+        if (s.items.length <= max) return s;
+        const READONLY = /* @__PURE__ */ new Set(["report", "rumor", "letter"]);
+        const droppable = (it) => it.read && (it.resolved || READONLY.has(it.kind));
+        const kept = s.items.filter((it) => !droppable(it));
+        const room = Math.max(0, max - kept.length);
+        const keptDone = s.items.filter(droppable).slice(0, room);
+        const keepIds = new Set([...kept, ...keptDone].map((it) => it.id));
+        return { items: s.items.filter((it) => keepIds.has(it.id)) };
+      }),
       unreadCount: () => get().items.filter((it) => !it.read).length,
       decisionPendingCount: () => get().items.filter(
         (it) => !it.resolved && (it.kind === "event" || it.kind === "meeting_request" || it.kind === "quest_offer")
@@ -19267,8 +19280,8 @@ var useEventHistoryStore = create()(
     (set, get) => ({
       records: [],
       push: (r) => set((s) => ({
-        // 최신이 앞에 오도록 prepend. (sliceFor 가 처음 N개만 읽으면 됨)
-        records: [r, ...s.records]
+        // 최신이 앞에 오도록 prepend. sliceFor 는 처음 N개만 읽으므로 200개로 상한(장기 회차 무한증가 방지).
+        records: [r, ...s.records].slice(0, 200)
       })),
       sliceFor: (templateId, category) => {
         const { records } = get();
@@ -28158,6 +28171,8 @@ function advanceTurn() {
   tickCraft();
   tickElixirAbsorb();
   tickWoundRecovery();
+  useInboxStore.getState().clearExpired(useTimeStore.getState().totalDay);
+  useInboxStore.getState().prune();
   const time = useTimeStore.getState().current;
   if (time.year > before.year) {
     const m = useMasterStore.getState().master;
@@ -28470,6 +28485,7 @@ function seedNewRun(selectedPoolIds) {
   seedStartingRelations(list);
   useDiscipleStore.getState().setAll(list);
   const codex = useCodexStore.getState();
+  codex.resetForNewRun();
   for (const scroll of sectScrolls()) {
     if (!codex.hasScroll(scroll.artId)) {
       codex.addScroll(scroll);
