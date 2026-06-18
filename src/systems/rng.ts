@@ -54,11 +54,16 @@ let ambientState = 0;
 let ambientSeeded = false;
 let entropyCounter = 0;
 
+// 엔트로피 시드 1점 — 비결정 시드가 필요한 유일한 곳(앰비언트 자동시드·로컬 어댑터 newRun).
+// Math.random 미사용(시드화 목적과 충돌 방지). 시각 + 단조 카운터 혼합. 서버는 자체 crypto 시드.
+export function freshSeed(): number {
+  const t = Date.now();
+  return (t ^ (t >>> 11) ^ (entropyCounter++ * 0x9e3779b1)) >>> 0;
+}
+
 function ensureSeeded(): void {
   if (ambientSeeded) return;
-  // 엔트로피 자동 시드 — Math.random 미사용(시드화 목적과 충돌 방지). 시각 + 단조 카운터 혼합.
-  const t = Date.now();
-  ambientState = (t ^ (t >>> 11) ^ (entropyCounter++ * 0x9e3779b1)) >>> 0;
+  ambientState = freshSeed();
   ambientSeeded = true;
 }
 

@@ -12807,10 +12807,13 @@ function buildTickArtifacts(reports, dateLabel) {
 var ambientState = 0;
 var ambientSeeded = false;
 var entropyCounter = 0;
+function freshSeed() {
+  const t = Date.now();
+  return (t ^ t >>> 11 ^ entropyCounter++ * 2654435761) >>> 0;
+}
 function ensureSeeded() {
   if (ambientSeeded) return;
-  const t = Date.now();
-  ambientState = (t ^ t >>> 11 ^ entropyCounter++ * 2654435761) >>> 0;
+  ambientState = freshSeed();
   ambientSeeded = true;
 }
 function seedAmbient(seed) {
