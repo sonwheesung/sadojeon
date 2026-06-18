@@ -21,7 +21,7 @@ import { useBackConfirm } from '@/hooks/useBackConfirm';
 import { useGameStore, useMasterStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
 import { saveCurrentRunSilently } from '@/systems/runSync';
-import { advanceTurn } from '@/systems/timeSystem';
+import { getGameApi } from '@/engine/gameApi';
 import { colors, spacing } from '@/theme';
 
 export default function SectScreen() {
@@ -77,7 +77,7 @@ export default function SectScreen() {
         onCancel={() => setChoiceOpen(false)}
         onConfirm={() => {
           setChoiceOpen(false);
-          advanceTurn();
+          void getGameApi().advance(); // 하루 진행 — 서버 인터페이스 경유(로컬 어댑터=기존 동작)
         }}
       />
       <StartSelectModal visible={isFresh} onComplete={() => saveCurrentRunSilently()} />

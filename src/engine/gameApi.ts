@@ -1,31 +1,37 @@
 // 게임 API — 앱↔서버 계약(포트/어댑터). docs/31.
-// 앱은 이 **인터페이스에만** 의존한다. 구현 둘:
-//   · LocalGameApi  — 엔진을 앱 안에서 직접 실행(로컬 테스트·오프라인). 서버와 동일 흐름.
-//   · RemoteGameApi — Vercel 함수 HTTP 호출(배포). 응답 state/events 로 화면 갱신.
-// 전환은 EXPO_PUBLIC_GAME_SERVER_URL 유무로 자동 — 앱 코드는 안 바뀐다(어댑터만 교체).
+// 앱은 이 **인터페이스에만** 의존한다(advanceTurn·triggerPostSettlement 직접 호출 X). 구현 둘:
+//   · LocalGameApi  — 라이브 스토어에 직접 위임(로컬 테스트·오프라인). 기존 동작 그대로(무위험).
+//   · RemoteGameApi — Vercel 함수 HTTP(배포). 서버가 하루를 원자적으로 처리, 응답 state/events 반영.
+// 전환은 EXPO_PUBLIC_GAME_SERVER_URL 유무로 자동 — 앱 코드 불변(어댑터만 교체).
 //
-// 흐름은 양쪽 동일: newRun/advance → { state, events }. 클라는 state 로 스토어 갱신, events 로 휘발 UI.
-// 시드상태(rngState)는 **로컬에서만** 보유(원격은 서버 비공개) → 세이브 스커밍은 서버 권위에서 봉쇄.
+// 하루는 2단계(현 UX 보존): advance()=진행(정산 표시 단계) → settle()=정산 닫은 뒤 후속.
+//   · 로컬: advance=advanceTurn / settle=triggerPostSettlement (라이브 스토어, 기존과 동일).
+//   · 원격: advance=/api/advance(서버가 advanceTurn+post 원자 처리, events 로 정산+후속 반환) / settle=no-op.
+// 시드상태(rngState)는 로컬에서만 보유(원격은 서버 비공개) → 세이브 스커밍은 서버 권위에서 봉쇄.
 
-import { advance as engineAdvance, newRun as engineNewRun, type TurnEvents, type TurnResult } from './serverEngine';
+import { advanceTurn, triggerPostSettlement } from '@/systems/timeSystem';
+import { seedNewRun } from '@/systems/newRun';
+import { captureEvents, resetEphemeral, type TurnEvents, type TurnResult } from './serverEngine';
 import { captureGameState, commitGameState, type GameState } from './gameState';
-import { freshSeed } from '@/systems/rng';
+import { seedAmbient, ambientCursor, freshSeed } from '@/systems/rng';
+import { supabase } from '@/lib/supabase';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
-import { supabase } from '@/lib/supabase';
 
 export interface GameApi {
   /** 새 회차 시작 — 2~4명 선택. */
   newRun(party: string[], slot?: number): Promise<TurnResult>;
-  /** 하루 진행(정산 포함). */
+  /** 하루 진행 — 정산 표시 단계까지(로컬: advanceTurn). */
   advance(slot?: number): Promise<TurnResult>;
-  /** 이 어댑터가 서버(원격) 권위인가 — UI 가 쓰기 가능 여부 등 판단용. */
+  /** 정산 모달 닫은 뒤 후속(로컬: triggerPostSettlement / 원격: no-op, 서버가 이미 처리). */
+  settle(slot?: number): Promise<TurnResult>;
+  /** 서버(원격) 권위인가 — UI 쓰기 가능 여부 판단용. */
   readonly authoritative: boolean;
 }
 
-// 서버 응답 events 를 휘발 스토어에 반영 — UI(정산 모달·현장 급보·컷씬)가 읽어 렌더.
+// 서버 응답 events 를 휘발 스토어에 반영 — UI(정산·현장 급보·컷씬)가 읽어 렌더.
 function applyEvents(events: TurnEvents): void {
   if (events.pending) usePendingStore.setState(events.pending as never);
   if (events.field) useFieldEventStore.setState(events.field as never);
@@ -33,30 +39,36 @@ function applyEvents(events: TurnEvents): void {
   if (events.moral) useMoralEventStore.setState(events.moral as never);
 }
 
-// ─── 로컬 어댑터 — 엔진 인프로세스(로컬 테스트·오프라인) ──────────────────────
-// 엔진이 스토어를 곧장 새 상태로 갱신(부수효과) + 휘발 스토어에 events → UI 즉시 반영.
-// rngState 는 메모리 보유(앱 재시작 시 리셋 — 로컬 테스트용. 실제 비공개·영속은 서버 몫).
+// ─── 로컬 어댑터 — 라이브 스토어 직접(로컬 테스트·오프라인) ───────────────────
+// 기존 advanceTurn/triggerPostSettlement 를 그대로 호출 → 현 동작과 100% 동일(무위험).
 class LocalGameApi implements GameApi {
-  readonly authoritative = false; // 로컬은 클라가 곧 권위(테스트 전용)
-  private rngState = 0;
+  readonly authoritative = false;
+
+  private snapshot(): TurnResult {
+    return { state: captureGameState(), events: captureEvents(), rngState: ambientCursor() };
+  }
 
   async newRun(party: string[]): Promise<TurnResult> {
-    // 로컬 초기 시드 — 엔트로피 1점(rng.freshSeed). 서버는 자체 crypto 시드.
-    const result = engineNewRun(party, freshSeed());
-    this.rngState = result.rngState;
-    return result;
+    seedAmbient(freshSeed());
+    resetEphemeral();
+    seedNewRun(party);
+    return this.snapshot();
   }
 
   async advance(): Promise<TurnResult> {
-    const result = engineAdvance(captureGameState(), this.rngState);
-    this.rngState = result.rngState;
-    return result; // 스토어·휘발은 엔진이 이미 갱신함(서버와 동일 흐름)
+    advanceTurn(); // 정산 데이터를 pending 에 set(현 UX: 이어서 정산 모달 표시)
+    return this.snapshot();
+  }
+
+  async settle(): Promise<TurnResult> {
+    triggerPostSettlement(); // 졸업 체크·일일 이벤트·저장
+    return this.snapshot();
   }
 }
 
 // ─── 원격 어댑터 — Vercel 함수 HTTP(배포) ───────────────────────────────────
 class RemoteGameApi implements GameApi {
-  readonly authoritative = true; // 서버 권위 — 쓰기 경로 없음, 응답만 반영
+  readonly authoritative = true;
   constructor(private baseUrl: string) {}
 
   private async post(path: string, body: unknown): Promise<TurnResult> {
@@ -76,8 +88,13 @@ class RemoteGameApi implements GameApi {
   newRun(party: string[], slot = 1): Promise<TurnResult> {
     return this.post('/api/newRun', { party, slot });
   }
+  // 서버가 하루를 원자적으로 처리(advanceTurn+post). 정산·후속 events 가 함께 온다.
   advance(slot = 1): Promise<TurnResult> {
     return this.post('/api/advance', { slot });
+  }
+  // 원격은 advance 에서 후속까지 끝남 → settle 은 현재 상태만 돌려준다(no-op).
+  async settle(): Promise<TurnResult> {
+    return { state: captureGameState(), events: captureEvents(), rngState: 0 };
   }
 }
 

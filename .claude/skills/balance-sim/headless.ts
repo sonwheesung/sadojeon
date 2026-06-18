@@ -1924,15 +1924,18 @@ async function serverTurnDemo(): Promise<void> {
   const s3 = serverAdvance(mid.state, (mid.rngState ^ 0x1234) >>> 0); // 다른 시드상태
   ck('다른 시드상태 → 다른 결과', J(s1.state) !== J(s3.state));
 
-  // 5) GameApi 인터페이스(로컬 어댑터) — 앱이 쓸 계약이 Node에서 구동·진행·이벤트 반환.
+  // 5) GameApi 인터페이스(로컬 어댑터) — 앱이 쓸 계약(advance→settle 2단계)이 Node에서 구동.
   const api = getGameApi();
   ck('getGameApi → 로컬 어댑터(비권위)', api.authoritative === false);
   const r1 = await api.newRun(SERVER_PARTY);
   ck('api.newRun 구동 + events', !!r1.state && ['pending', 'field', 'cutscene', 'moral'].every((k) => k in r1.events));
   const before = J(r1.state);
   let last = r1;
-  for (let i = 0; i < 30; i += 1) last = await api.advance();
-  ck('api.advance 30회 → 상태 진행', J(last.state) !== before);
+  for (let i = 0; i < 30; i += 1) {
+    await api.advance(); // 하루 진행(정산 단계)
+    last = await api.settle(); // 정산 후속(졸업·일일 이벤트)
+  }
+  ck('api.advance+settle 30회 → 상태 진행', J(last.state) !== before);
 
   console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
   console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);

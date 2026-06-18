@@ -6,7 +6,7 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import type { LlmDebugEntry } from '@/stores/pendingStore';
-import { triggerPostSettlement } from '@/systems/timeSystem';
+import { getGameApi } from '@/engine/gameApi';
 import type { DailyLogKind } from '@/types';
 import { colors, radius, spacing, typography } from '@/theme';
 import { LlmDebugPanel } from './LlmDebugPanel';
@@ -36,9 +36,9 @@ export function DailySettlementModal() {
   // 미완 응답이 남아 있으면 "하루를 기록하는 중…" 으로 계속 대기(선택은 안 기다림).
   const canClose = timerDone && inflight === 0;
 
-  const onClose = () => {
+  const onClose = async () => {
     clearStore();
-    triggerPostSettlement();
+    await getGameApi().settle(); // 정산 후속 — 서버 인터페이스 경유(로컬 어댑터=triggerPostSettlement)
     // 강호/의뢰 현장 급보가 대기 중이면 사문함으로 보내지 않는다 — FieldEventOverlay 가
     // 컷씬+선택 모달로 먼저 처리(서신함 아님). docs/20·38.
     if (useFieldEventStore.getState().queue.length > 0) return;
