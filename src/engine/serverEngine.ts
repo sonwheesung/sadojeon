@@ -15,6 +15,11 @@ import { seedNewRun } from '@/systems/newRun';
 import { setAutoSaveEnabled } from '@/systems/runSync';
 import { seedAmbient, ambientCursor } from '@/systems/rng';
 import { captureGameState, commitGameState, cloneGameState, type GameState } from './gameState';
+
+// 모듈 로드 시점(어떤 유저 데이터도 닿기 전)의 회차 스토어 **초기 상태** 스냅샷.
+// 서버 advance 의 클린 슬레이트 기준 — 들어온 상태에 없는 스토어 키는 이 기본값으로 되돌려야
+// 직전 요청(유저) 데이터가 새지 않는다(전방호환 누락-스킵이 웜 인스턴스선 잔류=누수이므로).
+const PRISTINE_RUN_STATE: GameState = cloneGameState(captureGameState());
 import { captureAccountState, commitAccountState, resetAccountState, type AccountState } from './accountState';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useFieldEventStore } from '@/stores/fieldEventStore';
@@ -101,7 +106,11 @@ export function advance(state: GameState, rngState: number, account?: AccountSta
   ensureServerMode();
   resetEphemeral();
   loadAccount(account); // 유저 계정 격리(업적·집계) — docs/37 C10
-  commitGameState(cloneGameState(state)); // 스토어 통째 덮기(클린 슬레이트)
+  // 클린 슬레이트 2단 — ①초기 상태로 리셋(직전 유저 잔류 제거) ②들어온 상태 덮기.
+  // 들어온 상태가 완전하면 결과는 그 상태 그대로. 키 누락(옛 세이브)이면 그 스토어는 ①의 기본값으로
+  // 남아 직전 유저로 새지 않는다(전방호환 × 요청 간 격리 — docs/37 C10·R12).
+  commitGameState(cloneGameState(PRISTINE_RUN_STATE));
+  commitGameState(cloneGameState(state));
   seedAmbient(rngState);
   advanceTurn();
   triggerPostSettlement();

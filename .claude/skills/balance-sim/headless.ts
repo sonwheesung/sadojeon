@@ -48,6 +48,7 @@ import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
 import { useGraduateStore } from '@/stores/graduateStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
+import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { DECISION_KINDS } from '@/types';
 import { runs as runsRepo } from '@/data/repositories';
 // 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
@@ -1961,6 +1962,31 @@ async function serverTurnDemo(): Promise<void> {
   ck('실 회차 상태 JSON 라운드트립 항등(직렬화 안전)', J(roundTripped) === realJson);
   commitGameState(roundTripped as never);
   ck('역직렬화 상태 commit→capture 항등', J(captureGameState()) === realJson);
+
+  // 8) 인터리브 격리 — 두 유저 턴을 번갈아 진행해도 각자 단독 진행과 동일(엔진이 매 호출 전상태 재적재).
+  const ua0 = serverNewRun(SERVER_PARTY, 30001);
+  const ub0 = serverNewRun(SERVER_PARTY, 40002);
+  let ua = ua0; for (let i = 0; i < 3; i += 1) ua = serverAdvance(ua.state, ua.rngState); const uaSolo = J(ua.state);
+  let ub = ub0; for (let i = 0; i < 3; i += 1) ub = serverAdvance(ub.state, ub.rngState); const ubSolo = J(ub.state);
+  let uai = ua0, ubi = ub0;
+  for (let i = 0; i < 3; i += 1) { uai = serverAdvance(uai.state, uai.rngState); ubi = serverAdvance(ubi.state, ubi.rngState); }
+  ck('인터리브 A == 단독 A(요청 간 무오염)', J(uai.state) === uaSolo);
+  ck('인터리브 B == 단독 B(요청 간 무오염)', J(ubi.state) === ubSolo);
+
+  // 9) 전방호환 × 격리 — 옛 세이브(스토어 키 누락)를 직전 유저 데이터가 남은 웜 인스턴스서 진행 시,
+  //    누락 스토어가 **직전 유저 값으로 새면 안 된다**(기본값이어야). commit 의 누락-스킵이 서버선 잔류=누수.
+  // 핵심 격리 속성: advance(Y) 결과는 **직전에 싱글톤에 뭐가 있었든 무관**해야 한다.
+  // 서로 다른 직전 유저(P/Q) 뒤 같은 Y(분위기 키 누락)를 진행 → 분위기 결과가 같아야 누수 없음.
+  const yFull = JSON.parse(J(serverNewRun(SERVER_PARTY, 60004).state)) as Record<string, unknown>;
+  delete yFull.sectAtmosphere; // 옛 세이브: 나중 추가된 스토어 키 없음
+  const atmosOf = (r: TurnResult) => J((r.state as { sectAtmosphere?: unknown }).sectAtmosphere);
+  serverNewRun(SERVER_PARTY, 50003);
+  useSectAtmosphereStore.getState().set({ righteousness: 90, unity: 90 }); // 직전 유저 P 분위기
+  const afterP = serverAdvance(yFull as never, 0);
+  serverNewRun(SERVER_PARTY, 50003);
+  useSectAtmosphereStore.getState().set({ righteousness: -90, unity: -90 }); // 직전 유저 Q 분위기(다름)
+  const afterQ = serverAdvance(yFull as never, 0);
+  ck('전방호환×격리 — 누락 스토어가 직전 유저와 무관(P턴==Q턴)', atmosOf(afterP) === atmosOf(afterQ), `P=${atmosOf(afterP)} Q=${atmosOf(afterQ)}`);
 
   console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
   console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);
