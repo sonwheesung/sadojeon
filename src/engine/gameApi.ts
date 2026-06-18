@@ -13,6 +13,7 @@ import { advanceTurn, triggerPostSettlement } from '@/systems/timeSystem';
 import { seedNewRun } from '@/systems/newRun';
 import { captureEvents, resetEphemeral, type TurnEvents, type TurnResult } from './serverEngine';
 import { captureGameState, commitGameState, type GameState } from './gameState';
+import { captureAccountState, commitAccountState, type AccountState } from './accountState';
 import { seedAmbient, ambientCursor, freshSeed } from '@/systems/rng';
 import { supabase } from '@/lib/supabase';
 import { usePendingStore } from '@/stores/pendingStore';
@@ -45,7 +46,12 @@ class LocalGameApi implements GameApi {
   readonly authoritative = false;
 
   private snapshot(): TurnResult {
-    return { state: captureGameState(), events: captureEvents(), rngState: ambientCursor() };
+    return {
+      state: captureGameState(),
+      account: captureAccountState(),
+      events: captureEvents(),
+      rngState: ambientCursor(),
+    };
   }
 
   async newRun(party: string[]): Promise<TurnResult> {
@@ -79,10 +85,11 @@ class RemoteGameApi implements GameApi {
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`서버 오류 ${res.status}: ${await res.text()}`);
-    const data = (await res.json()) as { state: GameState; events: TurnEvents };
+    const data = (await res.json()) as { state: GameState; account?: AccountState; events: TurnEvents };
     commitGameState(data.state); // 서버 권위 상태로 스토어 갱신
+    if (data.account) commitAccountState(data.account); // 업적·집계 반영
     applyEvents(data.events);
-    return { state: data.state, events: data.events, rngState: 0 }; // rngState 비공개
+    return { state: data.state, account: captureAccountState(), events: data.events, rngState: 0 }; // rngState 비공개
   }
 
   newRun(party: string[], slot = 1): Promise<TurnResult> {
@@ -94,7 +101,7 @@ class RemoteGameApi implements GameApi {
   }
   // 원격은 advance 에서 후속까지 끝남 → settle 은 현재 상태만 돌려준다(no-op).
   async settle(): Promise<TurnResult> {
-    return { state: captureGameState(), events: captureEvents(), rngState: 0 };
+    return { state: captureGameState(), account: captureAccountState(), events: captureEvents(), rngState: 0 };
   }
 }
 
