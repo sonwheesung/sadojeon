@@ -17,6 +17,11 @@ export function UpdateGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    // 게이트 전체에 타임아웃 — 네트워크 행(hang) 시 빈 화면 영구 잠금 방지(fail-open).
+    // checkForUpdate 는 error 만 fail-open 이라, 응답이 영영 안 오는 hang 은 여기서 통과시킨다.
+    const timeout = setTimeout(() => {
+      if (mounted) setPhase('ok');
+    }, 6000);
     (async () => {
       // 1) OTA 먼저 — 새 JS 번들 있으면 받아서 재시작(여기서 멈춤). docs/31.
       const reloaded = await applyOtaIfAvailable();
@@ -24,11 +29,13 @@ export function UpdateGate({ children }: { children: ReactNode }) {
       // 2) 스토어 강제 업데이트 게이트 — 최소버전 미달이면 차단.
       const r = await checkForUpdate();
       if (!mounted) return;
+      clearTimeout(timeout);
       setStoreUrl(r.storeUrl);
-      setPhase(r.required ? 'required' : 'ok');
+      setPhase((p) => (p === 'checking' ? (r.required ? 'required' : 'ok') : p));
     })();
     return () => {
       mounted = false;
+      clearTimeout(timeout);
     };
   }, []);
 

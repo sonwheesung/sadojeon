@@ -28484,6 +28484,7 @@ function cloneGameState(state) {
 }
 
 // src/engine/accountState.ts
+init_gameStore();
 var ACCOUNT_STORES = {
   achievement: useAchievementStore,
   tally: useTallyStore
@@ -28498,6 +28499,7 @@ function captureAccountState() {
   for (const key of Object.keys(ACCOUNT_STORES)) {
     acc[key] = dataOnly2(ACCOUNT_STORES[key].getState());
   }
+  acc.diamonds = useGameStore.getState().diamonds;
   return acc;
 }
 function commitAccountState(state) {
@@ -28505,10 +28507,12 @@ function commitAccountState(state) {
     const store2 = ACCOUNT_STORES[key];
     store2.setState(state[key]);
   }
+  useGameStore.setState({ diamonds: state.diamonds });
 }
 function resetAccountState() {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] });
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} });
+  useGameStore.setState({ diamonds: 0 });
 }
 
 // src/engine/serverEngine.ts

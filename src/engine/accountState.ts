@@ -6,6 +6,7 @@
 
 import { useAchievementStore } from '@/stores/achievementStore';
 import { useTallyStore } from '@/stores/tallyStore';
+import { useGameStore } from '@/stores/gameStore';
 
 const ACCOUNT_STORES = {
   achievement: useAchievementStore,
@@ -18,9 +19,11 @@ type DataOnly<T> = {
   [K in keyof T as T[K] extends (...args: never[]) => unknown ? never : K]: T[K];
 };
 
+// 업적·집계 + **다이아**(계정 단위 재화 — gameStore.diamonds, 연구 즉시완료 등에 소비).
+// 다이아도 회차 무관 계정 상태라 GameState 가 아니라 여기. 서버에서 유저별 로드/격리 대상.
 export type AccountState = {
   [K in keyof AccountStores]: DataOnly<ReturnType<AccountStores[K]['getState']>>;
-};
+} & { diamonds: number };
 
 function dataOnly<T extends object>(state: T): DataOnly<T> {
   const out: Record<string, unknown> = {};
@@ -34,6 +37,7 @@ export function captureAccountState(): AccountState {
   for (const key of Object.keys(ACCOUNT_STORES) as (keyof AccountStores)[]) {
     acc[key] = dataOnly(ACCOUNT_STORES[key].getState());
   }
+  acc.diamonds = useGameStore.getState().diamonds;
   return acc as AccountState;
 }
 
@@ -43,10 +47,12 @@ export function commitAccountState(state: AccountState): void {
     const store = ACCOUNT_STORES[key] as unknown as { setState: (partial: unknown) => void };
     store.setState(state[key]);
   }
+  useGameStore.setState({ diamonds: state.diamonds });
 }
 
 // 계정 스토어를 빈 상태로 — 서버 요청 클린 슬레이트(이전 유저 잔여 차단). 유저 로드 전 호출.
 export function resetAccountState(): void {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] } as never);
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} } as never);
+  useGameStore.setState({ diamonds: 0 }); // 다이아도 유저별 — 요청 클린 슬레이트
 }
