@@ -20,6 +20,7 @@ import { useSectStore } from '@/stores/sectStore';
 import { adjustDiscipleRep, adjustSectRep } from './reputationSystem';
 import { combatRating } from './combatPower';
 import { useGraduateStore, type GraduateRecord, type GraduateStatus } from '@/stores/graduateStore';
+import { useDiscipleStore } from '@/stores/discipleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { pushJianghuNews } from './jianghuNews';
 import { tickGraduateEvents } from './graduateEvents';
@@ -73,6 +74,20 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     const fname = findFaction(factionId)?.name ?? '';
     if (fname) pushNews(`${d.name} — ${fname}`, `${d.name}이 ${ROUTE_LABEL[route]}의 길에 드니, ${fname}과 사문의 인연이 깊어졌다.`);
   }
+}
+
+// 직업 전환 — 졸업 의지 갈등에서 '존중'(제자 뜻) 선택 시. 이미 확정된 레코드를 새 직업으로 갱신.
+// 보상(평판·첫 소식)은 재적용하지 않는다(graduateToCareer 가 확정 시 1회만 — 중복 방지).
+export function switchGraduateCareer(d: Disciple, newJobId: string): void {
+  const { route, level, title } = careerStartFromJob(newJobId);
+  useDiscipleStore.getState().update(d.id, { graduatedJob: newJobId });
+  useGraduateStore.getState().update(d.id, {
+    route,
+    level,
+    title,
+    power: routeCompetence(route, d),
+  });
+  pushNews(`${d.name} — 제 뜻대로`, `${d.name}이 끝내 제 뜻을 좇아 ${ROUTE_LABEL[route]} ${title}의 길로 들어섰다.`);
 }
 
 function deathLine(g: GraduateRecord, status: GraduateStatus): string {

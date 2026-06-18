@@ -200,7 +200,9 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
   let spark: Disciple | null = null;
   if (tier === 'close' && random() < SPARK_CHANCE) {
     spark = random() < 0.5 ? a : b;
-    const extra = gainSparSeongExp(ds.disciples[spark.id] ?? spark, SPARK_EXP_MULT);
+    // 신선한 상태 재읽기 — winner/loser EXP 가 이미 적용된 뒤라 stale ds 스냅샷을 쓰면 그 적립을 덮어쓴다.
+    const fresh = useDiscipleStore.getState().disciples[spark.id] ?? spark;
+    const extra = gainSparSeongExp(fresh, SPARK_EXP_MULT);
     if (extra) artDelta[spark.id] = extra;
   }
 

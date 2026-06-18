@@ -4,7 +4,7 @@
 
 import { JOB_POOL, type Job } from '@/data/jobs';
 import { evaluateJobs, graduationWillConflict } from './jobSystem';
-import { graduateToCareer } from './careerSystem';
+import { graduateToCareer, switchGraduateCareer } from './careerSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -14,8 +14,9 @@ function jobById(id: string): Job | undefined {
   return JOB_POOL.find((j) => j.id === id);
 }
 
-// 졸업 직업 확정 — graduatedJob 기록 + 평생 궤적 시작(§4). 갈등 없거나 해소 후 단일 진입점.
+// 졸업 직업 확정 — graduatedJob 기록 + 평생 궤적 시작(§4). **멱등**(이미 확정이면 무시 — 중복 보상 방지).
 function finalizeGraduation(d: Disciple, jobId: string): void {
+  if (d.graduatedJob) return; // 이미 졸업 직업 확정됨(재진입·중복 탭 방지)
   useDiscipleStore.getState().update(d.id, { graduatedJob: jobId });
   graduateToCareer(d, jobId);
 }
@@ -50,20 +51,21 @@ function enqueueGraduationConflict(d: Disciple, userPickId: string, willJob: Job
   });
 }
 
-// 졸업 선택 해소(서신함). 제자 의지와 어긋나면 갈등 이벤트로 한 번 더, 아니면 바로 확정.
+// 졸업 선택 해소(서신함). **항상 사부 선택으로 즉시 확정**(제자가 무직으로 표류하거나 회차종료서
+// 누락되는 것 방지 — docs/37 C10). 제자 의지와 어긋나면 추가로 갈등 이벤트를 띄워, '존중' 시 전환.
 export function resolveGraduationPick(discipleId: string, chosenJobId: string): void {
   const d = useDiscipleStore.getState().disciples[discipleId];
   if (!d) return;
   const candidates = evaluateJobs(d).slice(0, 4).map((j) => j.job);
   const willJob = graduationWillConflict(d, candidates, chosenJobId);
-  if (willJob) {
+  finalizeGraduation(d, chosenJobId); // 항상 확정 — 갈등 무시해도 직업·궤적은 보장
+  if (willJob && willJob.id !== chosenJobId) {
     enqueueGraduationConflict(d, chosenJobId, willJob, useTimeStore.getState().totalDay);
-    return; // 확정 보류 — 갈등 해소에서 마무리
   }
-  finalizeGraduation(d, chosenJobId);
 }
 
-// 갈등 해소 — 설득(사부의 길) / 존중(제자의 길). 신뢰 변동 + 확정.
+// 갈등 해소 — 설득(사부의 길 유지) / 존중(제자의 길로 전환). 신뢰 변동 + 소식.
+// 직업은 resolveGraduationPick 에서 이미 사부 선택으로 확정됨. '존중'이면 의지 직업으로 전환(보상 재적용 X).
 export function resolveGraduationConflict(
   discipleId: string,
   userPickId: string,
@@ -75,15 +77,25 @@ export function resolveGraduationConflict(
   if (!d) return;
   const day = useTimeStore.getState().totalDay;
   const respect = decision === 'respect';
-  const jobId = respect ? willJobId : userPickId;
-  const job = jobById(jobId);
   // 신뢰 — 뜻을 존중하면 사제의 정이 깊어지고, 끝내 꺾으면 응어리가 남는다.
   ds.update(discipleId, {
     trustToMaster: Math.max(0, Math.min(100, d.trustToMaster + (respect ? 8 : -10))),
   });
+  // 직업 확정/전환 — pick 에서 이미 확정됐으면 전환(존중)·유지(설득), 아직이면 여기서 확정.
+  if (respect) {
+    if (d.graduatedJob) {
+      if (willJobId && willJobId !== d.graduatedJob) switchGraduateCareer(d, willJobId);
+    } else {
+      finalizeGraduation(d, willJobId);
+    }
+  } else if (!d.graduatedJob) {
+    finalizeGraduation(d, userPickId);
+  }
+  const willName = jobById(willJobId)?.name ?? '제 뜻';
+  const userName = jobById(userPickId)?.name ?? '권한 길';
   const body = respect
-    ? `${d.name}의 뜻을 꺾지 않았다. 「…고맙습니다, 사부님.」 제 길을 향해 ${job?.name ?? '강호'}로 나선다.`
-    : `${d.name}을 달래어 ${job?.name ?? '권한 길'}로 돌려세웠다. 제자는 끝내 고개를 끄덕였으나, 그 눈빛엔 못다 한 바람이 어렸다.`;
+    ? `${d.name}의 뜻을 꺾지 않았다. 「…고맙습니다, 사부님.」 제 길(${willName})을 향해 나선다.`
+    : `${d.name}을 달래어 ${userName}로 돌려세웠다. 제자는 끝내 고개를 끄덕였으나, 그 눈빛엔 못다 한 바람이 어렸다.`;
   useInboxStore.getState().add({
     id: `gradconflict-result-${day}-${d.id}`,
     kind: 'report',
@@ -96,5 +108,4 @@ export function resolveGraduationConflict(
     resolved: false,
     payload: { domain: 'jianghu_news' },
   });
-  finalizeGraduation(d, jobId);
 }

@@ -14798,12 +14798,24 @@ var useQuestStore = create()(
 
 // src/stores/fieldEventStore.ts
 init_esm();
-var useFieldEventStore = create((set) => ({
-  queue: [],
-  push: (e) => set((s) => ({ queue: [...s.queue, e] })),
-  pop: () => set((s) => ({ queue: s.queue.slice(1) })),
-  clear: () => set({ queue: [] })
-}));
+init_middleware();
+init_persistStorage();
+var useFieldEventStore = create()(
+  persist(
+    (set) => ({
+      queue: [],
+      push: (e) => set((s) => ({ queue: [...s.queue, e] })),
+      pop: () => set((s) => ({ queue: s.queue.slice(1) })),
+      clear: () => set({ queue: [] })
+    }),
+    {
+      name: "fieldEvent",
+      storage: createJSONStorage(() => slotAwareStorage),
+      version: 1,
+      partialize: (s) => ({ queue: s.queue })
+    }
+  )
+);
 
 // src/stores/sectAtmosphereStore.ts
 init_esm();
@@ -16374,7 +16386,8 @@ function resolveDaeryeon(aId, bId) {
   let spark = null;
   if (tier === "close" && random() < SPARK_CHANCE) {
     spark = random() < 0.5 ? a : b;
-    const extra = gainSparSeongExp(ds.disciples[spark.id] ?? spark, SPARK_EXP_MULT);
+    const fresh = useDiscipleStore.getState().disciples[spark.id] ?? spark;
+    const extra = gainSparSeongExp(fresh, SPARK_EXP_MULT);
     if (extra) artDelta[spark.id] = extra;
   }
   const wRel = winner.relationships[loser.id] ?? "neutral";
@@ -19660,7 +19673,10 @@ function passesTrigger(d, tmpl, allDiscipleIds) {
 }
 function collectEligible(templates) {
   const ds = useDiscipleStore.getState();
-  const allIds = new Set(ds.order);
+  const allIds = new Set(ds.order.filter((id) => {
+    const x = ds.disciples[id];
+    return x != null && isActive2(x);
+  }));
   const out = [];
   for (const id of ds.order) {
     const d = ds.disciples[id];
