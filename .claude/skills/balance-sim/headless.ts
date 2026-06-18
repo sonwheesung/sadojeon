@@ -48,6 +48,7 @@ import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
 import { useGraduateStore } from '@/stores/graduateStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
+import { DECISION_KINDS } from '@/types';
 import { runs as runsRepo } from '@/data/repositories';
 // 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
 import { newRun as serverNewRun, advance as serverAdvance, type TurnResult } from '@/engine/serverEngine';
@@ -1979,7 +1980,6 @@ async function lifetimeDemo(): Promise<void> {
   console.log('═══ 장기 완주 무결성 (newRun → ended, 인메모리) ═══\n');
 
   const CAP = 99 * 12 * 4 * 7 + 30; // 사부 수명 99년치 일수 + 여유. 보통 전원 졸업으로 훨씬 일찍 종결.
-  const ACTIONABLE = new Set(['event', 'meeting_request', 'quest_offer']);
   let cur = serverNewRun(SERVER_PARTY, 77777);
   let days = 0, ended = false;
   let maxInbox = 0, maxInfo = 0, maxAction = 0, maxHistory = 0;
@@ -2001,7 +2001,7 @@ async function lifetimeDemo(): Promise<void> {
     const res = useSectStore.getState().sect?.resources ?? 0;
     if (!Number.isFinite(res)) issues.push(`자금 NaN`);
     const items = useInboxStore.getState().items;
-    const actionN = items.filter((it) => !it.resolved && ACTIONABLE.has(it.kind)).length;
+    const actionN = items.filter((it) => !it.resolved && DECISION_KINDS.includes(it.kind)).length;
     const infoN = items.length - actionN;
     const histN = useEventHistoryStore.getState().records.length;
     maxInbox = Math.max(maxInbox, items.length);
@@ -2016,6 +2016,10 @@ async function lifetimeDemo(): Promise<void> {
     scan();
     if (useGameStore.getState().phase === 'ended') { ended = true; break; }
     if (issues.length > 30) break; // 폭주 방지 — 위반 누적 시 조기 중단
+    // 진행 게이트 모델 — 실플레이는 결정형 서신을 다 처리해야 하루를 넘긴다(무시 불가, docs/12).
+    // 다음 턴 입력 상태에서 결정형을 처리됨으로 표시("매 턴 비우는 플레이어"). 결정형 누적이 차단되는지 검증.
+    const inbox = (cur.state.inbox as { items?: { resolved: boolean; read: boolean; kind: string }[] } | undefined)?.items;
+    if (inbox) for (const it of inbox) if (!it.resolved && DECISION_KINDS.includes(it.kind as never)) { it.resolved = true; it.read = true; }
   }
 
   const years = (days / (12 * 4 * 7)).toFixed(1);
@@ -2031,11 +2035,11 @@ async function lifetimeDemo(): Promise<void> {
   ck('종결 시 활성 제자 0(전원 졸업/이탈)', active.length === 0, `졸업 ${graduated.length}·이탈 ${departed.length}·활성 ${active.length}`);
   ck('전원 졸업으로 종결(대량 이탈 아님)', graduated.length === disc.length && departed.length === 0, `졸업 ${graduated.length}/${disc.length}`);
   ck('사부 수명 정상(yearsAsMaster ≤ 99)', !!master && master.yearsAsMaster <= 99 && master.yearsAsMaster >= 0, `${master?.yearsAsMaster}년차`);
-  // 정보성(풍문·보고·서신·알림)은 prune 으로 한도 내. 미해결 결정형(도덕·면담·의뢰제안)은
-  // 만료 없으면 무시 시 누적 — 설계 판단 대기(measure-only). 둘을 분리해 정직하게 검증.
+  // 정보성(풍문·보고·서신·알림)은 prune 으로 한도. 결정형은 진행 게이트(무시 불가)가 매 턴 비우게 강제 →
+  // 둘 다 상한 내여야 한다(서버 권위: 매 턴 GameState 직렬화 비대 차단).
   ck('서신함 정보성 적체 한도 내(≤150)', maxInfo <= 150, `정보성 최대 ${maxInfo}건`);
+  ck('미해결 결정형 적체 한도 내(≤60, 게이트가 매 턴 비움)', maxAction <= 60, `결정형 최대 ${maxAction}건`);
   ck('이벤트 히스토리 상한 내(≤200)', maxHistory <= 200, `최대 ${maxHistory}건`);
-  console.log(`  [측정] 미해결 결정형(도덕·면담·의뢰제안) 최대 ${maxAction}건 — 만료 정책 미정(무시 시 누적). 설계 확인 대기.`);
   // 종결 상태도 직렬화 안전(DB 저장 가능) — 라운드트립 항등.
   const endState = JSON.stringify(cur.state);
   let serialOk = false;

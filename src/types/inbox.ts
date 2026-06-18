@@ -17,6 +17,23 @@ export type InboxKind =
 
 export type InboxPriority = 'low' | 'normal' | 'high' | 'urgent';
 
+// 정본 "결정/응답 필요" 종류 — 진행 게이트·배지·prune 보존이 모두 이 한 집합을 쓴다(단일 진실).
+// 이 종류의 미해소 항목이 서신함에 있으면 **진행(하루 넘김) 불가** — 무시할 수 없다(docs/12).
+// 나머지(one_liner·letter·rumor·system·report)는 정보성/선택 응답 — 진행 막지 않고 prune 정리 대상.
+export const DECISION_KINDS: ReadonlyArray<InboxKind> = [
+  'event',
+  'meeting_request',
+  'quest_offer',
+  'complaint',
+  'recommendation',
+  'visit',
+  'diplomacy',
+];
+
+export function isDecisionKind(kind: InboxKind): boolean {
+  return DECISION_KINDS.includes(kind);
+}
+
 export interface InboxItemBase {
   id: string;
   kind: InboxKind;
