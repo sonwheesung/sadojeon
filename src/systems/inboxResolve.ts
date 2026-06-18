@@ -133,6 +133,18 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   const templateId = String(p.templateId ?? '');
   const discipleId = String(p.discipleId ?? '');
 
+  // 떠난 제자(졸업·하산) 대상 양육 상호작용은 효과 미적용 — 항목만 제거. 사라진 동문에 트러스트·흑화·
+  // 사문 분위기 변동 방지(graduation/graduation_conflict 는 졸업 제자 대상이라 제외). docs/37 C9.
+  const RAISING_DOMAINS = ['oneLiner', 'wish', 'moral', 'meeting'];
+  if (RAISING_DOMAINS.includes(String(p.domain)) && discipleId) {
+    const subj = useDiscipleStore.getState().disciples[discipleId];
+    const active = subj && (subj.status === 'training' || subj.status === 'resting' || subj.status === 'meditating');
+    if (subj && !active) {
+      useInboxStore.getState().remove(item.id);
+      return;
+    }
+  }
+
   if (p.domain === 'oneLiner') {
     usePendingStore.getState().setOneLiner({
       templateId,

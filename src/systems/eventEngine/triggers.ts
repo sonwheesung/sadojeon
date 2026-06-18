@@ -85,7 +85,8 @@ export function collectEligible<TTone extends string>(
   templates: ReadonlyArray<EventTemplate<TTone>>,
 ): EligiblePair<TTone>[] {
   const ds = useDiscipleStore.getState();
-  const allIds = new Set(ds.order);
+  // requireSiblingId 판정용 — **활성 제자만**(졸업·하산한 동문은 호명 안 함, 사라진 동문 사건 재등장 금지).
+  const allIds = new Set(ds.order.filter((id) => { const x = ds.disciples[id]; return x != null && isActive(x); }));
   const out: EligiblePair<TTone>[] = [];
   for (const id of ds.order) {
     const d = ds.disciples[id];
