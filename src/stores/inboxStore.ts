@@ -52,18 +52,20 @@ export const useInboxStore = create<InboxStore>()(
           }),
         })),
 
-      // 적체 방지 — 상한 초과 시 **이미 본 + 처리됐거나 읽기전용(풍문·보고·서신)** 항목만 오래된 것부터 제거.
-      // 미읽음·미해소(결정 대기) 항목은 절대 안 지운다(결정 유실·동결 방지). 매일 advanceTurn 에서 호출.
-      // 15년×365일 누적 풍문/보고가 무한 증가해 메모리·매턴 직렬화(GameState)·서버 전송을 부풀리던 것 차단. docs/37.
+      // 적체 방지 — 상한 초과 시 **미해결 결정형 항목(event·면담요청·의뢰제안)을 제외한** 나머지를
+      // 오래된 것부터 제거. 풍문·보고·서신·알림 등 정보성은 결정이 없으므로 **읽음 여부와 무관하게** 정리 대상
+      // (안 읽어도 손실 없는 정보다). 미해결 결정형은 절대 안 지운다(결정 유실·동결 방지). 매일 호출.
+      // 🐛 종전엔 "읽은 것"만 정리해, 서신함을 안 여는(또는 서버 시뮬) 경우 미읽음 풍문/보고가 무한 누적
+      //   (15년 5549건 — lifetime 시뮬 발견). 메모리·매턴 직렬화(GameState)·서버 전송을 부풀린다. docs/37.
       prune: (max = 120) =>
         set((s) => {
           if (s.items.length <= max) return s;
-          const READONLY = new Set(['report', 'rumor', 'letter']);
-          const droppable = (it: InboxItem) => it.read && (it.resolved || READONLY.has(it.kind));
-          const kept = s.items.filter((it) => !droppable(it)); // 미읽음·미해소·응답형 보존
+          const ACTIONABLE = new Set(['event', 'meeting_request', 'quest_offer']);
+          const mustKeep = (it: InboxItem) => !it.resolved && ACTIONABLE.has(it.kind); // 미해결 결정 — 절대 보존
+          const kept = s.items.filter(mustKeep);
           const room = Math.max(0, max - kept.length);
-          const keptDone = s.items.filter(droppable).slice(0, room); // 처리분은 최신순으로 cap 내
-          const keepIds = new Set([...kept, ...keptDone].map((it) => it.id));
+          const rest = s.items.filter((it) => !mustKeep(it)).slice(0, room); // 정보성·해결분 최신순 cap 내
+          const keepIds = new Set([...kept, ...rest].map((it) => it.id));
           return { items: s.items.filter((it) => keepIds.has(it.id)) }; // 원래 순서(최신순) 보존
         }),
 

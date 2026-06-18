@@ -46,6 +46,8 @@ import { FACTIONS } from '@/data/factions';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
+import { useGraduateStore } from '@/stores/graduateStore';
+import { useEventHistoryStore } from '@/stores/eventHistoryStore';
 import { runs as runsRepo } from '@/data/repositories';
 // 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
 import { newRun as serverNewRun, advance as serverAdvance, type TurnResult } from '@/engine/serverEngine';
@@ -1965,11 +1967,95 @@ async function serverTurnDemo(): Promise<void> {
   if (fail > 0) process.exit(1);
 }
 
+// ─── 장기 완주(lifetime) ───────────────────────────────────────────────────
+// 한 회차를 종결(전원 졸업 → phase='ended', 혹은 사부 수명 99년 캡)까지 인메모리로 완주시키며
+// 매 턴 불변식을 검사한다(누적·오버플로우·직렬화 안전이 장기에서 무너지지 않는지). DB 불필요.
+async function lifetimeDemo(): Promise<void> {
+  let pass = 0, fail = 0;
+  const ck = (label: string, cond: boolean, detail = '') => {
+    if (cond) { pass += 1; console.log(`  PASS  ${label}${detail ? `   ${detail}` : ''}`); }
+    else { fail += 1; console.log(`  FAIL  ${label}${detail ? `   ${detail}` : ''}`); }
+  };
+  console.log('═══ 장기 완주 무결성 (newRun → ended, 인메모리) ═══\n');
+
+  const CAP = 99 * 12 * 4 * 7 + 30; // 사부 수명 99년치 일수 + 여유. 보통 전원 졸업으로 훨씬 일찍 종결.
+  const ACTIONABLE = new Set(['event', 'meeting_request', 'quest_offer']);
+  let cur = serverNewRun(SERVER_PARTY, 77777);
+  let days = 0, ended = false;
+  let maxInbox = 0, maxInfo = 0, maxAction = 0, maxHistory = 0;
+  const issues: string[] = []; // 매 턴 무결성 위반 누적(NaN·음수·성 범위·나이·직렬화)
+
+  const scan = () => {
+    const disc = Object.values(useDiscipleStore.getState().disciples);
+    for (const d of disc) {
+      const age = currentAge(d);
+      if (!Number.isFinite(age) || age < 0 || age > 200) issues.push(`나이 ${d.id}=${age}`);
+      if (!Number.isFinite(d.stamina) || d.stamina < 0) issues.push(`체력 ${d.id}=${d.stamina}`);
+      if (!Number.isFinite(d.stress) || d.stress < 0) issues.push(`스트레스 ${d.id}=${d.stress}`);
+      if (!Number.isFinite(d.realmProgress?.internal ?? 0)) issues.push(`내공 ${d.id}`);
+      for (const a of d.martialArts) {
+        if (!Number.isFinite(a.seong) || a.seong < 1 || a.seong > 10) issues.push(`성범위 ${d.id}:${a.artId}=${a.seong}`);
+        if (!Number.isFinite(a.exp) || a.exp < 0) issues.push(`exp ${d.id}:${a.artId}=${a.exp}`);
+      }
+    }
+    const res = useSectStore.getState().sect?.resources ?? 0;
+    if (!Number.isFinite(res)) issues.push(`자금 NaN`);
+    const items = useInboxStore.getState().items;
+    const actionN = items.filter((it) => !it.resolved && ACTIONABLE.has(it.kind)).length;
+    const infoN = items.length - actionN;
+    const histN = useEventHistoryStore.getState().records.length;
+    maxInbox = Math.max(maxInbox, items.length);
+    maxInfo = Math.max(maxInfo, infoN);
+    maxAction = Math.max(maxAction, actionN);
+    maxHistory = Math.max(maxHistory, histN);
+  };
+
+  while (days < CAP) {
+    cur = serverAdvance(cur.state, cur.rngState);
+    days += 1;
+    scan();
+    if (useGameStore.getState().phase === 'ended') { ended = true; break; }
+    if (issues.length > 30) break; // 폭주 방지 — 위반 누적 시 조기 중단
+  }
+
+  const years = (days / (12 * 4 * 7)).toFixed(1);
+  const master = useMasterStore.getState().master;
+  const disc = Object.values(useDiscipleStore.getState().disciples);
+  const graduated = disc.filter((d) => d.status === 'graduated');
+  const departed = disc.filter((d) => d.status === 'departed');
+  const careerRecords = useGraduateStore.getState().records ?? []; // 진로 선택 해소 후에만 적재
+  const active = disc.filter((d) => d.status === 'training' || d.status === 'resting' || d.status === 'meditating');
+
+  ck('종결(phase=ended) 도달', ended, `${days}일 ≈ ${years}년`);
+  ck('완주 중 무결성 위반 0건(NaN·음수·성범위·나이)', issues.length === 0, issues.slice(0, 6).join(' · '));
+  ck('종결 시 활성 제자 0(전원 졸업/이탈)', active.length === 0, `졸업 ${graduated.length}·이탈 ${departed.length}·활성 ${active.length}`);
+  ck('전원 졸업으로 종결(대량 이탈 아님)', graduated.length === disc.length && departed.length === 0, `졸업 ${graduated.length}/${disc.length}`);
+  ck('사부 수명 정상(yearsAsMaster ≤ 99)', !!master && master.yearsAsMaster <= 99 && master.yearsAsMaster >= 0, `${master?.yearsAsMaster}년차`);
+  // 정보성(풍문·보고·서신·알림)은 prune 으로 한도 내. 미해결 결정형(도덕·면담·의뢰제안)은
+  // 만료 없으면 무시 시 누적 — 설계 판단 대기(measure-only). 둘을 분리해 정직하게 검증.
+  ck('서신함 정보성 적체 한도 내(≤150)', maxInfo <= 150, `정보성 최대 ${maxInfo}건`);
+  ck('이벤트 히스토리 상한 내(≤200)', maxHistory <= 200, `최대 ${maxHistory}건`);
+  console.log(`  [측정] 미해결 결정형(도덕·면담·의뢰제안) 최대 ${maxAction}건 — 만료 정책 미정(무시 시 누적). 설계 확인 대기.`);
+  // 종결 상태도 직렬화 안전(DB 저장 가능) — 라운드트립 항등.
+  const endState = JSON.stringify(cur.state);
+  let serialOk = false;
+  try { commitGameState(JSON.parse(endState)); serialOk = JSON.stringify(captureGameState()) === endState; } catch { serialOk = false; }
+  ck('종결 상태 JSON 라운드트립 항등(직렬화 안전)', serialOk);
+
+  console.log(`\n[정보] ${years}년 완주 · 졸업 ${graduated.length}명(진로해소 ${careerRecords.length}) · 최대 서신함 ${maxInbox}(정보성 ${maxInfo}·결정형 ${maxAction}) · 최대 히스토리 ${maxHistory}`);
+  console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
+  if (fail > 0) process.exit(1);
+}
+
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
   if (process.argv[2] === 'serverturn') {
     await serverTurnDemo();
+    return;
+  }
+  if (process.argv[2] === 'lifetime') {
+    await lifetimeDemo();
     return;
   }
   if (process.argv[2] === 'sweep') {
