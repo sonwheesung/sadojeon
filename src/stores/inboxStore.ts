@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { InboxItem } from '@/types';
+import { isDecisionKind } from '@/types';
 import { slotAwareStorage } from './persistStorage';
 
 interface InboxStore {
@@ -60,8 +61,9 @@ export const useInboxStore = create<InboxStore>()(
       prune: (max = 120) =>
         set((s) => {
           if (s.items.length <= max) return s;
-          const ACTIONABLE = new Set(['event', 'meeting_request', 'quest_offer']);
-          const mustKeep = (it: InboxItem) => !it.resolved && ACTIONABLE.has(it.kind); // 미해결 결정 — 절대 보존
+          // 미해결 결정형은 절대 보존 — **진행 게이트가 보는 DECISION_KINDS 와 동일 집합**(단일 진실).
+          // (종전엔 event·면담·의뢰제안만 보존해 민원·천거·방문·외교 결정이 잘려나갈 수 있었다.)
+          const mustKeep = (it: InboxItem) => !it.resolved && isDecisionKind(it.kind);
           const kept = s.items.filter(mustKeep);
           const room = Math.max(0, max - kept.length);
           const rest = s.items.filter((it) => !mustKeep(it)).slice(0, room); // 정보성·해결분 최신순 cap 내
@@ -71,14 +73,9 @@ export const useInboxStore = create<InboxStore>()(
 
       unreadCount: () => get().items.filter((it) => !it.read).length,
 
+      // 진행 게이트의 근거 — 미해소 "결정/응답 필요" 수(정본 DECISION_KINDS). >0 이면 진행 불가.
       decisionPendingCount: () =>
-        get().items.filter(
-          (it) =>
-            !it.resolved &&
-            (it.kind === 'event' ||
-              it.kind === 'meeting_request' ||
-              it.kind === 'quest_offer'),
-        ).length,
+        get().items.filter((it) => !it.resolved && isDecisionKind(it.kind)).length,
 
       reset: () => set({ items: [] }),
     }),

@@ -14,20 +14,20 @@ export function SectProgressBar({ onProgress }: { onProgress: () => void }) {
   const pendingDecisions = useInboxBadgeCount();
   const confirm = useConfirm();
 
+  const blocked = pendingDecisions > 0;
+
   const onPress = async () => {
     Haptics.selectionAsync().catch(() => {});
-    // 결정 필요한 서신이 남아 있으면 진행 전 알림.
-    if (pendingDecisions > 0) {
-      const proceed = await confirm({
-        title: '결정할 사항이 있습니다',
-        message: `서신함에 결정이 필요한 일이 ${pendingDecisions}건 남아 있습니다. 먼저 살펴보시겠습니까?`,
+    // 결정 필요한 서신이 남아 있으면 **진행 불가** — 무시할 수 없다(docs/12). 서신함으로만 유도.
+    if (blocked) {
+      const goInbox = await confirm({
+        title: '먼저 처리할 일이 있습니다',
+        message: `서신함에 결정이 필요한 일이 ${pendingDecisions}건 있습니다. 모두 처리해야 하루를 넘길 수 있습니다.`,
         confirmLabel: '서신함으로',
-        cancelLabel: '그대로 진행',
+        cancelLabel: '닫기',
       });
-      if (proceed) {
-        router.push('/inbox');
-        return;
-      }
+      if (goInbox) router.push('/inbox');
+      return; // 어느 쪽이든 진행은 막는다(탈출구 없음).
     }
     onProgress();
   };
@@ -37,12 +37,14 @@ export function SectProgressBar({ onProgress }: { onProgress: () => void }) {
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="진행"
+        accessibilityLabel={blocked ? `진행 불가 — 처리할 서신 ${pendingDecisions}건` : '진행'}
+        accessibilityState={{ disabled: blocked }}
         hitSlop={8}
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+        style={({ pressed }) => [styles.button, blocked && styles.buttonBlocked, pressed && styles.buttonPressed]}
       >
-        <Text style={styles.label}>진행</Text>
+        <Text style={[styles.label, blocked && styles.labelBlocked]}>진행</Text>
       </Pressable>
+      {blocked && <Text style={styles.blockedHint}>처리할 서신 {pendingDecisions}건</Text>}
     </View>
   );
 }
@@ -69,10 +71,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paperDark,
     opacity: 0.85,
   },
+  // 결정 서신이 남아 진행이 막힌 상태 — 흐리게(그레이박스). 누르면 서신함으로 유도.
+  buttonBlocked: {
+    opacity: 0.4,
+    backgroundColor: colors.paperDark,
+  },
   label: {
     fontFamily: typography.serifBold,
     fontSize: typography.sizes.lg,
     color: colors.ink,
     letterSpacing: typography.letterSpacing.wide,
+  },
+  labelBlocked: {
+    color: colors.inkSoft,
+  },
+  blockedHint: {
+    marginTop: spacing.xs,
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
   },
 });
