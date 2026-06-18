@@ -9,6 +9,7 @@
 //     1) Resolver 선택 (LLM eligible & enabled → LlmResolver else RuleResolver)
 //     2) 효과 적용 + history push + pending clear
 
+import { random } from '@/systems/rng';
 import { ALL_MORAL_EVENTS, TIER_WEIGHT } from '@/data/scenarios/moralEvents';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
@@ -94,7 +95,7 @@ function pickSibling(perp: Disciple, tmpl: EventTemplate<string>): Disciple | nu
         (d.status === 'training' || d.status === 'resting' || d.status === 'meditating'),
     );
   if (others.length === 0) return null;
-  return others[Math.floor(Math.random() * others.length)];
+  return others[Math.floor(random() * others.length)];
 }
 
 function interpolate(text: string, perp: string, sib?: string): string {
@@ -126,7 +127,7 @@ function pickHint(
 
 function triggerMoralOnce(): void {
   if (useMoralEventStore.getState().pending) return;
-  if (Math.random() >= MORAL_DAILY_CHANCE) return;
+  if (random() >= MORAL_DAILY_CHANCE) return;
 
   const pairs = collectEligible(ALL_MORAL_TEMPLATES);
   const picked = pickByTier(pairs, TIER_WEIGHT);
@@ -253,7 +254,7 @@ async function resolveMoral(tone: MoralChoiceTone): Promise<void> {
 
     const day = useTimeStore.getState().totalDay;
     useEventHistoryStore.getState().push({
-      id: `${day}-${template.id}-${perpetrator.id}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `${day}-${template.id}-${perpetrator.id}-${random().toString(36).slice(2, 6)}`,
       day,
       domain: 'moral',
       templateId: template.id,

@@ -1,6 +1,7 @@
 // 한 마디 풀 — docs/12_인박스_면담.md "단계 1: 일상 한 마디"
 // 매일 진행 시 무작위 제자 1명이 사부에게 한 마디. 사부는 4문장 중 하나로 응답.
 
+import { random } from '@/systems/rng';
 import { GRADUATION } from '@/data/constants';
 
 export type OneLinerCategory = 'training' | 'daily' | 'relation' | 'worry';
@@ -115,7 +116,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
 export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null {
   const pool = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
   if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[Math.floor(random() * pool.length)];
 }
 
 // 본문 변수 치환 — {rival}=최강 동문 이름. 발화 시점에 실제 이름으로 박는다.
@@ -161,12 +162,12 @@ export const ONE_LINER_RESPONSES: Record<OneLinerTone, readonly string[]> = {
 };
 
 export function pickRandomOneLiner(): OneLinerTemplate {
-  const idx = Math.floor(Math.random() * ONE_LINERS.length);
+  const idx = Math.floor(random() * ONE_LINERS.length);
   return ONE_LINERS[idx];
 }
 
 export function pickResponse(tone: OneLinerTone): string {
   const pool = ONE_LINER_RESPONSES[tone];
-  const idx = Math.floor(Math.random() * pool.length);
+  const idx = Math.floor(random() * pool.length);
   return pool[idx];
 }

@@ -4,6 +4,7 @@
 // 상처=woundSystem, 실전 무공 EXP=questSystem.gainMainSeongExp, 깨달음=attemptQuestEnlightenment 재사용.
 // activitySystem 과 순환 의존을 피하려 가용 판정은 자체적으로 둔다(작은 중복 — 의도).
 
+import { random } from '@/systems/rng';
 import { findExpeditionDest } from '@/data/expeditions';
 import {
   EXPEDITION_EVENTS,
@@ -85,7 +86,7 @@ function planEventDays(dest: ExpeditionDest, startedDay: number, dueDay: number)
   const threat = worldThreat(useJianghuStore.getState().world);
   const expected = dest.danger * (dest.days / 4) * (1 + threat) * EXPEDITION_EVENT_BASE;
   let count = Math.floor(expected);
-  if (Math.random() < expected - count) count += 1;
+  if (random() < expected - count) count += 1;
   count = Math.max(0, Math.min(EXPEDITION_EVENT_MAX, count));
   const span = Math.max(1, dueDay - startedDay);
   const days: number[] = [];
@@ -167,7 +168,7 @@ function pickEvent(dest: ExpeditionDest): ExpeditionEvent | null {
   const pool = EXPEDITION_EVENTS.filter((e) => (e.minDanger ?? 0) <= dest.danger);
   if (pool.length === 0) return null;
   const total = pool.reduce((s, e) => s + e.weight, 0);
-  let r = Math.random() * total;
+  let r = random() * total;
   for (const e of pool) {
     r -= e.weight;
     if (r <= 0) return e;
@@ -220,12 +221,12 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
 // 행선 위험도 → 맞붙는 상대의 격(경지·영글기). 강호의 길에서 만나는 잡배~고수.
 function foeForDanger(danger: number): { realm: Realm; quality: number } {
   if (danger >= 0.6) {
-    return { realm: Math.random() < 0.3 ? 'jeoljeong' : 'ilryu', quality: 0.4 + Math.random() * 0.5 };
+    return { realm: random() < 0.3 ? 'jeoljeong' : 'ilryu', quality: 0.4 + random() * 0.5 };
   }
   if (danger >= 0.35) {
-    return { realm: Math.random() < 0.3 ? 'ilryu' : 'iryu', quality: 0.4 + Math.random() * 0.4 };
+    return { realm: random() < 0.3 ? 'ilryu' : 'iryu', quality: 0.4 + random() * 0.4 };
   }
-  return { realm: Math.random() < 0.4 ? 'iryu' : 'samryu', quality: 0.3 + Math.random() * 0.4 };
+  return { realm: random() < 0.4 ? 'iryu' : 'samryu', quality: 0.3 + random() * 0.4 };
 }
 
 const EXP_ARCHETYPES: NpcArchetype[] = ['orthodox', 'rogue', 'soldier', 'assassin'];
@@ -246,7 +247,7 @@ function resolveCombat(active: ActiveActivity, dest: ExpeditionDest, e: Expediti
     id: 'exp-foe',
     name: '강호의 맞수',
     realm: foe.realm,
-    archetype: EXP_ARCHETYPES[Math.floor(Math.random() * EXP_ARCHETYPES.length)],
+    archetype: EXP_ARCHETYPES[Math.floor(random() * EXP_ARCHETYPES.length)],
     quality: foe.quality,
   });
   const r = simulateCombat([combatantFromDisciple(champion)], [npc], {
@@ -294,7 +295,7 @@ function applyNonCombat(active: ActiveActivity, e: ExpeditionEffect): void {
   }
   if (e.woundSeverity) {
     const dest = active.destId ? findExpeditionDest(active.destId) : undefined;
-    const victim = present[Math.floor(Math.random() * present.length)];
+    const victim = present[Math.floor(random() * present.length)];
     if (victim && dest) inflictWound(victim.id, dest.woundType, e.woundSeverity, (6 - e.woundSeverity) * 5);
   }
   if (e.jianghuNews) {
@@ -347,7 +348,7 @@ export function applyExpeditionEventChoice(activityId: string, choice: Expeditio
   if (choice.roll) {
     const cap = capValue(active, choice.roll.by);
     const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
-    if (Math.random() >= p) e = choice.failEffect ?? { resultText: '일은 뜻대로 풀리지 않았다.' };
+    if (random() >= p) e = choice.failEffect ?? { resultText: '일은 뜻대로 풀리지 않았다.' };
   }
 
   const text = e.combat && dest ? resolveCombat(active, dest, e) : (applyNonCombat(active, e), e.resultText);

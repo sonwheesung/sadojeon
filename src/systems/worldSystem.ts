@@ -2,6 +2,7 @@
 // seedWorldState: 회차 시작 정세. tickWorldState: 한 계절 진행(긴장 드리프트 → 사건 발생·진행·결말).
 // 부수효과(서신·평판·의뢰)는 코어가 직접 하지 않고 '리포트'로 반환 → worldDriver 가 적용(SOLID).
 
+import { random } from '@/systems/rng';
 import {
   BLOC_DEF,
   BLOC_LABEL,
@@ -59,7 +60,7 @@ function refreshOutlooks(s: WorldState): void {
 }
 
 // ── 초기 정세 ────────────────────────────────────────────────────────────────
-export function seedWorldState(rng: Rng = Math.random): WorldState {
+export function seedWorldState(rng: Rng = random): WorldState {
   const powers = {} as Record<WorldBloc, WorldPower>;
   for (const bloc of WORLD_BLOCS) {
     const base = BLOC_DEF[bloc].base + Math.round(noise(rng, 4));
@@ -103,7 +104,7 @@ function sameBlocs(ev: WorldEvent, blocs: WorldBloc[]): boolean {
 }
 
 // ── 한 계절 진행 (입력 상태를 변형하고 같은 객체 반환 — 호출자는 누적용 단일 상태를 넘긴다) ──
-export function tickWorldState(s: WorldState, rng: Rng = Math.random): WorldTickReport {
+export function tickWorldState(s: WorldState, rng: Rng = random): WorldTickReport {
   const report: WorldTickReport = { rumors: [], repSwings: [], questSeeds: [], ignited: [], resolved: [] };
 
   // 1) 지난 계절 결말난 사건 제거.

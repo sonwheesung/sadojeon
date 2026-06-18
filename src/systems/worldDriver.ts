@@ -2,6 +2,7 @@
 // 부수효과로 적용. advanceTurn 이 계절 경계마다 tickWorld() 호출. docs/08.
 // 코어는 부수효과를 모른다(SOLID) — 여기서만 서신함·평판·의뢰에 닿는다.
 
+import { random } from '@/systems/rng';
 import { BLOC_FACTIONS } from '@/data/worldPowers';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
@@ -13,7 +14,7 @@ import { seedWorldQuests } from './questSystem';
 function pushRumor(title: string, body: string, priority: 'normal' | 'high'): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `world-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `world-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'rumor',
     title,
     preview: body,
@@ -59,7 +60,7 @@ export function seedWorld(): void {
 export function tickWorld(): void {
   const st = useJianghuStore.getState();
   const world = st.world ?? seedWorldState();
-  const report = tickWorldState(world, Math.random);
+  const report = tickWorldState(world, random);
   st.setWorld(world);
   applyReport(report);
 }

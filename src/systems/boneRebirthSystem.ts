@@ -7,6 +7,7 @@
 // 메리트: 외공 +8(근골) · 체력 그릇 +4(금강불괴 결) · 심마 0(탁기 일소) · 상처 완치 · 스트레스 0
 //         · **젊은 육체 회귀**(boneReborn — 이후 외공·체력 훈련 나이 보정이 청년기 ×2.4 밑으로 안 떨어짐).
 
+import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -28,7 +29,7 @@ export function attemptBoneRebirth(discipleId: string): boolean {
   // 임독양맥 타통 굴림 — 심마(마장)가 끼어 있으면 약기운이 역류한다.
   const simma = d.simma ?? 0;
   const failChance = Math.max(0, (simma - BONE_REBIRTH_SAFE_SIMMA) / 100);
-  if (failChance > 0 && Math.random() < failChance) {
+  if (failChance > 0 && random() < failChance) {
     triggerQiDeviation(discipleId); // 주화입마 — 내상·내공 흩어짐. 영약은 토해내 보존.
     return false;
   }

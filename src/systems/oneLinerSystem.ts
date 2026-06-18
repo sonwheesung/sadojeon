@@ -10,6 +10,7 @@
 // 톤별 신뢰 변동의 기본값은 제자 personality 에서 자동 산출되는 가중치를 사용.
 // 시드에 tonePreferences 가 직접 정의되어 있으면 그 값 우선.
 
+import { random } from '@/systems/rng';
 import {
   fillOneLinerBody,
   pickContextualOneLiner,
@@ -71,7 +72,7 @@ export const ONE_LINER_DAILY_CHANCE = 0.6;
 
 // 매일 진행 시 호출. 확률 통과 시 활동 가능한 제자 중 무작위 1명에게 한 마디 부여.
 export function triggerDailyOneLiner(): void {
-  if (Math.random() >= ONE_LINER_DAILY_CHANCE) return;
+  if (random() >= ONE_LINER_DAILY_CHANCE) return;
 
   const ds = useDiscipleStore.getState();
   const candidates = ds.order
@@ -85,7 +86,7 @@ export function triggerDailyOneLiner(): void {
     );
   if (candidates.length === 0) return;
 
-  const disciple = candidates[Math.floor(Math.random() * candidates.length)];
+  const disciple = candidates[Math.floor(random() * candidates.length)];
 
   // 상황 컨텍스트 — 현재 상태에 맞는 한 마디만 발화(무작위 X). docs/12.
   const others = candidates.filter((d) => d.id !== disciple.id);

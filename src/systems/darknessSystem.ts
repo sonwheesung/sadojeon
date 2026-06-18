@@ -3,6 +3,7 @@
 // 위험도(risk)는 매주 갱신(흑화 면담·이벤트 게이트 구동), 단계(level)는 압력 높을 때만 천천히.
 // 노출은 라벨이 아니라 관찰 가능한 풍문으로(feedback_hidden_game_state).
 
+import { random } from '@/systems/rng';
 import { findMartialArt } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -69,7 +70,7 @@ export function tickDarkness(): void {
     const patch: Partial<Disciple> = {};
     const risk = riskOf(score);
     if (risk !== d.darknessRisk) patch.darknessRisk = risk;
-    if (rollLevel && score >= 78 && d.darknessLevel < 4 && Math.random() < 0.18) {
+    if (rollLevel && score >= 78 && d.darknessLevel < 4 && random() < 0.18) {
       patch.darknessLevel = (d.darknessLevel + 1) as DarknessLevel;
     }
     if (Object.keys(patch).length) {

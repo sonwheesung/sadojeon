@@ -2,6 +2,7 @@
 // 비등한 두 동문이 이따금 손을 맞춘다. 승패는 전투력+운, 결과 = 명성·스트레스·인격·관계.
 // 강제 선택 아님(읽기 전용 보고). 사부가 산에서 지켜보는 풍경.
 
+import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -44,7 +45,7 @@ function eligible(d: Disciple | undefined): d is Disciple {
 function pushReport(title: string, body: string, discipleId: string): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `spar-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `spar-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'report',
     title,
     preview: body.split('\n')[0],
@@ -61,13 +62,13 @@ function pushReport(title: string, body: string, discipleId: string): void {
 function pickPair(list: Disciple[]): [Disciple, Disciple] | null {
   if (list.length < 2) return null;
   const sorted = [...list].sort((a, b) => combatPower(a) - combatPower(b));
-  const i = Math.floor(Math.random() * (sorted.length - 1)); // 0 .. len-2
+  const i = Math.floor(random() * (sorted.length - 1)); // 0 .. len-2
   return [sorted[i], sorted[i + 1]];
 }
 
 // 매 진행 후 호출. 낮은 확률로 동문 비무 1건.
 export function triggerDailySpar(): void {
-  if (Math.random() >= SPAR_DAILY_CHANCE) return;
+  if (random() >= SPAR_DAILY_CHANCE) return;
   const ds = useDiscipleStore.getState();
   const pool = ds.order.map((id) => ds.disciples[id]).filter(eligible);
   const pair = pickPair(pool);
@@ -80,7 +81,7 @@ export function triggerDailySpar(): void {
     [combatantFromDisciple(y)],
     { mode: 'spar' },
   );
-  const winner = result.winner === 'B' ? y : result.winner === 'A' ? x : Math.random() < 0.5 ? x : y;
+  const winner = result.winner === 'B' ? y : result.winner === 'A' ? x : random() < 0.5 ? x : y;
   const loser = winner.id === x.id ? y : x;
   const decisive = result.tier !== 'close';
 

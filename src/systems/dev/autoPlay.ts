@@ -8,6 +8,7 @@
 // in-app(app/dev/autoplay): 실제 온디바이스 LLM 호출(응답 대기 있음).
 // headless(scripts): RN 스텁 + 룰 폴백(LLM 미호출).
 
+import { random } from '@/systems/rng';
 import { advanceTurn, triggerPostSettlement } from '@/systems/timeSystem';
 import { isRespondable, responseOptionsFor, resolveInboxItem } from '@/systems/inboxResolve';
 import { canDispatch, dispatchQuest } from '@/systems/questSystem';
@@ -49,7 +50,7 @@ export interface AutoPlayEvent {
   llmRaw?: string;
 }
 
-const rand = () => Math.random();
+const rand = () => random();
 
 function dateLabel(): string {
   const t = useTimeStore.getState().current;

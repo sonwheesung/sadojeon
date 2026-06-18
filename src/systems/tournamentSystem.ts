@@ -2,6 +2,7 @@
 // 활동 제자(이류↑·14세↑)가 타 문파 후기지수(생성 NPC)들과 전투력으로 순위를 다툰다.
 // 결과 = 명성 가감 + 강호 풍문 서신. 숫자 직접 노출 X, 등수·풍문으로(docs/27 §6).
 
+import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -46,7 +47,7 @@ function eligible(d: Disciple | undefined): d is Disciple {
 function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'normal'): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `tourney-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `tourney-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'rumor',
     title,
     preview: body,
@@ -63,16 +64,16 @@ function pushNews(title: string, body: string, priority: 'normal' | 'high' = 'no
 function makeRivals(median: number, count: number): Entrant[] {
   const out: Entrant[] = [];
   for (let i = 0; i < count; i += 1) {
-    const surname = RIVAL_SURNAMES[Math.floor(Math.random() * RIVAL_SURNAMES.length)];
-    const given = RIVAL_GIVEN[Math.floor(Math.random() * RIVAL_GIVEN.length)];
-    const useTitle = Math.random() < 0.4;
+    const surname = RIVAL_SURNAMES[Math.floor(random() * RIVAL_SURNAMES.length)];
+    const given = RIVAL_GIVEN[Math.floor(random() * RIVAL_GIVEN.length)];
+    const useTitle = random() < 0.4;
     const name = useTitle
-      ? RIVAL_TITLES[Math.floor(Math.random() * RIVAL_TITLES.length)]
+      ? RIVAL_TITLES[Math.floor(random() * RIVAL_TITLES.length)]
       : `${surname}${given}`;
     // 0.55~1.7배 분포 — 대부분 비등, 간혹 압도적 천재. 0 바닥 방지.
-    const factor = 0.55 + Math.random() * 1.15;
+    const factor = 0.55 + random() * 1.15;
     const base = Math.max(15, median) * factor;
-    out.push({ name, power: Math.round(base + Math.random() * base * 0.15), isDisciple: false });
+    out.push({ name, power: Math.round(base + random() * base * 0.15), isDisciple: false });
   }
   return out;
 }
@@ -108,7 +109,7 @@ export function runYoungTalentsTournament(): void {
 
   const med = median(parts.map((d) => combatPower(d)));
   const rivalCount = Math.max(5, parts.length * 2);
-  const luck = () => Math.round((Math.random() - 0.5) * Math.max(10, med) * 0.3); // ±15% 운
+  const luck = () => Math.round((random() - 0.5) * Math.max(10, med) * 0.3); // ±15% 운
 
   const field: Entrant[] = [
     ...parts.map((d) => ({
