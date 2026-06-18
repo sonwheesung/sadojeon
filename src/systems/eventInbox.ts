@@ -1,6 +1,7 @@
 // 진행 중 발생 이벤트 → 서신함 적재 변환기.
 // 모달로 띄우지 않고 inbox 에 쌓는다. payload 에 해소용 정보 보관(추후 서신함에서 응답).
 
+import { josa } from '@/utils/korean';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, Milestone, PendingMoralEvent, Realm } from '@/types';
@@ -40,7 +41,7 @@ export function seclusionPetitionToInbox(d: Disciple, target: Realm): void {
     kind: 'event',
     eventId: `seclusion-${target}`,
     title: `${d.name} — 폐관 청원`,
-    preview: `${d.name}이(가) 사부 앞에 무릎을 꿇었다. "사부님, 벽이 보입니다. 폐관에 들어 뚫어보고 싶습니다."`,
+    preview: `${josa(d.name, '이', '가')} 사부 앞에 무릎을 꿇었다. "사부님, 벽이 보입니다. 폐관에 들어 뚫어보고 싶습니다."`,
     priority: 'high',
     createdAtDay: day,
     read: false,

@@ -1,3 +1,4 @@
+import { josa } from '@/utils/korean';
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -60,7 +61,7 @@ export function MartialTrainingPanel({ disciple }: { disciple: Disciple }) {
     }
 
     const ok = await confirm({
-      title: `${art.name}을(를) 주력으로 삼을까요?`,
+      title: `${josa(art.name, '을', '를')} 주력으로 삼을까요?`,
       message,
       tone,
     });

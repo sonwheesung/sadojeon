@@ -6,6 +6,7 @@
 // 결과 4단계(박빙/우세/압도/사고)가 보상을 정한다 — 배움은 박빙에서 나오고, 압도전에선 아무도 못 배운다.
 // 숫자는 비노출 — 결과 풍경(일지 텍스트)으로만 인지(숨은 변수 룰).
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import {
   findMartialArt,
@@ -175,7 +176,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
       return {
         tier,
         injured,
-        note: `${victim.name}이(가) ${striker.name}의 손속에 다쳤다 — 그런데 일으켜 세우는 손을 뿌리치지 않았다.`,
+        note: `${josa(victim.name, '이', '가')} ${striker.name}의 손속에 다쳤다 — 그런데 일으켜 세우는 손을 뿌리치지 않았다.`,
         artDelta,
       };
     }
@@ -185,7 +186,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
     return {
       tier,
       injured,
-      note: `대련이 과열됐다. ${striker.name}의 손속이 지나쳐 ${victim.name}이(가) 다쳤다.`,
+      note: `대련이 과열됐다. ${striker.name}의 손속이 지나쳐 ${josa(victim.name, '이', '가')} 다쳤다.`,
       artDelta,
     };
   }
@@ -231,12 +232,12 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
   // 결과 풍경 — 숫자 없이 구간을 읽게 한다.
   const note =
     spark != null
-      ? `${a.name}과(와) ${b.name}이(가) 손을 맞췄다 — 합이 무르익던 중, ${spark.name}이(가) 상대의 초식에서 제 무공의 답을 보았다.`
+      ? `${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 손을 맞췄다 — 합이 무르익던 중, ${josa(spark.name, '이', '가')} 상대의 초식에서 제 무공의 답을 보았다.`
       : tier === 'close'
-        ? `${a.name}과(와) ${b.name}이(가) 팽팽하게 손을 맞췄다. 서로의 빈틈을 짚어주며 둘 다 적잖이 얻었다.`
+        ? `${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 팽팽하게 손을 맞췄다. 서로의 빈틈을 짚어주며 둘 다 적잖이 얻었다.`
         : tier === 'edge'
-          ? `${winner.name}이(가) 반 수 위였다. ${loser.name}은(는) 받아내며 더 많이 배웠다.`
-          : `${winner.name}의 무위가 한참 위라 ${loser.name}은(는) 손도 제대로 못 섞었다 — 이 짝으로는 서로 얻을 게 없다.`;
+          ? `${josa(winner.name, '이', '가')} 반 수 위였다. ${josa(loser.name, '은', '는')} 받아내며 더 많이 배웠다.`
+          : `${winner.name}의 무위가 한참 위라 ${josa(loser.name, '은', '는')} 손도 제대로 못 섞었다 — 이 짝으로는 서로 얻을 게 없다.`;
 
   return { tier, injured, note, artDelta };
 }

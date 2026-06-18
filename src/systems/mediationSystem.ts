@@ -6,6 +6,7 @@
 // 성공률 = 사부 통찰 + 신뢰 + 사연 인지(통찰 ★4↑ × 시드 적대) + 훈계 누적(도덕 이벤트 history).
 // 잘못 들쑤시면 악화(신뢰·스트레스) — 개입은 공짜가 아니다.
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { STARTING_RIVALRIES } from '@/data/disciples/startingPool';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -121,7 +122,7 @@ export function triggerDailyMediation(): void {
       kind: 'event',
       eventId: 'mediation',
       title: `${a.name}·${b.name} — 사이가 심상치 않다`,
-      preview: `${a.name}과(와) ${b.name}이(가) 마주쳐도 서로 눈을 피한다. 수련 중에도 함께 서지 않으려 한다. 사부로서 어찌할 것인가.`,
+      preview: `${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 마주쳐도 서로 눈을 피한다. 수련 중에도 함께 서지 않으려 한다. 사부로서 어찌할 것인가.`,
       priority: 'high',
       createdAtDay: day,
       read: false,
@@ -141,7 +142,7 @@ export function triggerDailyMediation(): void {
       kind: 'event',
       eventId: 'counsel',
       title: `${subject.name} — 마음에 응어리가 보인다`,
-      preview: `${subject.name}이(가) ${other.name} 얘기만 나오면 낯빛이 굳는다. 조용히 불러 마음을 물어볼 것인가.`,
+      preview: `${josa(subject.name, '이', '가')} ${other.name} 얘기만 나오면 낯빛이 굳는다. 조용히 불러 마음을 물어볼 것인가.`,
       priority: 'normal',
       createdAtDay: day,
       read: false,
@@ -203,7 +204,7 @@ export function resolveMediation(aId: string, bId: string, key: string): void {
       if (nextBa) ds.setRelation(bId, aId, nextBa);
       pushReport(
         `${a.name}·${b.name} — 응어리가 한 꺼풀 벗겨졌다`,
-        `사부가 둘을 같이 앉혔다. 한참의 침묵 끝에, ${a.name}과(와) ${b.name}이(가) 서로에게 처음으로 고개를 끄덕였다. 응어리가 다 풀린 건 아니나 — 한 꺼풀은 분명 벗겨졌다.`,
+        `사부가 둘을 같이 앉혔다. 한참의 침묵 끝에, ${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 서로에게 처음으로 고개를 끄덕였다. 응어리가 다 풀린 건 아니나 — 한 꺼풀은 분명 벗겨졌다.`,
       );
     } else if (random() < 0.5) {
       // 서먹하게 끝남 — 변화 없음.
@@ -242,7 +243,7 @@ export function resolveMediation(aId: string, bId: string, key: string): void {
     ds.setRelation(other.id, sided.id, REL_DOWN[rel]);
     pushReport(
       `사부가 ${sided.name}의 편에 섰다`,
-      `사부가 ${sided.name}의 손을 들어주었다. ${sided.name}은(는) 어깨를 폈으나, ${other.name}의 눈빛이 한층 어두워졌다.`,
+      `사부가 ${sided.name}의 손을 들어주었다. ${josa(sided.name, '은', '는')} 어깨를 폈으나, ${other.name}의 눈빛이 한층 어두워졌다.`,
     );
     return;
   }
@@ -265,7 +266,7 @@ export function resolveCounsel(subjectId: string, otherId: string, key: string):
       if (next) ds.setRelation(subjectId, otherId, next);
       pushReport(
         `${subject.name} — 마음이 조금 풀렸다`,
-        `사부 앞에서 ${subject.name}이(가) 오래 담아둔 말을 꺼냈다. 다 풀린 건 아니나, ${other.name}을(를) 보는 눈이 조금은 누그러졌다.`,
+        `사부 앞에서 ${josa(subject.name, '이', '가')} 오래 담아둔 말을 꺼냈다. 다 풀린 건 아니나, ${josa(other.name, '을', '를')} 보는 눈이 조금은 누그러졌다.`,
       );
     }
     return;
