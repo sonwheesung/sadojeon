@@ -17,13 +17,13 @@ import type { MartialArtGrade } from '@/types/martialArt';
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 
-// 등급별 연구 소요(실제 시간). 하품 5분 ~ 신품 12시간. 🔧 그레이박스.
+// 등급별 연구 소요(실제 시간). 하품 10분 ~ 신품 24시간. 🔧 그레이박스. (2026-06-18 전 등급 ×2)
 export const RESEARCH_DURATION_MS: Record<MartialArtGrade, number> = {
-  novice: 5 * MIN,
-  apprentice: 30 * MIN,
-  master: 2 * HOUR,
-  grandmaster: 6 * HOUR,
-  legendary: 12 * HOUR,
+  novice: 10 * MIN,
+  apprentice: 60 * MIN,
+  master: 4 * HOUR,
+  grandmaster: 12 * HOUR,
+  legendary: 24 * HOUR,
 };
 
 // 다이아 즉시 완료 비용 — 남은 시간 30분당 1 (최소 1). 🔧
