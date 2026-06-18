@@ -111,6 +111,15 @@ export function remainingMs(artId: string): number {
   return Math.max(0, s.researchEndAt - Date.now());
 }
 
+// 연구 진행률 0~100 (UI 표시용) — 경과/총 소요(실시간). researching 아니면 0.
+export function researchProgressPct(artId: string): number {
+  const s = useCodexStore.getState().scrolls.find((x) => x.artId === artId);
+  if (!s || s.status !== 'researching' || s.researchStartAt == null || s.researchEndAt == null) return 0;
+  const span = s.researchEndAt - s.researchStartAt;
+  if (span <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round(((Date.now() - s.researchStartAt) / span) * 100)));
+}
+
 export function diamondCostFor(artId: string): number {
   const remain = remainingMs(artId);
   if (remain <= 0) return 0;

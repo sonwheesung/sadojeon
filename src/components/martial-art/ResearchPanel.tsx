@@ -12,6 +12,7 @@ import {
   diamondCostFor,
   formatRemaining,
   researchDurationFor,
+  researchProgressPct,
   skipResearchWithDiamonds,
   startResearch,
   syncResearch,
@@ -39,6 +40,7 @@ export function ResearchPanel() {
   if (!researching && pending.length === 0) return null; // 풀 것이 없으면 침묵
 
   const remain = researching ? Math.max(0, (researching.researchEndAt ?? now) - now) : 0;
+  const pct = researching ? researchProgressPct(researching.artId) : 0;
   const cost = researching ? diamondCostFor(researching.artId) : 0;
 
   async function onSkip(artId: string, artName: string) {
@@ -63,7 +65,10 @@ export function ResearchPanel() {
         <View style={styles.activeRow}>
           <View style={styles.activeMain}>
             <Text style={styles.activeName}>{findMartialArt(researching.artId)?.name ?? researching.artId}</Text>
-            <Text style={styles.activeTime}>풀이 중 — {formatRemaining(remain)} 남음</Text>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${pct}%` }]} />
+            </View>
+            <Text style={styles.activeTime}>풀이 중 {pct}% — {formatRemaining(remain)} 남음</Text>
           </View>
           <Pressable
             style={[styles.skipBtn, diamonds < cost && styles.btnOff]}
@@ -95,7 +100,7 @@ export function ResearchPanel() {
               accessibilityRole="button"
               accessibilityLabel={`${art.name} 연구 시작`}
             >
-              <Text style={styles.startText}>{researching ? '연구 중…' : '연구 시작'}</Text>
+              <Text style={styles.startText}>{researching ? '연구 중…' : '연구 시작하기'}</Text>
             </Pressable>
           </View>
         );
@@ -126,9 +131,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.inkSoft,
   },
-  activeMain: { flex: 1, gap: 1 },
+  activeMain: { flex: 1, gap: 2 },
   activeName: { fontFamily: typography.serifBold, fontSize: typography.sizes.sm, color: colors.ink },
   activeTime: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.brown },
+  // 진행 바(그레이박스) — track 위에 brown fill, 너비 = 진행률%.
+  barTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.paper,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkSoft,
+    overflow: 'hidden',
+  },
+  barFill: { height: '100%', backgroundColor: colors.brown },
   skipBtn: {
     borderWidth: 1,
     borderColor: colors.seal,
