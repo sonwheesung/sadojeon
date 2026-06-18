@@ -47,13 +47,8 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
 import { runs as runsRepo } from '@/data/repositories';
-// 서버 권위 검증 — 엔진을 Node에서 서버처럼 구동(GameState 로드→진행→캡처)·결정성 실증. docs/31.
-import { captureGameState, commitGameState, cloneGameState, type GameState } from '@/engine/gameState';
-import { seedAmbient, ambientCursor } from '@/systems/rng';
-import { triggerPostSettlement } from '@/systems/timeSystem';
-import { useFieldEventStore } from '@/stores/fieldEventStore';
-import { useMoralEventStore } from '@/stores/moralEventStore';
-import { useCutsceneStore } from '@/stores/cutsceneStore';
+// 서버 권위 검증 — 정본 서버 엔진 API(serverEngine)를 Node에서 구동·결정성 실증. docs/31 Phase 1.
+import { newRun as serverNewRun, advance as serverAdvance, type TurnResult } from '@/engine/serverEngine';
 
 const SEED_POOL = ['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon'];
 
@@ -1881,80 +1876,55 @@ async function runCovertSweep(): Promise<void> {
   );
 }
 // ─── 서버 권위 결정성 실증 (docs/31 Phase 1) ────────────────────────────────
-// 엔진을 Vercel 함수처럼 Node에서 구동 — "같은 상태 + 같은 시드 → 같은 결과"를 실증.
-// 이게 성립해야 서버가 시드를 쥐었을 때 세이브 스커밍(결과 재시도)이 봉쇄된다.
+// 정본 서버 엔진 API(serverEngine.newRun/advance)를 Vercel 함수처럼 Node에서 구동.
+// "같은 상태 + 같은 시드상태 → 같은 결과"를 실증 — 서버가 시드를 쥐면 세이브 스커밍 봉쇄.
 const SERVER_PARTY = ['yun-soso', 'i-cheongha', 'jin-sohwa', 'jang-cheol'];
 
-// 휘발 출력 스토어 초기화 — 서버 요청의 클린 슬레이트(이 넷은 GameState 아닌 엔진 출력 events).
-function resetEphemeral(): void {
-  usePendingStore.setState({
-    oneLiner: null, wish: null, dailyLog: null, dailyBadges: [], milestones: [],
-    settlement: null, llmDebugBuffer: [], lastDebug: null, inflightResolutions: 0,
-  } as never);
-  useMoralEventStore.getState().clear();
-  useFieldEventStore.getState().clear();
-  useCutsceneStore.getState().clear();
-}
-
-// 하루 진행(턴 + 정산 후속). 월초/종결은 advanceTurn 이 알아서 분기.
-function stepDays(days: number): void {
-  for (let i = 0; i < days; i += 1) {
-    if (useGameStore.getState().phase === 'ended') break;
-    advanceTurn();
-    triggerPostSettlement();
-  }
-}
-
-// 새 회차를 시드 고정으로 days 일 진행 → 최종 GameState. (seedNewRun 도 rng 를 쓰므로 시드를 먼저 건다)
-function freshRun(seed: number, days: number): GameState {
-  seedAmbient(seed);
-  resetEphemeral();
-  seedNewRun(SERVER_PARTY);
-  stepDays(days);
-  return cloneGameState(captureGameState());
-}
-
-// 서버 모델: 임의 GameState 를 로드(commit)하고 시드 걸어 1+ 진행 → 최종 GameState.
-function serverStep(stateIn: GameState, seed: number, days: number): GameState {
-  resetEphemeral();
-  commitGameState(cloneGameState(stateIn)); // 스토어 통째 덮기(클린 슬레이트)
-  seedAmbient(seed);
-  stepDays(days);
-  return cloneGameState(captureGameState());
+// newRun 후 advance 를 days 회 체인(매 턴 전진된 rngState 를 다음 턴에 — 실제 서버 흐름).
+function runChain(seed: number, days: number): TurnResult {
+  let cur = serverNewRun(SERVER_PARTY, seed);
+  for (let i = 0; i < days; i += 1) cur = serverAdvance(cur.state, cur.rngState);
+  return cur;
 }
 
 async function serverTurnDemo(): Promise<void> {
-  setAutoSaveEnabled(false); // DB 미접속(순수 인메모리 — 결정성 보존)
   const J = (x: unknown) => JSON.stringify(x);
   let pass = 0, fail = 0;
   const ck = (label: string, cond: boolean, detail = '') => {
     if (cond) { pass += 1; console.log(`  PASS  ${label}${detail ? `   ${detail}` : ''}`); }
     else { fail += 1; console.log(`  FAIL  ${label}${detail ? `   ${detail}` : ''}`); }
   };
-  console.log('═══ 서버 권위 결정성 실증 (엔진 Node 구동) ═══\n');
+  console.log('═══ 서버 권위 결정성 실증 (serverEngine API, Node 구동) ═══\n');
 
-  const DAYS = 120; // ~4개월
-  // 1) 풀런 결정성 — 같은 시드 → 같은 회차.
-  const a = freshRun(12345, DAYS);
-  const b = freshRun(12345, DAYS);
-  ck('같은 시드 풀런 → 동일 GameState', J(a) === J(b));
-  ck('진행됨(시작과 다름)', J(a) !== J(freshRun(12345, 0)));
+  // 1) newRun 결정성 + 이벤트·시드상태 반환.
+  const r0a = serverNewRun(SERVER_PARTY, 12345);
+  const r0b = serverNewRun(SERVER_PARTY, 12345);
+  ck('newRun 같은 시드 → 동일 상태·시드상태', J(r0a.state) === J(r0b.state) && r0a.rngState === r0b.rngState);
+  ck('TurnResult 이벤트 반환(pending/field/cutscene/moral)',
+    ['pending', 'field', 'cutscene', 'moral'].every((k) => k in r0a.events));
 
-  // 2) 시드 민감도 — 다른 시드 → 다른 회차(rng 가 실제로 결과를 가른다).
-  const c = freshRun(99999, DAYS);
-  ck('다른 시드 → 다른 GameState', J(a) !== J(c));
+  // 2) advance 체인 결정성 — 같은 시드에서 120턴 두 번 → 완전 동일.
+  const DAYS = 120;
+  const a = runChain(2024, DAYS);
+  const b = runChain(2024, DAYS);
+  ck('advance 체인 같은 시드 → 동일', J(a.state) === J(b.state) && a.rngState === b.rngState);
+  ck('진행됨(newRun 직후와 다름)', J(a.state) !== J(serverNewRun(SERVER_PARTY, 2024).state));
 
-  // 3) 서버 모델 — 임의 상태 로드→진행 결정성(세이브 스커밍 봉쇄 실증).
-  const mid = freshRun(2024, 60); // 중간 상태
-  const s1 = serverStep(mid, 777, 30);
-  const s2 = serverStep(mid, 777, 30); // 같은 상태+같은 시드 재시도
-  ck('상태 로드→진행 결정성(재시도 동일)', J(s1) === J(s2));
-  const s3 = serverStep(mid, 555, 30); // 다른 시드로 재시도
-  ck('다른 시드 재시도 → 다른 결과', J(s1) !== J(s3));
-  ck('중간 상태에서 진행됨', J(s1) !== J(mid));
+  // 3) 시드 민감도 — 다른 시드 → 다른 회차.
+  const c = runChain(7777, DAYS);
+  ck('다른 시드 → 다른 결과', J(a.state) !== J(c.state));
 
-  console.log(`\n  → 같은 상태+시드는 항상 같은 결과, 시드 바꾸면 달라짐.`);
-  console.log(`    서버가 시드를 쥐면 클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄.`);
+  // 4) 서버 모델 — 임의 중간 상태 로드→advance 재시도 동일(세이브 스커밍 봉쇄 실증).
+  const mid = runChain(333, 60);
+  const s1 = serverAdvance(mid.state, mid.rngState);
+  const s2 = serverAdvance(mid.state, mid.rngState); // 같은 상태+같은 시드상태 재시도
+  ck('상태 로드→advance 재시도 → 동일', J(s1.state) === J(s2.state) && s1.rngState === s2.rngState);
+  ck('한 턴 진행됨', J(s1.state) !== J(mid.state));
+  const s3 = serverAdvance(mid.state, (mid.rngState ^ 0x1234) >>> 0); // 다른 시드상태
+  ck('다른 시드상태 → 다른 결과', J(s1.state) !== J(s3.state));
+
+  console.log(`\n  → 같은 (상태, 시드상태) 는 항상 같은 결과. 서버가 시드상태를 비공개로 쥐면`);
+  console.log(`    클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄. 엔진이 RN 없이 Node 구동됨도 확인.`);
   console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
   if (fail > 0) process.exit(1);
 }
