@@ -3,6 +3,7 @@
 // 수용은 전적으로 제자 결정 — 어둠 노선·낮은 신뢰면 사부의 말이 잘 닿지 않는다. 결과는 풍문 서신.
 // 효과는 GraduateRecord(power·fame·status·route)에만 — 졸업 제자는 자율체라 직접 조작이 아니라 '청'이다.
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { ROUTE_LADDER, ROUTE_LABEL, type RouteId } from '@/data/careers';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -99,7 +100,7 @@ function resolveLetter(g: GraduateRecord, tone: LetterTone): void {
       convertToRighteous(g);
       pushJianghuNews(
         `${g.name} — 개심`,
-        `사부의 경고가 끝내 마음에 닿았다. ${g.name}이 어둠의 길을 등지고 손을 씻기로 했다는 놀라운 소식.`,
+        `사부의 경고가 끝내 마음에 닿았다. ${josa(g.name, '이', '가')} 어둠의 길을 등지고 손을 씻기로 했다는 놀라운 소식.`,
         'high',
       );
     } else {
@@ -117,7 +118,7 @@ function resolveSummon(g: GraduateRecord): void {
   const came = random() < Math.max(0.05, Math.min(0.95, p));
 
   if (!came) {
-    pushJianghuNews(`${g.name} — 부름`, `사부가 ${g.name}을 산문으로 불렀으나, 응하지 않았다는 소식.`);
+    pushJianghuNews(`${g.name} — 부름`, `사부가 ${josa(g.name, '을', '를')} 산문으로 불렀으나, 응하지 않았다는 소식.`);
     return;
   }
   const parts: string[] = [];
@@ -139,7 +140,7 @@ function resolveSummon(g: GraduateRecord): void {
     );
     return;
   }
-  pushJianghuNews(`${g.name} — 산문에 다녀가다`, `${g.name}이 산문에 들러 ${parts.join(', ')}. 한 계절을 머물다 강호로 돌아갔다.`);
+  pushJianghuNews(`${g.name} — 산문에 다녀가다`, `${josa(g.name, '이', '가')} 산문에 들러 ${parts.join(', ')}. 한 계절을 머물다 강호로 돌아갔다.`);
 }
 
 // advanceTurn 훅 — 도달한 전갈을 판정.
@@ -150,7 +151,7 @@ export function tickMasterOutreach(): void {
     const g = useGraduateStore.getState().records.find((r) => r.id === m.graduateId);
     if (!g || g.status === 'dead' || g.status === 'missing' || g.status === 'retired') {
       // 전갈이 닿기 전 강호를 떠났다.
-      if (g) pushJianghuNews(`${m.graduateName} — 전갈`, `사부의 전갈이 닿기 전, ${m.graduateName}은 이미 강호에서 멀어진 뒤였다.`);
+      if (g) pushJianghuNews(`${m.graduateName} — 전갈`, `사부의 전갈이 닿기 전, ${josa(m.graduateName, '은', '는')} 이미 강호에서 멀어진 뒤였다.`);
       useOutreachStore.getState().remove(m.id);
       continue;
     }

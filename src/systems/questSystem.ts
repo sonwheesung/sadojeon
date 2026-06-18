@@ -2,6 +2,7 @@
 // 게시판(사문 명성 게이트) → 파견(1~N명) → 주(일) 진행 → 결산 outcome 5분기.
 // 도메인 성장(능력치 EXP) + 자금 + 명성(제자·사문) + 위험(부상·사망).
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import {
   QUEST_DOMAIN_LABEL,
@@ -423,13 +424,13 @@ function rollRescueReveal(active: ActiveQuest): {
   for (const id of active.discipleIds) adjustDiscipleRep(id, f.id, Math.ceil(amount / 2));
   if (isRight) {
     return {
-      text: `구한 이는 ${f.name}의 고인(高人)이었다. ${f.name}과의 인연이 두터워졌다.`,
+      text: `구한 이는 ${f.name}의 고인(高人)이었다. ${josa(f.name, '과', '와')}의 인연이 두터워졌다.`,
       rewardFlag: 'noble',
       rewardMult: 1,
     };
   }
   return {
-    text: `구한 이는 ${f.name}의 사람이었다. ${f.name}이 은밀히 사례하니, 그쪽과의 관계가 두터워졌다.`,
+    text: `구한 이는 ${f.name}의 사람이었다. ${josa(f.name, '이', '가')} 은밀히 사례하니, 그쪽과의 관계가 두터워졌다.`,
     rewardMult: 1.1,
   };
 }
@@ -1111,7 +1112,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
 
   let body: string;
   if (outcome === 'disaster' && lostName) {
-    body = `${tag} ${q.title} — ${names}\n임무 도중 ${lostName}이(가) 치명상을 입었다. 동문들이 마을 의원까지 업고 달렸으나 — 끝내 돌아오지 못했다.`;
+    body = `${tag} ${q.title} — ${names}\n임무 도중 ${josa(lostName, '이', '가')} 치명상을 입었다. 동문들이 마을 의원까지 업고 달렸으나 — 끝내 돌아오지 못했다.`;
   } else if (outcome === 'disaster' && gravelyHurtName) {
     const rescueNote =
       rescueRoute === 'elixir'
@@ -1121,7 +1122,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
           : rescueRoute === 'innate'
             ? '영약도 의원도 없는 사경에서, 타고난 진원(先天眞氣)을 끌어올려 스스로 죽음을 떨쳤다. 허나 근본이 상해 공력을 잃었다.'
             : '동문들이 마을 의원까지 업고 달린 끝에 가까스로 살렸다.';
-    body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${gravelyHurtName}이(가) 치명상을 입었으나 ${rescueNote} 오래 몸져눕는다.`;
+    body = `${tag} ${q.title} — ${names}\n재난에 가까운 위기였다. ${josa(gravelyHurtName, '이', '가')} 치명상을 입었으나 ${rescueNote} 오래 몸져눕는다.`;
   } else {
     const reward = `자금 ${Math.round(q.reward.money * scale.money)}${
       scale.fame > 0 ? ' · 명성 ↑' : ''

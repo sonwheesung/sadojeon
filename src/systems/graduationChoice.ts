@@ -2,6 +2,7 @@
 // graduationSystem(언제 졸업하나·milestone)과 분리: 여기는 inbox 응답으로 직업을 확정하는 책임만.
 // pendingStore(→executorch RN) 비의존 → 헤드리스 검증 가능. inboxResolve 가 호출.
 
+import { josa } from '@/utils/korean';
 import { JOB_POOL, type Job } from '@/data/jobs';
 import { evaluateJobs, graduationWillConflict } from './jobSystem';
 import { graduateToCareer, switchGraduateCareer } from './careerSystem';
@@ -25,8 +26,8 @@ function finalizeGraduation(d: Disciple, jobId: string): void {
 function enqueueGraduationConflict(d: Disciple, userPickId: string, willJob: Job, day: number): void {
   const userName = jobById(userPickId)?.name ?? '그 길';
   const sceneLine =
-    `${d.name}이 고개를 들어 사부를 바라보았다.\n` +
-    `「사부님. ${userName}의 길을 일러 주심을 압니다. 허나… 저는 ${willJob.name}이 되고 싶습니다.」\n` +
+    `${josa(d.name, '이', '가')} 고개를 들어 사부를 바라보았다.\n` +
+    `「사부님. ${userName}의 길을 일러 주심을 압니다. 허나… 저는 ${josa(willJob.name, '이', '가')} 되고 싶습니다.」\n` +
     `제 뜻이 분명한 제자다. 스승의 권함과 제자의 바람이 엇갈렸다.`;
   useInboxStore.getState().add({
     id: `gradconflict-${day}-${d.id}`,
@@ -95,7 +96,7 @@ export function resolveGraduationConflict(
   const userName = jobById(userPickId)?.name ?? '권한 길';
   const body = respect
     ? `${d.name}의 뜻을 꺾지 않았다. 「…고맙습니다, 사부님.」 제 길(${willName})을 향해 나선다.`
-    : `${d.name}을 달래어 ${userName}로 돌려세웠다. 제자는 끝내 고개를 끄덕였으나, 그 눈빛엔 못다 한 바람이 어렸다.`;
+    : `${josa(d.name, '을', '를')} 달래어 ${josa(userName, '으로', '로')} 돌려세웠다. 제자는 끝내 고개를 끄덕였으나, 그 눈빛엔 못다 한 바람이 어렸다.`;
   useInboxStore.getState().add({
     id: `gradconflict-result-${day}-${d.id}`,
     kind: 'report',

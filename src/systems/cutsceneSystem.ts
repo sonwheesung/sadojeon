@@ -2,6 +2,7 @@
 // 사건 추가 = data/cutscenes 한 항목 + 트리거 한 줄. 제자 전용 연출 추가 = byDisciple 한 칸(SOLID).
 
 import { random } from '@/systems/rng';
+import { fillName } from '@/utils/korean';
 import { findCutscene } from '@/data/cutscenes';
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -27,7 +28,7 @@ export function playCutscene(
     hanzi: def.hanzi,
     title: def.title,
     tone: def.tone,
-    line: (variant?.line ?? def.defaultLine).replaceAll('{name}', disciple.name),
+    line: fillName(variant?.line ?? def.defaultLine, { name: disciple.name }),
     quote: variant?.quote,
     mediaVariant: opts?.mediaVariant,
     frameWidth: opts?.frame?.width,

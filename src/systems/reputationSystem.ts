@@ -2,6 +2,7 @@
 // 사문/제자 ↔ 문파 관계를 올리고 내린다. 오케스트레이터 본문 안 건드리고 기존 훅에서 호출(SOLID).
 // 현재 구동원: 의뢰 결산(성향). 추후 도덕 이벤트·졸업 노선·흑화·세가 자제 영입 등 추가.
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { FACTIONS, repTier, type RepTier } from '@/data/factions';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -102,7 +103,7 @@ export function tickReputationInfluence(): void {
       useSectStore.getState().adjustResources(gift);
       pushFactionNews(
         `${f.name} — 후의`,
-        `${f.name}이 사문에 사례를 보내왔다. 두터운 관계의 보답으로 금자 ${gift}냥이 금고에 들었다.`,
+        `${josa(f.name, '이', '가')} 사문에 사례를 보내왔다. 두터운 관계의 보답으로 금자 ${gift}냥이 금고에 들었다.`,
       );
     } else if (tier === 'hostile' && random() < 0.5) {
       const cur = useSectStore.getState().sect?.resources ?? 0;
@@ -110,7 +111,7 @@ export function tickReputationInfluence(): void {
       useSectStore.getState().adjustResources(-loss);
       pushFactionNews(
         `${f.name} — 시비`,
-        `${f.name}이 사문에 자객을 보냈다는 흉흉한 소문. 대응에 금자 ${loss}냥을 썼다.`,
+        `${josa(f.name, '이', '가')} 사문에 자객을 보냈다는 흉흉한 소문. 대응에 금자 ${loss}냥을 썼다.`,
       );
     }
   }

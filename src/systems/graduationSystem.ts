@@ -2,6 +2,7 @@
 // 그레이박스 단순화: 무공 단계 + 신뢰 두 축 기반.
 // 추후 명성·노선 안정성 도입 시 종합 평가로 확장.
 
+import { josa } from '@/utils/korean';
 import { findMartialArt, seongToStage } from '@/data/martialArts';
 import { JOB_TIER_LABEL } from '@/data/jobs';
 import { GRADUATION } from '@/data/constants';
@@ -36,7 +37,7 @@ function enqueueGraduationChoice(d: Disciple, day: number): void {
     kind: 'event',
     eventId: `graduation-${d.id}`,
     title: `${d.name} — 하산, 어느 길로`,
-    preview: `${mainArtSummary(d)}을 이룬 ${d.name}이 강호로 나섭니다.\n사부로서 어느 길을 권하시겠습니까.`,
+    preview: `${mainArtSummary(d)}을 이룬 ${josa(d.name, '이', '가')} 강호로 나섭니다.\n사부로서 어느 길을 권하시겠습니까.`,
     priority: 'high',
     createdAtDay: day,
     read: false,
@@ -132,7 +133,7 @@ export function checkGraduations(): void {
       discipleId: id,
       discipleName: d.name,
       title: '하산',
-      body: `${d.name}이 사부에게 마지막 절을 올렸다.\n${mainArtSummary(d)} — ${GRADE_LABEL[grade]}.\n강호로 나간다.`,
+      body: `${josa(d.name, '이', '가')} 사부에게 마지막 절을 올렸다.\n${mainArtSummary(d)} — ${GRADE_LABEL[grade]}.\n강호로 나간다.`,
     });
     // 강호 행로(직업)는 서신함 강제 결정으로. docs/28 §3.
     enqueueGraduationChoice(d, day);

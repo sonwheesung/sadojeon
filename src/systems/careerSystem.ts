@@ -2,6 +2,7 @@
 // graduateToCareer: 하산 직업 선택 → 졸업 제자 레코드 생성(노선 + 시작 직책).
 // tickCareers: 매년(timeSystem 연 경계) 호출 → 능력 완만 성장 + 강호 굴림(승급·좌절·은거·사망) → 강호 풍문 서신.
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import {
   ROUTE_BLOC,
@@ -64,7 +65,7 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     status: 'active',
     graduatedYear: year,
   });
-  pushNews(`${d.name} — 강호로`, `${d.name}이 ${ROUTE_LABEL[route]} ${title}(으)로 강호에 첫발을 디뎠다.`);
+  pushNews(`${d.name} — 강호로`, `${josa(d.name, '이', '가')} ${ROUTE_LABEL[route]} ${title}(으)로 강호에 첫발을 디뎠다.`);
 
   // 노선 → 연관 문파 평판↑. 제자가 그 길에 드니 사문·본인과 그 문파의 인연이 깊어진다. docs/30.
   const factionId = ROUTE_FACTION[route];
@@ -72,7 +73,7 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     adjustSectRep(factionId, 12);
     adjustDiscipleRep(d.id, factionId, 25);
     const fname = findFaction(factionId)?.name ?? '';
-    if (fname) pushNews(`${d.name} — ${fname}`, `${d.name}이 ${ROUTE_LABEL[route]}의 길에 드니, ${fname}과 사문의 인연이 깊어졌다.`);
+    if (fname) pushNews(`${d.name} — ${fname}`, `${josa(d.name, '이', '가')} ${ROUTE_LABEL[route]}의 길에 드니, ${josa(fname, '과', '와')} 사문의 인연이 깊어졌다.`);
   }
 }
 
@@ -87,12 +88,12 @@ export function switchGraduateCareer(d: Disciple, newJobId: string): void {
     title,
     power: routeCompetence(route, d),
   });
-  pushNews(`${d.name} — 제 뜻대로`, `${d.name}이 끝내 제 뜻을 좇아 ${ROUTE_LABEL[route]} ${title}의 길로 들어섰다.`);
+  pushNews(`${d.name} — 제 뜻대로`, `${josa(d.name, '이', '가')} 끝내 제 뜻을 좇아 ${ROUTE_LABEL[route]} ${title}의 길로 들어섰다.`);
 }
 
 function deathLine(g: GraduateRecord, status: GraduateStatus): string {
   if (status === 'missing') return `${g.name}의 종적이 끊겼다. 강호 어디에서도 소식이 없다.`;
-  return `${g.name}이 강호에서 변을 당했다는 비보가 전해졌다. ${ROUTE_LABEL[g.route]}의 길이었다.`;
+  return `${josa(g.name, '이', '가')} 강호에서 변을 당했다는 비보가 전해졌다. ${ROUTE_LABEL[g.route]}의 길이었다.`;
 }
 
 // 매년 1회. 각 졸업 제자의 한 해를 굴린다.
@@ -131,7 +132,7 @@ export function tickCareers(): void {
       status = dead ? 'dead' : 'missing';
       gs.update(g.id, { power, fame, status });
       const line = blocAtWar
-        ? `${g.name}이 ${BLOC_LABEL[bloc]}의 전란에 몸을 던졌다가 끝내 돌아오지 못했다. ${ROUTE_LABEL[g.route]}의 길이었다.`
+        ? `${josa(g.name, '이', '가')} ${BLOC_LABEL[bloc]}의 전란에 몸을 던졌다가 끝내 돌아오지 못했다. ${ROUTE_LABEL[g.route]}의 길이었다.`
         : deathLine({ ...g, power, fame }, status);
       pushNews(`${g.name} — 비보`, line);
       continue;
@@ -148,12 +149,12 @@ export function tickCareers(): void {
         level += 1;
         title = ladder[level];
         fame = clamp(fame + 6);
-        pushNews(`${g.name} — 승급`, `${g.name}이 ${ROUTE_LABEL[g.route]} ${title}에 올랐다는 소식.`);
+        pushNews(`${g.name} — 승급`, `${josa(g.name, '이', '가')} ${ROUTE_LABEL[g.route]} ${title}에 올랐다는 소식.`);
       } else {
         // 정점 — 자리를 지키며 이름을 더 떨친다.
         fame = clamp(fame + 4);
         if (random() < 0.4) {
-          pushNews(`${g.name} — 명성`, `${g.name}, ${title}으로서 그 이름이 강호에 더 높이 오른다.`);
+          pushNews(`${g.name} — 명성`, `${g.name}, ${josa(title, '으로서', '로서')} 그 이름이 강호에 더 높이 오른다.`);
         }
       }
     } else if (r > 1 - down) {
@@ -162,16 +163,16 @@ export function tickCareers(): void {
         title = ladder[level];
         fame = clamp(fame - 4);
         setback = true;
-        pushNews(`${g.name} — 좌절`, `${g.name}이 자리에서 밀려 ${title}에 머문다는 소식.`);
+        pushNews(`${g.name} — 좌절`, `${josa(g.name, '이', '가')} 자리에서 밀려 ${title}에 머문다는 소식.`);
       } else {
         // 말단에서 더 밀리면 무공을 놓고 은거.
         status = 'retired';
-        pushNews(`${g.name} — 은거`, `${g.name}이 무공을 놓고 강호를 떠났다고 한다.`);
+        pushNews(`${g.name} — 은거`, `${josa(g.name, '이', '가')} 무공을 놓고 강호를 떠났다고 한다.`);
       }
     } else if (random() < 0.1) {
       status = 'injured';
       setback = true;
-      pushNews(`${g.name} — 부상`, `${g.name}이 강호에서 크게 다쳐 한동안 몸을 추스른다 한다.`);
+      pushNews(`${g.name} — 부상`, `${josa(g.name, '이', '가')} 강호에서 크게 다쳐 한동안 몸을 추스른다 한다.`);
     }
 
     // 3) 노선 전환 — 환멸(정→사)·개심(사→정). 활동 중일 때만. docs/28 §4.
@@ -191,7 +192,7 @@ export function tickCareers(): void {
       useSectStore.getState().adjustResources(gift);
       pushNews(
         `${g.name} — 후원`,
-        `${ROUTE_LABEL[route]} ${title} ${g.name}이 사문을 잊지 않고 사례를 보내왔다. 금자 ${gift}냥이 금고에 들었다.`,
+        `${ROUTE_LABEL[route]} ${title} ${josa(g.name, '이', '가')} 사문을 잊지 않고 사례를 보내왔다. 금자 ${gift}냥이 금고에 들었다.`,
       );
     }
 
@@ -227,8 +228,8 @@ function maybeRouteShift(
       news: [
         `${g.name} — 환멸`,
         route === 'vigilante'
-          ? `${g.name}이 강호의 정의에 환멸을 느껴 스스로 칼을 들었다 한다. ${ROUTE_LABEL[route]}의 길로 들어섰다.`
-          : `${g.name}이 끝내 빛을 등졌다는 흉흉한 소문. ${ROUTE_LABEL[route]}의 그림자에 몸을 담갔다 한다.`,
+          ? `${josa(g.name, '이', '가')} 강호의 정의에 환멸을 느껴 스스로 칼을 들었다 한다. ${ROUTE_LABEL[route]}의 길로 들어섰다.`
+          : `${josa(g.name, '이', '가')} 끝내 빛을 등졌다는 흉흉한 소문. ${ROUTE_LABEL[route]}의 그림자에 몸을 담갔다 한다.`,
       ],
     };
   }
@@ -243,7 +244,7 @@ function maybeRouteShift(
       title: ladder[lv],
       news: [
         `${g.name} — 개심`,
-        `${g.name}이 지난 길을 뉘우치고 손을 씻었다는 놀라운 소식. ${ROUTE_LABEL[route]}의 길에서 새로 시작한다 한다.`,
+        `${josa(g.name, '이', '가')} 지난 길을 뉘우치고 손을 씻었다는 놀라운 소식. ${ROUTE_LABEL[route]}의 길에서 새로 시작한다 한다.`,
       ],
     };
   }

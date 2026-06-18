@@ -2,6 +2,7 @@
 // 의미 있는 변화 1~3줄만 추출. 절댓값 큰 효과 우선.
 // 정확한 수치는 비공개 (메모리 룰 feedback_hidden_game_state).
 
+import { josa } from '@/utils/korean';
 import type { EventEffects } from '@/types';
 
 interface WeightedLine {
@@ -29,7 +30,7 @@ export function summarizeEffects(
     }
     if (p.darknessLevelBump && p.darknessLevelBump > 0) {
       lines.push({
-        text: `${perpName}이 어둠으로 한 걸음 더 들어섰다.`,
+        text: `${josa(perpName, '이', '가')} 어둠으로 한 걸음 더 들어섰다.`,
         weight: 100,
       });
     }

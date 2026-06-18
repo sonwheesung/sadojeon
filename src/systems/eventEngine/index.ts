@@ -10,6 +10,7 @@
 //     2) 효과 적용 + history push + pending clear
 
 import { random } from '@/systems/rng';
+import { fillName } from '@/utils/korean';
 import { ALL_MORAL_EVENTS, TIER_WEIGHT } from '@/data/scenarios/moralEvents';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
@@ -99,7 +100,8 @@ function pickSibling(perp: Disciple, tmpl: EventTemplate<string>): Disciple | nu
 }
 
 function interpolate(text: string, perp: string, sib?: string): string {
-  return text.replace(/\{name\}/g, perp).replace(/\{sibling\}/g, sib ?? '동문');
+  // 이름 치환 + 조사 자동 교정({name}이/을/는… 받침 분기). docs/37 텍스트 감사.
+  return fillName(text, { name: perp, sibling: sib ?? '동문' });
 }
 
 function insightTier(insight: number): InsightTier {

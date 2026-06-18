@@ -2,6 +2,7 @@
 // 매일 진행 시 무작위 제자 1명이 사부에게 한 마디. 사부는 4문장 중 하나로 응답.
 
 import { random } from '@/systems/rng';
+import { fillName } from '@/utils/korean';
 import { GRADUATION } from '@/data/constants';
 
 export type OneLinerCategory = 'training' | 'daily' | 'relation' | 'worry';
@@ -121,7 +122,8 @@ export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null 
 
 // 본문 변수 치환 — {rival}=최강 동문 이름. 발화 시점에 실제 이름으로 박는다.
 export function fillOneLinerBody(body: string, c: OneLinerCtx): string {
-  return body.replace(/\{rival\}/g, c.rivalName ?? '동문');
+  // {rival} 치환 + 조사 자동 교정(받침 분기). 출처는 활성 동문(buildDiscipleCtx)·없으면 '동문'. docs/37.
+  return fillName(body, { rival: c.rivalName ?? '동문' });
 }
 
 // 사부 응답 풀 — 톤별. 한 마디와 무관하게 범용으로 사용. 대사 또는 행동.

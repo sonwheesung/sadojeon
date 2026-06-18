@@ -4,6 +4,7 @@
 // 2. badges 맵 (DiscipleCard 위 배지) — discipleId → DiscipleBadge[]
 // 3. Milestone[] (변곡점 모달 큐) — 승급·탈진만
 
+import { josa } from '@/utils/korean';
 import { findMartialArt } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -27,19 +28,19 @@ const PROGRESS_NORMAL = 2;
 function trainingPhrase(name: string, totalDelta: number): { text: string; isPlateau: boolean } {
   if (totalDelta <= 0) {
     return {
-      text: `${name}은 형을 짚었으나 한 자리에서 맴돌았다.`,
+      text: `${josa(name, '은', '는')} 형을 짚었으나 한 자리에서 맴돌았다.`,
       isPlateau: true,
     };
   }
   if (totalDelta < PROGRESS_NORMAL) {
     return {
-      text: `${name}이 무공의 결을 더듬어 보았으나 손에 잡히지 않았다.`,
+      text: `${josa(name, '이', '가')} 무공의 결을 더듬어 보았으나 손에 잡히지 않았다.`,
       isPlateau: true,
     };
   }
   if (totalDelta < PROGRESS_GOOD) {
     return {
-      text: `${name}이 자세를 한결 다듬었다.`,
+      text: `${josa(name, '이', '가')} 자세를 한결 다듬었다.`,
       isPlateau: false,
     };
   }
@@ -60,7 +61,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       kind: 'collapse',
       discipleId: id,
       discipleName: name,
-      text: `${name}이 무리한 끝에 쓰러졌다 — 사부가 거두어 치료에 들였다.`,
+      text: `${josa(name, '이', '가')} 무리한 끝에 쓰러졌다 — 사부가 거두어 치료에 들였다.`,
     });
     return entries;
   }
@@ -72,7 +73,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       kind: 'override',
       discipleId: id,
       discipleName: name,
-      text: `${name}이 치료를 이어가며 몸을 추슬렀다.`,
+      text: `${josa(name, '이', '가')} 치료를 이어가며 몸을 추슬렀다.`,
     });
   } else if (report.overrideCommand === 'quest') {
     entries.push({
@@ -80,7 +81,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       kind: 'override',
       discipleId: id,
       discipleName: name,
-      text: `${name}은 의뢰 현장에서 강호의 바람을 마셨다.`,
+      text: `${josa(name, '은', '는')} 의뢰 현장에서 강호의 바람을 마셨다.`,
     });
   } else if (report.overrideCommand === 'seclusion') {
     const totalDelta = report.arts.reduce((s, a) => s + a.delta, 0);
@@ -90,7 +91,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       kind: phrase.isPlateau ? 'plateau' : 'training',
       discipleId: id,
       discipleName: name,
-      text: `${name}은 폐관에 들어 안과 마주섰다 — ${phrase.text.replace(`${name}은 `, '').replace(`${name}이 `, '').replace(`${name}의 `, '')}`,
+      text: `${josa(name, '은', '는')} 폐관에 들어 안과 마주섰다 — ${phrase.text.replace(`${josa(name, '은', '는')} `, '').replace(`${josa(name, '이', '가')} `, '').replace(`${name}의 `, '')}`,
     });
   } else if (report.sparNote) {
     // 3-a) 대련 — 결과 풍경이 곧 신호(숫자 비노출). docs/06.
@@ -132,7 +133,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
       discipleName: name,
       text: dropped
         ? `${name}의 기색이 ${afterLabel}으로 가라앉았다.`
-        : `${name}이 기력을 되찾아 ${afterLabel}에 가까워졌다.`,
+        : `${josa(name, '이', '가')} 기력을 되찾아 ${afterLabel}에 가까워졌다.`,
     });
   }
 
@@ -147,7 +148,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
         kind: 'promotion',
         discipleId: id,
         discipleName: name,
-        text: `${name}이 ${artName} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
+        text: `${josa(name, '이', '가')} ${artName} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
       });
     } else if (a.seong > a.seongBefore) {
       entries.push({
@@ -155,7 +156,7 @@ function buildEntry(report: DiscipleTickReport, name: string): DailyLogEntry[] {
         kind: 'growth',
         discipleId: id,
         discipleName: name,
-        text: `${name}의 ${artName}이 ${a.seong}성에 올랐다.`,
+        text: `${name}의 ${josa(artName, '이', '가')} ${a.seong}성에 올랐다.`,
       });
     }
   }
@@ -176,8 +177,8 @@ function categoryEntry(report: DiscipleTickReport, name: string): DailyLogEntry 
         discipleId: id,
         discipleName: name,
         text: what
-          ? `${name}이 ${what}(으)로 숨을 돌렸다.`
-          : `${name}이 푹 쉬며 기력을 회복했다.`,
+          ? `${josa(name, '이', '가')} ${what}(으)로 숨을 돌렸다.`
+          : `${josa(name, '이', '가')} 푹 쉬며 기력을 회복했다.`,
       };
     case 'physical':
       return {
@@ -186,8 +187,8 @@ function categoryEntry(report: DiscipleTickReport, name: string): DailyLogEntry 
         discipleId: id,
         discipleName: name,
         text: what
-          ? `${name}이 ${what}(으)로 몸을 단련했다.`
-          : `${name}이 몸을 단련했다.`,
+          ? `${josa(name, '이', '가')} ${what}(으)로 몸을 단련했다.`
+          : `${josa(name, '이', '가')} 몸을 단련했다.`,
       };
     case 'study':
       return {
@@ -196,8 +197,8 @@ function categoryEntry(report: DiscipleTickReport, name: string): DailyLogEntry 
         discipleId: id,
         discipleName: name,
         text: what
-          ? `${name}이 ${what} 공부에 머리를 싸맸다.`
-          : `${name}이 서책을 들여다보았다.`,
+          ? `${josa(name, '이', '가')} ${what} 공부에 머리를 싸맸다.`
+          : `${josa(name, '이', '가')} 서책을 들여다보았다.`,
       };
     case 'martial':
     default: {
@@ -251,7 +252,7 @@ function buildMilestones(reports: DiscipleTickReport[]): Milestone[] {
         discipleId: r.discipleId,
         discipleName: d.name,
         title: '쓰러짐',
-        body: `${d.name}이 무리한 끝에 쓰러졌다.\n사부가 거두어 치료에 들였다 — 며칠 강제 휴식.`,
+        body: `${josa(d.name, '이', '가')} 무리한 끝에 쓰러졌다.\n사부가 거두어 치료에 들였다 — 며칠 강제 휴식.`,
       });
     }
 
@@ -268,7 +269,7 @@ function buildMilestones(reports: DiscipleTickReport[]): Milestone[] {
         artName: art?.name ?? a.artId,
         newStage: a.promoted,
         title: '경지 도약',
-        body: `${d.name}이 ${art?.name ?? a.artId} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
+        body: `${josa(d.name, '이', '가')} ${art?.name ?? a.artId} ${stageLabel} 경지에 올랐다 — ${a.seong}성.`,
       });
     }
   }
