@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { checkForUpdate } from '@/systems/versionGate';
+import { applyOtaIfAvailable } from '@/systems/otaUpdate';
 import { colors, radius, spacing, typography } from '@/theme';
 
 type Phase = 'checking' | 'ok' | 'required';
@@ -16,11 +17,16 @@ export function UpdateGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    checkForUpdate().then((r) => {
+    (async () => {
+      // 1) OTA 먼저 — 새 JS 번들 있으면 받아서 재시작(여기서 멈춤). docs/31.
+      const reloaded = await applyOtaIfAvailable();
+      if (reloaded || !mounted) return;
+      // 2) 스토어 강제 업데이트 게이트 — 최소버전 미달이면 차단.
+      const r = await checkForUpdate();
       if (!mounted) return;
       setStoreUrl(r.storeUrl);
       setPhase(r.required ? 'required' : 'ok');
-    });
+    })();
     return () => {
       mounted = false;
     };
