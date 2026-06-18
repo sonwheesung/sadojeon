@@ -57,6 +57,7 @@ export function resetAlchemy(): void {
 
 // 영단 판매 — 자금 수입. 등급(req)·효과에 비례. (이번 밸런스 테스트에선 미사용.)
 export function sellElixir(recipeId: string, qty: number): number {
+  if (!Number.isFinite(qty) || qty <= 0) return 0; // 음수·0 수량 차단(음수면 영단 획득+자금 조작 악용)
   const recipe = findElixirRecipe(recipeId);
   const items = useItemStore.getState();
   const owned = items.items.find((i) => i.id === recipeId);
@@ -93,6 +94,7 @@ export function elixirItemCount(id: string): number {
   return useItemStore.getState().items.find((i) => i.id === id)?.count ?? 0;
 }
 export function consumeElixirItem(id: string, n = 1): boolean {
+  if (!Number.isFinite(n) || n <= 0) return false; // 음수·0 차단(음수면 소모가 아니라 획득이 됨)
   const items = useItemStore.getState();
   if ((items.items.find((i) => i.id === id)?.count ?? 0) < n) return false;
   items.adjustCount(id, -n);
@@ -109,6 +111,7 @@ const HERB_PRICE: Record<string, number> = {
   'herb-divine': 130,
 };
 export function buyMaterial(id: string, qty: number): boolean {
+  if (!Number.isFinite(qty) || qty <= 0) return false; // 음수·0 차단(음수면 자금 증가+음수 재료 악용)
   const cost = (HERB_PRICE[id] ?? Infinity) * qty;
   const sect = useSectStore.getState();
   if (!sect.sect || sect.sect.resources < cost) return false;
