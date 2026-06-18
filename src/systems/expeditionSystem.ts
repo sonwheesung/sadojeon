@@ -32,7 +32,8 @@ import { inflictWound } from './woundSystem';
 import { shiftPersona } from './personaShift';
 import { attemptQuestEnlightenment } from './trainingSystem';
 import { gainMainSeongExpArts } from './martialExp';
-import type { Disciple, Milestone, PersonalityTraits, RelationLevel } from '@/types';
+import type { Disciple, Milestone, PersonalityTraits } from '@/types';
+import { REL_UP } from '@/data/relationTransitions';
 import type {
   ActiveActivity,
   ExpeditionChoice,
@@ -316,13 +317,6 @@ function applyNonCombat(active: ActiveActivity, e: ExpeditionEffect): void {
   }
 }
 
-const REL_UP: Record<RelationLevel, RelationLevel> = {
-  enemy: 'distant',
-  distant: 'neutral',
-  neutral: 'friend',
-  friend: 'sworn',
-  sworn: 'sworn',
-};
 function relBump(ids: string[]): void {
   const ds = useDiscipleStore.getState();
   for (let i = 0; i < ids.length; i += 1) {

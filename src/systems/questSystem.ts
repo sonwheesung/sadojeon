@@ -62,8 +62,8 @@ import type {
   QuestEventRoll,
   QuestGrade,
   QuestOutcome,
-  RelationLevel,
 } from '@/types';
+import { REL_UP } from '@/data/relationTransitions';
 
 // ─── 역량·자격 ────────────────────────────────────────────────────────────
 
@@ -782,13 +782,6 @@ function personaDeltas(
 }
 
 // 같은 의뢰 동행 → 호감도 한 단계 상승. docs/28 §7·§8.
-const REL_UP: Record<RelationLevel, RelationLevel> = {
-  enemy: 'distant',
-  distant: 'neutral',
-  neutral: 'friend',
-  friend: 'sworn',
-  sworn: 'sworn',
-};
 
 function bumpRelations(ids: string[]): void {
   const ds = useDiscipleStore.getState();

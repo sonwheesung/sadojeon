@@ -14,7 +14,8 @@ import { useEventHistoryStore } from '@/stores/eventHistoryStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useMasterStore } from '@/stores/masterStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, RelationLevel } from '@/types';
+import type { Disciple } from '@/types';
+import { REL_DOWN, TOWARD_NEUTRAL } from '@/data/relationTransitions';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
@@ -23,17 +24,6 @@ const MEDIATION_DAILY_CHANCE = 0.05;
 const COUNSEL_DAILY_CHANCE = 0.04;
 
 // 화해 방향 한 단계 — 무관(neutral)까지만. 그 위(친밀·의형제)는 중재로 만들 수 없다.
-const TOWARD_NEUTRAL: Partial<Record<RelationLevel, RelationLevel>> = {
-  enemy: 'distant',
-  distant: 'neutral',
-};
-const REL_DOWN: Record<RelationLevel, RelationLevel> = {
-  sworn: 'friend',
-  friend: 'neutral',
-  neutral: 'distant',
-  distant: 'enemy',
-  enemy: 'enemy',
-};
 
 function isActive(d: Disciple | undefined): d is Disciple {
   return (

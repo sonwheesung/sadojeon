@@ -18,7 +18,8 @@ import {
 } from '@/data/martialArts';
 import { REALM_SEONG_CAP } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
-import type { Disciple, RelationLevel } from '@/types';
+import type { Disciple } from '@/types';
+import { REL_UP, REL_DOWN } from '@/data/relationTransitions';
 import type { CombatTier } from '@/types/combat';
 import { combatantFromDisciple, simulateCombat } from './combat';
 import { inflictWound } from './woundSystem';
@@ -61,20 +62,6 @@ const INJURY_ENEMY = 0.1; //   적대 관계 — 감정이 실린 손속
 const INJURY_IMPULSIVE = 0.03; // 충동 인격(신중<35) 한쪽이라도
 const INJURY_DARK_ART = 0.03; // 마공 수련자 — 살기
 
-const REL_UP: Record<RelationLevel, RelationLevel> = {
-  enemy: 'distant',
-  distant: 'neutral',
-  neutral: 'friend',
-  friend: 'sworn',
-  sworn: 'sworn',
-};
-const REL_DOWN: Record<RelationLevel, RelationLevel> = {
-  sworn: 'friend',
-  friend: 'neutral',
-  neutral: 'distant',
-  distant: 'enemy',
-  enemy: 'enemy',
-};
 
 export interface DaeryeonOutcome {
   tier: DaeryeonTier;
