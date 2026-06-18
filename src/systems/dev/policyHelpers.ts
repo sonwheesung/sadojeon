@@ -6,6 +6,7 @@
 //           한번 정한 무공 계열의 선행조건(prerequisites)을 차례로 충족하며 상위 무공으로 갈아탄다
 //           (텔레포트 X). 정점(절품 무공서) + 내공/외공/성 게이트 + 신품 영약 → 화경.
 
+import { random } from '@/systems/rng';
 import {
   MARTIAL_ARTS,
   canLearnArt,
@@ -32,7 +33,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, InboxItem, MartialArt, TrainingCategory } from '@/types';
 
-const rand = () => Math.random();
+const rand = () => random();
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
 
 // 과금 등급 = 회차당 확보 가능한 신품 영약 수(화경 벽 1개 소모). 0=무과금.

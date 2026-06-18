@@ -6,6 +6,7 @@
 // 성공률 = 사부 통찰 + 신뢰 + 사연 인지(통찰 ★4↑ × 시드 적대) + 훈계 누적(도덕 이벤트 history).
 // 잘못 들쑤시면 악화(신뢰·스트레스) — 개입은 공짜가 아니다.
 
+import { random } from '@/systems/rng';
 import { STARTING_RIVALRIES } from '@/data/disciples/startingPool';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
@@ -92,7 +93,7 @@ function admonishBonus(aId: string, bId: string): number {
 function pushReport(title: string, body: string): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `mediation-report-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `mediation-report-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'report',
     title,
     preview: body.split('\n')[0],
@@ -113,8 +114,8 @@ export function triggerDailyMediation(): void {
   const day = useTimeStore.getState().totalDay;
 
   // 중재(2인) 기회.
-  if (!hasUnresolved('mediation') && Math.random() < MEDIATION_DAILY_CHANCE) {
-    const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
+  if (!hasUnresolved('mediation') && random() < MEDIATION_DAILY_CHANCE) {
+    const [a, b] = pairs[Math.floor(random() * pairs.length)];
     useInboxStore.getState().add({
       id: `mediation-${a.id}-${b.id}-${day}`,
       kind: 'event',
@@ -131,9 +132,9 @@ export function triggerDailyMediation(): void {
   }
 
   // 상담(1:1) 기회 — 응어리 쌍의 한쪽을 따로 부른다.
-  if (!hasUnresolved('counsel') && Math.random() < COUNSEL_DAILY_CHANCE) {
-    const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
-    const subject = Math.random() < 0.5 ? a : b;
+  if (!hasUnresolved('counsel') && random() < COUNSEL_DAILY_CHANCE) {
+    const [a, b] = pairs[Math.floor(random() * pairs.length)];
+    const subject = random() < 0.5 ? a : b;
     const other = subject.id === a.id ? b : a;
     useInboxStore.getState().add({
       id: `counsel-${subject.id}-${day}`,
@@ -193,7 +194,7 @@ export function resolveMediation(aId: string, bId: string, key: string): void {
       0.9,
       0.3 + tier * 0.07 + avgTrust / 500 + (backstoryKnown ? 0.15 : 0) + admonishBonus(aId, bId),
     );
-    if (Math.random() < p) {
+    if (random() < p) {
       const ab = a.relationships[bId] ?? 'neutral';
       const ba = b.relationships[aId] ?? 'neutral';
       const nextAb = TOWARD_NEUTRAL[ab];
@@ -204,7 +205,7 @@ export function resolveMediation(aId: string, bId: string, key: string): void {
         `${a.name}·${b.name} — 응어리가 한 꺼풀 벗겨졌다`,
         `사부가 둘을 같이 앉혔다. 한참의 침묵 끝에, ${a.name}과(와) ${b.name}이(가) 서로에게 처음으로 고개를 끄덕였다. 응어리가 다 풀린 건 아니나 — 한 꺼풀은 분명 벗겨졌다.`,
       );
-    } else if (Math.random() < 0.5) {
+    } else if (random() < 0.5) {
       // 서먹하게 끝남 — 변화 없음.
       pushReport(
         `${a.name}·${b.name} — 자리가 무겁게 끝났다`,
@@ -258,7 +259,7 @@ export function resolveCounsel(subjectId: string, otherId: string, key: string):
     // 그 제자의 인식만 — 한 방향, 중재(2인)보다 약함. 🔧
     const tier = masterInsightTier();
     const p = Math.min(0.7, 0.25 + tier * 0.06 + (subject.trustToMaster ?? 0) / 600);
-    if (Math.random() < p) {
+    if (random() < p) {
       const rel = subject.relationships[otherId] ?? 'neutral';
       const next = TOWARD_NEUTRAL[rel];
       if (next) ds.setRelation(subjectId, otherId, next);
@@ -291,19 +292,19 @@ export function applyRivalryTone(
   const sibling = ds.disciples[siblingId];
   if (!perp || !sibling) return;
 
-  if (tone === 'admonish' && Math.random() < 0.25) {
+  if (tone === 'admonish' && random() < 0.25) {
     const rel = perp.relationships[siblingId] ?? 'neutral';
     const next = TOWARD_NEUTRAL[rel];
     if (next) ds.setRelation(perpId, siblingId, next);
-  } else if (tone === 'punish' && Math.random() < 0.2) {
+  } else if (tone === 'punish' && random() < 0.2) {
     const rel = sibling.relationships[perpId] ?? 'neutral';
     const next = TOWARD_NEUTRAL[rel];
     if (next) ds.setRelation(siblingId, perpId, next);
-  } else if (tone === 'seclusion' && Math.random() < 0.1) {
+  } else if (tone === 'seclusion' && random() < 0.1) {
     const rel = perp.relationships[siblingId] ?? 'neutral';
     const next = TOWARD_NEUTRAL[rel];
     if (next) ds.setRelation(perpId, siblingId, next);
-  } else if (tone === 'overlook' && Math.random() < 0.25) {
+  } else if (tone === 'overlook' && random() < 0.25) {
     const rel = sibling.relationships[perpId] ?? 'neutral';
     ds.setRelation(siblingId, perpId, REL_DOWN[rel]);
   }

@@ -3,6 +3,7 @@
 // v1: **사망 없음**(lethal:false) — 일상 사건에서 제자를 잃지 않는다(사망은 결투 의뢰의
 // 생존 체인 경로만). 이기면 명성·푼돈 전리품, 지면 부상·스트레스. 숫자 비노출 — 서신 풍경.
 
+import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -32,30 +33,30 @@ function eligible(d: Disciple | undefined): d is Disciple {
 function makeRaiders(count: number, sectRep: number): Combatant[] {
   return Array.from({ length: count }, (_, i) => {
     // 이름난 사문일수록 노리는 자들도 격이 있다 — 명성 비례로 이류가 섞인다. 🔧
-    const tougher = sectRep >= 40 && Math.random() < Math.min(0.5, sectRep / 200);
-    const archetype = Math.random() < 0.75 ? ('bandit' as const) : ('rogue' as const);
+    const tougher = sectRep >= 40 && random() < Math.min(0.5, sectRep / 200);
+    const archetype = random() < 0.75 ? ('bandit' as const) : ('rogue' as const);
     return makeNpcCombatant({
       id: `raider-${i}`,
       name: archetype === 'bandit' ? `산적${i + 1}` : `사파 낭인${i + 1}`,
       realm: tougher ? 'iryu' : 'samryu',
       archetype,
-      quality: 0.35 + Math.random() * 0.3,
+      quality: 0.35 + random() * 0.3,
     });
   });
 }
 
 // 매 진행 후 호출(timeSystem). 낮은 확률로 습격 1건.
 export function triggerDailyRaid(): void {
-  if (Math.random() >= RAID_DAILY_CHANCE) return;
+  if (random() >= RAID_DAILY_CHANCE) return;
   const ds = useDiscipleStore.getState();
   const pool = ds.order.map((id) => ds.disciples[id]).filter(eligible);
   if (pool.length === 0) return;
 
   // 나가 있던 1~2명이 당한다.
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const party = shuffled.slice(0, Math.random() < 0.5 ? 1 : Math.min(2, shuffled.length));
+  const shuffled = [...pool].sort(() => random() - 0.5);
+  const party = shuffled.slice(0, random() < 0.5 ? 1 : Math.min(2, shuffled.length));
   const sectRep = useSectStore.getState().sect?.reputation ?? 0;
-  const raiders = makeRaiders(1 + Math.floor(Math.random() * Math.min(3, party.length + 1)), sectRep);
+  const raiders = makeRaiders(1 + Math.floor(random() * Math.min(3, party.length + 1)), sectRep);
 
   const r = simulateCombat(party.map(combatantFromDisciple), raiders, {
     mode: 'real',
@@ -76,7 +77,7 @@ export function triggerDailyRaid(): void {
   }
   let lootNote = '';
   if (won) {
-    const loot = LOOT_MIN + Math.floor(Math.random() * (LOOT_MAX - LOOT_MIN + 1));
+    const loot = LOOT_MIN + Math.floor(random() * (LOOT_MAX - LOOT_MIN + 1));
     useSectStore.getState().adjustResources(loot);
     lootNote = ' 놈들이 버리고 간 봇짐에서 푼돈이 나왔다.';
   }
@@ -84,7 +85,7 @@ export function triggerDailyRaid(): void {
   const names = party.map((d) => d.name).join('·');
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `raid-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `raid-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'report',
     title: won ? `${names} — 산길의 습격을 물리치다` : `${names} — 산길에서 봉변`,
     preview: `${names}이(가) 산길에서 ${raiders.length}인의 무리와 마주쳤다.`,

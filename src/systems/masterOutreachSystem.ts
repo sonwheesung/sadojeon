@@ -3,6 +3,7 @@
 // 수용은 전적으로 제자 결정 — 어둠 노선·낮은 신뢰면 사부의 말이 잘 닿지 않는다. 결과는 풍문 서신.
 // 효과는 GraduateRecord(power·fame·status·route)에만 — 졸업 제자는 자율체라 직접 조작이 아니라 '청'이다.
 
+import { random } from '@/systems/rng';
 import { ROUTE_LADDER, ROUTE_LABEL, type RouteId } from '@/data/careers';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGraduateStore, type GraduateRecord } from '@/stores/graduateStore';
@@ -11,7 +12,7 @@ import { useTimeStore } from '@/stores/timeStore';
 import { pushJianghuNews } from './jianghuNews';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
-const randInt = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const randInt = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 
 const SEASON_DAYS = 84; // 도달 지연 — 1계절(3달×4주×7일). docs/08 "도달까지 1~2계절".
 const DARK_ROUTES = new Set<RouteId>(['assassin', 'demonic', 'shadow']);
@@ -75,7 +76,7 @@ function resolveLetter(g: GraduateRecord, tone: LetterTone): void {
   let p = 0.4 + trust / 200 - (dark ? 0.2 : 0);
   if (tone === 'encourage') p += 0.15;
   if (tone === 'warn') p -= 0.15;
-  const accepted = Math.random() < Math.max(0.05, Math.min(0.95, p));
+  const accepted = random() < Math.max(0.05, Math.min(0.95, p));
 
   if (!accepted) {
     pushJianghuNews(
@@ -94,7 +95,7 @@ function resolveLetter(g: GraduateRecord, tone: LetterTone): void {
     pushJianghuNews(`${g.name} — 충고`, `사부의 가르침을 새긴 ${g.name}, 무위를 한층 가다듬었다 한다.`);
   } else {
     // 경고 — 어둠 노선이면 개심 기회, 아니면 자중(명성 소폭).
-    if (DARK_ROUTES.has(g.route) && Math.random() < 0.4) {
+    if (DARK_ROUTES.has(g.route) && random() < 0.4) {
       convertToRighteous(g);
       pushJianghuNews(
         `${g.name} — 개심`,
@@ -113,7 +114,7 @@ function resolveSummon(g: GraduateRecord): void {
   const dark = DARK_ROUTES.has(g.route);
   // 호출은 직접 와야 하니 서신보다 응하기 어렵다. 다친 제자는 의탁차 더 잘 온다.
   let p = 0.3 + trust / 200 - (dark ? 0.25 : 0) + (g.status === 'injured' ? 0.1 : 0);
-  const came = Math.random() < Math.max(0.05, Math.min(0.95, p));
+  const came = random() < Math.max(0.05, Math.min(0.95, p));
 
   if (!came) {
     pushJianghuNews(`${g.name} — 부름`, `사부가 ${g.name}을 산문으로 불렀으나, 응하지 않았다는 소식.`);
@@ -129,7 +130,7 @@ function resolveSummon(g: GraduateRecord): void {
   useGraduateStore.getState().update(g.id, { power: clamp(cur.power + d) });
   parts.push('사부의 직접 가르침을 받아 무위를 더했다');
 
-  if (DARK_ROUTES.has(g.route) && Math.random() < 0.3) {
+  if (DARK_ROUTES.has(g.route) && random() < 0.3) {
     convertToRighteous(g);
     pushJianghuNews(
       `${g.name} — 산문에 다녀가다`,

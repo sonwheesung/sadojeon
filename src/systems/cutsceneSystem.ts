@@ -1,6 +1,7 @@
 // 컷씬 발화 — docs/20. 트리거 측(용봉지회·의뢰 결산 등)은 이 함수 하나만 호출.
 // 사건 추가 = data/cutscenes 한 항목 + 트리거 한 줄. 제자 전용 연출 추가 = byDisciple 한 칸(SOLID).
 
+import { random } from '@/systems/rng';
 import { findCutscene } from '@/data/cutscenes';
 import { useCutsceneStore } from '@/stores/cutsceneStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -19,7 +20,7 @@ export function playCutscene(
   const variant = def.byDisciple?.[disciple.id];
   const day = useTimeStore.getState().totalDay;
   useCutsceneStore.getState().push({
-    id: `cs-${day}-${eventId}-${disciple.id}-${Math.floor(Math.random() * 1e6)}`,
+    id: `cs-${day}-${eventId}-${disciple.id}-${Math.floor(random() * 1e6)}`,
     eventId,
     discipleId: disciple.id,
     discipleName: disciple.name,

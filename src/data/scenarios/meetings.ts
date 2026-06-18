@@ -4,6 +4,7 @@
 //
 // 조건·컨텍스트·치환은 oneLiners 의 것을 그대로 재사용(matchesCondition·OneLinerCtx·fillOneLinerBody).
 
+import { random } from '@/systems/rng';
 import type { PersonalityTraits } from '@/types';
 import {
   fillOneLinerBody,
@@ -155,9 +156,9 @@ export function pickContextualMeeting(c: OneLinerCtx, discipleId?: string): Meet
   if (pool.length === 0) return null;
   const personal = pool.filter((m) => m.disciple);
   // 전용 면담이 있으면 60% 확률로 그쪽에서, 아니면 전체에서.
-  const usePersonal = personal.length > 0 && Math.random() < 0.6;
+  const usePersonal = personal.length > 0 && random() < 0.6;
   const src = usePersonal ? personal : pool;
-  return src[Math.floor(Math.random() * src.length)];
+  return src[Math.floor(random() * src.length)];
 }
 
 // 본문 {rival} 치환 — 한마디와 동일 규칙 재사용.

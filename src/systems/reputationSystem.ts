@@ -2,6 +2,7 @@
 // 사문/제자 ↔ 문파 관계를 올리고 내린다. 오케스트레이터 본문 안 건드리고 기존 훅에서 호출(SOLID).
 // 현재 구동원: 의뢰 결산(성향). 추후 도덕 이벤트·졸업 노선·흑화·세가 자제 영입 등 추가.
 
+import { random } from '@/systems/rng';
 import { FACTIONS, repTier, type RepTier } from '@/data/factions';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useReputationStore } from '@/stores/reputationStore';
@@ -14,7 +15,7 @@ export { repTier };
 function pushFactionNews(title: string, body: string): void {
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `faction-${day}-${Math.floor(Math.random() * 1e6)}`,
+    id: `faction-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'rumor',
     title,
     preview: body,
@@ -96,16 +97,16 @@ export function tickReputationInfluence(): void {
   const rep = useReputationStore.getState().sect;
   for (const f of FACTIONS) {
     const tier = repTier(rep[f.id] ?? 0);
-    if (tier === 'ally' && Math.random() < 0.5) {
-      const gift = 200 + Math.floor(Math.random() * 300);
+    if (tier === 'ally' && random() < 0.5) {
+      const gift = 200 + Math.floor(random() * 300);
       useSectStore.getState().adjustResources(gift);
       pushFactionNews(
         `${f.name} — 후의`,
         `${f.name}이 사문에 사례를 보내왔다. 두터운 관계의 보답으로 금자 ${gift}냥이 금고에 들었다.`,
       );
-    } else if (tier === 'hostile' && Math.random() < 0.5) {
+    } else if (tier === 'hostile' && random() < 0.5) {
       const cur = useSectStore.getState().sect?.resources ?? 0;
-      const loss = Math.min(cur, 150 + Math.floor(Math.random() * 250));
+      const loss = Math.min(cur, 150 + Math.floor(random() * 250));
       useSectStore.getState().adjustResources(-loss);
       pushFactionNews(
         `${f.name} — 시비`,

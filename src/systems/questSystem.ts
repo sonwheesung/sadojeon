@@ -2,6 +2,7 @@
 // 게시판(사문 명성 게이트) → 파견(1~N명) → 주(일) 진행 → 결산 outcome 5분기.
 // 도메인 성장(능력치 EXP) + 자금 + 명성(제자·사문) + 위험(부상·사망).
 
+import { random } from '@/systems/rng';
 import {
   QUEST_DOMAIN_LABEL,
   QUEST_DOMAIN_RIGHTEOUSNESS,
@@ -117,7 +118,7 @@ function sponsoredQuests(maxIdx: number, activeIds: Set<string>): Quest[] {
         (sapa ? !!q.gray : !q.gray),
     );
     if (cand.length === 0) continue;
-    const tmpl = cand[Math.floor(Math.random() * cand.length)];
+    const tmpl = cand[Math.floor(random() * cand.length)];
     out.push({
       ...tmpl,
       id,
@@ -185,7 +186,7 @@ function weightedSample<T>(items: readonly T[], weightFn: (x: T) => number, coun
   const picked: T[] = [];
   for (let i = 0; i < count && pool.length > 0; i += 1) {
     const total = pool.reduce((s, p) => s + p.w, 0);
-    let r = Math.random() * total;
+    let r = random() * total;
     let idx = 0;
     for (; idx < pool.length - 1; idx += 1) {
       r -= pool[idx].w;
@@ -352,7 +353,7 @@ function pickEvent(active: ActiveQuest): QuestEvent | null {
   );
   if (pool.length === 0) return null;
   const total = pool.reduce((s, e) => s + e.weight, 0);
-  let r = Math.random() * total;
+  let r = random() * total;
   for (const e of pool) {
     r -= e.weight;
     if (r <= 0) return e;
@@ -362,7 +363,7 @@ function pickEvent(active: ActiveQuest): QuestEvent | null {
 
 // 중반 1회 — 등급 확률로 돌발 이벤트 발동 → 서신함 강제 선택(결산 보류).
 function maybeFireEvent(active: ActiveQuest): void {
-  if (Math.random() >= QUEST_EVENT_CHANCE[active.quest.grade]) return;
+  if (random() >= QUEST_EVENT_CHANCE[active.quest.grade]) return;
   const event = pickEvent(active);
   if (!event) return;
   const ds = useDiscipleStore.getState();
@@ -404,7 +405,7 @@ function rollRescueReveal(active: ActiveQuest): {
   rewardFlag?: 'noble';
   rewardMult: number;
 } {
-  const r = Math.random();
+  const r = random();
   if (r < 0.5) {
     // 평민 — 특정 문파 X. 선행 소문이 돌아 사문 전반의 덕망(명성)↑.
     useSectStore.getState().adjustReputation(3);
@@ -415,7 +416,7 @@ function rollRescueReveal(active: ActiveQuest): {
   }
   const isRight = r < 0.9; // 0.5~0.9 명문 정파 / 0.9~ 사파
   const pool = FACTIONS.filter((f) => f.alignment === (isRight ? 'right' : 'sapa'));
-  const f = pool[Math.floor(Math.random() * pool.length)];
+  const f = pool[Math.floor(random() * pool.length)];
   if (!f) return { text: '구한 이는 말없이 사라졌다.', rewardMult: 1 };
   const amount = isRight ? 8 : 6;
   adjustSectRep(f.id, amount);
@@ -445,7 +446,7 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
   if (choice.roll) {
     const cap = capValue(active, choice.roll.by);
     const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
-    if (Math.random() >= p) e = choice.failEffect ?? {};
+    if (random() >= p) e = choice.failEffect ?? {};
   }
 
   // 구조 성공 시 정체 공개 → 문파 평판. (실패 effect엔 revealRescue 없음 = 죽어서 공개 X)
@@ -533,7 +534,7 @@ const DOMAIN_SCHOOL_AFFINITY: Record<QuestDomain, MartialArtSchool[]> = {
 
 function maybeDropScroll(q: Quest): boolean {
   const rule = SCROLL_DROP[q.grade];
-  if (!rule || Math.random() >= rule.chance) return false;
+  if (!rule || random() >= rule.chance) return false;
   const codex = useCodexStore.getState();
   // 풀 = 의뢰 등급에 맞는 비급 ∪ **다음 권**(선행 비급을 모두 보유한 무공 — 등급 무관).
   // 트리가 깊어진 카탈로그(640권)에서 고급 의뢰만 돌면 사다리 중간 권이 영영 안 모이는 문제 봉합:
@@ -559,7 +560,7 @@ function maybeDropScroll(q: Quest): boolean {
     if (a.prerequisites?.length && chainNext) w *= 8;
     return Array(w).fill(a) as typeof pool;
   });
-  const art = weighted[Math.floor(Math.random() * weighted.length)];
+  const art = weighted[Math.floor(random() * weighted.length)];
   const day = useTimeStore.getState().totalDay;
   codex.addScroll({
     artId: art.id,
@@ -678,9 +679,9 @@ function survivesFatalBlow(
     const insight = victim.insight ?? 1;
     const ambition = victim.personality?.ambition ?? 50;
     const innateChance = Math.max(0.05, Math.min(0.5, 0.1 + insight * 0.05 + ((ambition - 50) / 100) * 0.15));
-    if (Math.random() < innateChance) return 'innate';
+    if (random() < innateChance) return 'innate';
   }
-  return Math.random() < villageSurviveChance(victim.realm) ? 'village' : null;
+  return random() < villageSurviveChance(victim.realm) ? 'village' : null;
 }
 
 function rollOutcome(active: ActiveQuest): QuestOutcome {
@@ -702,7 +703,7 @@ function rollOutcome(active: ActiveQuest): QuestOutcome {
   if (bestFormation >= 20) s += 0.15;
   s += active.successDelta ?? 0; // 돌발 이벤트 선택 보정
   s = Math.max(-1, Math.min(1.5, s));
-  const r = Math.random();
+  const r = random();
   const risk = QUEST_GRADE_RISK[q.grade];
   if (s >= 0.6) return r < 0.85 ? 'full' : 'partial';
   if (s >= 0.2) return r < 0.5 ? 'full' : r < 0.85 ? 'partial' : risk.injury ? 'crisis' : 'partial';
@@ -859,7 +860,7 @@ function resolveDuelByEngine(active: ActiveQuest): DuelResolution | null {
   // 상대 뽑기 — 풀 가중 + 돌발 이벤트 성공 보정은 영글기(컨디션)로 환산.
   const pool = DUEL_POOL[q.grade];
   const total = pool.reduce((a, p) => a + p.w, 0);
-  let roll = Math.random() * total;
+  let roll = random() * total;
   let pick = pool[0];
   for (const p of pool) {
     roll -= p.w;
@@ -870,13 +871,13 @@ function resolveDuelByEngine(active: ActiveQuest): DuelResolution | null {
   }
   const quality = Math.max(
     0.05,
-    Math.min(1, pick.qMin + Math.random() * (pick.qMax - pick.qMin) - (active.successDelta ?? 0) * 0.3),
+    Math.min(1, pick.qMin + random() * (pick.qMax - pick.qMin) - (active.successDelta ?? 0) * 0.3),
   );
   const npc = makeNpcCombatant({
     id: 'duel-foe',
     name: DUEL_FOE_NAME[q.id] ?? '맞수',
     realm: pick.realm,
-    archetype: DUEL_ARCHETYPES[Math.floor(Math.random() * DUEL_ARCHETYPES.length)],
+    archetype: DUEL_ARCHETYPES[Math.floor(random() * DUEL_ARCHETYPES.length)],
     quality,
   });
 
@@ -913,7 +914,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   let outcome = duel ? duel.outcome : rollOutcome(active);
 
   // 돌발 이벤트 위험 보정 — 부상·사망 확률 가산(무모한 선택의 대가).
-  if (active.riskDelta && Math.random() < active.riskDelta) {
+  if (active.riskDelta && random() < active.riskDelta) {
     if (outcome === 'full' || outcome === 'partial') outcome = 'crisis';
     else if (outcome === 'crisis') outcome = QUEST_GRADE_RISK[q.grade].death ? 'disaster' : 'crisis';
   }
@@ -981,7 +982,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   if (
     q.grade === 'extreme' &&
     (outcome === 'full' || outcome === 'crisis') &&
-    Math.random() < DIVINE_ELIXIR_DROP_RATE
+    random() < DIVINE_ELIXIR_DROP_RATE
   ) {
     divineElixir = true;
     grantDivineElixir();
@@ -1007,7 +1008,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   const victimIdx = duel
     ? Math.max(0, present.indexOf(duel.championId))
     : present.length
-      ? Math.floor(Math.random() * present.length)
+      ? Math.floor(random() * present.length)
       : -1;
   let lostName = '';
   let gravelyHurtName = ''; // 재난에서 죽지 않고 중상으로 살아남은 자(있으면)
@@ -1050,7 +1051,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
     let inflicted: { severity: number; days: number } | null = null;
     if (outcome === 'disaster' && i === victimIdx) {
       // 사망 굴림 — 외공(금강불괴)이 치명상 확률을 깎는다. bodyToughnessMult.
-      if (Math.random() < QUEST_DISASTER_FATALITY * bodyToughnessMult(d)) {
+      if (random() < QUEST_DISASTER_FATALITY * bodyToughnessMult(d)) {
         const rescue = survivesFatalBlow(d, present, ds);
         if (rescue) {
           inflicted = { severity: 1, days: 28 }; // 치명상에서 살아남아 오래 몸져눕는다

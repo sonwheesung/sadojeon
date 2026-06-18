@@ -2,6 +2,7 @@
 // graduateToCareer: 하산 직업 선택 → 졸업 제자 레코드 생성(노선 + 시작 직책).
 // tickCareers: 매년(timeSystem 연 경계) 호출 → 능력 완만 성장 + 강호 굴림(승급·좌절·은거·사망) → 강호 풍문 서신.
 
+import { random } from '@/systems/rng';
 import {
   ROUTE_BLOC,
   ROUTE_DANGER,
@@ -26,7 +27,7 @@ import type { Disciple } from '@/types';
 import type { StatId } from '@/types/training';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
-const randInt = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const randInt = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 const statLv = (d: Disciple, id: StatId): number => d.stats?.[id]?.level ?? 0;
 
 // 졸업 스냅샷 "역량" 0~100 — 그 노선에서 직책이 오르는 능력 축. docs/28 §4.
@@ -108,10 +109,10 @@ export function tickCareers(): void {
     fame = clamp(fame + randInt(-1, 3));
 
     // 1) 사망·실종 굴림 — 노선 위험도 + 정세 압력(자기 세력이 전쟁·충돌이면 휘말려 죽을 위험↑). docs/08.
-    if (Math.random() < ROUTE_DANGER[g.route] + pressure.danger) {
+    if (random() < ROUTE_DANGER[g.route] + pressure.danger) {
       const lethal: RouteId[] = ['assassin', 'vigilante'];
       const baseDead = lethal.includes(g.route) ? 0.6 : 0.4;
-      const dead = Math.random() < baseDead + (blocAtWar ? 0.2 : 0); // 전란 중엔 더 치명적
+      const dead = random() < baseDead + (blocAtWar ? 0.2 : 0); // 전란 중엔 더 치명적
       status = dead ? 'dead' : 'missing';
       gs.update(g.id, { power, fame, status });
       const line = blocAtWar
@@ -125,7 +126,7 @@ export function tickCareers(): void {
     const perf = (power / 100) * 0.5 + (fame / 100) * 0.5; // 0~1
     const up = Math.max(0.05, Math.min(0.85, 0.15 + perf * 0.45 + pressure.fortune));
     const down = Math.max(0, 0.12 * (1 - perf) - pressure.fortune);
-    const r = Math.random();
+    const r = random();
 
     if (r < up) {
       if (level < top) {
@@ -136,7 +137,7 @@ export function tickCareers(): void {
       } else {
         // 정점 — 자리를 지키며 이름을 더 떨친다.
         fame = clamp(fame + 4);
-        if (Math.random() < 0.4) {
+        if (random() < 0.4) {
           pushNews(`${g.name} — 명성`, `${g.name}, ${title}으로서 그 이름이 강호에 더 높이 오른다.`);
         }
       }
@@ -152,7 +153,7 @@ export function tickCareers(): void {
         status = 'retired';
         pushNews(`${g.name} — 은거`, `${g.name}이 무공을 놓고 강호를 떠났다고 한다.`);
       }
-    } else if (Math.random() < 0.1) {
+    } else if (random() < 0.1) {
       status = 'injured';
       setback = true;
       pushNews(`${g.name} — 부상`, `${g.name}이 강호에서 크게 다쳐 한동안 몸을 추스른다 한다.`);
@@ -170,7 +171,7 @@ export function tickCareers(): void {
     }
 
     // 후원 차등 — 성공한 졸업 제자가 사문에 보답(자금). 직책 높을수록 자주·많이. docs/08.
-    if (status === 'active' && level >= 2 && Math.random() < 0.1 + level * 0.06) {
+    if (status === 'active' && level >= 2 && random() < 0.1 + level * 0.06) {
       const gift = 100 + level * 120 + Math.round(fame * 1.5);
       useSectStore.getState().adjustResources(gift);
       pushNews(
@@ -200,7 +201,7 @@ function maybeRouteShift(
   setback: boolean,
 ): { route: RouteId; level: number; title: string; news: [string, string] } | null {
   // 환멸 — 정 계열 + 올해 좌절 + 낮은 확률.
-  if (LIGHT_ROUTES.has(g.route) && setback && Math.random() < 0.08) {
+  if (LIGHT_ROUTES.has(g.route) && setback && random() < 0.08) {
     const route: RouteId = fame >= 40 ? 'vigilante' : 'assassin';
     const ladder = ROUTE_LADDER[route];
     const lv = Math.min(ladder.length - 1, Math.max(0, level));
@@ -217,7 +218,7 @@ function maybeRouteShift(
     };
   }
   // 개심 — 어둠 계열 + 자리 잡힘 + 더 낮은 확률.
-  if (DARK_ROUTES.has(g.route) && level >= 2 && fame >= 50 && Math.random() < 0.05) {
+  if (DARK_ROUTES.has(g.route) && level >= 2 && fame >= 50 && random() < 0.05) {
     const route: RouteId = 'righteous';
     const ladder = ROUTE_LADDER[route];
     const lv = Math.min(ladder.length - 1, Math.max(0, level - 1));

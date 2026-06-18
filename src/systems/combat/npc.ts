@@ -2,6 +2,7 @@
 // 경지 한 줄로 빚는다. 엔진 입력(Combatant)을 직접 만들므로 카탈로그 비급이 필요 없다.
 // 같은 경지라도 quality(0~1)로 영근 정도가 갈린다 — 여느 삼류 산적 vs 손꼽히는 삼류.
 
+import { random } from '@/systems/rng';
 import {
   REALM_EXTERNAL_REQ,
   REALM_INTERNAL_REQ,
@@ -61,7 +62,7 @@ export interface NpcSpec {
 }
 
 export function makeNpcCombatant(spec: NpcSpec): Combatant {
-  const rng = spec.rng ?? Math.random;
+  const rng = spec.rng ?? random;
   const q = Math.max(0, Math.min(1, spec.quality ?? 0.5));
   const a = ARCHETYPES[spec.archetype];
 

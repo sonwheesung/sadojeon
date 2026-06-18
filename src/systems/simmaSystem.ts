@@ -5,6 +5,7 @@
 // 주화입마 = 심마가 임계를 넘으면 터지는 발작 — 내상(wound 'inner')·내공 흩어짐(진척 손실)·스트레스/흑화 급증.
 //   **즉사 없음**(생존 체인과 일관) — 깊은 내상으로 몸져눕되 죽지는 않는다. 안신단(mind 영약)으로 진정.
 
+import { random } from '@/systems/rng';
 import { findMartialArt } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -64,7 +65,7 @@ export function tickSimma(): void {
     // 발작 굴림 — 임계 초과분에 비례한 낮은 일일 확률.
     if (next >= SIMMA_ERUPT_THRESHOLD) {
       const chance = clamp((next - SIMMA_ERUPT_THRESHOLD) / 40, 0, 1) * 0.05;
-      if (Math.random() < chance) triggerQiDeviation(id);
+      if (random() < chance) triggerQiDeviation(id);
     }
   }
 }
@@ -76,7 +77,7 @@ export function onForcedBreakthroughFail(discipleId: string): void {
   if (!d) return;
   const simma = d.simma ?? 0;
   const chance = clamp((simma - 40) / 40, 0, 1) * 0.18;
-  if (Math.random() < chance) triggerQiDeviation(discipleId);
+  if (random() < chance) triggerQiDeviation(discipleId);
 }
 
 const SIMMA_SEVERITY = (simma: number): number => (simma >= 88 ? 2 : simma >= 72 ? 3 : 4);

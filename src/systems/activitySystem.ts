@@ -2,6 +2,7 @@
 // 의뢰(questSystem) 파견 골격을 미러. 엔진 재사용: 재료=alchemySystem.addMaterial,
 // 상처=woundSystem.inflictWound, 결산 서신=pendingStore milestone(=inbox). 강호 출행은 Phase 2.
 
+import { random } from '@/systems/rng';
 import { findGatherRegion, GATHER_REGIONS } from '@/data/activities';
 import { MATERIAL_LABEL } from '@/data/elixirs';
 import { useActivityStore } from '@/stores/activityStore';
@@ -87,8 +88,8 @@ function settleGather(act: ActiveActivity): Milestone | null {
   };
 
   for (const drop of region.drops) {
-    if (Math.random() >= drop.chance) continue;
-    const base = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+    if (random() >= drop.chance) continue;
+    const base = drop.min + Math.floor(random() * (drop.max - drop.min + 1));
     give(drop.id, Math.max(1, Math.round(base * (drop.id === 'herb-common' ? loreMult : 1))));
   }
 
@@ -97,7 +98,7 @@ function settleGather(act: ActiveActivity): Milestone | null {
   let beastWon = true;
   if (region.spiritBeast) {
     const power = party.reduce((s, d) => s + combatSeong(d), 0);
-    beastWon = Math.random() < Math.min(0.85, 0.25 + power * 0.06);
+    beastWon = random() < Math.min(0.85, 0.25 + power * 0.06);
     if (beastWon) give('herb-divine', 1);
   }
 
@@ -105,8 +106,8 @@ function settleGather(act: ActiveActivity): Milestone | null {
   const woundChance = region.spiritBeast && !beastWon ? Math.min(1, region.woundChance + 0.3) : region.woundChance;
   const hurt: string[] = [];
   for (const d of party) {
-    if (Math.random() >= woundChance) continue;
-    const sev = region.woundSeverityMin + Math.floor(Math.random() * (5 - region.woundSeverityMin + 1));
+    if (random() >= woundChance) continue;
+    const sev = region.woundSeverityMin + Math.floor(random() * (5 - region.woundSeverityMin + 1));
     inflictWound(d.id, region.woundType, sev, (6 - sev) * 5);
     hurt.push(d.name);
   }

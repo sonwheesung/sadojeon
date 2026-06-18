@@ -5,6 +5,7 @@
 // 사건 종류: 충돌(은원)·노선 갈등(이념)·의기투합·합심 의거·해후·소원 + 복수(연쇄, 동문이 죽으면 그를 아끼던
 // 동문이 가해자를 쫓는다). 관계 사다리(enemy↔distant↔neutral↔friend↔sworn)를 따라 깊어지거나 식는다.
 
+import { random } from '@/systems/rng';
 import { ROUTE_BLOC, ROUTE_LABEL, type RouteId } from '@/data/careers';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGraduateStore, type GraduateRecord } from '@/stores/graduateStore';
@@ -13,7 +14,7 @@ import type { RelationLevel } from '@/types';
 import { pushJianghuNews } from './jianghuNews';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
-const randInt = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const randInt = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 
 // ─── 관계 사다리·조회 ──────────────────────────────────────────────────────
 const REL_ORDER: RelationLevel[] = ['enemy', 'distant', 'neutral', 'friend', 'sworn'];
@@ -63,7 +64,7 @@ const clash: GradEvent = {
   weight: () => 6,
   resolve: (a, b) => {
     const { winner, loser } = duel(a, b);
-    const fatal = LETHAL_ROUTES.has(loser.route) ? Math.random() < 0.45 : Math.random() < 0.2;
+    const fatal = LETHAL_ROUTES.has(loser.route) ? random() < 0.45 : random() < 0.2;
     gs().update(winner.id, { fame: clamp(winner.fame + 6) });
     gs().update(loser.id, fatal ? { status: 'dead', slainBy: winner.id } : { status: 'injured', fame: clamp(loser.fame - 4) });
     pushJianghuNews(
@@ -84,7 +85,7 @@ const blocConflict: GradEvent = {
   weight: () => 3,
   resolve: (a, b, rel) => {
     const { winner, loser } = duel(a, b);
-    const fatal = LETHAL_ROUTES.has(loser.route) ? Math.random() < 0.3 : Math.random() < 0.12;
+    const fatal = LETHAL_ROUTES.has(loser.route) ? random() < 0.3 : random() < 0.12;
     gs().update(winner.id, { fame: clamp(winner.fame + 5) });
     gs().update(loser.id, fatal ? { status: 'dead', slainBy: winner.id } : { status: 'injured', fame: clamp(loser.fame - 3) });
     setRel(a.id, b.id, fatal ? 'enemy' : relDown(rel)); // 부딪칠수록 척진다
@@ -191,7 +192,7 @@ function resolveVendetta(avenger: GraduateRecord, killer: GraduateRecord, dead: 
   const { winner } = duel(avenger, killer);
   setRel(avenger.id, killer.id, 'enemy');
   if (winner.id === avenger.id) {
-    const fatal = Math.random() < 0.5;
+    const fatal = random() < 0.5;
     gs().update(avenger.id, { fame: clamp(avenger.fame + 8) });
     gs().update(killer.id, fatal ? { status: 'dead', slainBy: avenger.id } : { status: 'injured', fame: clamp(killer.fame - 6) });
     pushJianghuNews(
@@ -202,7 +203,7 @@ function resolveVendetta(avenger: GraduateRecord, killer: GraduateRecord, dead: 
       'high',
     );
   } else {
-    const fatal = LETHAL_ROUTES.has(killer.route) ? Math.random() < 0.5 : Math.random() < 0.25;
+    const fatal = LETHAL_ROUTES.has(killer.route) ? random() < 0.5 : random() < 0.25;
     gs().update(killer.id, { fame: clamp(killer.fame + 5) });
     gs().update(avenger.id, fatal ? { status: 'dead', slainBy: killer.id } : { status: 'injured' });
     pushJianghuNews(
@@ -243,7 +244,7 @@ export function tickGraduateEvents(): void {
     const pool = cands.filter((c) => !usedPairs.has(pairKey(c.a, c.b)));
     if (pool.length === 0) break;
     const total = pool.reduce((s, c) => s + c.w, 0);
-    let r = Math.random() * total;
+    let r = random() * total;
     let pick = pool[0];
     for (const c of pool) {
       r -= c.w;

@@ -50,7 +50,7 @@ export type CombatMode = 'spar' | 'real';
 
 export interface CombatConfig {
   mode: CombatMode;
-  rng?: () => number; // 미지정 시 Math.random — 헤드리스 시뮬은 시드 주입
+  rng?: () => number; // 미지정 시 앰비언트 random() (시드 PRNG) — 헤드리스 시뮬은 시드 주입
   lethal?: boolean; // real: 결정타 사망 굴림 허용 (기본 true)
   allowRetreat?: boolean; // real: 열세 측 패주 시도 (기본 true)
   extraAccidentChance?: number; // spar: 호출측 가산 사고율(감정·기질·살기 — 호출측이 안다)

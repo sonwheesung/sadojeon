@@ -1,6 +1,7 @@
 // 면담 시스템 — docs/12. 진행 시 확률 + 상황 조건 충족하면 제자 1명이 면담 청 → 서신함(필수).
 // 응답 선택마다 인격 6축·신뢰·흑화·노선이 갈린다. inboxResolve(domain:'meeting')에서 효과 적용.
 
+import { random } from '@/systems/rng';
 import { MEETINGS, fillMeetingBody, pickContextualMeeting, type MeetingEffect } from '@/data/scenarios/meetings';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -20,12 +21,12 @@ function isActive(d: Disciple): boolean {
 
 // 매일 진행 시 호출(triggerPostSettlement). 확률 + 상황 조건 통과 시 면담 청 적재.
 export function triggerDailyMeeting(): void {
-  if (Math.random() >= MEETING_DAILY_CHANCE) return;
+  if (random() >= MEETING_DAILY_CHANCE) return;
   const ds = useDiscipleStore.getState();
   const active = ds.order.map((id) => ds.disciples[id]).filter((d): d is Disciple => d != null && isActive(d));
   if (active.length === 0) return;
 
-  const disciple = active[Math.floor(Math.random() * active.length)];
+  const disciple = active[Math.floor(random() * active.length)];
   const others = active.filter((d) => d.id !== disciple.id);
   const ctx = buildDiscipleCtx(disciple, others);
   const tmpl = pickContextualMeeting(ctx, disciple.id); // 제자 전용 + 범용

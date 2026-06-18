@@ -10,6 +10,7 @@
 //   · 실전: 쓰러질 때까지. 결정타 사망 굴림(손속·자비·마공·몸의 단단함), 열세 측 패주.
 // 모든 수치 🔧 그레이박스 — 숫자는 비노출, 풍경(narrate)으로만 읽힌다.
 
+import { random } from '@/systems/rng';
 import type {
   CombatConfig,
   CombatEvent,
@@ -139,7 +140,7 @@ export function simulateCombat(
   sideB: Combatant[],
   config: CombatConfig,
 ): CombatResult {
-  const rng = config.rng ?? Math.random;
+  const rng = config.rng ?? random;
   const maxRounds = config.maxRounds ?? MAX_ROUNDS_DEFAULT;
   const lethal = config.lethal ?? true;
   const allowRetreat = config.allowRetreat ?? true;

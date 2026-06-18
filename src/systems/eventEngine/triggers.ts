@@ -1,6 +1,7 @@
 // 트리거 — 후보 제자 × 템플릿 쌍 수집 + tier 가중치 픽.
 // 도메인별 풀과 무관하게 동작. moralEventSystem.ts 의 collectEligible/pickByTier 일반화.
 
+import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -105,7 +106,7 @@ export function weightedPick<T>(items: T[], weights: number[]): T | null {
   if (items.length === 0) return null;
   const total = weights.reduce((s, w) => s + Math.max(0, w), 0);
   if (total <= 0) return items[0];
-  let r = Math.random() * total;
+  let r = random() * total;
   for (let i = 0; i < items.length; i++) {
     r -= Math.max(0, weights[i]);
     if (r <= 0) return items[i];

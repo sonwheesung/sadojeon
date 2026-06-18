@@ -5,6 +5,7 @@
 // 같은 응답이라도 제자 성격·신뢰·체력에 따라 효과 차등 — 압박을 좋아하는 제자에 거절 →
 // 신뢰 ↑, 무관심에 상처받는 제자에 거절 → 신뢰 폭락 등. LLM 가 trustMul 보정.
 
+import { random } from '@/systems/rng';
 import { pickRandomWish, WISHES, type WishTemplate } from '@/data/scenarios/wishes';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -21,7 +22,7 @@ export const WISH_DAILY_CHANCE = 0.18;
 
 // 매일 진행 시 호출.
 export function triggerDailyWish(): void {
-  if (Math.random() >= WISH_DAILY_CHANCE) return;
+  if (random() >= WISH_DAILY_CHANCE) return;
 
   const ds = useDiscipleStore.getState();
   const overrides = useScheduleStore.getState().overrides;
@@ -41,7 +42,7 @@ export function triggerDailyWish(): void {
 
   if (candidates.length === 0) return;
 
-  const disciple = candidates[Math.floor(Math.random() * candidates.length)];
+  const disciple = candidates[Math.floor(random() * candidates.length)];
   const template = pickRandomWish();
 
   // 모달 대신 서신함에 적재 — 진행 중엔 화면에 안 띄우고 쌓아둔다.

@@ -6,6 +6,7 @@
 // 결과 4단계(박빙/우세/압도/사고)가 보상을 정한다 — 배움은 박빙에서 나오고, 압도전에선 아무도 못 배운다.
 // 숫자는 비노출 — 결과 풍경(일지 텍스트)으로만 인지(숨은 변수 룰).
 
+import { random } from '@/systems/rng';
 import {
   findMartialArt,
   seongCap,
@@ -152,7 +153,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
   const tier: DaeryeonTier = result.tier;
   // 무승부면 박빙 — 승자는 서사용으로만 갈라둔다.
   const winner =
-    result.winner === 'A' ? a : result.winner === 'B' ? b : Math.random() < 0.5 ? a : b;
+    result.winner === 'A' ? a : result.winner === 'B' ? b : random() < 0.5 ? a : b;
   const loser = winner.id === a.id ? b : a;
   const injured = result.accident != null;
 
@@ -168,7 +169,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
     // 관계 — 보통은 틀어진다. 적대 페어만 낮은 확률로 "치고받고 인정"(화해 불씨).
     const vRel = victim.relationships[striker.id] ?? 'neutral';
     const sRel = striker.relationships[victim.id] ?? 'neutral';
-    if (enemyPair && Math.random() < 0.12) {
+    if (enemyPair && random() < 0.12) {
       ds.setRelation(victim.id, striker.id, REL_UP[vRel]);
       ds.setRelation(striker.id, victim.id, REL_UP[sRel]);
       return {
@@ -178,7 +179,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
         artDelta,
       };
     }
-    if (Math.random() < 0.3) {
+    if (random() < 0.3) {
       ds.setRelation(victim.id, striker.id, REL_DOWN[vRel]);
     }
     return {
@@ -197,8 +198,8 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
 
   // 깨달음 불씨 — 박빙 한정. 한쪽이 상대의 검에서 답을 본다.
   let spark: Disciple | null = null;
-  if (tier === 'close' && Math.random() < SPARK_CHANCE) {
-    spark = Math.random() < 0.5 ? a : b;
+  if (tier === 'close' && random() < SPARK_CHANCE) {
+    spark = random() < 0.5 ? a : b;
     const extra = gainSparSeongExp(ds.disciples[spark.id] ?? spark, SPARK_EXP_MULT);
     if (extra) artDelta[spark.id] = extra;
   }
@@ -207,12 +208,12 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
   const wRel = winner.relationships[loser.id] ?? 'neutral';
   const lRel = loser.relationships[winner.id] ?? 'neutral';
   if (tier === 'close') {
-    if (Math.random() < 0.3) {
+    if (random() < 0.3) {
       ds.setRelation(winner.id, loser.id, REL_UP[wRel]);
       ds.setRelation(loser.id, winner.id, REL_UP[lRel]);
     }
   } else if (tier === 'edge') {
-    if (Math.random() < 0.15) {
+    if (random() < 0.15) {
       ds.setRelation(loser.id, winner.id, REL_UP[lRel]); // 한 수 위를 향한 존경
     }
     ds.update(winner.id, { personality: shiftPersona(winner, { warmth: 1 }) }); // 가르친 보람
@@ -220,7 +221,7 @@ export function resolveDaeryeon(aId: string, bId: string): DaeryeonOutcome | nul
     // 압도 — 약자는 기죽는다. 무뚝뚝·야심가는 앙금.
     ds.update(loser.id, { stress: clamp((loser.stress ?? 0) + 6) });
     const resentful = loser.personality.warmth < 40 || loser.personality.ambition > 65;
-    if (resentful && Math.random() < 0.2) {
+    if (resentful && random() < 0.2) {
       ds.setRelation(loser.id, winner.id, REL_DOWN[lRel]);
     }
   }
