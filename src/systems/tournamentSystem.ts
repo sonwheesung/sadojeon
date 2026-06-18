@@ -2,6 +2,7 @@
 // 활동 제자(이류↑·14세↑)가 타 문파 후기지수(생성 NPC)들과 전투력으로 순위를 다툰다.
 // 결과 = 명성 가감 + 강호 풍문 서신. 숫자 직접 노출 X, 등수·풍문으로(docs/27 §6).
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -136,8 +137,8 @@ export function runYoungTalentsTournament(): void {
   const champ = field[0];
   const headline =
     champ.isDisciple
-      ? `${year}년 용봉지회 — 우리 ${champ.name}이 장원!`
-      : `${year}년 용봉지회 — ${champ.name}이 장원에 올랐다`;
+      ? `${year}년 용봉지회 — 우리 ${josa(champ.name, '이', '가')} 장원!`
+      : `${year}년 용봉지회 — ${josa(champ.name, '이', '가')} 장원에 올랐다`;
   const body = `올해 용봉지회에 강호의 후기지수 ${field.length}인이 모였다.\n\n${lines.join('\n')}`;
   pushNews(headline, body, champ.isDisciple ? 'high' : 'normal');
 

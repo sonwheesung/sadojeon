@@ -12091,6 +12091,44 @@ function totalMonth(t) {
   return (t.year - 1) * GAME.MONTHS_PER_YEAR + monthOfYear(t);
 }
 
+// src/utils/korean.ts
+function hasBatchim(word) {
+  if (!word) return false;
+  const c = word.charCodeAt(word.length - 1);
+  if (c < 44032 || c > 55203) return false;
+  return (c - 44032) % 28 !== 0;
+}
+function josa(word, withBatchim, withoutBatchim) {
+  return word + (hasBatchim(word) ? withBatchim : withoutBatchim);
+}
+var PARTICLE_PAIRS = {
+  \uC740: ["\uC740", "\uB294"],
+  \uB294: ["\uC740", "\uB294"],
+  \uC774: ["\uC774", "\uAC00"],
+  \uAC00: ["\uC774", "\uAC00"],
+  \uC744: ["\uC744", "\uB97C"],
+  \uB97C: ["\uC744", "\uB97C"],
+  \uACFC: ["\uACFC", "\uC640"],
+  \uC640: ["\uACFC", "\uC640"],
+  \uC73C\uB85C: ["\uC73C\uB85C", "\uB85C"],
+  \uB85C: ["\uC73C\uB85C", "\uB85C"],
+  \uC544: ["\uC544", "\uC57C"],
+  \uC57C: ["\uC544", "\uC57C"]
+};
+var PARTICLE_ALT = "\uC73C\uB85C|\uC740|\uB294|\uC774|\uAC00|\uC744|\uB97C|\uACFC|\uC640|\uB85C|\uC544|\uC57C";
+function fillName(template, map) {
+  let out = template;
+  for (const [key, name] of Object.entries(map)) {
+    const re = new RegExp(`\\{${key}\\}(${PARTICLE_ALT})?`, "g");
+    out = out.replace(re, (_m, particle) => {
+      if (!particle) return name;
+      const pair = PARTICLE_PAIRS[particle];
+      return pair ? name + (hasBatchim(name) ? pair[0] : pair[1]) : name + particle;
+    });
+  }
+  return out;
+}
+
 // src/systems/dailyLogSystem.ts
 init_martialArts();
 
@@ -12567,19 +12605,19 @@ var PROGRESS_NORMAL = 2;
 function trainingPhrase(name, totalDelta) {
   if (totalDelta <= 0) {
     return {
-      text: `${name}\uC740 \uD615\uC744 \uC9DA\uC5C8\uC73C\uB098 \uD55C \uC790\uB9AC\uC5D0\uC11C \uB9F4\uB3CC\uC558\uB2E4.`,
+      text: `${josa(name, "\uC740", "\uB294")} \uD615\uC744 \uC9DA\uC5C8\uC73C\uB098 \uD55C \uC790\uB9AC\uC5D0\uC11C \uB9F4\uB3CC\uC558\uB2E4.`,
       isPlateau: true
     };
   }
   if (totalDelta < PROGRESS_NORMAL) {
     return {
-      text: `${name}\uC774 \uBB34\uACF5\uC758 \uACB0\uC744 \uB354\uB4EC\uC5B4 \uBCF4\uC558\uC73C\uB098 \uC190\uC5D0 \uC7A1\uD788\uC9C0 \uC54A\uC558\uB2E4.`,
+      text: `${josa(name, "\uC774", "\uAC00")} \uBB34\uACF5\uC758 \uACB0\uC744 \uB354\uB4EC\uC5B4 \uBCF4\uC558\uC73C\uB098 \uC190\uC5D0 \uC7A1\uD788\uC9C0 \uC54A\uC558\uB2E4.`,
       isPlateau: true
     };
   }
   if (totalDelta < PROGRESS_GOOD) {
     return {
-      text: `${name}\uC774 \uC790\uC138\uB97C \uD55C\uACB0 \uB2E4\uB4EC\uC5C8\uB2E4.`,
+      text: `${josa(name, "\uC774", "\uAC00")} \uC790\uC138\uB97C \uD55C\uACB0 \uB2E4\uB4EC\uC5C8\uB2E4.`,
       isPlateau: false
     };
   }
@@ -12597,7 +12635,7 @@ function buildEntry(report, name) {
       kind: "collapse",
       discipleId: id,
       discipleName: name,
-      text: `${name}\uC774 \uBB34\uB9AC\uD55C \uB05D\uC5D0 \uC4F0\uB7EC\uC84C\uB2E4 \u2014 \uC0AC\uBD80\uAC00 \uAC70\uB450\uC5B4 \uCE58\uB8CC\uC5D0 \uB4E4\uC600\uB2E4.`
+      text: `${josa(name, "\uC774", "\uAC00")} \uBB34\uB9AC\uD55C \uB05D\uC5D0 \uC4F0\uB7EC\uC84C\uB2E4 \u2014 \uC0AC\uBD80\uAC00 \uAC70\uB450\uC5B4 \uCE58\uB8CC\uC5D0 \uB4E4\uC600\uB2E4.`
     });
     return entries;
   }
@@ -12607,7 +12645,7 @@ function buildEntry(report, name) {
       kind: "override",
       discipleId: id,
       discipleName: name,
-      text: `${name}\uC774 \uCE58\uB8CC\uB97C \uC774\uC5B4\uAC00\uBA70 \uBAB8\uC744 \uCD94\uC2AC\uB800\uB2E4.`
+      text: `${josa(name, "\uC774", "\uAC00")} \uCE58\uB8CC\uB97C \uC774\uC5B4\uAC00\uBA70 \uBAB8\uC744 \uCD94\uC2AC\uB800\uB2E4.`
     });
   } else if (report.overrideCommand === "quest") {
     entries.push({
@@ -12615,7 +12653,7 @@ function buildEntry(report, name) {
       kind: "override",
       discipleId: id,
       discipleName: name,
-      text: `${name}\uC740 \uC758\uB8B0 \uD604\uC7A5\uC5D0\uC11C \uAC15\uD638\uC758 \uBC14\uB78C\uC744 \uB9C8\uC168\uB2E4.`
+      text: `${josa(name, "\uC740", "\uB294")} \uC758\uB8B0 \uD604\uC7A5\uC5D0\uC11C \uAC15\uD638\uC758 \uBC14\uB78C\uC744 \uB9C8\uC168\uB2E4.`
     });
   } else if (report.overrideCommand === "seclusion") {
     const totalDelta = report.arts.reduce((s, a) => s + a.delta, 0);
@@ -12625,7 +12663,7 @@ function buildEntry(report, name) {
       kind: phrase.isPlateau ? "plateau" : "training",
       discipleId: id,
       discipleName: name,
-      text: `${name}\uC740 \uD3D0\uAD00\uC5D0 \uB4E4\uC5B4 \uC548\uACFC \uB9C8\uC8FC\uC130\uB2E4 \u2014 ${phrase.text.replace(`${name}\uC740 `, "").replace(`${name}\uC774 `, "").replace(`${name}\uC758 `, "")}`
+      text: `${josa(name, "\uC740", "\uB294")} \uD3D0\uAD00\uC5D0 \uB4E4\uC5B4 \uC548\uACFC \uB9C8\uC8FC\uC130\uB2E4 \u2014 ${phrase.text.replace(`${josa(name, "\uC740", "\uB294")} `, "").replace(`${josa(name, "\uC774", "\uAC00")} `, "").replace(`${name}\uC758 `, "")}`
     });
   } else if (report.sparNote) {
     entries.push({
@@ -12657,7 +12695,7 @@ function buildEntry(report, name) {
       kind: dropped ? "stamina_drop" : "stamina_rise",
       discipleId: id,
       discipleName: name,
-      text: dropped ? `${name}\uC758 \uAE30\uC0C9\uC774 ${afterLabel}\uC73C\uB85C \uAC00\uB77C\uC549\uC558\uB2E4.` : `${name}\uC774 \uAE30\uB825\uC744 \uB418\uCC3E\uC544 ${afterLabel}\uC5D0 \uAC00\uAE4C\uC6CC\uC84C\uB2E4.`
+      text: dropped ? `${name}\uC758 \uAE30\uC0C9\uC774 ${afterLabel}\uC73C\uB85C \uAC00\uB77C\uC549\uC558\uB2E4.` : `${josa(name, "\uC774", "\uAC00")} \uAE30\uB825\uC744 \uB418\uCC3E\uC544 ${afterLabel}\uC5D0 \uAC00\uAE4C\uC6CC\uC84C\uB2E4.`
     });
   }
   for (const a of report.arts) {
@@ -12670,7 +12708,7 @@ function buildEntry(report, name) {
         kind: "promotion",
         discipleId: id,
         discipleName: name,
-        text: `${name}\uC774 ${artName} ${stageLabel} \uACBD\uC9C0\uC5D0 \uC62C\uB790\uB2E4 \u2014 ${a.seong}\uC131.`
+        text: `${josa(name, "\uC774", "\uAC00")} ${artName} ${stageLabel} \uACBD\uC9C0\uC5D0 \uC62C\uB790\uB2E4 \u2014 ${a.seong}\uC131.`
       });
     } else if (a.seong > a.seongBefore) {
       entries.push({
@@ -12678,7 +12716,7 @@ function buildEntry(report, name) {
         kind: "growth",
         discipleId: id,
         discipleName: name,
-        text: `${name}\uC758 ${artName}\uC774 ${a.seong}\uC131\uC5D0 \uC62C\uB790\uB2E4.`
+        text: `${name}\uC758 ${josa(artName, "\uC774", "\uAC00")} ${a.seong}\uC131\uC5D0 \uC62C\uB790\uB2E4.`
       });
     }
   }
@@ -12694,7 +12732,7 @@ function categoryEntry(report, name) {
         kind: "rest",
         discipleId: id,
         discipleName: name,
-        text: what ? `${name}\uC774 ${what}(\uC73C)\uB85C \uC228\uC744 \uB3CC\uB838\uB2E4.` : `${name}\uC774 \uD479 \uC26C\uBA70 \uAE30\uB825\uC744 \uD68C\uBCF5\uD588\uB2E4.`
+        text: what ? `${josa(name, "\uC774", "\uAC00")} ${what}(\uC73C)\uB85C \uC228\uC744 \uB3CC\uB838\uB2E4.` : `${josa(name, "\uC774", "\uAC00")} \uD479 \uC26C\uBA70 \uAE30\uB825\uC744 \uD68C\uBCF5\uD588\uB2E4.`
       };
     case "physical":
       return {
@@ -12702,7 +12740,7 @@ function categoryEntry(report, name) {
         kind: "training",
         discipleId: id,
         discipleName: name,
-        text: what ? `${name}\uC774 ${what}(\uC73C)\uB85C \uBAB8\uC744 \uB2E8\uB828\uD588\uB2E4.` : `${name}\uC774 \uBAB8\uC744 \uB2E8\uB828\uD588\uB2E4.`
+        text: what ? `${josa(name, "\uC774", "\uAC00")} ${what}(\uC73C)\uB85C \uBAB8\uC744 \uB2E8\uB828\uD588\uB2E4.` : `${josa(name, "\uC774", "\uAC00")} \uBAB8\uC744 \uB2E8\uB828\uD588\uB2E4.`
       };
     case "study":
       return {
@@ -12710,7 +12748,7 @@ function categoryEntry(report, name) {
         kind: "training",
         discipleId: id,
         discipleName: name,
-        text: what ? `${name}\uC774 ${what} \uACF5\uBD80\uC5D0 \uBA38\uB9AC\uB97C \uC2F8\uB9F8\uB2E4.` : `${name}\uC774 \uC11C\uCC45\uC744 \uB4E4\uC5EC\uB2E4\uBCF4\uC558\uB2E4.`
+        text: what ? `${josa(name, "\uC774", "\uAC00")} ${what} \uACF5\uBD80\uC5D0 \uBA38\uB9AC\uB97C \uC2F8\uB9F8\uB2E4.` : `${josa(name, "\uC774", "\uAC00")} \uC11C\uCC45\uC744 \uB4E4\uC5EC\uB2E4\uBCF4\uC558\uB2E4.`
       };
     case "martial":
     default: {
@@ -12760,7 +12798,7 @@ function buildMilestones(reports) {
         discipleId: r.discipleId,
         discipleName: d.name,
         title: "\uC4F0\uB7EC\uC9D0",
-        body: `${d.name}\uC774 \uBB34\uB9AC\uD55C \uB05D\uC5D0 \uC4F0\uB7EC\uC84C\uB2E4.
+        body: `${josa(d.name, "\uC774", "\uAC00")} \uBB34\uB9AC\uD55C \uB05D\uC5D0 \uC4F0\uB7EC\uC84C\uB2E4.
 \uC0AC\uBD80\uAC00 \uAC70\uB450\uC5B4 \uCE58\uB8CC\uC5D0 \uB4E4\uC600\uB2E4 \u2014 \uBA70\uCE60 \uAC15\uC81C \uD734\uC2DD.`
       });
     }
@@ -12777,7 +12815,7 @@ function buildMilestones(reports) {
         artName: art?.name ?? a.artId,
         newStage: a.promoted,
         title: "\uACBD\uC9C0 \uB3C4\uC57D",
-        body: `${d.name}\uC774 ${art?.name ?? a.artId} ${stageLabel} \uACBD\uC9C0\uC5D0 \uC62C\uB790\uB2E4 \u2014 ${a.seong}\uC131.`
+        body: `${josa(d.name, "\uC774", "\uAC00")} ${art?.name ?? a.artId} ${stageLabel} \uACBD\uC9C0\uC5D0 \uC62C\uB790\uB2E4 \u2014 ${a.seong}\uC131.`
       });
     }
   }
@@ -14070,7 +14108,7 @@ function tickReputationInfluence() {
       useSectStore.getState().adjustResources(gift);
       pushFactionNews(
         `${f.name} \u2014 \uD6C4\uC758`,
-        `${f.name}\uC774 \uC0AC\uBB38\uC5D0 \uC0AC\uB840\uB97C \uBCF4\uB0B4\uC654\uB2E4. \uB450\uD130\uC6B4 \uAD00\uACC4\uC758 \uBCF4\uB2F5\uC73C\uB85C \uAE08\uC790 ${gift}\uB0E5\uC774 \uAE08\uACE0\uC5D0 \uB4E4\uC5C8\uB2E4.`
+        `${josa(f.name, "\uC774", "\uAC00")} \uC0AC\uBB38\uC5D0 \uC0AC\uB840\uB97C \uBCF4\uB0B4\uC654\uB2E4. \uB450\uD130\uC6B4 \uAD00\uACC4\uC758 \uBCF4\uB2F5\uC73C\uB85C \uAE08\uC790 ${gift}\uB0E5\uC774 \uAE08\uACE0\uC5D0 \uB4E4\uC5C8\uB2E4.`
       );
     } else if (tier === "hostile" && random() < 0.5) {
       const cur = useSectStore.getState().sect?.resources ?? 0;
@@ -14078,7 +14116,7 @@ function tickReputationInfluence() {
       useSectStore.getState().adjustResources(-loss);
       pushFactionNews(
         `${f.name} \u2014 \uC2DC\uBE44`,
-        `${f.name}\uC774 \uC0AC\uBB38\uC5D0 \uC790\uAC1D\uC744 \uBCF4\uB0C8\uB2E4\uB294 \uD749\uD749\uD55C \uC18C\uBB38. \uB300\uC751\uC5D0 \uAE08\uC790 ${loss}\uB0E5\uC744 \uC37C\uB2E4.`
+        `${josa(f.name, "\uC774", "\uAC00")} \uC0AC\uBB38\uC5D0 \uC790\uAC1D\uC744 \uBCF4\uB0C8\uB2E4\uB294 \uD749\uD749\uD55C \uC18C\uBB38. \uB300\uC751\uC5D0 \uAE08\uC790 ${loss}\uB0E5\uC744 \uC37C\uB2E4.`
       );
     }
   }
@@ -14224,7 +14262,7 @@ var clash2 = {
     gs().update(loser.id, fatal ? { status: "dead", slainBy: winner.id } : { status: "injured", fame: clamp3(loser.fame - 4) });
     pushJianghuNews(
       `${winner.name} \u2194 ${loser.name} \u2014 \uC740\uC6D0`,
-      fatal ? `${winner.name}\uACFC ${loser.name}\uC774 \uAC15\uD638\uC5D0\uC11C \uB05D\uB0B4 \uCE7C\uC744 \uACA8\uB234\uB2E4. ${loser.name}\uC740(\uB294) \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4.` : `${winner.name}\uACFC ${loser.name}\uC774 \uCE7C\uC744 \uACA8\uB234\uB2E4. ${loser.name}\uC774 \uC0C1\uCC98\uB97C \uC785\uACE0 \uBB3C\uB7EC\uB0AC\uB2E4 \uD55C\uB2E4.`
+      fatal ? `${josa(winner.name, "\uACFC", "\uC640")} ${josa(loser.name, "\uC774", "\uAC00")} \uAC15\uD638\uC5D0\uC11C \uB05D\uB0B4 \uCE7C\uC744 \uACA8\uB234\uB2E4. ${josa(loser.name, "\uC740", "\uB294")} \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4.` : `${josa(winner.name, "\uACFC", "\uC640")} ${josa(loser.name, "\uC774", "\uAC00")} \uCE7C\uC744 \uACA8\uB234\uB2E4. ${josa(loser.name, "\uC774", "\uAC00")} \uC0C1\uCC98\uB97C \uC785\uACE0 \uBB3C\uB7EC\uB0AC\uB2E4 \uD55C\uB2E4.`
     );
   }
 };
@@ -14240,7 +14278,7 @@ var blocConflict = {
     setRel(a.id, b.id, fatal ? "enemy" : relDown(rel));
     pushJianghuNews(
       `${a.name} \u2194 ${b.name} \u2014 \uC815\uC0AC(\u6B63\u90AA)\uC758 \uCDA9\uB3CC`,
-      fatal ? `${ROUTE_LABEL[a.route]} ${a.name}\uACFC ${ROUTE_LABEL[b.route]} ${b.name}\uC774 \uAE38\uC5D0\uC11C \uBD80\uB52A\uCCD0 \uD53C\uB97C \uBD24\uB2E4. ${loser.name}\uC774 \uC4F0\uB7EC\uC84C\uB2E4.` : `${ROUTE_LABEL[a.route]} ${a.name}\uACFC ${ROUTE_LABEL[b.route]} ${b.name}\uC774 \uAE38\uC5D0\uC11C \uAC80\uC744 \uB9DE\uB314\uB2E4. \uC61B \uC815\uC774 \uC5C6\uB358 \uB458 \uC0AC\uC774\uC5D0 \uC740\uC6D0\uC774 \uC2F9\uD144\uB2E4.`
+      fatal ? `${ROUTE_LABEL[a.route]} ${josa(a.name, "\uACFC", "\uC640")} ${ROUTE_LABEL[b.route]} ${josa(b.name, "\uC774", "\uAC00")} \uAE38\uC5D0\uC11C \uBD80\uB52A\uCCD0 \uD53C\uB97C \uBD24\uB2E4. ${josa(loser.name, "\uC774", "\uAC00")} \uC4F0\uB7EC\uC84C\uB2E4.` : `${ROUTE_LABEL[a.route]} ${josa(a.name, "\uACFC", "\uC640")} ${ROUTE_LABEL[b.route]} ${josa(b.name, "\uC774", "\uAC00")} \uAE38\uC5D0\uC11C \uAC80\uC744 \uB9DE\uB314\uB2E4. \uC61B \uC815\uC774 \uC5C6\uB358 \uB458 \uC0AC\uC774\uC5D0 \uC740\uC6D0\uC774 \uC2F9\uD144\uB2E4.`
     );
   }
 };
@@ -14255,7 +14293,7 @@ var jointDeed = {
     setRel(a.id, b.id, relUp(rel));
     pushJianghuNews(
       `${a.name} \xB7 ${b.name} \u2014 \uC758\uAC70(\u7FA9\u64E7)`,
-      `\uC61B \uB3D9\uBB38 ${a.name}\uACFC ${b.name}\uC774 \uD798\uC744 \uD569\uCCD0 \uAC15\uD638\uC758 \uC758\uB97C \uD589\uD588\uB2E4\uB294 \uC18C\uBB38. \uB458\uC758 \uC774\uB984\uACFC \uD568\uAED8 \uC0AC\uBB38\uC758 \uC774\uB984\uB3C4 \uB192\uC774 \uC624\uB978\uB2E4.`
+      `\uC61B \uB3D9\uBB38 ${josa(a.name, "\uACFC", "\uC640")} ${josa(b.name, "\uC774", "\uAC00")} \uD798\uC744 \uD569\uCCD0 \uAC15\uD638\uC758 \uC758\uB97C \uD589\uD588\uB2E4\uB294 \uC18C\uBB38. \uB458\uC758 \uC774\uB984\uACFC \uD568\uAED8 \uC0AC\uBB38\uC758 \uC774\uB984\uB3C4 \uB192\uC774 \uC624\uB978\uB2E4.`
     );
   }
 };
@@ -14269,7 +14307,7 @@ var alliance = {
     setRel(a.id, b.id, relUp(rel));
     pushJianghuNews(
       `${a.name} \xB7 ${b.name} \u2014 \uC758\uAE30\uD22C\uD569`,
-      `\uC61B \uB3D9\uBB38 ${a.name}\uACFC ${b.name}\uC774 \uAC15\uD638\uC5D0\uC11C \uC190\uC744 \uC7A1\uC558\uB2E4\uB294 \uD750\uBB47\uD55C \uC18C\uC2DD. \uB458\uC758 \uC774\uB984\uC774 \uD568\uAED8 \uC624\uB978\uB2E4.`
+      `\uC61B \uB3D9\uBB38 ${josa(a.name, "\uACFC", "\uC640")} ${josa(b.name, "\uC774", "\uAC00")} \uAC15\uD638\uC5D0\uC11C \uC190\uC744 \uC7A1\uC558\uB2E4\uB294 \uD750\uBB47\uD55C \uC18C\uC2DD. \uB458\uC758 \uC774\uB984\uC774 \uD568\uAED8 \uC624\uB978\uB2E4.`
     );
   }
 };
@@ -14281,7 +14319,7 @@ var estrangement = {
     setRel(a.id, b.id, relDown(rel));
     pushJianghuNews(
       `${a.name} \xB7 ${b.name} \u2014 \uC18C\uC6D0`,
-      `${ROUTE_LABEL[a.route]}\uC758 \uAE38\uC744 \uAC00\uB294 ${a.name}\uACFC ${ROUTE_LABEL[b.route]}\uC758 ${b.name}. \uAC77\uB294 \uAE38\uC774 \uAC08\uB9AC\uB2C8 \uC61B \uC815\uB3C4 \uCC28\uCE30 \uC2DD\uC5B4\uAC04\uB2E4 \uD55C\uB2E4.`
+      `${ROUTE_LABEL[a.route]}\uC758 \uAE38\uC744 \uAC00\uB294 ${josa(a.name, "\uACFC", "\uC640")} ${ROUTE_LABEL[b.route]}\uC758 ${b.name}. \uAC77\uB294 \uAE38\uC774 \uAC08\uB9AC\uB2C8 \uC61B \uC815\uB3C4 \uCC28\uCE30 \uC2DD\uC5B4\uAC04\uB2E4 \uD55C\uB2E4.`
     );
   }
 };
@@ -14294,7 +14332,7 @@ var encounter = {
     gs().update(b.id, { fame: clamp3(b.fame + 2) });
     pushJianghuNews(
       `${a.name} \xB7 ${b.name} \u2014 \uD574\uD6C4`,
-      `\uAC19\uC740 ${ROUTE_LABEL[a.route]}\uC758 \uAE38\uC744 \uAC77\uB294 ${a.name}\uACFC ${b.name}\uC774 \uAC15\uD638\uC5D0\uC11C \uB9C8\uC8FC\uCCD0 \uD55C \uC218 \uACA8\uB918\uB2E4 \uD55C\uB2E4.`
+      `\uAC19\uC740 ${ROUTE_LABEL[a.route]}\uC758 \uAE38\uC744 \uAC77\uB294 ${josa(a.name, "\uACFC", "\uC640")} ${josa(b.name, "\uC774", "\uAC00")} \uAC15\uD638\uC5D0\uC11C \uB9C8\uC8FC\uCCD0 \uD55C \uC218 \uACA8\uB918\uB2E4 \uD55C\uB2E4.`
     );
   }
 };
@@ -14329,7 +14367,7 @@ function resolveVendetta(avenger, killer, dead) {
     gs().update(killer.id, fatal ? { status: "dead", slainBy: avenger.id } : { status: "injured", fame: clamp3(killer.fame - 6) });
     pushJianghuNews(
       `${avenger.name} \u2014 \uBCF5\uC218`,
-      fatal ? `${avenger.name}\uC774 \uC61B \uB3D9\uBB38 ${dead.name}\uC758 \uC6D0\uC218 ${killer.name}\uC744 \uB05D\uB0B4 \uBCA0\uC5C8\uB2E4. \uAC15\uD638\uAC00 \uADF8 \uC758\uB9AC\uC5D0 \uC220\uB801\uC778\uB2E4.` : `${avenger.name}\uC774 ${dead.name}\uC758 \uC6D0\uC218 ${killer.name}\uC744 \uCC3E\uC544 \uCE7C\uC744 \uACA8\uB234\uB2E4. ${killer.name}\uC774 \uAE4A\uC740 \uC0C1\uCC98\uB97C \uC785\uACE0 \uB2EC\uC544\uB0AC\uB2E4 \uD55C\uB2E4.`,
+      fatal ? `${josa(avenger.name, "\uC774", "\uAC00")} \uC61B \uB3D9\uBB38 ${dead.name}\uC758 \uC6D0\uC218 ${josa(killer.name, "\uC744", "\uB97C")} \uB05D\uB0B4 \uBCA0\uC5C8\uB2E4. \uAC15\uD638\uAC00 \uADF8 \uC758\uB9AC\uC5D0 \uC220\uB801\uC778\uB2E4.` : `${josa(avenger.name, "\uC774", "\uAC00")} ${dead.name}\uC758 \uC6D0\uC218 ${josa(killer.name, "\uC744", "\uB97C")} \uCC3E\uC544 \uCE7C\uC744 \uACA8\uB234\uB2E4. ${josa(killer.name, "\uC774", "\uAC00")} \uAE4A\uC740 \uC0C1\uCC98\uB97C \uC785\uACE0 \uB2EC\uC544\uB0AC\uB2E4 \uD55C\uB2E4.`,
       "high"
     );
   } else {
@@ -14338,7 +14376,7 @@ function resolveVendetta(avenger, killer, dead) {
     gs().update(avenger.id, fatal ? { status: "dead", slainBy: killer.id } : { status: "injured" });
     pushJianghuNews(
       `${avenger.name} \u2014 \uBE44\uC6B4\uC758 \uBCF5\uC218`,
-      fatal ? `${avenger.name}\uC774 \uC61B \uB3D9\uBB38 ${dead.name}\uC758 \uBCF5\uC218\uB97C \uB178\uB838\uC73C\uB098, \uB3C4\uB9AC\uC5B4 ${killer.name}\uC758 \uCE7C\uC5D0 \uC2A4\uB7EC\uC84C\uB2E4. \uC740\uC6D0\uC774 \uB610 \uB2E4\uB978 \uD53C\uB97C \uBD88\uB800\uB2E4.` : `${avenger.name}\uC774 ${dead.name}\uC758 \uC6D0\uC218 ${killer.name}\uC5D0\uAC8C \uB364\uBCD0\uC73C\uB098 \uB05D\uB0B4 \uAEBE\uC774\uC9C0 \uBABB\uD558\uACE0 \uC0C1\uCC98\uB9CC \uC548\uACE0 \uBB3C\uB7EC\uB0AC\uB2E4.`,
+      fatal ? `${josa(avenger.name, "\uC774", "\uAC00")} \uC61B \uB3D9\uBB38 ${dead.name}\uC758 \uBCF5\uC218\uB97C \uB178\uB838\uC73C\uB098, \uB3C4\uB9AC\uC5B4 ${killer.name}\uC758 \uCE7C\uC5D0 \uC2A4\uB7EC\uC84C\uB2E4. \uC740\uC6D0\uC774 \uB610 \uB2E4\uB978 \uD53C\uB97C \uBD88\uB800\uB2E4.` : `${josa(avenger.name, "\uC774", "\uAC00")} ${dead.name}\uC758 \uC6D0\uC218 ${killer.name}\uC5D0\uAC8C \uB364\uBCD0\uC73C\uB098 \uB05D\uB0B4 \uAEBE\uC774\uC9C0 \uBABB\uD558\uACE0 \uC0C1\uCC98\uB9CC \uC548\uACE0 \uBB3C\uB7EC\uB0AC\uB2E4.`,
       "high"
     );
   }
@@ -14386,7 +14424,7 @@ var randInt2 = (lo, hi) => lo + Math.floor(random() * (hi - lo + 1));
 var pushNews = pushJianghuNews;
 function deathLine(g, status) {
   if (status === "missing") return `${g.name}\uC758 \uC885\uC801\uC774 \uB04A\uACBC\uB2E4. \uAC15\uD638 \uC5B4\uB514\uC5D0\uC11C\uB3C4 \uC18C\uC2DD\uC774 \uC5C6\uB2E4.`;
-  return `${g.name}\uC774 \uAC15\uD638\uC5D0\uC11C \uBCC0\uC744 \uB2F9\uD588\uB2E4\uB294 \uBE44\uBCF4\uAC00 \uC804\uD574\uC84C\uB2E4. ${ROUTE_LABEL[g.route]}\uC758 \uAE38\uC774\uC5C8\uB2E4.`;
+  return `${josa(g.name, "\uC774", "\uAC00")} \uAC15\uD638\uC5D0\uC11C \uBCC0\uC744 \uB2F9\uD588\uB2E4\uB294 \uBE44\uBCF4\uAC00 \uC804\uD574\uC84C\uB2E4. ${ROUTE_LABEL[g.route]}\uC758 \uAE38\uC774\uC5C8\uB2E4.`;
 }
 function tickCareers() {
   const gs2 = useGraduateStore.getState();
@@ -14414,7 +14452,7 @@ function tickCareers() {
       const dead = random() < baseDead + (blocAtWar ? 0.2 : 0);
       status = dead ? "dead" : "missing";
       gs2.update(g.id, { power, fame, status });
-      const line = blocAtWar ? `${g.name}\uC774 ${BLOC_LABEL[bloc]}\uC758 \uC804\uB780\uC5D0 \uBAB8\uC744 \uB358\uC84C\uB2E4\uAC00 \uB05D\uB0B4 \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4. ${ROUTE_LABEL[g.route]}\uC758 \uAE38\uC774\uC5C8\uB2E4.` : deathLine({ ...g, power, fame }, status);
+      const line = blocAtWar ? `${josa(g.name, "\uC774", "\uAC00")} ${BLOC_LABEL[bloc]}\uC758 \uC804\uB780\uC5D0 \uBAB8\uC744 \uB358\uC84C\uB2E4\uAC00 \uB05D\uB0B4 \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4. ${ROUTE_LABEL[g.route]}\uC758 \uAE38\uC774\uC5C8\uB2E4.` : deathLine({ ...g, power, fame }, status);
       pushNews(`${g.name} \u2014 \uBE44\uBCF4`, line);
       continue;
     }
@@ -14427,11 +14465,11 @@ function tickCareers() {
         level += 1;
         title = ladder[level];
         fame = clamp4(fame + 6);
-        pushNews(`${g.name} \u2014 \uC2B9\uAE09`, `${g.name}\uC774 ${ROUTE_LABEL[g.route]} ${title}\uC5D0 \uC62C\uB790\uB2E4\uB294 \uC18C\uC2DD.`);
+        pushNews(`${g.name} \u2014 \uC2B9\uAE09`, `${josa(g.name, "\uC774", "\uAC00")} ${ROUTE_LABEL[g.route]} ${title}\uC5D0 \uC62C\uB790\uB2E4\uB294 \uC18C\uC2DD.`);
       } else {
         fame = clamp4(fame + 4);
         if (random() < 0.4) {
-          pushNews(`${g.name} \u2014 \uBA85\uC131`, `${g.name}, ${title}\uC73C\uB85C\uC11C \uADF8 \uC774\uB984\uC774 \uAC15\uD638\uC5D0 \uB354 \uB192\uC774 \uC624\uB978\uB2E4.`);
+          pushNews(`${g.name} \u2014 \uBA85\uC131`, `${g.name}, ${josa(title, "\uC73C\uB85C\uC11C", "\uB85C\uC11C")} \uADF8 \uC774\uB984\uC774 \uAC15\uD638\uC5D0 \uB354 \uB192\uC774 \uC624\uB978\uB2E4.`);
         }
       }
     } else if (r > 1 - down) {
@@ -14440,15 +14478,15 @@ function tickCareers() {
         title = ladder[level];
         fame = clamp4(fame - 4);
         setback = true;
-        pushNews(`${g.name} \u2014 \uC88C\uC808`, `${g.name}\uC774 \uC790\uB9AC\uC5D0\uC11C \uBC00\uB824 ${title}\uC5D0 \uBA38\uBB38\uB2E4\uB294 \uC18C\uC2DD.`);
+        pushNews(`${g.name} \u2014 \uC88C\uC808`, `${josa(g.name, "\uC774", "\uAC00")} \uC790\uB9AC\uC5D0\uC11C \uBC00\uB824 ${title}\uC5D0 \uBA38\uBB38\uB2E4\uB294 \uC18C\uC2DD.`);
       } else {
         status = "retired";
-        pushNews(`${g.name} \u2014 \uC740\uAC70`, `${g.name}\uC774 \uBB34\uACF5\uC744 \uB193\uACE0 \uAC15\uD638\uB97C \uB5A0\uB0AC\uB2E4\uACE0 \uD55C\uB2E4.`);
+        pushNews(`${g.name} \u2014 \uC740\uAC70`, `${josa(g.name, "\uC774", "\uAC00")} \uBB34\uACF5\uC744 \uB193\uACE0 \uAC15\uD638\uB97C \uB5A0\uB0AC\uB2E4\uACE0 \uD55C\uB2E4.`);
       }
     } else if (random() < 0.1) {
       status = "injured";
       setback = true;
-      pushNews(`${g.name} \u2014 \uBD80\uC0C1`, `${g.name}\uC774 \uAC15\uD638\uC5D0\uC11C \uD06C\uAC8C \uB2E4\uCCD0 \uD55C\uB3D9\uC548 \uBAB8\uC744 \uCD94\uC2A4\uB978\uB2E4 \uD55C\uB2E4.`);
+      pushNews(`${g.name} \u2014 \uBD80\uC0C1`, `${josa(g.name, "\uC774", "\uAC00")} \uAC15\uD638\uC5D0\uC11C \uD06C\uAC8C \uB2E4\uCCD0 \uD55C\uB3D9\uC548 \uBAB8\uC744 \uCD94\uC2A4\uB978\uB2E4 \uD55C\uB2E4.`);
     }
     if (status === "active" || status === "injured") {
       const shift = maybeRouteShift(g, level, fame, setback);
@@ -14464,7 +14502,7 @@ function tickCareers() {
       useSectStore.getState().adjustResources(gift);
       pushNews(
         `${g.name} \u2014 \uD6C4\uC6D0`,
-        `${ROUTE_LABEL[route]} ${title} ${g.name}\uC774 \uC0AC\uBB38\uC744 \uC78A\uC9C0 \uC54A\uACE0 \uC0AC\uB840\uB97C \uBCF4\uB0B4\uC654\uB2E4. \uAE08\uC790 ${gift}\uB0E5\uC774 \uAE08\uACE0\uC5D0 \uB4E4\uC5C8\uB2E4.`
+        `${ROUTE_LABEL[route]} ${title} ${josa(g.name, "\uC774", "\uAC00")} \uC0AC\uBB38\uC744 \uC78A\uC9C0 \uC54A\uACE0 \uC0AC\uB840\uB97C \uBCF4\uB0B4\uC654\uB2E4. \uAE08\uC790 ${gift}\uB0E5\uC774 \uAE08\uACE0\uC5D0 \uB4E4\uC5C8\uB2E4.`
       );
     }
     gs2.update(g.id, { level, power, fame, status, title, route });
@@ -14484,7 +14522,7 @@ function maybeRouteShift(g, level, fame, setback) {
       title: ladder[lv],
       news: [
         `${g.name} \u2014 \uD658\uBA78`,
-        route === "vigilante" ? `${g.name}\uC774 \uAC15\uD638\uC758 \uC815\uC758\uC5D0 \uD658\uBA78\uC744 \uB290\uAEF4 \uC2A4\uC2A4\uB85C \uCE7C\uC744 \uB4E4\uC5C8\uB2E4 \uD55C\uB2E4. ${ROUTE_LABEL[route]}\uC758 \uAE38\uB85C \uB4E4\uC5B4\uC130\uB2E4.` : `${g.name}\uC774 \uB05D\uB0B4 \uBE5B\uC744 \uB4F1\uC84C\uB2E4\uB294 \uD749\uD749\uD55C \uC18C\uBB38. ${ROUTE_LABEL[route]}\uC758 \uADF8\uB9BC\uC790\uC5D0 \uBAB8\uC744 \uB2F4\uAC14\uB2E4 \uD55C\uB2E4.`
+        route === "vigilante" ? `${josa(g.name, "\uC774", "\uAC00")} \uAC15\uD638\uC758 \uC815\uC758\uC5D0 \uD658\uBA78\uC744 \uB290\uAEF4 \uC2A4\uC2A4\uB85C \uCE7C\uC744 \uB4E4\uC5C8\uB2E4 \uD55C\uB2E4. ${ROUTE_LABEL[route]}\uC758 \uAE38\uB85C \uB4E4\uC5B4\uC130\uB2E4.` : `${josa(g.name, "\uC774", "\uAC00")} \uB05D\uB0B4 \uBE5B\uC744 \uB4F1\uC84C\uB2E4\uB294 \uD749\uD749\uD55C \uC18C\uBB38. ${ROUTE_LABEL[route]}\uC758 \uADF8\uB9BC\uC790\uC5D0 \uBAB8\uC744 \uB2F4\uAC14\uB2E4 \uD55C\uB2E4.`
       ]
     };
   }
@@ -14498,7 +14536,7 @@ function maybeRouteShift(g, level, fame, setback) {
       title: ladder[lv],
       news: [
         `${g.name} \u2014 \uAC1C\uC2EC`,
-        `${g.name}\uC774 \uC9C0\uB09C \uAE38\uC744 \uB258\uC6B0\uCE58\uACE0 \uC190\uC744 \uC53B\uC5C8\uB2E4\uB294 \uB180\uB77C\uC6B4 \uC18C\uC2DD. ${ROUTE_LABEL[route]}\uC758 \uAE38\uC5D0\uC11C \uC0C8\uB85C \uC2DC\uC791\uD55C\uB2E4 \uD55C\uB2E4.`
+        `${josa(g.name, "\uC774", "\uAC00")} \uC9C0\uB09C \uAE38\uC744 \uB258\uC6B0\uCE58\uACE0 \uC190\uC744 \uC53B\uC5C8\uB2E4\uB294 \uB180\uB77C\uC6B4 \uC18C\uC2DD. ${ROUTE_LABEL[route]}\uC758 \uAE38\uC5D0\uC11C \uC0C8\uB85C \uC2DC\uC791\uD55C\uB2E4 \uD55C\uB2E4.`
       ]
     };
   }
@@ -16106,7 +16144,7 @@ function playCutscene(eventId, disciple, opts) {
     hanzi: def.hanzi,
     title: def.title,
     tone: def.tone,
-    line: (variant?.line ?? def.defaultLine).replaceAll("{name}", disciple.name),
+    line: fillName(variant?.line ?? def.defaultLine, { name: disciple.name }),
     quote: variant?.quote,
     mediaVariant: opts?.mediaVariant,
     frameWidth: opts?.frame?.width,
@@ -17533,11 +17571,11 @@ function resolveQuest(active) {
   let body;
   if (outcome === "disaster" && lostName) {
     body = `${tag} ${q.title} \u2014 ${names2}
-\uC784\uBB34 \uB3C4\uC911 ${lostName}\uC774(\uAC00) \uCE58\uBA85\uC0C1\uC744 \uC785\uC5C8\uB2E4. \uB3D9\uBB38\uB4E4\uC774 \uB9C8\uC744 \uC758\uC6D0\uAE4C\uC9C0 \uC5C5\uACE0 \uB2EC\uB838\uC73C\uB098 \u2014 \uB05D\uB0B4 \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4.`;
+\uC784\uBB34 \uB3C4\uC911 ${josa(lostName, "\uC774", "\uAC00")} \uCE58\uBA85\uC0C1\uC744 \uC785\uC5C8\uB2E4. \uB3D9\uBB38\uB4E4\uC774 \uB9C8\uC744 \uC758\uC6D0\uAE4C\uC9C0 \uC5C5\uACE0 \uB2EC\uB838\uC73C\uB098 \u2014 \uB05D\uB0B4 \uB3CC\uC544\uC624\uC9C0 \uBABB\uD588\uB2E4.`;
   } else if (outcome === "disaster" && gravelyHurtName) {
     const rescueNote = rescueRoute === "elixir" ? "\uCD5C\uC0C1\uAE09 \uAD6C\uAE09\uC601\uC57D\uC774 \uB04A\uC5B4\uC9C0\uB358 \uC228\uC744 \uBD99\uB4E4\uC5C8\uB2E4." : rescueRoute === "medic" ? "\uB3D9\uD589\uD55C \uC758\uC6D0\uC758 \uC190\uC774 \uC8FD\uC74C\uC758 \uBB38\uD131\uC5D0\uC11C \uB04C\uC5B4\uB0C8\uB2E4." : rescueRoute === "innate" ? "\uC601\uC57D\uB3C4 \uC758\uC6D0\uB3C4 \uC5C6\uB294 \uC0AC\uACBD\uC5D0\uC11C, \uD0C0\uACE0\uB09C \uC9C4\uC6D0(\u5148\u5929\u771E\u6C23)\uC744 \uB04C\uC5B4\uC62C\uB824 \uC2A4\uC2A4\uB85C \uC8FD\uC74C\uC744 \uB5A8\uCCE4\uB2E4. \uD5C8\uB098 \uADFC\uBCF8\uC774 \uC0C1\uD574 \uACF5\uB825\uC744 \uC783\uC5C8\uB2E4." : "\uB3D9\uBB38\uB4E4\uC774 \uB9C8\uC744 \uC758\uC6D0\uAE4C\uC9C0 \uC5C5\uACE0 \uB2EC\uB9B0 \uB05D\uC5D0 \uAC00\uAE4C\uC2A4\uB85C \uC0B4\uB838\uB2E4.";
     body = `${tag} ${q.title} \u2014 ${names2}
-\uC7AC\uB09C\uC5D0 \uAC00\uAE4C\uC6B4 \uC704\uAE30\uC600\uB2E4. ${gravelyHurtName}\uC774(\uAC00) \uCE58\uBA85\uC0C1\uC744 \uC785\uC5C8\uC73C\uB098 ${rescueNote} \uC624\uB798 \uBAB8\uC838\uB215\uB294\uB2E4.`;
+\uC7AC\uB09C\uC5D0 \uAC00\uAE4C\uC6B4 \uC704\uAE30\uC600\uB2E4. ${josa(gravelyHurtName, "\uC774", "\uAC00")} \uCE58\uBA85\uC0C1\uC744 \uC785\uC5C8\uC73C\uB098 ${rescueNote} \uC624\uB798 \uBAB8\uC838\uB215\uB294\uB2E4.`;
   } else {
     const reward = `\uC790\uAE08 ${Math.round(q.reward.money * scale.money)}${scale.fame > 0 ? " \xB7 \uBA85\uC131 \u2191" : ""}${scale.growth > 0 ? ` \xB7 ${QUEST_DOMAIN_LABEL[q.domain]} \uACBD\uD5D8 \u2191` : ""}`;
     const medicNote = medicSaved ? " (\uB3D9\uD589\uD55C \uC758\uC6D0\uC774 \uD070 \uD654\uB97C \uB9C9\uC558\uB2E4)" : "";
@@ -17722,7 +17760,7 @@ function runYoungTalentsTournament() {
     lines.push(`${e.name} \u2014 ${ordinal(rank)} (\uCD1D ${field.length}\uC778 \uC911)`);
   });
   const champ = field[0];
-  const headline2 = champ.isDisciple ? `${year}\uB144 \uC6A9\uBD09\uC9C0\uD68C \u2014 \uC6B0\uB9AC ${champ.name}\uC774 \uC7A5\uC6D0!` : `${year}\uB144 \uC6A9\uBD09\uC9C0\uD68C \u2014 ${champ.name}\uC774 \uC7A5\uC6D0\uC5D0 \uC62C\uB790\uB2E4`;
+  const headline2 = champ.isDisciple ? `${year}\uB144 \uC6A9\uBD09\uC9C0\uD68C \u2014 \uC6B0\uB9AC ${josa(champ.name, "\uC774", "\uAC00")} \uC7A5\uC6D0!` : `${year}\uB144 \uC6A9\uBD09\uC9C0\uD68C \u2014 ${josa(champ.name, "\uC774", "\uAC00")} \uC7A5\uC6D0\uC5D0 \uC62C\uB790\uB2E4`;
   const body = `\uC62C\uD574 \uC6A9\uBD09\uC9C0\uD68C\uC5D0 \uAC15\uD638\uC758 \uD6C4\uAE30\uC9C0\uC218 ${field.length}\uC778\uC774 \uBAA8\uC600\uB2E4.
 
 ${lines.join("\n")}`;
@@ -17885,7 +17923,7 @@ function enqueueGraduationChoice(d, day) {
     kind: "event",
     eventId: `graduation-${d.id}`,
     title: `${d.name} \u2014 \uD558\uC0B0, \uC5B4\uB290 \uAE38\uB85C`,
-    preview: `${mainArtSummary(d)}\uC744 \uC774\uB8EC ${d.name}\uC774 \uAC15\uD638\uB85C \uB098\uC12D\uB2C8\uB2E4.
+    preview: `${mainArtSummary(d)}\uC744 \uC774\uB8EC ${josa(d.name, "\uC774", "\uAC00")} \uAC15\uD638\uB85C \uB098\uC12D\uB2C8\uB2E4.
 \uC0AC\uBD80\uB85C\uC11C \uC5B4\uB290 \uAE38\uC744 \uAD8C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C.`,
     priority: "high",
     createdAtDay: day,
@@ -17943,7 +17981,7 @@ function checkGraduations() {
       discipleId: id,
       discipleName: d.name,
       title: "\uD558\uC0B0",
-      body: `${d.name}\uC774 \uC0AC\uBD80\uC5D0\uAC8C \uB9C8\uC9C0\uB9C9 \uC808\uC744 \uC62C\uB838\uB2E4.
+      body: `${josa(d.name, "\uC774", "\uAC00")} \uC0AC\uBD80\uC5D0\uAC8C \uB9C8\uC9C0\uB9C9 \uC808\uC744 \uC62C\uB838\uB2E4.
 ${mainArtSummary(d)} \u2014 ${GRADE_LABEL[grade]}.
 \uAC15\uD638\uB85C \uB098\uAC04\uB2E4.`
     });
@@ -17967,7 +18005,7 @@ var UNIVERSAL_MORAL_EVENTS = [
     tier: "universal",
     category: "extortion",
     trigger: { weight: 10, minYearInSect: 2 },
-    scenario: '\uB9C8\uC744\uC5D0\uC11C \uD55C \uB178\uC810 \uB178\uC778\uC774 \uC0AC\uBB38 \uC0B0\uBB38\uC5D0 \uCC3E\uC544\uC640 \uB5A8\uB9AC\uB294 \uC190\uC73C\uB85C \uD638\uC18C\uD588\uB2E4.\n"\uC0AC\uBD80\uB2D8 \uC81C\uC790 {name}\uC774\uAC00 \uC5B4\uC81C \uC88C\uD310 \uC55E\uC5D0\uC11C \uB3C8 \uD55C \uC90C\uC744 \uBE7C\uC557\uC544 \uAC14\uC2B5\uB2C8\uB2E4\u2026"\n\uB178\uC778\uC758 \uC190\uC5D0\uB294 \uC5B4\uB9B0 \uAD8C\uBC95\uC758 \uC790\uAD6D\uC774 \uB0A8\uC544 \uC788\uB2E4.',
+    scenario: '\uB9C8\uC744\uC5D0\uC11C \uD55C \uB178\uC810 \uB178\uC778\uC774 \uC0AC\uBB38 \uC0B0\uBB38\uC5D0 \uCC3E\uC544\uC640 \uB5A8\uB9AC\uB294 \uC190\uC73C\uB85C \uD638\uC18C\uD588\uB2E4.\n"\uC0AC\uBD80\uB2D8 \uC81C\uC790 {name}\uC774 \uC5B4\uC81C \uC88C\uD310 \uC55E\uC5D0\uC11C \uB3C8 \uD55C \uC90C\uC744 \uBE7C\uC557\uC544 \uAC14\uC2B5\uB2C8\uB2E4\u2026"\n\uB178\uC778\uC758 \uC190\uC5D0\uB294 \uC5B4\uB9B0 \uAD8C\uBC95\uC758 \uC790\uAD6D\uC774 \uB0A8\uC544 \uC788\uB2E4.',
     insightHints: {
       3: "{name}\uC740 \uB3D9\uBB38 \uC0AC\uC774 \uC790\uC874\uC2EC\uC744 \uC138\uC6B0\uB824 \uB9C8\uC744\uC5D0\uC11C \uC190\uC744 \uC4F4 \uB4EF\uD558\uB2E4.",
       4: "{name}\uC774 \uC774 \uC77C\uC744 \uAC00\uBCCD\uAC8C \uC5EC\uAE30\uACE0 \uC788\uB2E4. \uB2E4\uB978 \uC81C\uC790\uB3C4 \uD758\uB824\uB4E3\uC9C0 \uC54A\uC744 \uAC83\uC774\uB2E4."
@@ -19757,7 +19795,7 @@ function pickSibling(perp, tmpl) {
   return others[Math.floor(random() * others.length)];
 }
 function interpolate(text, perp, sib) {
-  return text.replace(/\{name\}/g, perp).replace(/\{sibling\}/g, sib ?? "\uB3D9\uBB38");
+  return fillName(text, { name: perp, sibling: sib ?? "\uB3D9\uBB38" });
 }
 function insightTier(insight) {
   if (insight >= 80) return 5;
@@ -20440,7 +20478,7 @@ function resolveLetter(g, tone) {
       convertToRighteous(g);
       pushJianghuNews(
         `${g.name} \u2014 \uAC1C\uC2EC`,
-        `\uC0AC\uBD80\uC758 \uACBD\uACE0\uAC00 \uB05D\uB0B4 \uB9C8\uC74C\uC5D0 \uB2FF\uC558\uB2E4. ${g.name}\uC774 \uC5B4\uB460\uC758 \uAE38\uC744 \uB4F1\uC9C0\uACE0 \uC190\uC744 \uC53B\uAE30\uB85C \uD588\uB2E4\uB294 \uB180\uB77C\uC6B4 \uC18C\uC2DD.`,
+        `\uC0AC\uBD80\uC758 \uACBD\uACE0\uAC00 \uB05D\uB0B4 \uB9C8\uC74C\uC5D0 \uB2FF\uC558\uB2E4. ${josa(g.name, "\uC774", "\uAC00")} \uC5B4\uB460\uC758 \uAE38\uC744 \uB4F1\uC9C0\uACE0 \uC190\uC744 \uC53B\uAE30\uB85C \uD588\uB2E4\uB294 \uB180\uB77C\uC6B4 \uC18C\uC2DD.`,
         "high"
       );
     } else {
@@ -20455,7 +20493,7 @@ function resolveSummon(g) {
   let p = 0.3 + trust / 200 - (dark ? 0.25 : 0) + (g.status === "injured" ? 0.1 : 0);
   const came = random() < Math.max(0.05, Math.min(0.95, p));
   if (!came) {
-    pushJianghuNews(`${g.name} \u2014 \uBD80\uB984`, `\uC0AC\uBD80\uAC00 ${g.name}\uC744 \uC0B0\uBB38\uC73C\uB85C \uBD88\uB800\uC73C\uB098, \uC751\uD558\uC9C0 \uC54A\uC558\uB2E4\uB294 \uC18C\uC2DD.`);
+    pushJianghuNews(`${g.name} \u2014 \uBD80\uB984`, `\uC0AC\uBD80\uAC00 ${josa(g.name, "\uC744", "\uB97C")} \uC0B0\uBB38\uC73C\uB85C \uBD88\uB800\uC73C\uB098, \uC751\uD558\uC9C0 \uC54A\uC558\uB2E4\uB294 \uC18C\uC2DD.`);
     return;
   }
   const parts = [];
@@ -20476,7 +20514,7 @@ function resolveSummon(g) {
     );
     return;
   }
-  pushJianghuNews(`${g.name} \u2014 \uC0B0\uBB38\uC5D0 \uB2E4\uB140\uAC00\uB2E4`, `${g.name}\uC774 \uC0B0\uBB38\uC5D0 \uB4E4\uB7EC ${parts.join(", ")}. \uD55C \uACC4\uC808\uC744 \uBA38\uBB3C\uB2E4 \uAC15\uD638\uB85C \uB3CC\uC544\uAC14\uB2E4.`);
+  pushJianghuNews(`${g.name} \u2014 \uC0B0\uBB38\uC5D0 \uB2E4\uB140\uAC00\uB2E4`, `${josa(g.name, "\uC774", "\uAC00")} \uC0B0\uBB38\uC5D0 \uB4E4\uB7EC ${parts.join(", ")}. \uD55C \uACC4\uC808\uC744 \uBA38\uBB3C\uB2E4 \uAC15\uD638\uB85C \uB3CC\uC544\uAC14\uB2E4.`);
 }
 function tickMasterOutreach() {
   const today = useTimeStore.getState().totalDay;
@@ -20484,7 +20522,7 @@ function tickMasterOutreach() {
   for (const m of due) {
     const g = useGraduateStore.getState().records.find((r) => r.id === m.graduateId);
     if (!g || g.status === "dead" || g.status === "missing" || g.status === "retired") {
-      if (g) pushJianghuNews(`${m.graduateName} \u2014 \uC804\uAC08`, `\uC0AC\uBD80\uC758 \uC804\uAC08\uC774 \uB2FF\uAE30 \uC804, ${m.graduateName}\uC740 \uC774\uBBF8 \uAC15\uD638\uC5D0\uC11C \uBA40\uC5B4\uC9C4 \uB4A4\uC600\uB2E4.`);
+      if (g) pushJianghuNews(`${m.graduateName} \u2014 \uC804\uAC08`, `\uC0AC\uBD80\uC758 \uC804\uAC08\uC774 \uB2FF\uAE30 \uC804, ${josa(m.graduateName, "\uC740", "\uB294")} \uC774\uBBF8 \uAC15\uD638\uC5D0\uC11C \uBA40\uC5B4\uC9C4 \uB4A4\uC600\uB2E4.`);
       useOutreachStore.getState().remove(m.id);
       continue;
     }
@@ -20558,7 +20596,7 @@ function pickContextualOneLiner(c) {
   return pool[Math.floor(random() * pool.length)];
 }
 function fillOneLinerBody(body, c) {
-  return body.replace(/\{rival\}/g, c.rivalName ?? "\uB3D9\uBB38");
+  return fillName(body, { rival: c.rivalName ?? "\uB3D9\uBB38" });
 }
 var ONE_LINER_RESPONSES = {
   encourage: [

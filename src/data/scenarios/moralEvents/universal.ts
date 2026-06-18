@@ -19,7 +19,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
     trigger: { weight: 10, minYearInSect: 2 },
     scenario:
       '마을에서 한 노점 노인이 사문 산문에 찾아와 떨리는 손으로 호소했다.\n' +
-      '"사부님 제자 {name}이가 어제 좌판 앞에서 돈 한 줌을 빼앗아 갔습니다…"\n' +
+      '"사부님 제자 {name}이 어제 좌판 앞에서 돈 한 줌을 빼앗아 갔습니다…"\n' +
       '노인의 손에는 어린 권법의 자국이 남아 있다.',
     insightHints: {
       3: '{name}은 동문 사이 자존심을 세우려 마을에서 손을 쓴 듯하다.',

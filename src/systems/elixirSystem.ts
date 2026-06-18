@@ -2,6 +2,7 @@
 // 획득: 최고난도 의뢰 드랍(운, questSystem) 또는 과금(purchaseDivineElixir — BM 훅).
 // 소모: 화경 깨달음 벽에서 1개 소모(trainingSystem.applyRealmTick).
 
+import { josa } from '@/utils/korean';
 import { useItemStore } from '@/stores/itemStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -58,9 +59,9 @@ export function tickElixirCraft(): void {
   useInboxStore.getState().add({
     id: `craft-${day}`,
     kind: 'report',
-    title: `${crafter.name} — 신품 영약 제련 (${count}과)`,
-    preview: `${crafter.name}이 한 해의 연단 끝에 신품 영약 구전대환단 ${count}과를 빚어냈다.`,
-    body: `${crafter.name}이 영약제조의 묘리가 깊어져, 한 해의 연단 끝에 **구전대환단 ${count}과**를 빚어냈다. 화경의 벽 앞에 선 동문이 폐관 중 복용하면 그 벽을 넘을 수 있다.`,
+    title: `${crafter.name} — 신품 영약 제련 (과)`,
+    preview: `${josa(crafter.name, '이', '가')} 한 해의 연단 끝에 신품 영약 구전대환단 과를 빚어냈다.`,
+    body: `${josa(crafter.name, '이', '가')} 영약제조의 묘리가 깊어져, 한 해의 연단 끝에 **구전대환단 과**를 빚어냈다. 화경의 벽 앞에 선 동문이 폐관 중 복용하면 그 벽을 넘을 수 있다.`,
     priority: 'high',
     createdAtDay: day,
     read: false,

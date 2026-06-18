@@ -5,6 +5,7 @@
 // 사건 종류: 충돌(은원)·노선 갈등(이념)·의기투합·합심 의거·해후·소원 + 복수(연쇄, 동문이 죽으면 그를 아끼던
 // 동문이 가해자를 쫓는다). 관계 사다리(enemy↔distant↔neutral↔friend↔sworn)를 따라 깊어지거나 식는다.
 
+import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { ROUTE_BLOC, ROUTE_LABEL, type RouteId } from '@/data/careers';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -70,8 +71,8 @@ const clash: GradEvent = {
     pushJianghuNews(
       `${winner.name} ↔ ${loser.name} — 은원`,
       fatal
-        ? `${winner.name}과 ${loser.name}이 강호에서 끝내 칼을 겨눴다. ${loser.name}은(는) 돌아오지 못했다.`
-        : `${winner.name}과 ${loser.name}이 칼을 겨눴다. ${loser.name}이 상처를 입고 물러났다 한다.`,
+        ? `${josa(winner.name, '과', '와')} ${josa(loser.name, '이', '가')} 강호에서 끝내 칼을 겨눴다. ${josa(loser.name, '은', '는')} 돌아오지 못했다.`
+        : `${josa(winner.name, '과', '와')} ${josa(loser.name, '이', '가')} 칼을 겨눴다. ${josa(loser.name, '이', '가')} 상처를 입고 물러났다 한다.`,
     );
   },
 };
@@ -92,8 +93,8 @@ const blocConflict: GradEvent = {
     pushJianghuNews(
       `${a.name} ↔ ${b.name} — 정사(正邪)의 충돌`,
       fatal
-        ? `${ROUTE_LABEL[a.route]} ${a.name}과 ${ROUTE_LABEL[b.route]} ${b.name}이 길에서 부딪쳐 피를 봤다. ${loser.name}이 쓰러졌다.`
-        : `${ROUTE_LABEL[a.route]} ${a.name}과 ${ROUTE_LABEL[b.route]} ${b.name}이 길에서 검을 맞댔다. 옛 정이 없던 둘 사이에 은원이 싹텄다.`,
+        ? `${ROUTE_LABEL[a.route]} ${josa(a.name, '과', '와')} ${ROUTE_LABEL[b.route]} ${josa(b.name, '이', '가')} 길에서 부딪쳐 피를 봤다. ${josa(loser.name, '이', '가')} 쓰러졌다.`
+        : `${ROUTE_LABEL[a.route]} ${josa(a.name, '과', '와')} ${ROUTE_LABEL[b.route]} ${josa(b.name, '이', '가')} 길에서 검을 맞댔다. 옛 정이 없던 둘 사이에 은원이 싹텄다.`,
     );
   },
 };
@@ -111,7 +112,7 @@ const jointDeed: GradEvent = {
     setRel(a.id, b.id, relUp(rel)); // 함께 의를 행하며 정이 깊어진다(friend→sworn)
     pushJianghuNews(
       `${a.name} · ${b.name} — 의거(義擧)`,
-      `옛 동문 ${a.name}과 ${b.name}이 힘을 합쳐 강호의 의를 행했다는 소문. 둘의 이름과 함께 사문의 이름도 높이 오른다.`,
+      `옛 동문 ${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 힘을 합쳐 강호의 의를 행했다는 소문. 둘의 이름과 함께 사문의 이름도 높이 오른다.`,
     );
   },
 };
@@ -127,7 +128,7 @@ const alliance: GradEvent = {
     setRel(a.id, b.id, relUp(rel));
     pushJianghuNews(
       `${a.name} · ${b.name} — 의기투합`,
-      `옛 동문 ${a.name}과 ${b.name}이 강호에서 손을 잡았다는 흐뭇한 소식. 둘의 이름이 함께 오른다.`,
+      `옛 동문 ${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 강호에서 손을 잡았다는 흐뭇한 소식. 둘의 이름이 함께 오른다.`,
     );
   },
 };
@@ -141,7 +142,7 @@ const estrangement: GradEvent = {
     setRel(a.id, b.id, relDown(rel)); // friend → neutral
     pushJianghuNews(
       `${a.name} · ${b.name} — 소원`,
-      `${ROUTE_LABEL[a.route]}의 길을 가는 ${a.name}과 ${ROUTE_LABEL[b.route]}의 ${b.name}. 걷는 길이 갈리니 옛 정도 차츰 식어간다 한다.`,
+      `${ROUTE_LABEL[a.route]}의 길을 가는 ${josa(a.name, '과', '와')} ${ROUTE_LABEL[b.route]}의 ${b.name}. 걷는 길이 갈리니 옛 정도 차츰 식어간다 한다.`,
     );
   },
 };
@@ -156,7 +157,7 @@ const encounter: GradEvent = {
     gs().update(b.id, { fame: clamp(b.fame + 2) });
     pushJianghuNews(
       `${a.name} · ${b.name} — 해후`,
-      `같은 ${ROUTE_LABEL[a.route]}의 길을 걷는 ${a.name}과 ${b.name}이 강호에서 마주쳐 한 수 겨뤘다 한다.`,
+      `같은 ${ROUTE_LABEL[a.route]}의 길을 걷는 ${josa(a.name, '과', '와')} ${josa(b.name, '이', '가')} 강호에서 마주쳐 한 수 겨뤘다 한다.`,
     );
   },
 };
@@ -198,8 +199,8 @@ function resolveVendetta(avenger: GraduateRecord, killer: GraduateRecord, dead: 
     pushJianghuNews(
       `${avenger.name} — 복수`,
       fatal
-        ? `${avenger.name}이 옛 동문 ${dead.name}의 원수 ${killer.name}을 끝내 베었다. 강호가 그 의리에 술렁인다.`
-        : `${avenger.name}이 ${dead.name}의 원수 ${killer.name}을 찾아 칼을 겨눴다. ${killer.name}이 깊은 상처를 입고 달아났다 한다.`,
+        ? `${josa(avenger.name, '이', '가')} 옛 동문 ${dead.name}의 원수 ${josa(killer.name, '을', '를')} 끝내 베었다. 강호가 그 의리에 술렁인다.`
+        : `${josa(avenger.name, '이', '가')} ${dead.name}의 원수 ${josa(killer.name, '을', '를')} 찾아 칼을 겨눴다. ${josa(killer.name, '이', '가')} 깊은 상처를 입고 달아났다 한다.`,
       'high',
     );
   } else {
@@ -209,8 +210,8 @@ function resolveVendetta(avenger: GraduateRecord, killer: GraduateRecord, dead: 
     pushJianghuNews(
       `${avenger.name} — 비운의 복수`,
       fatal
-        ? `${avenger.name}이 옛 동문 ${dead.name}의 복수를 노렸으나, 도리어 ${killer.name}의 칼에 스러졌다. 은원이 또 다른 피를 불렀다.`
-        : `${avenger.name}이 ${dead.name}의 원수 ${killer.name}에게 덤볐으나 끝내 꺾이지 못하고 상처만 안고 물러났다.`,
+        ? `${josa(avenger.name, '이', '가')} 옛 동문 ${dead.name}의 복수를 노렸으나, 도리어 ${killer.name}의 칼에 스러졌다. 은원이 또 다른 피를 불렀다.`
+        : `${josa(avenger.name, '이', '가')} ${dead.name}의 원수 ${killer.name}에게 덤볐으나 끝내 꺾이지 못하고 상처만 안고 물러났다.`,
       'high',
     );
   }
