@@ -37,7 +37,7 @@ bash .claude/skills/security-audit/scan.sh
 
 ## 3) 알려진 기준선 (2026-06-18 측정)
 - ✅ 레포 스캔 FAIL 0. service-role 앱 미포함·.env gitignore·Math.random 0.
-- 🚨 **HIGH `common_disciples_test_write`**(ALL/true) — 인증 누구나 공용제자 전체 쓰기. → `server/migrations/001` §4 가 제거(즉시 적용 권장, 현 앱 무해).
+- ✅ **(수정됨 2026-06-18) `common_disciples_test_write`** — ALL/true 정책 제거(`drop_common_disciples_test_write_policy` 마이그레이션). read 정책만 잔존. advisor 재실행에서 `rls_policy_always_true` 사라짐 확인.
 - 🟡 **MED owner ALL 쓰기** — 전 게임 테이블 클라 쓰기 가능(클라 권위 치팅면). → docs/31 RLS 뒤집기(컷오버 시).
 - 🟢 **LOW `is_username_available` SECURITY DEFINER anon 실행** — 유저명 열거 가능(가입용, 가용 bool만 반환이라 저위험). 수용 또는 rate-limit.
 - 🟢 **LOW 유출 비번 보호 비활성** — Supabase Auth 설정에서 HaveIBeenPwned 체크 on.
