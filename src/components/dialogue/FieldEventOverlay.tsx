@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useFieldEventStore } from '@/stores/fieldEventStore';
@@ -24,6 +24,7 @@ export function FieldEventOverlay() {
   const settlement = usePendingStore((s) => s.settlement);
 
   const [phase, setPhase] = useState<'scene' | 'choice'>('scene');
+  const resolvedRef = useRef<string | null>(null); // 마지막 처리한 사건 id — 이중 탭 멱등 가드
   useEffect(() => {
     setPhase('scene'); // 새 사건마다 컷씬부터.
   }, [current?.id]);
@@ -36,6 +37,8 @@ export function FieldEventOverlay() {
 
   const onChoose = (key: string, disabled: boolean) => {
     if (disabled) return;
+    if (resolvedRef.current === current.id) return; // 같은 사건 재처리 차단(이중 탭 → 효과 이중적용·다음 사건 유실 방지)
+    resolvedRef.current = current.id;
     resolveFieldEvent(current, key);
     pop();
     setPhase('scene');

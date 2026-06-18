@@ -49,6 +49,10 @@ export function issueOverride(
   command: Exclude<DiscipleOverrideCommand, 'default'>,
   durationDays: number = OVERRIDE_DURATION_DEFAULT,
 ): void {
+  // 진행 중·떠난 제자에 명령 금지 — 파견(questing)·연단(crafting)·졸업/하산 상태에 override 를 걸면
+  // 그 활동 기록이 고아가 되고 status 가 덮인다. 가용(training/resting/meditating)만 허용. docs/37 C2.
+  const d = useDiscipleStore.getState().disciples[discipleId];
+  if (!d || (d.status !== 'training' && d.status !== 'resting' && d.status !== 'meditating')) return;
   const day = useTimeStore.getState().totalDay;
   const ov: DiscipleOverride = {
     discipleId,

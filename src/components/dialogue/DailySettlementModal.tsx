@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useInboxStore } from '@/stores/inboxStore';
@@ -31,12 +31,15 @@ export function DailySettlementModal() {
   const clearStore = usePendingStore((s) => s.clearSettlement);
   const inflight = usePendingStore((s) => s.inflightResolutions);
   const [timerDone, setTimerDone] = useState(false);
+  const closingRef = useRef(false); // [다음] 이중 탭 → settle 이중 호출 차단
 
   // [다음] 활성 = 최소 음미 시간 경과 + 백그라운드 LLM 해결이 모두 끝남.
   // 미완 응답이 남아 있으면 "하루를 기록하는 중…" 으로 계속 대기(선택은 안 기다림).
   const canClose = timerDone && inflight === 0;
 
   const onClose = async () => {
+    if (closingRef.current) return; // 이중 [다음] 무시(정산 후속 이중 실행 방지)
+    closingRef.current = true;
     clearStore();
     await getGameApi().settle(); // 정산 후속 — 서버 인터페이스 경유(로컬 어댑터=triggerPostSettlement)
     // 강호/의뢰 현장 급보가 대기 중이면 사문함으로 보내지 않는다 — FieldEventOverlay 가
@@ -51,6 +54,7 @@ export function DailySettlementModal() {
   // 정산 표시 시 최소 시간 후 타이머 완료.
   useEffect(() => {
     if (settlement) {
+      closingRef.current = false; // 새 정산 → 닫기 가드 해제
       setTimerDone(false);
       const t = setTimeout(() => setTimerDone(true), MIN_DISPLAY_MS);
       return () => clearTimeout(t);
