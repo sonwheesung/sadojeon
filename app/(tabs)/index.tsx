@@ -18,7 +18,7 @@ import { DiscipleMoodPanel } from '@/components/sect/DiscipleMoodPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
-import { useGameStore, useMasterStore } from '@/stores';
+import { useGameStore, useMasterStore, usePendingStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
 import { saveCurrentRunSilently } from '@/systems/runSync';
 import { getGameApi } from '@/engine/gameApi';
@@ -79,7 +79,9 @@ export default function SectScreen() {
         onCancel={() => setChoiceOpen(false)}
         onConfirm={() => {
           setChoiceOpen(false);
+          // 정산 모달 미해소·회차 종료 상태에선 진행 금지(이중 진행·정산 건너뜀 차단). docs/37 C10.
           if (advancingRef.current) return; // 진행 중이면 무시(원격 왕복 중 중복 진행 차단)
+          if (usePendingStore.getState().settlement || useGameStore.getState().phase === 'ended') return;
           advancingRef.current = true;
           getGameApi()
             .advance() // 하루 진행 — 서버 인터페이스 경유(로컬 어댑터=기존 동작)

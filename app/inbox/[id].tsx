@@ -121,10 +121,11 @@ export default function InboxDetailScreen() {
     setBusy(true);
     try {
       await resolveInboxItem(item, selected);
+      router.back(); // 성공 시에만 닫는다
     } catch (e) {
       if (typeof console !== 'undefined') console.warn('[inbox] 응답 처리 실패', e);
+      setBusy(false); // 실패 → busy 해제, 자동 back 안 함(중복 적용·미해소 back 방지). 재시도 가능
     }
-    router.back();
   };
 
   return (

@@ -11,9 +11,25 @@ import {
   useScheduleStore,
   useSectStore,
   useTimeStore,
+  useFieldEventStore,
+  useCutsceneStore,
+  useMoralEventStore,
+  usePendingStore,
 } from '@/stores';
 import type { Disciple, GameTime, Master, SectState } from '@/types';
 import { RUN_CHILD_SLICES } from './runSlices';
+
+// 회차 경계(로드·새 회차·슬롯 전환)에서 비워야 하는 **휘발 큐** — GameState/영속 밖이라 자동 리셋 안 됨.
+// 안 비우면 직전 회차의 현장 급보·컷씬·정산·도덕 이벤트가 새 회차/다른 슬롯에 그대로 뜬다(docs/37 C10).
+export function clearTransientRun(): void {
+  useFieldEventStore.getState().clear();
+  useCutsceneStore.getState().clear();
+  useMoralEventStore.getState().clear();
+  usePendingStore.setState({
+    oneLiner: null, wish: null, dailyLog: null, dailyBadges: [], milestones: [],
+    settlement: null, llmDebugBuffer: [], lastDebug: null, inflightResolutions: 0,
+  } as never);
+}
 
 // 현재 스토어 → 회차 핵심 스냅샷 (회차 행 payload + 제자).
 function snapshot(): { payload: RunWrite; disciples: RunDiscipleRecord[] } {
@@ -93,6 +109,7 @@ export function saveCurrentRunSilently(): void {
 
 // 회차 핵심 → 스토어 복원.
 function hydrateCore(core: RunCore): void {
+  clearTransientRun(); // 슬롯 전환·로드 시 직전 회차 휘발 큐 잔여 제거(교차 누수 차단). docs/37 C10.
   const { run: record, disciples } = core;
 
   const current = (record.gameTime as { current?: GameTime }).current;

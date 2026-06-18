@@ -17,7 +17,7 @@ import {
   useSectStore,
   useTimeStore,
 } from '@/stores';
-import { loadRun } from '@/systems/runSync';
+import { loadRun, clearTransientRun } from '@/systems/runSync';
 import { RUN_CHILD_SLICES } from '@/systems/runSlices';
 import { colors, spacing, typography } from '@/theme';
 
@@ -97,6 +97,7 @@ export default function SlotSelectScreen() {
     useTimeStore.getState().reset();
     useScheduleStore.getState().reset();
     RUN_CHILD_SLICES.forEach((slice) => slice.reset());
+    clearTransientRun(); // 직전 회차 휘발 큐(현장급보·컷씬·정산·도덕) 잔여 제거. docs/37 C10.
     router.replace('/(tabs)');
   };
 

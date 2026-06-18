@@ -28,8 +28,9 @@ function combatSeong(d: Disciple): number {
 }
 
 // 파견 가용 상태(일과 중인 제자만 — questing/crafting/injured/graduated 제외).
+// 폐관(meditating) 도 제외 — 폐관 override 중 파견하면 override 가 고아로 남는다(docs/37 C2).
 export function isAvailable(d: Disciple): boolean {
-  return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
+  return d.status === 'training' || d.status === 'resting';
 }
 
 // 파티가 지역 조건을 충족하나 — 약 지식 게이트 + (위험 지역) 전투원. 미달이면 사유.

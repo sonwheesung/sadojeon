@@ -57,7 +57,8 @@ const EXP_CAT_SCENE: Record<ExpeditionEventCategory, { hanzi: string; tone: Cuts
 
 // ─── 가용·게이트 ─────────────────────────────────────────────────────────
 function isFree(d: Disciple): boolean {
-  return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
+  // 폐관(meditating) 제외 — 폐관 override 중 출행하면 override 가 고아로 남는다(docs/37 C2).
+  return d.status === 'training' || d.status === 'resting';
 }
 
 function combatSeong(d: Disciple): number {
