@@ -41,7 +41,7 @@ bash .claude/skills/security-audit/scan.sh
 - 🟡 **MED owner ALL 쓰기** — 전 게임 테이블 클라 쓰기 가능(클라 권위 치팅면). → docs/31 RLS 뒤집기(컷오버 시).
 - 🟢 **LOW `is_username_available` SECURITY DEFINER anon 실행** — 유저명 열거 가능(가입용, 가용 bool만 반환이라 저위험). 수용 또는 rate-limit.
 - 🟢 **LOW 유출 비번 보호 비활성** — Supabase Auth 설정에서 HaveIBeenPwned 체크 on.
-- 🟡 **결정성: researchSystem 실시간 타이머(Date.now)** — 서버 권위·재현성과 충돌. 턴기반/서버시간 이관 필요(헤드리스는 setResearchInstant 로 중화).
+- ℹ️ **researchSystem 실시간 타이머(Date.now) = 의도된 BM**(비급 연구는 실시간 대기 또는 다이아 스킵 — 진행만으론 못 풂, 사용자 확정 2026-06-18). **턴기반 전환 금지.** 서버 권위 처리 = **서버가 시계 소유**(Vercel 함수가 서버 시간으로 완료 판정 → 클라 위조 불가). 결정적 턴 엔진과 별개 레이어(serverturn 검증은 setResearchInstant 로 분리). scan 의 Date.now WARN 중 researchSystem 은 이 의도 항목.
 
 ## 출력
 발견을 심각도(HIGH/MED/LOW)·근거(스캔/advisor/MCP)·수정안으로 보고. 사용자가 코드 안 봄 → 일상어로
