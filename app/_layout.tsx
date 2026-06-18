@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/noto-serif-sc';
 
 import { ConfirmProvider } from '@/components/common/ConfirmDialog';
+import { UpdateGate } from '@/components/common/UpdateGate';
 import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/theme';
 
@@ -62,6 +63,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
+        <UpdateGate>
         <ConfirmProvider>
           <Stack
             screenOptions={{
@@ -100,6 +102,7 @@ export default function RootLayout() {
             </Stack.Protected>
           </Stack>
         </ConfirmProvider>
+        </UpdateGate>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
