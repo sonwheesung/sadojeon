@@ -47,6 +47,13 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { REALM_LABEL } from '@/types/realm';
 import { runs as runsRepo } from '@/data/repositories';
+// 서버 권위 검증 — 엔진을 Node에서 서버처럼 구동(GameState 로드→진행→캡처)·결정성 실증. docs/31.
+import { captureGameState, commitGameState, cloneGameState, type GameState } from '@/engine/gameState';
+import { seedAmbient, ambientCursor } from '@/systems/rng';
+import { triggerPostSettlement } from '@/systems/timeSystem';
+import { useFieldEventStore } from '@/stores/fieldEventStore';
+import { useMoralEventStore } from '@/stores/moralEventStore';
+import { useCutsceneStore } from '@/stores/cutsceneStore';
 
 const SEED_POOL = ['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon'];
 
@@ -1873,9 +1880,92 @@ async function runCovertSweep(): Promise<void> {
       `자객 ${(sumAssassinCount / iters).toFixed(1)}회(평균 ${Math.round(sumAssassinCost / iters)}냥) · 사파 후원 수행 ${(sumSponsored / iters).toFixed(1)}회`,
   );
 }
+// ─── 서버 권위 결정성 실증 (docs/31 Phase 1) ────────────────────────────────
+// 엔진을 Vercel 함수처럼 Node에서 구동 — "같은 상태 + 같은 시드 → 같은 결과"를 실증.
+// 이게 성립해야 서버가 시드를 쥐었을 때 세이브 스커밍(결과 재시도)이 봉쇄된다.
+const SERVER_PARTY = ['yun-soso', 'i-cheongha', 'jin-sohwa', 'jang-cheol'];
+
+// 휘발 출력 스토어 초기화 — 서버 요청의 클린 슬레이트(이 넷은 GameState 아닌 엔진 출력 events).
+function resetEphemeral(): void {
+  usePendingStore.setState({
+    oneLiner: null, wish: null, dailyLog: null, dailyBadges: [], milestones: [],
+    settlement: null, llmDebugBuffer: [], lastDebug: null, inflightResolutions: 0,
+  } as never);
+  useMoralEventStore.getState().clear();
+  useFieldEventStore.getState().clear();
+  useCutsceneStore.getState().clear();
+}
+
+// 하루 진행(턴 + 정산 후속). 월초/종결은 advanceTurn 이 알아서 분기.
+function stepDays(days: number): void {
+  for (let i = 0; i < days; i += 1) {
+    if (useGameStore.getState().phase === 'ended') break;
+    advanceTurn();
+    triggerPostSettlement();
+  }
+}
+
+// 새 회차를 시드 고정으로 days 일 진행 → 최종 GameState. (seedNewRun 도 rng 를 쓰므로 시드를 먼저 건다)
+function freshRun(seed: number, days: number): GameState {
+  seedAmbient(seed);
+  resetEphemeral();
+  seedNewRun(SERVER_PARTY);
+  stepDays(days);
+  return cloneGameState(captureGameState());
+}
+
+// 서버 모델: 임의 GameState 를 로드(commit)하고 시드 걸어 1+ 진행 → 최종 GameState.
+function serverStep(stateIn: GameState, seed: number, days: number): GameState {
+  resetEphemeral();
+  commitGameState(cloneGameState(stateIn)); // 스토어 통째 덮기(클린 슬레이트)
+  seedAmbient(seed);
+  stepDays(days);
+  return cloneGameState(captureGameState());
+}
+
+async function serverTurnDemo(): Promise<void> {
+  setAutoSaveEnabled(false); // DB 미접속(순수 인메모리 — 결정성 보존)
+  const J = (x: unknown) => JSON.stringify(x);
+  let pass = 0, fail = 0;
+  const ck = (label: string, cond: boolean, detail = '') => {
+    if (cond) { pass += 1; console.log(`  PASS  ${label}${detail ? `   ${detail}` : ''}`); }
+    else { fail += 1; console.log(`  FAIL  ${label}${detail ? `   ${detail}` : ''}`); }
+  };
+  console.log('═══ 서버 권위 결정성 실증 (엔진 Node 구동) ═══\n');
+
+  const DAYS = 120; // ~4개월
+  // 1) 풀런 결정성 — 같은 시드 → 같은 회차.
+  const a = freshRun(12345, DAYS);
+  const b = freshRun(12345, DAYS);
+  ck('같은 시드 풀런 → 동일 GameState', J(a) === J(b));
+  ck('진행됨(시작과 다름)', J(a) !== J(freshRun(12345, 0)));
+
+  // 2) 시드 민감도 — 다른 시드 → 다른 회차(rng 가 실제로 결과를 가른다).
+  const c = freshRun(99999, DAYS);
+  ck('다른 시드 → 다른 GameState', J(a) !== J(c));
+
+  // 3) 서버 모델 — 임의 상태 로드→진행 결정성(세이브 스커밍 봉쇄 실증).
+  const mid = freshRun(2024, 60); // 중간 상태
+  const s1 = serverStep(mid, 777, 30);
+  const s2 = serverStep(mid, 777, 30); // 같은 상태+같은 시드 재시도
+  ck('상태 로드→진행 결정성(재시도 동일)', J(s1) === J(s2));
+  const s3 = serverStep(mid, 555, 30); // 다른 시드로 재시도
+  ck('다른 시드 재시도 → 다른 결과', J(s1) !== J(s3));
+  ck('중간 상태에서 진행됨', J(s1) !== J(mid));
+
+  console.log(`\n  → 같은 상태+시드는 항상 같은 결과, 시드 바꾸면 달라짐.`);
+  console.log(`    서버가 시드를 쥐면 클라가 결과를 재시도(세이브 스커밍)해도 동일 → 봉쇄.`);
+  console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
+  if (fail > 0) process.exit(1);
+}
+
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
+  if (process.argv[2] === 'serverturn') {
+    await serverTurnDemo();
+    return;
+  }
   if (process.argv[2] === 'sweep') {
     await runSweep(); // 인증·저장 없음(순수 인메모리).
     return;
