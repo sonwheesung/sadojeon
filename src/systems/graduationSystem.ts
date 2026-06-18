@@ -107,8 +107,9 @@ export function mainArtSummary(disciple: Disciple): string {
 // 잘 키웠든(전설) 못 키웠든(실패) 25세에 강호로 나선다 — "한 판 = 15년 양육" 타임박스.
 // (옛 실력 게이트 '무공 천장 + 신뢰 60' 폐기 — 잘 크면 13세 조기 졸업, 못 크면 영영 미졸업으로
 //  회차 길이가 들쭉날쭉하고 끝이 안 나던 문제. docs/06)
-// questing·crafting 은 외부/장기 작업 중이라, 복귀 후 다음 체크에서 하산.
-const GRADUATION_BUSY: DiscipleStatus[] = ['questing', 'crafting', 'graduated', 'departed'];
+// questing·crafting·meditating(폐관) 은 진행 중이라, 끝난 뒤 다음 체크에서 하산.
+// (meditating 포함 — 폐관 override 중 졸업하면 override 가 졸업 제자에 고아로 남는다. 폐관 끝나고 하산.)
+const GRADUATION_BUSY: DiscipleStatus[] = ['questing', 'crafting', 'meditating', 'graduated', 'departed'];
 export function isGraduationEligible(d: Disciple, currentYear: number): boolean {
   if (GRADUATION_BUSY.includes(d.status)) return false;
   return currentYear - d.entryYear >= GRADUATION.RAISING_YEARS;
