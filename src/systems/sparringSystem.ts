@@ -7,7 +7,8 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { realmIndex } from '@/data/realm';
-import type { Disciple, RelationLevel } from '@/types';
+import type { Disciple } from '@/types';
+import { REL_UP, REL_DOWN } from '@/data/relationTransitions';
 import { combatPower } from './combatPower';
 import { combatantFromDisciple, simulateCombat } from './combat';
 import { currentAge } from './discipleCtx';
@@ -17,20 +18,6 @@ import { shiftPersona } from './personaShift';
 const SPAR_DAILY_CHANCE = 0.06; // 자격 2인↑일 때 하루 발동 확률(≈수 주 1회)
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
-const REL_UP: Record<RelationLevel, RelationLevel> = {
-  enemy: 'distant',
-  distant: 'neutral',
-  neutral: 'friend',
-  friend: 'sworn',
-  sworn: 'sworn',
-};
-const REL_DOWN: Record<RelationLevel, RelationLevel> = {
-  sworn: 'friend',
-  friend: 'neutral',
-  neutral: 'distant',
-  distant: 'enemy',
-  enemy: 'enemy',
-};
 
 function eligible(d: Disciple | undefined): d is Disciple {
   return (
