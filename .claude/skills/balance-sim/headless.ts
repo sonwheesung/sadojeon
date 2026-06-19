@@ -2167,6 +2167,8 @@ const CARRY_CHECKPOINTS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 // 카리 최종경지 + 절정/초절정/화경 첫 도달일(day, 없으면 -1) + 회차 종료 시점 codex 비급 artId 집합을 반환.
 async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Promise<{
   realm: string; reach: Record<string, number>; scrollIds: Set<string>; seong: number; ext: number; internal: number;
+  // 측정2: 이 회차 *새로* 코드덱스에 든 비급 artId(시작5권·이월분 제외) + 이 회차 중복 드랍 횟수.
+  newScrollIds: string[]; dupDrops: number;
 }> {
   const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
@@ -2174,6 +2176,12 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   useGameStore.getState().setPhase('playing');
   // 이월 비급만 complete 로(=새 사부 첫날 즉시 연구). 시작5권은 seedNewRun 이 이미 complete.
   for (const id of carriedIds) grantScroll(id);
+  // 측정2 기준선 — 회차 시작 코드덱스(시작5권 ∪ 이월 비급). 이 이후 의뢰로 새로 든 권만 "새권".
+  const baselineScrollIds = new Set(useCodexStore.getState().scrolls.map((x) => x.artId));
+  // 이 회차 중복 드랍 횟수 — maybeDropScroll 이 보유 권을 다시 뽑으면 'scroll-dup-…' 서신만 추가하고
+  // 코드덱스 미추가(questSystem). 매일 reset 전에 그 서신을 세어 누적한다.
+  let dupDrops = 0;
+  const seenDupIds = new Set<string>();
   setElixirBudget(0);
   setByeokgokdanBudget(Infinity);
   {
@@ -2235,6 +2243,13 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
       }
     }
     drainFieldEvents();
+    // 측정2 — reset 전에 이 날 발생한 중복 드랍 서신을 집계(id = scroll-dup-<artId>-<day>, day별 고유).
+    for (const item of useInboxStore.getState().items) {
+      if (item.id.startsWith('scroll-dup-') && !seenDupIds.has(item.id)) {
+        seenDupIds.add(item.id);
+        dupDrops += 1;
+      }
+    }
     useInboxStore.getState().reset();
     healWithSalve(false);
     markReach(d);
@@ -2247,7 +2262,9 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   const internal = Math.round(carry?.realmProgress?.internal ?? 0);
   // 종료 시점 codex 비급 전체 — 다음 회차로 이월할 영구 집합(시작5권 포함이나 무해).
   const scrollIds = new Set(useCodexStore.getState().scrolls.map((x) => x.artId));
-  return { realm, reach, scrollIds, seong, ext, internal };
+  // 새권 = 종료 코드덱스 − 회차 시작 기준선(시작5권 ∪ 이월). 의뢰 드랍으로 실제로 새로 든 권만.
+  const newScrollIds = [...scrollIds].filter((id) => !baselineScrollIds.has(id));
+  return { realm, reach, scrollIds, seong, ext, internal, newScrollIds, dupDrops };
 }
 
 // 회차 이월 곡선 측정 — chains(R)개의 독립 체인을 각각 1→runs(기본100)회차 순차 이월하며
@@ -2269,6 +2286,11 @@ async function runCarrySweep(): Promise<void> {
   for (const c of checkpoints) acc[c] = mk();
   // 체인별 비급수 궤적 — 포화회차 탐지용(전 체인 공통 추세 보고).
   const scrollTraj: number[][] = [];
+  // 측정2 — 회차별 새권수·중복수 누적(전 회차, 전 체인 평균용). chain0 은 실제 비급 이름 목록도 기록.
+  const newCountByRun = new Array(runs + 1).fill(0); // [run] += 그 회차 새권수
+  const dupCountByRun = new Array(runs + 1).fill(0); // [run] += 그 회차 중복드랍수
+  const chain0NewNames: Record<number, string[]> = {}; // chain0 회차별 새 비급 이름
+  const artName = (id: string) => MARTIAL_ARTS.find((a) => a.id === id)?.name ?? id;
 
   for (let chain = 0; chain < chains; chain += 1) {
     let carried = new Set<string>();
@@ -2276,6 +2298,9 @@ async function runCarrySweep(): Promise<void> {
     for (let run = 1; run <= runs; run += 1) {
       const res = await runFactoryOnce(carried, days);
       traj.push(carried.size); // 이 회차 *시작* 시점 이월 비급수
+      newCountByRun[run] += res.newScrollIds.length;
+      dupCountByRun[run] += res.dupDrops;
+      if (chain === 0) chain0NewNames[run] = res.newScrollIds.map(artName);
       if (acc[run]) {
         const a = acc[run];
         const idx = realmIndex(res.realm);
@@ -2319,6 +2344,21 @@ async function runCarrySweep(): Promise<void> {
   }
   console.log(`\n비급 누적 궤적(회차 시작시점 평균 이월권수): ${avgTraj.map((v, i) => (CARRY_CHECKPOINTS.includes(i + 1) ? `${i + 1}회:${v.toFixed(0)}` : null)).filter(Boolean).join(' / ')}`);
   console.log(`비급 포화 회차 ≈ ${satRun > 0 ? `${satRun}회차(이후 증가분 <1권/회차)` : '미포화(100회차까지 계속 증가)'}`);
+
+  // ── 측정2: 회차별 무공서 획득 — 새권수·중복수 추세(전 회차) + chain0 실제 새 비급 이름(핵심 회차) ──
+  console.log(`\n=== 측정2: 회차별 무공서 획득(새권 N권 + 중복 M회, 전 ${chains}체인 평균) ===`);
+  console.log('회차 | 새권(평균) | 중복드랍(평균)');
+  const m2Checkpoints = runs <= 30 ? Array.from({ length: runs }, (_, i) => i + 1) : checkpoints;
+  for (const r of m2Checkpoints) {
+    console.log(`${String(r).padStart(4)} | ${(newCountByRun[r] / chains).toFixed(1).padStart(6)}권 | ${(dupCountByRun[r] / chains).toFixed(1).padStart(6)}회`);
+  }
+  // chain0 실제 새 비급 이름 — 초반 회차일수록 풀 목록, 후반은 포화라 짧음.
+  console.log(`\n[chain0 실제 새 획득 비급 목록 — 핵심 회차]`);
+  const nameRuns = runs <= 20 ? Array.from({ length: runs }, (_, i) => i + 1) : [1, 2, 3, 4, 5, 10, 20, 30, 50, 100].filter((r) => r <= runs);
+  for (const r of nameRuns) {
+    const names = chain0NewNames[r] ?? [];
+    console.log(`  ${r}회차 (새 ${names.length}권): ${names.length ? names.join(' · ') : '(새권 없음)'}`);
+  }
 }
 
 async function main() {
