@@ -467,7 +467,10 @@ function applyRealmTick(
   store.update(discipleId, {
     realm,
     realmProgress: {
-      internal: Math.round(internal),
+      // 내공은 실수로 누적 — 매일 round 하면 소수부(2.5→3)가 매번 올림돼 누적 총량이 설계치를
+      // 초과한다(eff=1.0 심법 1일 +2.5 → +3, +20% 누수). alchemySystem.tickElixirAbsorb 와 동일 결.
+      // 표시는 DiscipleStatusPanel 이 round. docs/23·28 정통 내공 페이싱.
+      internal,
       pity,
       petitioned,
     },

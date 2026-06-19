@@ -130,7 +130,7 @@ export function DiscipleStatusPanel({ disciple }: Props) {
         {constitution && (
           <Row label="체질" value={constitution} valueStyle={styles.rowValueDoorstep} />
         )}
-        <Row label="내공" value={`${disciple.realmProgress.internal}`} />
+        <Row label="내공" value={`${Math.round(disciple.realmProgress.internal)}`} />
         {art && (
           <Row
             label="무공"
