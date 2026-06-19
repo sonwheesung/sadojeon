@@ -131,5 +131,91 @@ console.log(`═══ 졸업 동문 강호 사건 엔진 (표본 ${N}) ══�
   check('복수 후 slainBy 소비(반복 방지)', seedConsumed > N * 0.95, `${((seedConsumed / N) * 100).toFixed(0)}%`);
 }
 
+// ── 극단 보강(2026-06-19) — 자기참조·연쇄 상한·클램프·떠난 동문·빈 명단 ──
+const fin = (n: number) => Number.isFinite(n) && !Number.isNaN(n);
+const gsR = () => useGraduateStore.getState().records;
+
+// E1 빈/단일 명단 — no-op·크래시 없음.
+reset();
+let threw = false;
+try { tickGraduateEvents(); } catch (e) { threw = true; }
+check('졸업자 0명 — no-op·크래시 없음', !threw);
+reset();
+addGrad('solo', '독', 'righteous');
+threw = false;
+try { tickGraduateEvents(); } catch (e) { threw = true; }
+check('졸업자 1명 — 쌍 사건 없음·크래시 없음', !threw);
+
+// E2 자기참조 slainBy(손상 레코드) — 크래시 없음·씨앗 소멸.
+reset();
+addGrad('sd', '자', 'righteous', 'dead', 'sd'); // slainBy === 자기 id
+addGrad('x', '엑', 'righteous');
+addGrad('y', '와이', 'righteous');
+threw = false;
+try { tickGraduateEvents(); } catch (e) { threw = true; console.log('  throw:', (e as Error).message); }
+check('자기참조 slainBy — 크래시 없음', !threw);
+check('자기참조 slainBy — 씨앗 소멸(무한루프 방지)', gsR().find((r) => r.id === 'sd')?.slainBy === undefined);
+
+// E3 가해자도 사망 — 복수 씨앗 정리(연쇄 종료).
+reset();
+addGrad('vic', '피', 'righteous', 'dead', 'gone');
+addGrad('gone', '간', 'assassin', 'dead'); // 가해자도 떠남
+addGrad('aa', '에이', 'righteous');
+addGrad('bb', '비', 'righteous');
+tickGraduateEvents();
+check('가해자도 사망 — 복수 씨앗 소멸(연쇄 종료)', gsR().find((r) => r.id === 'vic')?.slainBy === undefined);
+
+// E4 복수 연쇄 상한 — 한 틱에 죽은 동문 2명+복수자 2명이라도 복수는 최대 1건.
+reset();
+addGrad('k1', '케이1', 'assassin');
+addGrad('k2', '케이2', 'assassin');
+addGrad('m1', '엠1', 'righteous', 'dead', 'k1');
+addGrad('m2', '엠2', 'righteous', 'dead', 'k2');
+addGrad('av1', '복1', 'righteous');
+addGrad('av2', '복2', 'righteous');
+rel('av1', 'm1', 'sworn');
+rel('av2', 'm2', 'sworn');
+tickGraduateEvents();
+const liveSeeds = gsR().filter((r) => r.status === 'dead' && r.slainBy != null).length;
+check('복수 연쇄 — 한 틱 최대 1건(씨앗 1개 이상 잔존)', liveSeeds >= 1, `잔존 씨앗=${liveSeeds}`);
+
+// E5 다년 풀시뮬 — 명성 0~100 클램프·유한·status 유효·자기참조 없음·무한루프 없음.
+reset();
+const routes: RouteId[] = ['righteous', 'assassin', 'demonic', 'escort', 'vigilante', 'healer'] as RouteId[];
+for (let i = 0; i < 12; i += 1) addGrad(`g${i}`, `지${i}`, routes[i % routes.length]);
+const levels: RelationLevel[] = ['enemy', 'distant', 'neutral', 'friend', 'sworn'];
+for (let i = 0; i < 12; i += 1) for (let j = i + 1; j < 12; j += 1) rel(`g${i}`, `g${j}`, levels[(i + j) % 5]);
+let ok = true;
+for (let yr = 0; yr < 30; yr += 1) {
+  tickGraduateEvents();
+  for (const r of gsR()) {
+    if (!fin(r.fame) || r.fame < 0 || r.fame > 100) { ok = false; console.log(`   bad fame ${r.id}=${r.fame}`); }
+    if (!['active', 'injured', 'retired', 'dead', 'missing'].includes(r.status)) { ok = false; }
+    if (r.slainBy === r.id) { ok = false; console.log('   self slainBy!'); }
+  }
+}
+check('30년 풀시뮬 — 명성 0~100·유한·status 유효·자기참조 없음', ok);
+const repV = useSectStore.getState().sect?.reputation ?? -1;
+check('30년 풀시뮬 — 사문 명성 0~100 유한', fin(repV) && repV >= 0 && repV <= 100, `rep=${repV}`);
+
+// E6 관계 사다리 상한 — sworn 끼리 반복 의기투합해도 사다리 밖으로 안 나감.
+reset();
+addGrad('s1', '에스1', 'righteous');
+addGrad('s2', '에스2', 'righteous');
+rel('s1', 's2', 'sworn');
+for (let i = 0; i < 10; i += 1) tickGraduateEvents();
+const relSworn = relOf('s1', 's2');
+check('sworn 상한 — 사다리 밖으로 안 나감', !!relSworn && levels.includes(relSworn), `rel=${relSworn}`);
+
+// E7 disciple 엔트리 없는 졸업자 — relOf 폴백·setRel no-op, 사건 진행·크래시 없음.
+reset();
+useGraduateStore.getState().add({ id: 'p1', name: '피1', route: 'righteous' as RouteId, level: 1, title: 't', power: 50, fame: 50, status: 'active', graduatedYear: 1 });
+useGraduateStore.getState().add({ id: 'p2', name: '피2', route: 'demonic' as RouteId, level: 1, title: 't', power: 50, fame: 50, status: 'active', graduatedYear: 1 });
+threw = false;
+try { for (let i = 0; i < 5; i += 1) tickGraduateEvents(); } catch (e) { threw = true; console.log('  throw:', (e as Error).message); }
+check('disciple 엔트리 없는 졸업자 — 사건 진행·크래시 없음', !threw);
+check('disciple 엔트리 없어도 — 명성 유한·클램프', gsR().every((r) => fin(r.fame) && r.fame >= 0 && r.fame <= 100));
+
+console.log(`\n[정보] 극단 보강 — 풀시뮬 12명×30년 · 측정일 2026-06-19`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);
