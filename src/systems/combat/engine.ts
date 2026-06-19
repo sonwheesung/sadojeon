@@ -27,6 +27,9 @@ import { resistsWound } from '@/data/martialArts';
 import { buildSheet, type CombatSheet } from './sheet';
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+// NaN/Infinity 안전 클램프 — 전투원 스탯이 손상(NaN·±Infinity)돼도 엔진 출력(hpFrac·margin 등)이
+// 절대 NaN/Infinity 를 내보내지 않게 하한으로 떨군다. 순수 엔진의 출력 계약(항상 유한·범위) 보증.
+const safeClamp = (n: number, lo: number, hi: number) => (Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo);
 
 // ─── 조정 상수 🔧 ─────────────────────────────────────────────────────────────
 const MAX_ROUNDS_DEFAULT = 30;
@@ -117,7 +120,7 @@ function sideStrength(fs: Fighter[], side: 'A' | 'B'): number {
   const members = fs.filter((f) => f.side === side);
   if (members.length === 0) return 0;
   const sum = members.reduce(
-    (acc, f) => acc + (f.state === 'standing' ? Math.max(0, f.hp) / f.sheet.maxHp : 0),
+    (acc, f) => acc + (f.state === 'standing' ? safeClamp(Math.max(0, f.hp) / f.sheet.maxHp, 0, 1) : 0),
     0,
   );
   return sum / members.length;
@@ -130,7 +133,7 @@ function sideResidual(fs: Fighter[], side: 'A' | 'B'): number {
   if (members.length === 0) return 0;
   const sum = members.reduce((acc, f) => {
     if (f.state === 'dead' || f.state === 'fled') return acc;
-    return acc + Math.max(0, f.hp) / f.sheet.maxHp;
+    return acc + safeClamp(Math.max(0, f.hp) / f.sheet.maxHp, 0, 1);
   }, 0);
   return sum / members.length;
 }
@@ -388,7 +391,7 @@ export function simulateCombat(
           : rA > rB
             ? 'A'
             : 'B';
-  const margin = Math.abs(rA - rB);
+  const margin = safeClamp(Math.abs(rA - rB), 0, 1);
   const tier: CombatTier = margin < 0.22 ? 'close' : margin < 0.5 ? 'edge' : 'crush';
 
   // ── 대련 사고 — 판 전체에 1회 굴림. 현격한 차·호출측 가산(감정·살기)으로 오른다.
@@ -439,10 +442,10 @@ export function simulateCombat(
       name: f.sheet.ref.name,
       side: f.side,
       state: f.state,
-      hpFrac: clamp(f.hp / f.sheet.maxHp, 0, 1),
-      qiFrac: clamp(f.qi / 100, 0, 1),
-      dealtFrac: Math.round(f.dealt * 100) / 100,
-      takenFrac: Math.round(f.taken * 100) / 100,
+      hpFrac: safeClamp(f.hp / f.sheet.maxHp, 0, 1),
+      qiFrac: safeClamp(f.qi / 100, 0, 1),
+      dealtFrac: Math.round(safeClamp(f.dealt, 0, Number.MAX_SAFE_INTEGER) * 100) / 100,
+      takenFrac: Math.round(safeClamp(f.taken, 0, Number.MAX_SAFE_INTEGER) * 100) / 100,
       drainedQi: f.drained > 0 ? Math.round(f.drained) : undefined,
       wound: f.wound,
     };
