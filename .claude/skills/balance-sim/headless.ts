@@ -2151,6 +2151,176 @@ async function lifetimeDemo(): Promise<void> {
   if (fail > 0) process.exit(1);
 }
 
+// ── 회차 이월 곡선 — 비급(무공서)만 영구 누적, 나머지(연구·영약·금고·사부·제자) 회차 초기화 ──
+// project_run_loop_carryover / docs/16: 비급 원본만 다음 사부에게 인계. seedNewRun 의 resetForNewRun 이
+// 정확히 이 경계를 구현(시작5권+이월 스크롤 유지·연구 progress 0으로 낮춤·영약/제자/금고/사부 리셋).
+// 측정: 1회차→100회차로 비급을 진짜로 이월하며 카리(yun-soso) 검 빌드의 초절정/화경 도달율·도달시점을
+// 체크포인트 회차에서 기록. 한 체인은 순차(run N+1 의 시작 코덱스 = run N 종료 시점 비급집합).
+//
+// 이월 충실성: seedNewRun 직후 이월 비급은 'identified'(연구 progress 0)로 깎인다. 실게임에선 새 사부가
+// 다시 풀어야(연구) 가르칠 수 있으나, 시뮬은 setResearchInstant(true)라 연구가 즉시 끝난다 — 따라서
+// 이월 비급을 회차 시작에 grantScroll(=complete)로 올리는 건 "새 사부가 첫날 즉시 연구 완료"와 동치(충실).
+// factorysweep 의 'all'(전권 641 complete)과 다른 점: 오직 그동안 의뢰로 실제 모은 집합만 올린다.
+const CARRY_CHECKPOINTS = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+// factory 1회차 본문(15년) — 이월 비급집합을 받아 시작 코덱스로 올리고, 카리 검 빌드로 굴린 뒤
+// 카리 최종경지 + 절정/초절정/화경 첫 도달일(day, 없으면 -1) + 회차 종료 시점 codex 비급 artId 집합을 반환.
+async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Promise<{
+  realm: string; reach: Record<string, number>; scrollIds: Set<string>; seong: number; ext: number; internal: number;
+}> {
+  const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
+  const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
+  seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
+  useGameStore.getState().setPhase('playing');
+  // 이월 비급만 complete 로(=새 사부 첫날 즉시 연구). 시작5권은 seedNewRun 이 이미 complete.
+  for (const id of carriedIds) grantScroll(id);
+  setElixirBudget(0);
+  setByeokgokdanBudget(Infinity);
+  {
+    const sect = useSectStore.getState();
+    if (sect.sect) sect.setSect({ ...sect.sect, resources: 100_000 });
+  }
+  buildAlchemyLab();
+  for (const id of RECIPE_IDS) learnRecipe(id);
+  for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
+  const carryId = 'yun-soso';
+  const sparPartnerId = 'jang-cheol';
+  const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId && id !== sparPartnerId);
+  const roleMap: Record<string, string> = { [carryId]: 'carry', [sparPartnerId]: 'carry' };
+  for (const sid of supportIds) roleMap[sid] = 'alchemy';
+
+  const reach: Record<string, number> = { jeoljeong: -1, chojeoljeong: -1, hwagyeong: -1 };
+  const markReach = (d: number) => {
+    const r = useDiscipleStore.getState().disciples[carryId]?.realm ?? 'samryu';
+    const idx = realmIndex(r);
+    if (reach.jeoljeong < 0 && idx >= realmIndex('jeoljeong')) reach.jeoljeong = d;
+    if (reach.chojeoljeong < 0 && idx >= realmIndex('chojeoljeong')) reach.chojeoljeong = d;
+    if (reach.hwagyeong < 0 && idx >= realmIndex('hwagyeong')) reach.hwagyeong = d;
+  };
+
+  for (let d = 0; d < days; d += 1) {
+    configurePartyDay(roleMap);
+    const upcoming = (useTimeStore.getState().current.day % 7) + 1;
+    if (upcoming === 1 || upcoming === 5) {
+      const sch = useScheduleStore.getState();
+      sch.setDailyChoice(carryId, 'martial', daeryeonChoiceValue(sparPartnerId));
+      sch.setDailyChoice(sparPartnerId, 'martial', daeryeonChoiceValue(carryId));
+    }
+    const dsNow = useDiscipleStore.getState();
+    for (const sid of supportIds) {
+      const sd = dsNow.disciples[sid];
+      if (sd && sd.status === 'training') {
+        const lv = sd.stats?.alchemy?.level ?? 0;
+        const best = byReqDesc.find((r) => r.alchemyReq <= lv);
+        if (best) startCraft(sid, best.id);
+      }
+    }
+    partyDispatch(carryId, roleMap, 0.12, 13);
+    rampQuest(carryId, 0.12);
+    const carry = dsNow.disciples[carryId];
+    if (carry && carry.status === 'training' && !carry.elixirAbsorb) {
+      consumeInternalElixir(carryId, 'naegong-fire') || consumeInternalElixir(carryId, 'naegong-water');
+    }
+    advanceTurn();
+    const s = useScheduleStore.getState();
+    if (s.pendingReport) s.resolveMonthlyReport();
+    if (s.pendingSetup) s.resolveMonthlySetup();
+    if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
+    const inbox = useInboxStore.getState();
+    for (const item of [...inbox.items]) {
+      const dom = (item.payload as { domain?: string } | undefined)?.domain;
+      if (isRespondable(item)) {
+        const key = dom === 'seclusion_petition' ? 'allow' : responseOptionsFor(item).filter((o) => !o.disabled)[0]?.key;
+        if (key) await resolveInboxItem(item, key);
+      }
+    }
+    drainFieldEvents();
+    useInboxStore.getState().reset();
+    healWithSalve(false);
+    markReach(d);
+  }
+  const carry = useDiscipleStore.getState().disciples[carryId];
+  const realm = carry?.realm ?? 'samryu';
+  const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
+  const seong = mainId ? (carry?.martialArts.find((a) => a.artId === mainId)?.seong ?? 0) : 0;
+  const ext = carry?.stats?.strength?.level ?? 0;
+  const internal = Math.round(carry?.realmProgress?.internal ?? 0);
+  // 종료 시점 codex 비급 전체 — 다음 회차로 이월할 영구 집합(시작5권 포함이나 무해).
+  const scrollIds = new Set(useCodexStore.getState().scrolls.map((x) => x.artId));
+  return { realm, reach, scrollIds, seong, ext, internal };
+}
+
+// 회차 이월 곡선 측정 — chains(R)개의 독립 체인을 각각 1→runs(기본100)회차 순차 이월하며
+// 체크포인트 회차에서 카리 경지·도달시점·이월 비급수를 집계. 체크포인트 통계는 R 체인 평균/비율.
+async function runCarrySweep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const runs = Number(process.argv[3] ?? 100);
+  const chains = Number(process.argv[4] ?? 1);
+  const years = Number(process.argv[5] ?? 15);
+  const days = years * 336;
+  const checkpoints = CARRY_CHECKPOINTS.filter((c) => c <= runs);
+  console.log(`=== 회차 이월 곡선 — 비급만 영구누적 · 카리 검빌드(factory) · ${years}년/회차 · ${runs}회차 · 체인 R=${chains} ===`);
+  console.log(`측정: 체크포인트 회차[${checkpoints.join(',')}]에서 초절정/화경 도달율·평균도달시점(경과년) + 비급 포화회차. n=${chains}체인.\n`);
+
+  // 체크포인트별 누적기: 화경/초절정+ 도달수, 도달시점 합(도달한 체인만), 비급수 합.
+  type Acc = { cho: number; hwa: number; jeol: number; choDaySum: number; choDayN: number; hwaDaySum: number; hwaDayN: number; jeolDaySum: number; jeolDayN: number; scrollSum: number; seongSum: number; extSum: number; intSum: number };
+  const mk = (): Acc => ({ cho: 0, hwa: 0, jeol: 0, choDaySum: 0, choDayN: 0, hwaDaySum: 0, hwaDayN: 0, jeolDaySum: 0, jeolDayN: 0, scrollSum: 0, seongSum: 0, extSum: 0, intSum: 0 });
+  const acc: Record<number, Acc> = {};
+  for (const c of checkpoints) acc[c] = mk();
+  // 체인별 비급수 궤적 — 포화회차 탐지용(전 체인 공통 추세 보고).
+  const scrollTraj: number[][] = [];
+
+  for (let chain = 0; chain < chains; chain += 1) {
+    let carried = new Set<string>();
+    const traj: number[] = [];
+    for (let run = 1; run <= runs; run += 1) {
+      const res = await runFactoryOnce(carried, days);
+      traj.push(carried.size); // 이 회차 *시작* 시점 이월 비급수
+      if (acc[run]) {
+        const a = acc[run];
+        const idx = realmIndex(res.realm);
+        if (idx >= realmIndex('jeoljeong')) a.jeol += 1;
+        if (idx >= realmIndex('chojeoljeong')) a.cho += 1;
+        if (idx >= realmIndex('hwagyeong')) a.hwa += 1;
+        if (res.reach.jeoljeong >= 0) { a.jeolDaySum += res.reach.jeoljeong; a.jeolDayN += 1; }
+        if (res.reach.chojeoljeong >= 0) { a.choDaySum += res.reach.chojeoljeong; a.choDayN += 1; }
+        if (res.reach.hwagyeong >= 0) { a.hwaDaySum += res.reach.hwagyeong; a.hwaDayN += 1; }
+        a.scrollSum += carried.size;
+        a.seongSum += res.seong; a.extSum += res.ext; a.intSum += res.internal;
+      }
+      // 이월 — 비급집합 합집합(영구 누적). 종료 codex 의 전 비급을 다음 회차로.
+      carried = new Set([...carried, ...res.scrollIds]);
+    }
+    scrollTraj.push(traj);
+    process.stderr.write(`  체인 ${chain + 1}/${chains} 완료 (최종 이월 비급 ${carried.size}권)\n`);
+  }
+
+  const fmtPct = (n: number) => `${Math.round((n / chains) * 100)}%`;
+  const fmtYr = (sum: number, n: number) => (n === 0 ? '미도달' : `${(sum / n / 336).toFixed(1)}년차(${(10 + sum / n / 336).toFixed(1)}세)`);
+  console.log('회차 | 초절정달성 | 화경달성 | 절정달성 | 초절정도달시점 | 화경도달시점 | 평균이월비급 | 카리 주력성/외공/내공');
+  for (const c of checkpoints) {
+    const a = acc[c];
+    console.log(
+      `${String(c).padStart(4)} | ${fmtPct(a.cho).padStart(6)} | ${fmtPct(a.hwa).padStart(6)} | ${fmtPct(a.jeol).padStart(6)} | ` +
+      `${fmtYr(a.choDaySum, a.choDayN).padStart(14)} | ${fmtYr(a.hwaDaySum, a.hwaDayN).padStart(14)} | ` +
+      `${(a.scrollSum / chains).toFixed(0).padStart(4)}권 | ${(a.seongSum / chains).toFixed(1)}성/${(a.extSum / chains).toFixed(0)}/${(a.intSum / chains).toFixed(0)}`,
+    );
+  }
+  // 비급 포화 — 회차별 평균 이월 비급수가 더 안 늘기 시작하는 첫 회차(증가분 <1권/회차가 연속 5회).
+  const avgTraj: number[] = [];
+  for (let i = 0; i < runs; i += 1) {
+    let s = 0; for (const t of scrollTraj) s += t[i] ?? 0;
+    avgTraj.push(s / chains);
+  }
+  let satRun = -1;
+  for (let i = 5; i < runs; i += 1) {
+    const flat = [0, 1, 2, 3, 4].every((k) => avgTraj[i - k] - avgTraj[i - k - 1] < 1);
+    if (flat) { satRun = i + 1; break; }
+  }
+  console.log(`\n비급 누적 궤적(회차 시작시점 평균 이월권수): ${avgTraj.map((v, i) => (CARRY_CHECKPOINTS.includes(i + 1) ? `${i + 1}회:${v.toFixed(0)}` : null)).filter(Boolean).join(' / ')}`);
+  console.log(`비급 포화 회차 ≈ ${satRun > 0 ? `${satRun}회차(이후 증가분 <1권/회차)` : '미포화(100회차까지 계속 증가)'}`);
+}
+
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
@@ -2176,6 +2346,10 @@ async function main() {
   }
   if (process.argv[2] === 'factorysweep') {
     await runFactorySweep();
+    return;
+  }
+  if (process.argv[2] === 'carrysweep') {
+    await runCarrySweep();
     return;
   }
   if (process.argv[2] === 'moderatesweep') {
