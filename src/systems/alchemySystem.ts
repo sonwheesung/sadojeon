@@ -248,8 +248,12 @@ export function tickElixirAbsorb(): void {
     const d = ds.disciples[id];
     if (!d?.elixirAbsorb) continue;
     const base = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
-    const internal = Math.round(base.internal + d.elixirAbsorb.perDay);
     const done = today >= d.elixirAbsorb.until;
+    // 누적 정밀 — perDay 를 매일 round 하면 소수부(예 3.6)가 매번 올림돼 흡수총량이 설계치를
+    // 초과한다(상극 흡수 72→80, +11% 누수). trainingSystem 처럼 흡수 중엔 실수로 누적하고
+    // 완료 시 한 번만 round → 총량이 설계 total(perDay×일수)에 정확히 수렴. docs/10·37.
+    const raw = base.internal + d.elixirAbsorb.perDay;
+    const internal = done ? Math.round(raw) : raw;
     ds.update(id, {
       realmProgress: { ...base, internal },
       ...(done ? { elixirAbsorb: undefined } : {}),
