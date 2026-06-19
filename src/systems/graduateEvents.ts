@@ -8,6 +8,7 @@
 import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { ROUTE_BLOC, ROUTE_LABEL, type RouteId } from '@/data/careers';
+import { REL_DOWN, REL_UP } from '@/data/relationTransitions';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGraduateStore, type GraduateRecord } from '@/stores/graduateStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -18,9 +19,9 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const randInt = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 
 // ─── 관계 사다리·조회 ──────────────────────────────────────────────────────
-const REL_ORDER: RelationLevel[] = ['enemy', 'distant', 'neutral', 'friend', 'sworn'];
-const relUp = (r: RelationLevel): RelationLevel => REL_ORDER[Math.min(4, REL_ORDER.indexOf(r) + 1)];
-const relDown = (r: RelationLevel): RelationLevel => REL_ORDER[Math.max(0, REL_ORDER.indexOf(r) - 1)];
+// 사다리는 단일 진실(src/data/relationTransitions)을 쓴다 — 드리프트 방지(docs/37 C9).
+const relUp = (r: RelationLevel): RelationLevel => REL_UP[r];
+const relDown = (r: RelationLevel): RelationLevel => REL_DOWN[r];
 
 // 졸업해도 discipleStore 에 status='graduated'로 남아 관계 보존. 양방 조회·설정.
 function relOf(aId: string, bId: string): RelationLevel {
