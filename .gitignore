@@ -59,3 +59,6 @@ app-example
 
 # balance-sim 임시 출력
 .claude/skills/balance-sim/_last_*.txt
+
+# scripts/sim 헤드리스 러너 임시 번들 (프로세스별 고유 pid)
+scripts/sim/_run.*.cjs
