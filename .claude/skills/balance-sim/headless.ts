@@ -1631,6 +1631,38 @@ async function runQuestSim(): Promise<void> {
   console.log('\n끝. [1] 경지가 난이도를 어디까지 감당 · [2] 파티 규모 효과 · [3] 부상 출전 페널티.');
 }
 
+// ── 극험 게이트 진단 — 절품 없이(master 천장) 닿는 combatRating 천장 측정. 실행: run-headless.cjs extremegate
+async function runExtremeGate(): Promise<void> {
+  setAutoSaveEnabled(false);
+  seedNewRun(SEED_POOL);
+  useGameStore.getState().setPhase('playing');
+  const ds = () => useDiscipleStore.getState();
+  const id = ds().order[0];
+  const { combatRating } = await import('@/systems/combatPower');
+  console.log('=== 극험 게이트 진단 — capability(=combatRating) vs minStat ===');
+  console.log('master(상품) 천장 = 초절정·8성. grandmaster(절품) = 화경·10성.\n');
+  // 1) 프리셋 사다리 combatRating (questmatrix 와 동일 프리셋).
+  for (const pk of ['ilryu6', 'jeol7', 'cho8', 'hwa10'] as const) {
+    applyPreset(id, PRESETS[pk]);
+    const mainArt = findMartialArt(PRESETS[pk].arts[0].artId);
+    console.log(`  ${PRESETS[pk].label.padEnd(8)} (${mainArt?.grade}) → combatRating ${combatRating(ds().disciples[id]!)}`);
+  }
+  // 2) master 천장 — maehwa-sword(master) 를 경지·성 상한까지: 절정7성·초절정8성.
+  console.log('\n  [절품 없이 도달 가능한 천장 — maehwa-sword(master)]');
+  for (const [realm, seong, label] of [['jeoljeong', 7, '절정7성'], ['chojeoljeong', 8, '초절정8성']] as const) {
+    ds().update(id, {
+      realm: realm as never,
+      realmProgress: { internal: 1050, pity: 0, petitioned: false },
+      martialArts: [inst('maehwa-sword', seong), inst('chosangbi', 6), inst('tonap-beop', 6), inst('geumjong-jo', 5)],
+      mainMartialArtId: 'maehwa-sword',
+      stats: { strength: { level: 56, exp: 0 }, agility: { level: 50, exp: 0 }, endurance: { level: 54, exp: 0 } } as never,
+      status: 'training',
+    });
+    console.log(`  master ${label.padEnd(10)} → combatRating ${combatRating(ds().disciples[id]!)}`);
+  }
+  console.log('\n  [현 게이트] GRADE_REWARD.extreme.minStat=72(세계사건) · 정적 극험 minStat=65~70(QUEST_POOL)');
+}
+
 async function runQuestMatrix(): Promise<void> {
   setAutoSaveEnabled(false);
   const reps = Number(process.argv[3] ?? 100);
@@ -2180,6 +2212,10 @@ async function main() {
   }
   if (process.argv[2] === 'questmatrix') {
     await runQuestMatrix();
+    return;
+  }
+  if (process.argv[2] === 'extremegate') {
+    await runExtremeGate();
     return;
   }
   if (process.argv[2] === 'questsim') {

@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
+import { QuestRiskMarks } from '@/components/quest/QuestRiskMarks';
 import {
   QUEST_DOMAIN_LABEL,
   QUEST_GRADE_LABEL,
@@ -83,7 +84,6 @@ function rewardLine(quest: Quest): string {
 
 function BoardCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
   const risk = QUEST_GRADE_RISK[quest.grade];
-  const warn = risk.death || quest.gray;
   return (
     <Pressable
       onPress={onPress}
@@ -103,9 +103,11 @@ function BoardCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
         <Text style={styles.preview} numberOfLines={2}>
           {quest.preview}
         </Text>
-        <Text style={[styles.footer, warn && styles.footerWarn]} numberOfLines={2}>
-          ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)} · ⚠ {risk.label} · 추천 {quest.recommended}명
+        <Text style={styles.footer} numberOfLines={2}>
+          ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)} · 추천 {quest.recommended}명
         </Text>
+        <QuestRiskMarks grade={quest.grade} />
+        {risk.note ? <Text style={styles.riskNote}>비고 — {risk.note}</Text> : null}
       </View>
     </Pressable>
   );
@@ -175,11 +177,10 @@ function DispatchModal({ quest, onClose }: { quest: Quest; onClose: () => void }
           <Text style={styles.modalClient}>의뢰인: {quest.client}</Text>
           <Text style={styles.modalDesc}>{quest.preview}</Text>
           <Text style={styles.modalMeta}>
-            ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)}
+            ⏱ 예상 {quest.weeks}주 · {rewardLine(quest)} · 추천 {quest.recommended}명
           </Text>
-          <Text style={[styles.modalMeta, (risk.death || quest.gray) && styles.footerWarn]}>
-            ⚠ {risk.label} · 추천 {quest.recommended}명
-          </Text>
+          <QuestRiskMarks grade={quest.grade} />
+          {risk.note ? <Text style={styles.riskNote}>비고 — {risk.note}</Text> : null}
 
           <Text style={styles.pickLabel}>누구를 보낼까 {selected.length > 0 ? `(${selected.length}명)` : ''}</Text>
           <ScrollView style={styles.pickList}>
@@ -280,6 +281,13 @@ const styles = StyleSheet.create({
   preview: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkLight, lineHeight: 16 },
   footer: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink, marginTop: 2 },
   footerWarn: { color: colors.seal },
+  riskNote: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+    lineHeight: 16,
+    marginTop: 1,
+  },
   activeSub: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink },
   activeBadge: {
     borderWidth: 1,

@@ -49,16 +49,29 @@ export const QUEST_DOMAIN_STAT: Record<QuestDomain, StatId | null> = {
   grand: null,
 };
 
-// 등급별 위험 — 부상/사망 가능 여부 + 라벨.
+// 등급별 위험 — 부상/치명상/사망 가능 여부 + 라벨 + 비고 경고문.
+// 화면은 숫자(정확 확률·역량) 대신 색상 마크(QuestRiskMarks)와 비고 문구로 노출 — feedback_hidden_game_state.
 export const QUEST_GRADE_RISK: Record<
   QuestGrade,
-  { label: string; injury: boolean; death: boolean }
+  { label: string; injury: boolean; critical: boolean; death: boolean; note?: string }
 > = {
-  menial: { label: '위험 없음', injury: false, death: false },
-  minor: { label: '경상 드묾', injury: true, death: false },
-  normal: { label: '부상 가능', injury: true, death: false },
-  dangerous: { label: '중상 가능', injury: true, death: false },
-  extreme: { label: '사망 가능', injury: true, death: true },
+  menial: { label: '위험 없음', injury: false, critical: false, death: false },
+  minor: { label: '경상 드묾', injury: true, critical: false, death: false },
+  normal: { label: '부상 가능', injury: true, critical: false, death: false },
+  dangerous: {
+    label: '중상 가능',
+    injury: true,
+    critical: true,
+    death: false,
+    note: '크게 다칠 수 있는 일이다. 버거운 제자라면 중상을 각오해야 한다.',
+  },
+  extreme: {
+    label: '사망 가능',
+    injury: true,
+    critical: true,
+    death: true,
+    note: '목숨을 잃을 수도 있는 일이다. 역부족인 제자를 보내면 살아 돌아오기 어렵다.',
+  },
 };
 
 // 사문 명성(reputation) 구간 → 게시판에 뜨는 최고 등급. (그레이박스)
