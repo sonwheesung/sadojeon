@@ -9,7 +9,8 @@ import { useInboxStore } from '../../src/stores/inboxStore';
 import { useItemStore } from '../../src/stores/itemStore';
 import { useTallyStore } from '../../src/stores/tallyStore';
 import { useTimeStore } from '../../src/stores/timeStore';
-import { TALLY, STREAK } from '../../src/data/tallyKeys';
+import { TALLY, STREAK, GRADE_TALLY, DOMAIN_TALLY } from '../../src/data/tallyKeys';
+import { ACHIEVEMENTS } from '../../src/data/achievements';
 import { checkAchievements, seedUnlockedArts } from '../../src/systems/achievementSystem';
 import { recordQuestResult } from '../../src/systems/questTally';
 import type { Disciple } from '../../src/types/disciple';
@@ -135,5 +136,72 @@ reset();
 checkAchievements();
 check('6도메인 완수 → 육예 통달', ach().has('ach-quest-all-domains'));
 
+// ── 극단 보강(2026-06-19) — 임계 오프바이원·음수/거대 카운터·키 일관성·재시드 멱등 ──
+// E1 임계 오프바이원 — 9건엔 10건업적 미해금, 정확히 10건에 해금.
+reset();
+for (let i = 0; i < 9; i += 1) settle('full');
+checkAchievements();
+check('의뢰 9건 — 10건 업적 미해금(오프바이원)', !ach().has('ach-quest-10'));
+settle('full');
+checkAchievements();
+check('의뢰 정확히 10건 — ach-quest-10 해금', ach().has('ach-quest-10'));
+check('10건 시점 — 25/50/100 미해금', !ach().has('ach-quest-25') && !ach().has('ach-quest-50') && !ach().has('ach-quest-100'));
+
+// E2 연속 4 vs 5 경계.
+reset();
+for (let i = 0; i < 4; i += 1) settle('full');
+checkAchievements();
+check('4연속 — streak5 미해금', !ach().has('ach-quest-flawless-streak5'));
+settle('full');
+checkAchievements();
+check('5연속 — streak5 해금', ach().has('ach-quest-flawless-streak5'));
+
+// E3 음수/거대 카운터 — 정산 크래시 없음.
+reset();
+useTallyStore.getState().bump(TALLY.questDone, -5);
+let threw = false;
+try { checkAchievements(); } catch (e) { threw = true; }
+check('음수 카운터 — 정산 크래시 없음·미해금', !threw && !ach().has('ach-quest-10'));
+useTallyStore.getState().bump(TALLY.questDone, 1e9);
+checkAchievements();
+check('거대 카운터 — 누적 업적 해금(크래시 없음)', ach().has('ach-quest-100'));
+
+// E4 tally ↔ 업적 키 일관성 — 업적이 읽는 모든 의뢰 TALLY 키가 적립 경로에 실제 존재.
+reset();
+settle('full', { grade: 'extreme', domain: 'guard' });
+settle('full', { grade: 'dangerous', domain: 'scout' });
+settle('full', { domain: 'duel' });
+settle('full', { domain: 'medicine' });
+settle('full', { domain: 'assassin', gray: true });
+settle('full', { grade: 'extreme', domain: 'grand' });
+settle('full', { id: 'world-evt-x', faction: 'mujimaeng' });
+settle('full', {}, { partySize: 3 });
+settle('full', {}, { partySize: 1, noble: true, scrollFound: true });
+settle('disaster', {}, { death: true, divineElixir: true });
+settle('fail', {}, { fatalSurvived: true });
+const counts = useTallyStore.getState().counts;
+const bumped = new Set(Object.keys(counts).filter((k) => counts[k] > 0));
+const QUEST_KEYS = [TALLY.questDone, TALLY.questFull, GRADE_TALLY.dangerous, GRADE_TALLY.extreme,
+  DOMAIN_TALLY.guard, DOMAIN_TALLY.scout, DOMAIN_TALLY.duel, DOMAIN_TALLY.medicine, DOMAIN_TALLY.assassin,
+  DOMAIN_TALLY.grand, TALLY.gray, TALLY.sponsored, TALLY.worldEvent, TALLY.solo, TALLY.party, TALLY.noble,
+  TALLY.scrollFound, TALLY.divineElixir, TALLY.disasterSurvived, TALLY.death];
+const missing = QUEST_KEYS.filter((k) => !bumped.has(k));
+check('업적이 읽는 의뢰 TALLY 키 전부 적립 경로 존재', missing.length === 0, missing.length ? `누락=${missing.join(',')}` : '전부 적립');
+
+// E5 seedUnlockedArts 재호출 멱등 — codex 중복 없음.
+reset();
+addDisc({ id: 'd1', realm: 'hwagyeong' });
+checkAchievements();
+useCodexStore.setState({ scrolls: [] });
+seedUnlockedArts();
+const c1 = useCodexStore.getState().scrolls.length;
+seedUnlockedArts(); seedUnlockedArts();
+check('seedUnlockedArts 다회 호출 — codex 중복 없음', useCodexStore.getState().scrolls.length === c1, `scrolls=${c1}`);
+
+// E6 업적 id 전역 유일(런타임 — 중복이면 정산 시 한 업적이 두 번 켜질 위험).
+const ids = ACHIEVEMENTS.map((a) => a.id);
+check('업적 id 전역 유일', new Set(ids).size === ids.length, `n=${ids.length}`);
+
+console.log(`\n[정보] 업적 ${ACHIEVEMENTS.length}종 · 측정일 2026-06-19`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);
