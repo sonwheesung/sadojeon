@@ -122,6 +122,10 @@ function withDefaults(d: Disciple): Disciple {
     personality: normalizePersonality(d.personality),
     martialArts: (d.martialArts ?? []).map(normalizeMartialInstance),
     maxStamina: d.maxStamina ?? BASE_MAX_STAMINA,
+    // stamina 미지정 방어 — 미지정이면 만전(maxStamina)으로. 안 하면 staminaFrac=stamina/maxStamina 가
+    // NaN 이 되어 전투 시트(staminaMult)·체력 로직에 NaN 이 새고, 강한 제자가 약한 제자에게 무승부로
+    // 묶이는 등 전투가 망가진다. maxStamina 를 디폴트하면서 stamina 만 빠뜨리던 구멍 봉합. 2026-06-19. 🔧
+    stamina: d.stamina ?? (d.maxStamina ?? BASE_MAX_STAMINA),
     stress: d.stress ?? 0,
     stats: d.stats ?? {},
     efficiency: d.efficiency ?? {},
