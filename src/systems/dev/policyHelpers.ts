@@ -83,7 +83,7 @@ function chainOwned(art: MartialArt, depth = 0): boolean {
   return true;
 }
 
-function goalArtFor(d: Disciple): MartialArt | null {
+export function goalArtFor(d: Disciple): MartialArt | null {
   // 보유 비급 기준 **모든 등급** 후보 — 사문 오리지널 폐기 후 보장 정점이 없으므로,
   // 드랍이 모이는 대로 더 높은 등급 트리로 동적으로 갈아탄다(초반엔 공용 중품이 목표).
   const candidates = MARTIAL_ARTS.filter(

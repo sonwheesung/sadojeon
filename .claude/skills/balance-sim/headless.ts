@@ -14,7 +14,7 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
-import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve } from '@/systems/dev/policyHelpers';
+import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve, goalArtFor as goalArtForDiag } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { evaluateJobs } from '@/systems/jobSystem';
 import { QUEST_GRADE_ORDER, QUEST_POOL } from '@/data/quests';
@@ -565,9 +565,11 @@ async function runFactorySweep(): Promise<void> {
   const realmTally: Record<string, number> = {};
   let sumDivine = 0;
   let sumInternalDan = 0;
+  const fullCodex = process.argv.includes('all'); // 'all' = 비급 전권 complete 시작 — 사슬 완성 게이트 격리(후기 회차 가정).
   for (let it = 0; it < iters; it += 1) {
     seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
     useGameStore.getState().setPhase('playing');
+    if (fullCodex) for (const a of MARTIAL_ARTS) grantScroll(a.id); // 전권 complete — 의뢰 드랍 사슬 미완성 변수 제거
     setElixirBudget(0); // 무과금 — 화경 영약은 오직 서폿 연단으로
     setByeokgokdanBudget(Infinity);
     // 경제 분리 — 이 sweep 은 화경 게이트(외공70·성7·영약) 검증 전용. 자금 부족으로 연단실이
@@ -669,8 +671,18 @@ async function runFactorySweep(): Promise<void> {
       const rep = useSectStore.getState().sect?.reputation ?? 0;
       const learned = carry?.martialArts.length ?? 0;
       const learnedDeep = carry?.martialArts.filter((a) => a.seong >= 4).length ?? 0;
+      const cx = useCodexStore.getState();
+      // 화경 천장(grandmaster+) 사슬을 코덱스가 전부(전이적) 보유하나 — 봇이 화경 무공을 익힐 수 있는 조건.
+      const chainComplete = (artId: string, depth = 0): boolean => {
+        if (depth > 8) return false;
+        const a = findMartialArt(artId);
+        if (!a || !cx.scrolls.find((x) => x.artId === artId && x.status === 'complete')) return false;
+        return (a.prerequisites ?? []).every((p) => chainComplete(p.artId, depth + 1));
+      };
+      const gmReady = MARTIAL_ARTS.filter((a) => a.minDarkness == null && (a.grade === 'grandmaster' || a.grade === 'legendary') && chainComplete(a.id));
+      const carryGoal = carry ? goalArtForDiag(carry) : null;
       console.log(
-        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 익힌 무공 ${learned}권(소성+ ${learnedDeep}) · 비급 ${scrollCount}권 · 명성 ${rep} · 의뢰 ${questCount}회 · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
+        `  [진단 it${it}] ${REALM_LABEL[realm]} · 내공${Math.round(carry?.realmProgress?.internal ?? 0)} · 외공${carry?.stats?.strength?.level ?? 0} · 주력 ${mainId}(${seong}성) · 익힌 무공 ${learned}권(소성+ ${learnedDeep}) · 비급 ${scrollCount}권 · 화경사슬완성 ${gmReady.length}계보(${gmReady.slice(0, 3).map((a) => a.id).join(',')}) · goal ${carryGoal?.id}(${carryGoal?.grade}) · 명성 ${rep} · 의뢰 ${questCount}회 · 영약재고 ${stock} · pity ${carry?.realmProgress?.pity ?? 0} · status ${carry?.status}`,
       );
     }
   }
@@ -963,7 +975,8 @@ const HWASAN_TREE = [
 ];
 
 function grantScroll(artId: string): void {
-  useCodexStore.getState().addScroll({
+  const cx = useCodexStore.getState();
+  cx.addScroll({
     artId,
     acquiredAtRun: 1,
     acquiredAtDay: useTimeStore.getState().totalDay,
@@ -972,6 +985,10 @@ function grantScroll(artId: string): void {
     isTrap: false,
     isIncomplete: false,
   });
+  // 이미 보유한 비급(addScroll 이 무시)도 complete 로 강제 — 다회차(seedNewRun resetForNewRun)가
+  // quest 비급을 identified 로 깎으므로, all 플래그 측정에서 사슬이 학습 가능하게 보장.
+  cx.setScrollStatus(artId, 'complete');
+  cx.patchScroll(artId, { researchProgress: 100 });
 }
 
 interface ArtSnap { seong: number; exp: number }
