@@ -245,7 +245,12 @@ export function seedWorldQuests(seeds: WorldQuestSeed[]): void {
   for (const seed of seeds) {
     const tpl = WORLD_QUEST_TEMPLATE[seed.kind];
     if (!tpl) continue;
-    const live = qs.board.filter((q) => q.id.startsWith(WORLD_QUEST_PREFIX)).length;
+    // live 는 매 반복마다 **현재** 스토어에서 다시 읽는다 — addToBoard 가 새 board 배열을 만들어
+    // 캡처해 둔 qs.board 는 갱신되지 않으므로(스냅샷 stale), 한 번의 호출에서 시드를 여러 개 받으면
+    // 상한(MAX_WORLD_QUESTS)이 안 걸리는 문제를 봉합. 2026-06-19.
+    const live = useQuestStore
+      .getState()
+      .board.filter((q) => q.id.startsWith(WORLD_QUEST_PREFIX)).length;
     if (live >= MAX_WORLD_QUESTS) break;
     // 등급 상한 — 사문 평판이 낮으면 사건 등급을 낮춰 띄운다.
     const gradeIdx = Math.min(QUEST_GRADE_ORDER.indexOf(tpl.grade), Math.max(0, maxIdx));
