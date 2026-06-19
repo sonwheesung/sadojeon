@@ -116,12 +116,11 @@ ck('초절정 깨달음 오성5', enlightenmentChance(5, 'chojeoljeong'), 0.35);
 ck('화경(절정막대) 깨달음 오성5', enlightenmentChance(5, 'hwagyeong'), 0.3);
 // 대오 — 실전(quest)이 폐관(seclude)보다 큼 (docs/23 §화경 벽)
 ck('대오 실전 오성4', greatEnlightenmentChance(4, 'quest'), 0.007 + 4 * 0.0035);
-// ⚠️ 폐관 대오: raw(오성4) = 0.0001+4×0.00004 = 0.00026 인데 하한 0.0005 에 막혀 0.0005 로 클램프.
-// 오성 0~5 전 구간이 하한에 깔려 폐관 대오는 사실상 오성 무차등 0.05%/일 (per-insight 무효).
-// docs/23·realm.ts 주석의 "오성4 ≈ 0.026%/일" 은 실제 미실현 — 하한이 더 높음(사용자 판단 필요).
-ck('대오 폐관 오성4(하한 0.0005 클램프)', greatEnlightenmentChance(4, 'seclude'), 0.0005);
-ck('대오 폐관 오성0(하한 클램프)', greatEnlightenmentChance(0, 'seclude'), 0.0005);
-ck('대오 폐관 오성5(하한 클램프 — 오성 무차등)', greatEnlightenmentChance(5, 'seclude'), 0.0005);
+// 폐관 대오: 오성 차등 부활(2026-06-19 사용자 결정 + 하한 0.0005→0 수정). raw = 0.0001+오성×0.00004.
+// docs/23·realm.ts 주석의 "오성4 ≈ 0.026%/일" 이 이제 실제로 실현된다(종전 하한이 곡선을 덮던 버그).
+ck('대오 폐관 오성0 = 0.0001', greatEnlightenmentChance(0, 'seclude'), 0.0001);
+ck('대오 폐관 오성4 = 0.00026', greatEnlightenmentChance(4, 'seclude'), 0.00026);
+ck('대오 폐관 오성5 = 0.0003 (오성 차등 생존)', greatEnlightenmentChance(5, 'seclude'), 0.0003);
 
 // ── 7. 인격 누적 = round(raw × 나이계수 × 관성계수) (docs/28 §6) ──
 // 나이계수: ≤10 ×1.5 / ≤12 ×1.2 / ≤14 ×1.0 / ≤16 ×0.7 / 이후 ×0.3

@@ -22,6 +22,15 @@ export function setPatronageMult(n: number): void {
 }
 export const FOOD_COST_PER_DISCIPLE = 20; // (기본 참고값)
 
+// 식비는 인원에 비선형 — 큰 사문일수록 1인당 조달·관리 부담이 커진다(docs/11 경제압박).
+// 정원 4명 기준 캘리브레이션: 1명 20 · 2명 43 · 3명 70 · 4명 99(만석 ≈ 1명의 5배 = "대식구 압박").
+// k=0.08 → 인원이 한 명 늘 때마다 1인당 식비 +8%p. foodCost 레버가 전체를 그대로 비례 조정.
+const FOOD_SCALE_PER_EXTRA = 0.08;
+export function monthlyFoodCost(mouths: number): number {
+  if (mouths <= 0) return 0;
+  return Math.round(mouths * foodCost * (1 + FOOD_SCALE_PER_EXTRA * (mouths - 1)));
+}
+
 // 후원금 — 사문 명성(reputation 0~100)에 비례. 명망 높을수록 후원 세력이 늘어 더 받는다.
 export function monthlyPatronage(reputation: number): number {
   return Math.floor(reputation / 10) * 25 * patronageMult; // rep10→25, rep50→125, rep90→225
@@ -37,7 +46,7 @@ export function tickMonthlyEconomy(): void {
   const mouths = ds.order
     .map((id) => ds.disciples[id])
     .filter((d) => d && d.status !== 'graduated' && d.status !== 'departed').length;
-  if (mouths > 0) sect.adjustResources(-mouths * foodCost);
+  if (mouths > 0) sect.adjustResources(-monthlyFoodCost(mouths));
 
   // 2) 후원금 — 명성 비례 수입.
   const rep = useSectStore.getState().sect?.reputation ?? 0;

@@ -77,12 +77,12 @@ for (const ins of insights) {
   }
   for (const m of ['seclude', 'quest'] as const) {
     const ge = greatEnlightenmentChance(ins, m);
-    if (Number.isNaN(ins)) { if (!Number.isNaN(ge) && (ge < 0.0005 || ge > 0.5)) geOk = false; }
-    else if (!(fin(ge) && ge >= 0.0005 && ge <= 0.5)) geOk = false;
+    if (Number.isNaN(ins)) { if (!Number.isNaN(ge) && (ge < 0 || ge > 0.5)) geOk = false; }
+    else if (!(fin(ge) && ge >= 0 && ge <= 0.5)) geOk = false;
   }
 }
 ck('enlightenmentChance 정상 insight → [0.02, 0.95] 유한', enlOk);
-ck('greatEnlightenmentChance 정상 insight → [0.0005, 0.5] 유한', geOk);
+ck('greatEnlightenmentChance 정상 insight → [0, 0.5] 유한 (폐관 하한 0.0001)', geOk);
 // 대오 — 실전(quest)이 폐관(seclude)보다 항상 큼(같은 오성, 실력 보상).
 ck('대오 quest > seclude(전 오성, 실전 보상)', [0, 3, 5].every((i) => greatEnlightenmentChance(i, 'quest') > greatEnlightenmentChance(i, 'seclude')));
 // 오성↑ → 깨달음 확률 비감소.

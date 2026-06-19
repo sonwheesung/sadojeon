@@ -196,7 +196,9 @@ export function greatEnlightenmentChance(insight: number, mode: 'seclude' | 'que
     mode === 'seclude'
       ? GREAT_ENLIGHTENMENT.secludePerDayBase + i * GREAT_ENLIGHTENMENT.secludePerDayPerInsight
       : GREAT_ENLIGHTENMENT.questBase + i * GREAT_ENLIGHTENMENT.questPerInsight;
-  return Math.max(0.0005, Math.min(0.5, raw));
+  // 하한은 곡선 아래로(폐관 base 0.0001) — 오성 차등이 살아 있게. 종전 0.0005 가 폐관 곡선
+  // (0.0001~0.0003)을 통째로 덮어 오성 무차등이 되던 버그(2026-06-19 계산식 감사). quest(min 0.007)는 무관.
+  return Math.max(0, Math.min(0.5, raw));
 }
 
 // 폐관 청원 허락 시 기본 폐관 일수. 위험 의뢰(3주=21일)보다 길게 — 폐관은 느리지만 확실, 의뢰는

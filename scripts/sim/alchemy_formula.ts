@@ -9,7 +9,7 @@ import { useTimeStore } from '../../src/stores/timeStore';
 import {
   consumeInternalElixir, tickElixirAbsorb, sellElixir, elixirItemCount,
 } from '../../src/systems/alchemySystem';
-import { monthlyPatronage, FOOD_COST_PER_DISCIPLE } from '../../src/systems/economySystem';
+import { monthlyPatronage, monthlyFoodCost, FOOD_COST_PER_DISCIPLE } from '../../src/systems/economySystem';
 import type { Disciple } from '../../src/types';
 import type { QiAttribute } from '../../src/types/disciple';
 
@@ -93,6 +93,12 @@ ck('후원 rep90 = 225', monthlyPatronage(90) === 225);
 ck('후원 rep100 = 250', monthlyPatronage(100) === 250);
 // 식비 기본값 = 제자 1명당 월 20동.
 ck('식비 기본값 = 20동/제자', FOOD_COST_PER_DISCIPLE === 20);
+// 식비 비선형(2026-06-19) — round(mouths×20×(1+0.08×(mouths−1))). 정원 4명 캘리브레이션.
+ck('식비 0명 = 0', monthlyFoodCost(0) === 0);
+ck('식비 1명 = 20', monthlyFoodCost(1) === 20);
+ck('식비 2명 = 43', monthlyFoodCost(2) === 43);
+ck('식비 3명 = 70', monthlyFoodCost(3) === 70);
+ck('식비 4명 = 99 (만석 ≈ 1명의 5배)', monthlyFoodCost(4) === 99);
 // 시작자금 = 5000동 = 50은 (1금=10은=1000동).
 useSectStore.getState().setSect({ name: 'x', hanjaName: 'x', reputation: 10, resources: 5000, facilities: [] } as never);
 ck('시작자금 표기 = 50은 = 5000동', 5000 / 1000 * 10 === 50);
