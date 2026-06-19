@@ -17,6 +17,8 @@ import { useGameStore } from '@/stores/gameStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { useInboxStore } from '@/stores/inboxStore';
+import { useFieldEventStore } from '@/stores/fieldEventStore';
+import { resolveFieldEvent } from '@/systems/fieldEventSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -126,6 +128,19 @@ async function resolveAll(emit: (e: AutoPlayEvent) => void, policy: PlayPolicy):
   }
 }
 
+// 현장 급보 큐 드레인 — 의뢰·출행 중 돌발 사건(fieldEventStore)을 첫 가용 선택으로 즉시 해소.
+function drainFieldEvents(): void {
+  let guard = 0;
+  while (useFieldEventStore.getState().queue.length > 0 && guard < 50) {
+    guard += 1;
+    const ev = useFieldEventStore.getState().queue[0];
+    if (!ev) break;
+    const key = ev.choices.find((c) => c.available !== false)?.key ?? ev.choices[0]?.key;
+    if (key) resolveFieldEvent(ev, key);
+    useFieldEventStore.getState().pop();
+  }
+}
+
 // 유휴 제자를 게시판 의뢰에 랜덤 파견. 낮은 확률 — 의뢰가 일상 이벤트(면담·한마디)를
 // 과하게 밀어내지 않게(파견 중엔 일과 이벤트 미발동). 한 번에 한 명만.
 function randomDispatch(): void {
@@ -194,6 +209,11 @@ export async function autoPlayDay(
   logPassiveInbox(beforeIds, emit);
   // 강제선택 항목 정책대로 해소(+LLM).
   await resolveAll(emit, policy);
+  // 현장 급보(의뢰·출행 중 돌발 사건) 자동 해소 — 실게임은 FieldEventOverlay 가 강제로 띄워
+  // 사용자가 고르고 턴 진행이 막히지만, 자동플레이는 첫 가용 선택으로 즉시 처리한다. ⚠ 안 풀면
+  // pendingEventId 가 남아 의뢰가 결산 안 되고 제자가 'questing' 에 영구 동결(현장 급보 fieldEventStore
+  // 이관 2026-06-17 이후 회귀 — 인박스 드레인만으론 안 풀림). docs/20·38.
+  drainFieldEvents();
   // 의뢰 파견(정책).
   policy.dispatch();
 

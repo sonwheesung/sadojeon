@@ -31,6 +31,8 @@ import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
+import { useFieldEventStore } from '@/stores/fieldEventStore';
+import { resolveFieldEvent } from '@/systems/fieldEventSystem';
 import { currentAge } from '@/systems/discipleCtx';
 import { findMartialArt, MARTIAL_ARTS, canLearnArt, constitutionTitles } from '@/data/martialArts';
 import { daeryeonChoiceValue } from '@/systems/daeryeonSystem';
@@ -243,6 +245,7 @@ async function fastDayQuest(rate: number): Promise<{ saved: number }> {
       await resolveInboxItem(item, 'allow');
     }
   }
+  drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 제자 'questing' 영구 동결.
   // 금창약 — 의뢰서 입은 치명상(중상·사망)을 회복(살린다). 화경 신품영약은 안 씀.
   const { saved } = healWithSalve(true);
   useInboxStore.getState().reset();
@@ -318,6 +321,7 @@ async function fastDayBuild(rate: number, minAge: number): Promise<void> {
     const domain = (item.payload as { domain?: string } | undefined)?.domain;
     if (domain === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
   }
+  drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 제자 'questing' 영구 동결.
   tickInjuryRecovery(); // 부상 자연 회복(기간 차감). 사망은 의뢰 생존체인이 이미 결정.
   useInboxStore.getState().reset();
 }
@@ -420,6 +424,7 @@ async function fastDayParty(mode: string, roleMap: Record<string, string>): Prom
     const domain = (item.payload as { domain?: string } | undefined)?.domain;
     if (domain === 'seclusion_petition' && isRespondable(item)) await resolveInboxItem(item, 'allow');
   }
+  drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 제자 'questing' 영구 동결.
   tickInjuryRecovery();
   useInboxStore.getState().reset();
 }
@@ -643,6 +648,7 @@ async function runFactorySweep(): Promise<void> {
           if (key) await resolveInboxItem(item, key);
         }
       }
+      drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 카리 'questing' 영구 동결(화경 0% 회귀 원인).
       useInboxStore.getState().reset();
       // 부상 즉시 치료 — 연단공장(무한재료) 빌드의 실플레이 가정: 다치면 약부터 짓는다.
       // (엔진 결투·습격 도입으로 부상 빈도↑ — 치료 없는 봇은 다운타임이 성장을 왜곡. 경제는 economysweep 몫.)
@@ -770,6 +776,7 @@ async function runModerateSweep(): Promise<void> {
           if (key) await resolveInboxItem(item, key);
         }
       }
+      drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 카리 'questing' 영구 동결(화경 0% 회귀 원인).
       useInboxStore.getState().reset();
       healWithSalve(false);
     }
@@ -790,6 +797,23 @@ async function runModerateSweep(): Promise<void> {
   const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
   console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 분포: ${dist}`);
   console.log(`연단 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과`);
+}
+
+// 현장 급보 큐 드레인 — 의뢰·출행 중 발동한 돌발 사건(fieldEventStore)을 첫 가용 선택으로 즉시 해소.
+// 실게임은 FieldEventOverlay 가 강제로 띄워 사용자가 고른다(턴 진행이 막힘) — 헤드리스는 자동 선택.
+// ⚠ 이걸 안 하면 pendingEventId 가 영영 안 풀려 의뢰가 결산되지 않고 제자가 'questing' 에 영구 동결된다
+// (현장 급보가 서신함→fieldEventStore 로 이관된 2026-06-17 이후 회귀 — 인박스 드레인만으론 안 풀림).
+function drainFieldEvents(): void {
+  const fes = useFieldEventStore.getState();
+  let guard = 0;
+  while (fes.queue.length > 0 && guard < 50) {
+    guard += 1;
+    const ev = useFieldEventStore.getState().queue[0];
+    if (!ev) break;
+    const key = ev.choices.find((c) => c.available !== false)?.key ?? ev.choices[0]?.key;
+    if (key) resolveFieldEvent(ev, key);
+    useFieldEventStore.getState().pop();
+  }
 }
 
 // 명성 램프업 파견 — 등급 무관 역량 되는 최고 의뢰에 솔로 파견(잡일·소무 포함).
@@ -1822,6 +1846,7 @@ async function runCovertSweep(): Promise<void> {
           if (key) await resolveInboxItem(item, key);
         }
       }
+      drainFieldEvents(); // 현장 급보 해소 — 안 풀면 의뢰가 결산 안 돼 카리 'questing' 영구 동결(화경 0% 회귀 원인).
       useInboxStore.getState().reset();
       healWithSalve(false);
 
