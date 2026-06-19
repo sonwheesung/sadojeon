@@ -542,12 +542,15 @@ function maybeDropScroll(q: Quest): boolean {
   const rule = SCROLL_DROP[q.grade];
   if (!rule || random() >= rule.chance) return false;
   const codex = useCodexStore.getState();
-  // 풀 = 의뢰 등급에 맞는 비급 ∪ **다음 권**(선행 비급을 모두 보유한 무공 — 등급 무관).
+  // 풀 = 의뢰 등급에 맞는 비급(보유/미보유 모두) ∪ **다음 권**(선행 비급을 모두 보유한 미보유 무공 — 등급 무관).
   // 트리가 깊어진 카탈로그(640권)에서 고급 의뢰만 돌면 사다리 중간 권이 영영 안 모이는 문제 봉합:
   // "사문이 찾는 다음 권은 어느 의뢰판에서든 눈에 띈다" (2026-06-11). 신품은 여전히 드랍 없음.
+  // 중복 드랍(2026-06-19): 등급 맞는 **보유 비급도 후보** — 의뢰가 트리를 무조건 채워주지 않게(보유가
+  // 많을수록 중복↑ → 후반 완성이 자연히 어려워짐). 중복 보상은 미정 — docs/05 §중복 비급(추후 결정).
   const pool = MARTIAL_ARTS.filter((a) => {
-    if (a.acquisition !== 'quest' || codex.hasScroll(a.id)) return false;
-    if (rule.grades.includes(a.grade)) return true;
+    if (a.acquisition !== 'quest') return false;
+    if (rule.grades.includes(a.grade)) return true; // 등급 일치 — 보유든 미보유든(중복 가능)
+    if (codex.hasScroll(a.id)) return false; // 다음 권 확장은 미보유만
     return (
       a.grade !== 'legendary' &&
       (a.prerequisites?.length ?? 0) > 0 &&
@@ -556,10 +559,12 @@ function maybeDropScroll(q: Quest): boolean {
   });
   if (pool.length === 0) return false;
   const affinity = DOMAIN_SCHOOL_AFFINITY[q.domain] ?? [];
-  // 가중 추첨 — ① 결 맞는 갈래 ×3 ② **다음 권 결 ×8**: 선행 비급을 모두 보유한 무공(트리의 다음 권)이
-  // 잘 나온다 — "한 문파의 비급은 함께 강호를 돈다". 트리가 자연히 완성되는 장치(보장 정점 폐기 보완).
+  // 가중 추첨 — **미보유만** ① 결 맞는 갈래 ×3 ② **다음 권 결 ×8**: 선행 비급을 모두 보유한 무공(트리의
+  // 다음 권)이 잘 나온다 — "한 문파의 비급은 함께 강호를 돈다". 트리가 자연히 완성되는 장치(보장 정점 폐기 보완).
   // ×3→×8 (2026-06-11): 카탈로그 640권 확장으로 풀이 희석돼 절품 트리 완성이 늦어짐(화경 38%) → 사슬 강화. 🔧
+  // 보유 비급(중복 후보)은 가중 없이 base 1 — 중복률 = 보유 권수에 비례(레버는 추후 튜닝).
   const weighted = pool.flatMap((a) => {
+    if (codex.hasScroll(a.id)) return [a]; // 중복 후보 — 가중 없음
     let w = 1;
     if (affinity.includes(a.school)) w *= 3;
     const chainNext = (a.prerequisites ?? []).every((pr) => codex.hasScroll(pr.artId));
@@ -568,6 +573,24 @@ function maybeDropScroll(q: Quest): boolean {
   });
   const art = weighted[Math.floor(random() * weighted.length)];
   const day = useTimeStore.getState().totalDay;
+
+  // 중복 비급 — 이미 사문에 있는 권. 재독 보상은 미정(docs/05 §중복 비급, TODO) — 지금은 알림만·코드덱스 미추가.
+  if (codex.hasScroll(art.id)) {
+    useInboxStore.getState().add({
+      id: `scroll-dup-${art.id}-${day}`,
+      kind: 'report',
+      title: `이미 익힌 비급 — ${art.name}`,
+      preview: `의뢰 끝에 「${art.name}」을 다시 얻었으나 이미 사문 서고에 있는 비급이다.`,
+      body: `의뢰를 마치고 돌아온 짐 속 비급은 이미 사문에 있는 **${art.name}(${art.hanjaName})**이었다. (같은 비급을 다시 얻은 보상은 아직 정해지지 않았다.)`,
+      priority: 'normal',
+      createdAtDay: day,
+      read: false,
+      resolved: false,
+      payload: { domain: 'jianghu_news' },
+    });
+    return false;
+  }
+
   codex.addScroll({
     artId: art.id,
     acquiredAtRun: 1,
