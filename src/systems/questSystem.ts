@@ -897,6 +897,14 @@ function resolveDuelByEngine(active: ActiveQuest): DuelResolution | null {
     outcome = bloodied ? 'crisis' : 'full';
   } else if (me?.wound?.severity === 1) {
     outcome = 'disaster'; // 치명상 — 사망 굴림 + 생존 체인(영약→의원→마을)으로.
+  } else if (q.grade === 'extreme') {
+    // 🔧 2026-06-19 (난이도 보정 — 결투 사상 분포 레버): 극험 결투의 패배는 목숨을 건다.
+    // 절정~초절정 강호 거물('혈수' 등)에게 진다는 건 단순 부상이 아니라 사경이다(disaster→사망 굴림
+    // 0.2×금강불괴, 그 뒤 생존 체인 영약→의원→자력→마을). 종전엔 엔진이 lethal:false라 사상 severity 1이
+    // 거의 안 나와 극험 사망률이 0%였다 — "초절정이 97% 안전히 파밍"하는 회차 무손실 모순을 봉합.
+    // (절품 무공서 획득률은 성공 시에만 드랍되므로 불변 — 절정 ~12% 유지. 정밀 측정: scripts/sim/extremerisk.ts)
+    // 위험·그 아래 결투 패배는 종전대로 중상(부상)에 그친다 — 극험만 회차 희생.
+    outcome = 'disaster';
   } else {
     outcome = 'fail'; // 패배 — 보상은 없지만 몸도 성치 않다(중상 별도 적용).
     failWound = { severity: me?.wound?.severity ?? 2, days: me?.wound?.days ?? 21 };

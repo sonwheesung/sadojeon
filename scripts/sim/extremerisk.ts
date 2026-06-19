@@ -68,10 +68,12 @@ function buildDisciple(
   } as unknown as Disciple;
 }
 
+// 실제 QUEST_POOL의 유일한 duel 극험 = q-hyeolsu(minStat 65·weeks 4·recommended 3).
+// (minStat 72는 grand 도메인 세계사건 의뢰 — 역량 판정식이지 전투 엔진이 아니다.)
 function extremeDuelQuest(id: string): Quest {
   return {
-    id, domain: 'duel', grade: 'extreme', title: '극험 결투', client: 'c', preview: '',
-    weeks: 6, reward: { money: 1000, fame: 28 }, recommended: 2, minStat: 72,
+    id, domain: 'duel', grade: 'extreme', title: "사파 거물 '혈수' 추적", client: '무림맹', preview: '',
+    weeks: 4, reward: { money: 185, fame: 16 }, recommended: 3, minStat: 65,
   } as Quest;
 }
 
@@ -85,10 +87,10 @@ const BUILDS: Build[] = [
   { label: '일류 6성 (rating~65)', realm: 'ilryu', mainSeong: 6, subSeong: 5, strength: 35, internal: 520 },
 ];
 
-interface Risk { full: number; crisis: number; fail: number; injured: number; fatal: number; death: number; scroll: number; n: number; }
+interface Risk { full: number; crisis: number; fail: number; injured: number; fatal: number; death: number; scroll: number; gm: number; n: number; }
 
 function measure(b: Build): Risk {
-  const r: Risk = { full: 0, crisis: 0, fail: 0, injured: 0, fatal: 0, death: 0, scroll: 0, n: 0 };
+  const r: Risk = { full: 0, crisis: 0, fail: 0, injured: 0, fatal: 0, death: 0, scroll: 0, gm: 0, n: 0 };
   // 대표 제자 rating 확인용 1회 빌드
   const probe = buildDisciple('probe', b.realm, b.mainSeong, b.subSeong, b.strength, b.internal);
   const rating = combatRating(probe);
@@ -131,8 +133,17 @@ function measure(b: Build): Risk {
     } else if (title.includes('실패')) r.fail += 1;
     // 부상 집계 — injured 상태(중상/경상/찰과상)지만 사망/치명상생존 아닌 경우
     if (!died && h?.status === 'injured' && !title.includes('재난')) r.injured += 1;
-    // 비급 노획(완수·위기 시 maybeDropScroll) — inbox '비급 입수'
-    if (useInboxStore.getState().items?.some((it: any) => it.title?.includes('비급 입수'))) r.scroll += 1;
+    // 비급 노획(완수·위기 시 maybeDropScroll) — 코덱스에서 새 비급 등급 확인.
+    // 절품(grandmaster)=화경의 진짜 열쇠 / master=초절정 천장 보조.
+    const dropped = useCodexStore.getState().scrolls;
+    if (dropped.length > 0) {
+      r.scroll += 1;
+      const anyGm = dropped.some((s: any) => {
+        const a = MARTIAL_ARTS.find((x) => x.id === s.artId);
+        return a?.grade === 'grandmaster';
+      });
+      if (anyGm) r.gm += 1;
+    }
     r.n += 1;
   }
   (r as any).rating = rating;
@@ -154,7 +165,9 @@ for (const b of BUILDS) {
   console.log(`   P(성공=완수+위기) ${pct(success, r.n)}  (완수 ${pct(r.full, r.n)} · 위기끝성공 ${pct(r.crisis, r.n)})`);
   console.log(`   P(실패) ${pct(r.fail, r.n)}   P(부상) ${pct(r.injured, r.n)}`);
   console.log(`   P(치명상 생존) ${pct(r.fatal, r.n)}   P(사망) ${pct(r.death, r.n)}`);
-  console.log(`   P(절품/master 무공서 노획) ${pct(r.scroll, r.n)}  ← 화경의 열쇠\n`);
+  console.log(`   P(무공서 노획) ${pct(r.scroll, r.n)}   그중 절품(grandmaster) ${pct(r.gm, r.n)}  ← 화경의 진짜 열쇠`);
+  // fresh-run 무과금 핵심 지표 = "이 회차 극험 1건에서 절품을 얻고 살아남을 확률"
+  console.log(`   ▶ 회차당 절품획득×생존 = ${pct(r.gm, r.n)}\n`);
 }
 
 // ── 골든 밴드 — 확률을 못박는다(로직 변경 시 깨져 재검증 강제). 2026-06-19 측정 기준 ±여유 ──
@@ -163,13 +176,19 @@ const jj = results.find((x) => x.b.realm === 'jeoljeong')!.r;
 const cj = results.find((x) => x.b.realm === 'chojeoljeong')!.r;
 const il = results.find((x) => x.b.realm === 'ilryu')!.r;
 
-ck('일류 6성 — 극험 게이트(72) 미달 → 완수 0 (파견 불가)', il.full + il.crisis === 0,
+const band = (x: number, n: number, lo: number, hi: number) => (x / n) >= lo && (x / n) <= hi;
+ck('일류 6성 — 극험 결투 게이트(minStat 65, rating~64) 미달 → 완수 0 (파견 불가)', il.full + il.crisis === 0,
   `성공=${il.full + il.crisis}`);
-ck('절정 7성 — 사망률 합리(0<death<35%)', jj.death / jj.n > 0 && jj.death / jj.n < 0.35, pct(jj.death, jj.n));
-ck('초절정 8성 — 절정보다 안전(사망률 더 낮음)', cj.death / cj.n <= jj.death / jj.n + 0.005,
+// 보정 후(2026-06-19): 극험 결투 패배=disaster→사망 굴림. 절정은 회차 도박, 초절정은 안전하나 무손실 아님.
+ck('절정 7성 — 사망 발생(회차 희생: 0.5%<death<8%)', band(jj.death, jj.n, 0.005, 0.08), pct(jj.death, jj.n));
+ck('절정 7성 — 치명상 생존도 발생(>2%)', jj.fatal / jj.n > 0.02, pct(jj.fatal, jj.n));
+ck('초절정 8성 — 사망 발생(무손실 아님, 0<death<2%)', cj.death / cj.n > 0 && cj.death / cj.n < 0.02, pct(cj.death, cj.n));
+ck('초절정 8성 — 절정보다 안전(사망률 더 낮음)', cj.death / cj.n < jj.death / jj.n,
   `절정 ${pct(jj.death, jj.n)} vs 초절정 ${pct(cj.death, cj.n)}`);
 ck('초절정 8성 — 성공률 절정보다 높음', (cj.full + cj.crisis) / cj.n > (jj.full + jj.crisis) / jj.n,
   `절정 ${pct(jj.full + jj.crisis, jj.n)} vs 초절정 ${pct(cj.full + cj.crisis, cj.n)}`);
+// 핵심 목표 — fresh-run 무과금 절정 제자의 회차당 절품(grandmaster) 획득률 10~15% 밴드(±여유 8~18%).
+ck('절정 7성 — 회차당 절품(grandmaster) 획득률 8~18% (목표 10~15%)', band(jj.gm, jj.n, 0.08, 0.18), pct(jj.gm, jj.n));
 
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);
