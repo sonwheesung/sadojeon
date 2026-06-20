@@ -4,8 +4,10 @@ import './_storageShim';
 import { useDiscipleStore } from '../../src/stores/discipleStore';
 import { useSectAtmosphereStore } from '../../src/stores/sectAtmosphereStore';
 import { useTimeStore } from '../../src/stores/timeStore';
-import { addSimma, getSimma, tickSimma, triggerQiDeviation, onForcedBreakthroughFail, SIMMA_ERUPT_THRESHOLD } from '../../src/systems/simmaSystem';
+import { addSimma, getSimma, tickSimma, triggerQiDeviation, onForcedBreakthroughFail, consumeAnsinElixir, SIMMA_ERUPT_THRESHOLD } from '../../src/systems/simmaSystem';
 import { darknessScore, tickDarkness } from '../../src/systems/darknessSystem';
+import { elixirItemCount } from '../../src/systems/alchemySystem';
+import { useItemStore } from '../../src/stores/itemStore';
 import { seedAmbient } from '../../src/systems/rng';
 import type { Disciple, PersonalityTraits, DarknessLevel } from '../../src/types';
 
@@ -100,6 +102,20 @@ for (let i = 0; i < 200; i += 1) {
   if (!(Number.isInteger(v) && v >= 0 && v <= 100)) simmaRangeOk = false;
 }
 ck('tickSimma·강행실패 200회 — 심마 항상 [0,100] 정수', simmaRangeOk);
+
+// ── 안신단 헛소모 방지 (R21 / Part D ④) — 진정할 심마도 내상도 없으면 소모 안 함, 내상 있으면 정상 ──
+// 종전엔 소모를 먼저 하고 내상 없으면 효과만 빠져, 우회 호출 시 영약을 헛되이 날렸다(UI 게이트로만 가려짐).
+useDiscipleStore.getState().setAll([disc('calm'), disc('hurt')]);
+useItemStore.setState({ items: [{ id: 'ansin', name: '안신단', category: 'elixir', count: 3 }] } as never);
+const ans1 = consumeAnsinElixir('calm'); // simma 0·내상 없음
+ck('심마0·내상無 → 안신단 소모 안 함(false)', ans1 === false);
+ck('헛소모 방지 — 안신단 개수 불변(3)', elixirItemCount('ansin') === 3);
+useDiscipleStore.getState().update('hurt', { simma: 50, wounds: [{ type: 'inner', severity: 2, daysRemaining: 5 }] } as never);
+const ans2 = consumeAnsinElixir('hurt'); // 내상 보유
+ck('내상 보유 → 안신단 정상 소모(true)', ans2 === true);
+ck('안신단 소모 반영(3→2)', elixirItemCount('ansin') === 2);
+ck('안신단 → 내상 제거', !(useDiscipleStore.getState().disciples['hurt'].wounds ?? []).some((w) => w.type === 'inner'));
+ck('안신단 → 심마 -45(50→5)', (useDiscipleStore.getState().disciples['hurt'].simma ?? 0) === 5);
 
 console.log(`\n[정보] 심마 임계 ${SIMMA_ERUPT_THRESHOLD} · 흑화 최종레벨 ${finalLevel}`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);

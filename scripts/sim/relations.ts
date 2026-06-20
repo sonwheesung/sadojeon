@@ -93,6 +93,28 @@ ck('전원 적대 후 관계 그래프 유효', allRelationsValid().ok);
 const selfRef = useDiscipleStore.getState().order.some((id) => useDiscipleStore.getState().disciples[id]?.relationships?.[id]);
 ck('어떤 제자도 자기 자신과 관계 없음', !selfRef);
 
+// ── 6. 떠난 동문 관계 변동 누수 차단 (R28 / Part D ④⑤) ──
+// applyRivalryTone 은 상대가 졸업/하산이면 관계를 건드리지 않아야. 종전엔 sibling 이 존재만 하면
+// (떠났어도) 확률적으로 관계를 바꿔, 도덕 이벤트를 방치하는 사이 졸업한 동문 관계가 샜다. §3 은
+// 크래시·유효성만 봤지 "관계값이 안 바뀐다"를 검증 안 해 이 누수를 못 잡았다(사각 ④).
+useDiscipleStore.getState().setAll([disc('act'), disc('left', 'graduated')]);
+useDiscipleStore.getState().setRelation('act', 'left', 'enemy');
+useDiscipleStore.getState().setRelation('left', 'act', 'enemy');
+for (let i = 0; i < 200; i += 1) {
+  for (const t of ['punish', 'seclusion', 'admonish', 'overlook'] as const) applyRivalryTone('act', 'left', t);
+}
+const leakA = useDiscipleStore.getState().disciples['act'].relationships['left'];
+const leakB = useDiscipleStore.getState().disciples['left'].relationships['act'];
+ck('떠난 동문 — applyRivalryTone 800회 관계 불변(act→left)', leakA === 'enemy', `act->left=${leakA}`);
+ck('떠난 동문 — applyRivalryTone 관계 불변(left→act)', leakB === 'enemy', `left->act=${leakB}`);
+// 대조군 — 둘 다 활성이면 가드가 막지 않고 적대 전이가 정상 적용돼야(과차단 아님 확인).
+useDiscipleStore.getState().setAll([disc('x'), disc('y')]);
+useDiscipleStore.getState().setRelation('x', 'y', 'enemy');
+useDiscipleStore.getState().setRelation('y', 'x', 'enemy');
+for (let i = 0; i < 400; i += 1) applyRivalryTone('x', 'y', 'admonish');
+const ctrl = useDiscipleStore.getState().disciples['x'].relationships['y'];
+ck('대조군 — 둘 다 활성이면 적대 전이 정상 적용(enemy 이탈)', ctrl !== 'enemy', `x->y=${ctrl}`);
+
 console.log(`\n[정보] 관계 레벨 ${LEVELS.length}종 · 해소키 중재5·상담3·적대4`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);

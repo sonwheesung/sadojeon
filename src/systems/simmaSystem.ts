@@ -126,9 +126,14 @@ export function consumeAnsinElixir(discipleId: string): boolean {
   const ds = useDiscipleStore.getState();
   const d = ds.disciples[discipleId];
   if (!d) return false;
+  // 진정할 심마도 내상도 없으면 헛소모 방지 — 소모를 먼저 하고 효과가 없던 R21 차단(서버·헤드리스
+  // 우회 호출 대비). UI 는 내상 있을 때만 버튼을 띄우지만 함수 자체도 방어한다. docs/37 R21.
+  const simma = d.simma ?? 0;
+  const hasInner = (d.wounds ?? []).some((w) => w.type === 'inner');
+  if (simma <= 0 && !hasInner) return false;
   if (elixirItemCount(ANSIN_ID) < 1) return false;
   if (!consumeElixirItem(ANSIN_ID, 1)) return false;
-  ds.update(discipleId, { simma: Math.max(0, (d.simma ?? 0) - 45) });
+  ds.update(discipleId, { simma: Math.max(0, simma - 45) });
   // 내상 회복 — 안신단은 심신을 다스려 주화입마 내상을 가라앉힌다(외상·중독 등 다른 상처엔 안 듣는다).
   // 내상 속성만 제거하고 나머지 상처는 그대로 둔다(clearWoundType 이 status·잔여일 정리).
   clearWoundType(discipleId, 'inner');
