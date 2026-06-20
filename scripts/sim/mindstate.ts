@@ -117,6 +117,13 @@ ck('안신단 소모 반영(3→2)', elixirItemCount('ansin') === 2);
 ck('안신단 → 내상 제거', !(useDiscipleStore.getState().disciples['hurt'].wounds ?? []).some((w) => w.type === 'inner'));
 ck('안신단 → 심마 -45(50→5)', (useDiscipleStore.getState().disciples['hurt'].simma ?? 0) === 5);
 
+// ── 발작 내공 손실 float 보존 (R27 / Part D ④) — internal 은 float 누적인데 발작만 정수 lost 를 빼던 것 차단 ──
+// base 101(정수)·severity 4(SCATTER 0.07) → 손실 7.07. float 보존이면 93.93(비정수), 정수 반올림이면 94(정수).
+useDiscipleStore.getState().setAll([disc('fl', {}, { realmProgress: { internal: 101, pity: 0, petitioned: false } })]);
+triggerQiDeviation('fl', 4);
+const intl = useDiscipleStore.getState().disciples['fl'].realmProgress?.internal ?? 0;
+ck('발작 내공 손실 — float 보존(정수 반올림 안 함, R27)', !Number.isInteger(intl) && intl > 0, `internal=${intl}`);
+
 console.log(`\n[정보] 심마 임계 ${SIMMA_ERUPT_THRESHOLD} · 흑화 최종레벨 ${finalLevel}`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
 process.exit(fail > 0 ? 1 : 0);

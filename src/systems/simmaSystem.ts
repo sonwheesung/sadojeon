@@ -95,7 +95,9 @@ export function triggerQiDeviation(discipleId: string, severityOverride?: number
 
   // 내공 흩어짐 — 쌓은 진기 일부가 역류해 흩어진다(진척 손실).
   const base = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
-  const lost = Math.round(base.internal * (SCATTER_PCT[severity] ?? 0.07));
+  // 손실을 반올림하지 않는다 — internal 은 페이싱 정밀도 위해 float 로 누적(매일 round 시 +20% 누수,
+  // trainingSystem 주석)인데 발작만 정수 lost 를 빼 미세 오차를 남기던 것 차단(docs/37 R27).
+  const lost = base.internal * (SCATTER_PCT[severity] ?? 0.07);
   ds.update(discipleId, {
     realmProgress: { ...base, internal: Math.max(0, base.internal - lost) },
     stress: clamp((d.stress ?? 0) + 18, 0, 100),
