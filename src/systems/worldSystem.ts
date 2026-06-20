@@ -212,9 +212,14 @@ export function blocPressure(s: WorldState | null, bloc: WorldBloc): { danger: n
 }
 
 // 강호 위기도 0~1 — 의뢰 게시판 구성 등 "정세에 닿는" 시스템이 읽는다. docs/08·29.
-// = 라이벌 쌍 최고 긴장(정규화) + 진행 중 공격적 사건(봉기·준동·충돌·토벌·전쟁) 가산.
+// = 라이벌 쌍 최고 긴장(정규화) + 진행 중 공격적 사건(봉기·준동·충돌·토벌·전쟁·사마대전·관사토벌) 가산.
 // 평온(0)이면 평화 잡일도 자연스럽고, 높을수록(사파 습격·전쟁) 무력·위기 의뢰로 기운다.
-const AGGRESSIVE_EVENTS = new Set(['uprising', 'demonic-stir', 'war', 'subjugation', 'clash']);
+// 독립 분쟁 축(W4: 사마 패권다툼·관의 사파 토벌)도 포함 — 정파는 평온해도 어둠이 대전 중이면
+// 게시판이 무력·위기로 기울어야 한다(docs/37 R33). 이 사건들은 정파 라이벌 쌍을 식혀(데탕트)
+// 긴장 기반 maxT 로는 안 잡히므로 명시 가산 필요.
+const AGGRESSIVE_EVENTS = new Set([
+  'uprising', 'demonic-stir', 'war', 'subjugation', 'clash', 'sapa-magyo-feud', 'imperial-purge',
+]);
 export function worldThreat(s: WorldState | null): number {
   if (!s) return 0;
   let maxT = 0;

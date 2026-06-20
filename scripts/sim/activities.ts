@@ -14,6 +14,7 @@ import {
 } from '../../src/systems/activitySystem';
 import { canExpedition, dispatchExpedition, tickExpedition, applyExpeditionEventChoice } from '../../src/systems/expeditionSystem';
 import { inflictWound, tickWoundRecovery } from '../../src/systems/woundSystem';
+import { attemptBoneRebirth } from '../../src/systems/boneRebirthSystem';
 import { GATHER_REGIONS, findGatherRegion } from '../../src/data/activities';
 import { EXPEDITION_DESTS } from '../../src/data/expeditions';
 import { seedAmbient } from '../../src/systems/rng';
@@ -206,6 +207,16 @@ ck('출행 중 상처 자연치유 — wounds 없음', !(w1.wounds?.length));
 ck('출행 중 상처 나아도 여정 점유 유지(questing, training 아님) — R16', w1.status === 'questing');
 ck('출행 중 회복 제자 — 다른 활동·일과 불가(isAvailable false)', !isAvailable(w1));
 ck('여정 활동은 그대로 active', useActivityStore.getState().active.some((a) => a.id === wexp.id));
+
+// R35 — 환골탈태도 부상 복귀 시 파견 중이면 questing 유지(R16과 동일 규칙·하드코딩 training 금지)
+reset();
+useDiscipleStore.getState().setAll([fighter('BR1'), fighter('BR2')]);
+dispatchExpedition(xFar.id, ['BR1', 'BR2']);
+inflictWound('BR1', 'wound', 3, 5); // 여정 도중 부상(injured), 활동 active 유지
+useDiscipleStore.getState().update('BR1', { simma: 0 } as never); // 타통 안전(주화입마 X)
+attemptBoneRebirth('BR1');
+const br1 = useDiscipleStore.getState().disciples['BR1'];
+ck('환골탈태 부상 복귀 — 파견 중이면 questing 유지(R35)', br1.status === 'questing', `status=${br1.status}`);
 
 // ──────────────────────────────────────────────────────────────────────────
 // 8. 급보 비용 선택지 — 해소 시점 잔액 부족 시 비용 없이 실패(underpayment 차단, R30 / Part D ④)

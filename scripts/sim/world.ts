@@ -3,7 +3,7 @@
 // **불변식·금지 케이스를 매 틱 단언**하고, 계약 수치를 밴드와 비교해 PASS/WARN/FAIL 출력.
 // docs/37 §0: "통과의 근거는 방금 돌린 측정값" — 엔진 수정 후 이걸 돌려 계약이 살아있는지 본다.
 
-import { seedWorldState, tickWorldState } from '../../src/systems/worldSystem';
+import { seedWorldState, tickWorldState, worldThreat } from '../../src/systems/worldSystem';
 import { BLOC_DEF, STANCE_LABEL } from '../../src/data/worldPowers';
 import type { WorldBloc, WorldState } from '../../src/types/world';
 
@@ -159,6 +159,18 @@ band('전쟁 후 긴장 탈진', warResolved === 0 || tensionDropAfterWar / warR
 // 독립 분쟁 축 — 세계가 정파 중심 한 덩어리가 아님(비정파 전쟁 가능 + 기조 발산 가능).
 band('비정파 전쟁 발발 가능', nonOrthWarIgnite > 0, `${nonOrthWarIgnite}건`, '>0');
 band('기조 발산 가능(정파 평온 中 어둠 전쟁)', divergeCalmWar > 0, `${divergeCalmWar}계절`, '>0');
+
+// R33 — 독립 분쟁 축(사마대전·관사토벌)이 위기도(worldThreat)에 반영되는가(정파 평온해도 어둠 전쟁이면
+// 의뢰 게시판 위기↑). 종전엔 AGGRESSIVE_EVENTS 누락으로 사마대전 중에도 위기도 ~0(게시판 평온 고착).
+let r33Pass = false;
+{
+  const s = seedWorldState(mulberry32(99));
+  for (const k of Object.keys(s.tensions)) s.tensions[k] = 0; // 정파 평온 가정 → 긴장 기반 위기도 0
+  const base = worldThreat(s);
+  s.events.push({ kind: 'sapa-magyo-feud', phase: 1, done: false, blocs: ['unorthodox', 'demonic'], phasesTotal: 2 } as never);
+  r33Pass = base < 0.15 && worldThreat(s) >= 0.15;
+}
+checks.push({ name: 'R33 독립분쟁축 위기도 반영', pass: r33Pass, got: r33Pass ? 'feud→≥0.15' : '미반영', want: 'feud 진행 시 위기도≥0.15' });
 
 const fails = checks.filter((c) => !c.pass && !c.warn);
 const warns = checks.filter((c) => c.warn);

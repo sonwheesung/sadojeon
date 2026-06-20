@@ -13,6 +13,7 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { BONE_REBIRTH_STRENGTH_BONUS } from '@/data/realm';
 import { triggerQiDeviation } from './simmaSystem';
+import { recoveredStatus } from './woundSystem';
 
 // 이 심마까지는 무조건 안전 — 초과분 1당 실패 확률 +1%p. (심마 60이면 30%, 90이면 60%)
 export const BONE_REBIRTH_SAFE_SIMMA = 30;
@@ -48,7 +49,8 @@ export function attemptBoneRebirth(discipleId: string): boolean {
     boneReborn: true, // 젊은 육체 회귀 — 근골이 다시 자란다(나이 보정 하한 ×2.4)
     // 상처·내상 완치 — 묵은 상처까지 씻겨 나간다(모든 속성 상처 일소).
     wounds: undefined,
-    ...(d.status === 'injured' ? { status: 'training' as const } : {}),
+    // 부상 회복 시 복귀 status — 파견 중이면 questing 유지(woundSystem R16과 동일 규칙·하드코딩 금지).
+    ...(d.status === 'injured' ? { status: recoveredStatus(d.id) } : {}),
   });
 
   const day = useTimeStore.getState().totalDay;

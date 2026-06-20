@@ -70,7 +70,7 @@ export function worstWound(d: Disciple): Wound | undefined {
 // 아니면 'training'. 강호 출행은 여정 도중 상처를 입히므로(의뢰는 결산 때만), 그 상처가 귀환 전에
 // 자연치유되면 종전엔 'training'으로 풀려 강호에 나가 있는 제자가 사문 일과·다른 의뢰에 더블부킹됐다
 // (docs/37 R16). 점유 단위를 status 가 아니라 실제 파견 집합(activityStore)으로 본다.
-function recoveredStatus(discipleId: string): DiscipleStatus {
+export function recoveredStatus(discipleId: string): DiscipleStatus {
   const onActivity = useActivityStore
     .getState()
     .active.some((a) => a.discipleIds.includes(discipleId));

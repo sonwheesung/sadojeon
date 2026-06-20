@@ -1070,7 +1070,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
         if (bodyExp > 0) ds.addStatExp(id, 'strength', bodyExp);
       }
       // 실전이 공력을 키운다 — 모든 성장 의뢰가 내공 적립(위험·장기일수록↑). 정통 페이싱: 모험가형도 경지 성장.
-      internalGain = Math.round(QUEST_INTERNAL_PER_WEEK * expFactor);
+      // 반올림하지 않는다 — internal 은 float 누적(심법과 동일 정책). 회당 round 시 ±0.5×회수 비대칭 누수(docs/37 R34).
+      internalGain = QUEST_INTERNAL_PER_WEEK * expFactor;
     }
     // 인격 변화 — 나이·관성 반영. docs/28 §6.
     const baseRp = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
