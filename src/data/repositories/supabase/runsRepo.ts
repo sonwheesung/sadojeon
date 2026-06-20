@@ -317,6 +317,32 @@ export class SupabaseRunRepo implements RunRepository {
     if (insErr) throw insErr;
   }
 
+  async getRunState(runId: string, domain: string): Promise<unknown | null> {
+    const { data, error } = await supabase
+      .from('run_state')
+      .select('data')
+      .eq('run_id', runId)
+      .eq('domain', domain)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? data.data : null;
+  }
+
+  async saveRunState(runId: string, domain: string, data: unknown): Promise<void> {
+    const uid = await requireUserId();
+    const { error } = await supabase.from('run_state').upsert(
+      {
+        run_id: runId,
+        user_id: uid,
+        domain,
+        data: data ?? {},
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'run_id,domain' },
+    );
+    if (error) throw error;
+  }
+
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from('runs').delete().eq('id', id);
     if (error) throw error;

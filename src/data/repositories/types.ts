@@ -142,5 +142,10 @@ export interface RunRepository {
   getNpcs(runId: string): Promise<RunNpcRecord[]>;
   saveNpcs(runId: string, npcs: RunNpcRecord[]): Promise<void>;
 
+  // 범용 회차 도메인 블롭 (run_state — domain별 1행 jsonb). codex·quest·graduate·activity 등
+  // 전용 컬럼이 필요 없는(서버 조회 불요) 도메인을 한 테이블에 담는다. 슬라이스가 domain 키로 사용.
+  getRunState(runId: string, domain: string): Promise<unknown | null>;
+  saveRunState(runId: string, domain: string, data: unknown): Promise<void>;
+
   delete(id: string): Promise<void>;
 }
