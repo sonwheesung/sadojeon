@@ -59,9 +59,10 @@ export const JOB_POOL: readonly Job[] = [
     name: '천마(天魔)',
     tier: 'peak',
     desc: '마(魔)의 정점에 선 자. 만마(萬魔)가 그 앞에 엎드린다. 마교를 호령하는 절대자.',
-    // 마공의 극성(9성) + 어둠에 완전히 삼켜진 자(흑화 최대) + 협의·자비를 버리고 천하를 삼키려는 야망.
+    // 마공(암흑술)의 극성(9성) + 어둠에 완전히 삼켜진 자(흑화 최대) + 협의·자비를 버리고 천하를 삼키려는 야망.
     // 마교 호법(협의≤40)보다 한 단계 위 — 양육으로 닿는 마도의 진짜 정점. docs/21·13·28 §3.
-    martial: { schools: COMBAT_SCHOOLS, minSeong: 9 },
+    // 천마는 마공의 정점이라야 — 검·도 등 일반 전투 갈래 9성+흑화로는 천마가 못 된다(암흑술 9성 필수, 사용자 2026-06-20).
+    martial: { schools: ['darkArts'], minSeong: 9 },
     personaMin: { ambition: 70 },
     personaMax: { integrity: 25, mercy: 25 },
     darknessMin: 4,

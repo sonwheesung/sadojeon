@@ -4,7 +4,7 @@ import './_storageShim';
 import { useDiscipleStore } from '../../src/stores/discipleStore';
 import { useSectAtmosphereStore } from '../../src/stores/sectAtmosphereStore';
 import { useTimeStore } from '../../src/stores/timeStore';
-import { addSimma, getSimma, tickSimma, triggerQiDeviation, onForcedBreakthroughFail, consumeAnsinElixir, SIMMA_ERUPT_THRESHOLD } from '../../src/systems/simmaSystem';
+import { addSimma, getSimma, tickSimma, triggerQiDeviation, onForcedBreakthroughFail, consumeAnsinElixir, listUnstable, SIMMA_ERUPT_THRESHOLD } from '../../src/systems/simmaSystem';
 import { darknessScore, tickDarkness } from '../../src/systems/darknessSystem';
 import { elixirItemCount } from '../../src/systems/alchemySystem';
 import { useItemStore } from '../../src/stores/itemStore';
@@ -123,6 +123,16 @@ useDiscipleStore.getState().setAll([disc('fl', {}, { realmProgress: { internal: 
 triggerQiDeviation('fl', 4);
 const intl = useDiscipleStore.getState().disciples['fl'].realmProgress?.internal ?? 0;
 ck('발작 내공 손실 — float 보존(정수 반올림 안 함, R27)', !Number.isInteger(intl) && intl > 0, `internal=${intl}`);
+
+// ── 안신단 예방 진정 (R20) — 불안정(심마 신호≥55) 제자를 발작 전에 다스릴 수 있어야 ──
+useDiscipleStore.getState().setAll([disc('un'), disc('lo')]);
+useDiscipleStore.getState().update('un', { simma: 60 } as never); // 신호 이상·내상 없음
+useDiscipleStore.getState().update('lo', { simma: 10 } as never);
+useItemStore.setState({ items: [{ id: 'ansin', name: '안신단', category: 'elixir', count: 1 }] } as never);
+ck('심마 신호 이상·내상無 → listUnstable 포함(R20)', listUnstable().some((d) => d.id === 'un'));
+ck('심마 낮은 제자 → listUnstable 제외', !listUnstable().some((d) => d.id === 'lo'));
+consumeAnsinElixir('un'); // 60 - 45 = 15 → 신호 아래
+ck('안신단 예방 복용 후 → listUnstable 제외(진정됨)', !listUnstable().some((d) => d.id === 'un'));
 
 console.log(`\n[정보] 심마 임계 ${SIMMA_ERUPT_THRESHOLD} · 흑화 최종레벨 ${finalLevel}`);
 console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);

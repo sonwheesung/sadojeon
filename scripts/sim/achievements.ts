@@ -83,6 +83,30 @@ check('미확정 졸업 → 직업 자동 확정(graduatedJob=demon-god)', useDi
 check('미확정 졸업도 천마 달성 — 누락 없음(R17)', ach().has('ach-demon-god'));
 check('미확정 졸업도 천마신공 해금 — 누락 없음(R17)', hasArt('cheonma-singong'));
 
+// C2c 천마 마공 필수 — 검(sword) 9성+흑화 빌드는 천마(demon-god)가 못 된다(암흑술 9성 필수, 사용자 2026-06-20).
+reset();
+addDisc({
+  id: 'd1',
+  status: 'graduated',
+  darknessLevel: 4,
+  martialArts: [{ artId: 'dokgo-gugeom', seong: 9 }],
+  personality: { integrity: 10, freedom: 50, warmth: 50, prudence: 50, mercy: 10, ambition: 90 },
+} as Partial<Disciple>);
+finalizePendingGraduations();
+checkAchievements();
+check('검 9성+흑화 → 천마(demon-god) 아님(마공 필수)', useDiscipleStore.getState().disciples['d1']?.graduatedJob !== 'demon-god');
+check('검 9성+흑화 → 천마신공 미해금', !hasArt('cheonma-singong'));
+
+// C2d (R25) 마교 호법(demonic level 3)도 정점 업적 자격(천마 level 4 한정 아님).
+reset();
+useGraduateStore.getState().add({ id: 'g1', name: '호법', route: 'demonic', level: 3, title: '마교 호법', power: 80, fame: 70, status: 'active', graduatedYear: 10 } as never);
+checkAchievements();
+check('마교 호법(demonic level3) → 정점 업적 달성(R25)', ach().has('ach-graduate-peak'));
+reset();
+useGraduateStore.getState().add({ id: 'g2', name: '마두', route: 'demonic', level: 2, title: '마두', power: 70, fame: 50, status: 'active', graduatedYear: 10 } as never);
+checkAchievements();
+check('마두(demonic level2) → 정점 업적 미달성(경계)', !ach().has('ach-graduate-peak'));
+
 // C3 검성 졸업 → 독고구검 해금.
 reset();
 addDisc({ id: 'd1', status: 'graduated', graduatedJob: 'sword-saint' } as Partial<Disciple>);

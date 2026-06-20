@@ -27,7 +27,7 @@ import {
   startCraft,
 } from '@/systems/alchemySystem';
 import { healWound, listWounded, treatableElixirsFor, woundLabel, woundsOf } from '@/systems/woundSystem';
-import { consumeAnsinElixir, hasAnsinElixir } from '@/systems/simmaSystem';
+import { consumeAnsinElixir, hasAnsinElixir, listUnstable } from '@/systems/simmaSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -73,6 +73,7 @@ export default function AlchemyScreen() {
     .sort((a, b) => (b.stats?.alchemy?.level ?? 0) - (a.stats?.alchemy?.level ?? 0));
   const elixirs = items.filter((i) => i.category === 'elixir');
   const wounded = listWounded();
+  const unstable = listUnstable(); // 불안정 기색(심마 신호)이나 내상은 없는 제자 — 안신단 예방 진정
 
   const onBuild = async () => {
     if (resources < ALCHEMY_LAB_BUILD_COST) return;
@@ -238,6 +239,41 @@ export default function AlchemyScreen() {
                     );
                   }),
                 )}
+              </View>
+            </>
+          )}
+
+          {/* 심신 안정(예방) — 불안정 기색(심마 신호)이 보이는 제자를 발작 전에 미리 다스린다. docs/37 R20 */}
+          {unstable.length > 0 && (
+            <>
+              <SectionLabel>심신 안정 (예방)</SectionLabel>
+              <View style={styles.panel}>
+                {unstable.map((d) => {
+                  const ansin = hasAnsinElixir();
+                  return (
+                    <View key={`calm-${d.id}`} style={styles.woundRow}>
+                      <View style={styles.woundInfo}>
+                        <Text style={styles.line}>
+                          {d.name} — <Text style={styles.woundTag}>불안정한 기색</Text>
+                        </Text>
+                        <Text style={styles.recipeMeta}>
+                          마음이 흔들리는 듯하다 · 안신단으로 미리 다스릴 수 있다
+                          {ansin ? '' : ' · 안신단 없음(제조 필요)'}
+                        </Text>
+                      </View>
+                      <View style={styles.elixirBtns}>
+                        {ansin && (
+                          <Pressable
+                            onPress={onCalm(d.id, d.name)}
+                            style={({ pressed }) => [styles.btnSm, styles.btnCraft, pressed && styles.pressed]}
+                          >
+                            <Text style={[styles.btnSmLabel, styles.btnCraftLabel]}>안신단</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             </>
           )}

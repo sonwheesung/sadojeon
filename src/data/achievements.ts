@@ -82,7 +82,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   },
 
   // ── 강호 ──────────────────────────────────────────────────────────
-  { id: 'ach-graduate-peak', name: '강호를 평정한 동문', desc: '졸업 제자가 노선의 정점에 오르다', category: 'ganghos', reward: '최고 칭호 · 다이아 다량', check: (c) => c.graduates.some((g) => g.level >= (g.route === 'demonic' ? 4 : 3)) },
+  // 노선 정점 — 마도는 마교 호법(level 3)도 정점 인정(천마 level 4 한정 아님, 사용자 2026-06-20). 전 노선 level≥3.
+  { id: 'ach-graduate-peak', name: '강호를 평정한 동문', desc: '졸업 제자가 노선의 정점에 오르다', category: 'ganghos', reward: '최고 칭호 · 다이아 다량', check: (c) => c.graduates.some((g) => g.level >= 3) },
 
   // ── 의뢰 ──────────────────────────────────────────────────────────
   // 누적 완수(성공=완수·성공·위기끝성공). 계정 단위 — 회차 넘어 합산. docs/32.

@@ -18,6 +18,9 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 
 // 발작 임계 — 이 이상에서 매일 낮은 확률로 주화입마를 굴린다.
 export const SIMMA_ERUPT_THRESHOLD = 60;
+// 불안정 신호 임계 — 이 이상이면 "불안정한 기색"이 관찰되고(discipleMoodSystem), 발작 전 예방용
+// 안신단을 쓸 수 있다(docs/37 R20). 발작 임계(60)보다 살짝 낮아 경고 → 대처 창을 준다.
+export const SIMMA_SIGNAL_THRESHOLD = 55;
 const ANSIN_ID = 'ansin';
 
 export function getSimma(d: Disciple): number {
@@ -140,6 +143,23 @@ export function consumeAnsinElixir(discipleId: string): boolean {
   // 내상 속성만 제거하고 나머지 상처는 그대로 둔다(clearWoundType 이 status·잔여일 정리).
   clearWoundType(discipleId, 'inner');
   return true;
+}
+
+// 불안정(심마 신호 이상)하지만 내상은 아직 없는 사문 내 제자 — 안신단 예방 진정 후보(docs/37 R20).
+// 내상 보유자는 상처 치료 경로에서 이미 안신단을 쓸 수 있어 제외. 떠나거나 출행 중인 제자도 제외.
+export function listUnstable(): Disciple[] {
+  const ds = useDiscipleStore.getState();
+  return ds.order
+    .map((id) => ds.disciples[id])
+    .filter(
+      (d): d is Disciple =>
+        !!d &&
+        (d.simma ?? 0) >= SIMMA_SIGNAL_THRESHOLD &&
+        !(d.wounds ?? []).some((w) => w.type === 'inner') &&
+        d.status !== 'graduated' &&
+        d.status !== 'departed' &&
+        d.status !== 'questing',
+    );
 }
 
 export function hasAnsinElixir(): boolean {

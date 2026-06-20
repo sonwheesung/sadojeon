@@ -12,6 +12,7 @@
 import { PLATEAU } from '@/data/constants';
 import { expToNextSeong, findMartialArt, seongCap } from '@/data/martialArts';
 import { staminaLevelIndex } from './staminaSystem';
+import { SIMMA_SIGNAL_THRESHOLD } from './simmaSystem';
 import type { Disciple } from '@/types';
 
 // 무공 진척 낌새 — 주력 무공 EXP 비율로 문턱/정체 판정 (DiscipleStatusPanel 과 동일 기준).
@@ -63,7 +64,7 @@ function pickBucket(d: Disciple, activeCommand?: string | null): string[] {
   }
 
   // 2-1. 심마 깊음 (숨김 → 불안정 신호. 주화입마 발작 직전 경고) -------------
-  if ((d.simma ?? 0) >= 55) {
+  if ((d.simma ?? 0) >= SIMMA_SIGNAL_THRESHOLD) {
     return [
       '기혈이 들끓는지 안색이 자주 변한다',
       '운기 중 진기가 흔들리는 듯 호흡이 고르지 못하다',
