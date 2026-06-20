@@ -22,6 +22,20 @@ function finalizeGraduation(d: Disciple, jobId: string): void {
   graduateToCareer(d, jobId);
 }
 
+// 회차 종료 직전 안전망 — 졸업했으나 아직 직업 미확정인 제자를 최선 후보로 자동 확정한다.
+// 마지막 제자가 졸업하면 같은 패스에서 phase='ended' → run-end 로 직행해(서신함 도달 불가) 졸업 직업
+// 선택이 영영 방치되고, graduatedJob 이 안 박혀 직업 업적·전설 무공서 해금(천마신공·독고구검 등)이
+// 영구 소실됐다(docs/37 R17). endRun 이 제자를 리셋하기 전에 호출 — 이후 checkAchievements 가 스캔.
+export function finalizePendingGraduations(): void {
+  const ds = useDiscipleStore.getState();
+  for (const id of ds.order) {
+    const d = ds.disciples[id];
+    if (!d || d.status !== 'graduated' || d.graduatedJob) continue;
+    const top = evaluateJobs(d)[0]?.job;
+    if (top) finalizeGraduation(d, top.id);
+  }
+}
+
 // 제자 의지 갈등 — 사부가 권한 길과 제자가 원하는 길이 다를 때 설득/존중 분기. docs/28 §3④.
 function enqueueGraduationConflict(d: Disciple, userPickId: string, willJob: Job, day: number): void {
   const userName = jobById(userPickId)?.name ?? '그 길';

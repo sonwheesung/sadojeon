@@ -13,6 +13,7 @@ import {
   canGather, dispatchGather, isAvailable, tickActivities,
 } from '../../src/systems/activitySystem';
 import { canExpedition, dispatchExpedition, tickExpedition } from '../../src/systems/expeditionSystem';
+import { inflictWound, tickWoundRecovery } from '../../src/systems/woundSystem';
 import { GATHER_REGIONS, findGatherRegion } from '../../src/data/activities';
 import { EXPEDITION_DESTS } from '../../src/data/expeditions';
 import { seedAmbient } from '../../src/systems/rng';
@@ -175,6 +176,26 @@ for (let i = 0; i < RUNS; i += 1) {
 }
 ck('향리 출행 150회 — 결산 종료(무한루프 없음)·자금 비음수·유한', settleOk, `money=${money()}`);
 ck('향리 출행 — 즉사 없음(departed 0)', deaths === 0, `departed=${deaths}`);
+
+// ──────────────────────────────────────────────────────────────────────────
+// 7. 강호 출행 도중 부상 자연치유 — 여정 점유 유지(더블부킹 차단, R16 / Part D ⑤)
+//    종전: 도중 부상이 여정 종료 전 나으면 status 가 'training'으로 풀려, 강호에 나가 있는데도
+//    사문 일과·다른 의뢰에 더블부킹됐다. 시뮬은 '같은 제자' 충돌(§2)만 봤지 '도중 부상→자연치유'
+//    생애 시퀀스를 안 굴려 못 잡았다.
+// ──────────────────────────────────────────────────────────────────────────
+reset();
+useDiscipleStore.getState().setAll([fighter('W1'), fighter('W2')]);
+dispatchExpedition(xFar.id, ['W1', 'W2']);
+const wexp = useActivityStore.getState().active[0];
+inflictWound('W1', 'wound', 4, 2); // 여정 도중 경상(2일) — dueDay 전 자연치유되도록
+ck('출행 중 부상 → status injured', useDiscipleStore.getState().disciples['W1'].status === 'injured');
+tickWoundRecovery();
+tickWoundRecovery(); // 2일 경과 → 상처 해소
+const w1 = useDiscipleStore.getState().disciples['W1'];
+ck('출행 중 상처 자연치유 — wounds 없음', !(w1.wounds?.length));
+ck('출행 중 상처 나아도 여정 점유 유지(questing, training 아님) — R16', w1.status === 'questing');
+ck('출행 중 회복 제자 — 다른 활동·일과 불가(isAvailable false)', !isAvailable(w1));
+ck('여정 활동은 그대로 active', useActivityStore.getState().active.some((a) => a.id === wexp.id));
 
 // ──────────────────────────────────────────────────────────────────────────
 // 6. canExpedition 게이트 — 험지 전투원 하드 게이트

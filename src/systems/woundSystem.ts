@@ -8,8 +8,9 @@
 
 import { ELIXIR_RECIPES, findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
 import { woundResistOf, resistsWound } from '@/data/martialArts';
+import { useActivityStore } from '@/stores/activityStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
-import type { Disciple, Wound, WoundType } from '@/types/disciple';
+import type { Disciple, DiscipleStatus, Wound, WoundType } from '@/types/disciple';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
 
 export const WOUND_TYPE_LABEL: Record<WoundType, string> = {
@@ -65,12 +66,23 @@ export function worstWound(d: Disciple): Wound | undefined {
   );
 }
 
-// 상처 묶음을 제자에 반영 — 비었으면 회복(training), 남았으면 injured 유지.
+// 상처가 다 나았을 때 복귀할 status — 강호 출행·약초 채집 파견 중이면 'questing'(여정 점유 유지),
+// 아니면 'training'. 강호 출행은 여정 도중 상처를 입히므로(의뢰는 결산 때만), 그 상처가 귀환 전에
+// 자연치유되면 종전엔 'training'으로 풀려 강호에 나가 있는 제자가 사문 일과·다른 의뢰에 더블부킹됐다
+// (docs/37 R16). 점유 단위를 status 가 아니라 실제 파견 집합(activityStore)으로 본다.
+function recoveredStatus(discipleId: string): DiscipleStatus {
+  const onActivity = useActivityStore
+    .getState()
+    .active.some((a) => a.discipleIds.includes(discipleId));
+  return onActivity ? 'questing' : 'training';
+}
+
+// 상처 묶음을 제자에 반영 — 비었으면 회복(파견 중이면 questing 유지·아니면 training), 남았으면 injured 유지.
 // 남은 상처가 있으면 status 를 injured 로 강제(다른 경로가 training 으로 돌려놨어도 되돌림 — R3).
 function applyWoundSet(discipleId: string, wounds: Wound[]): void {
   const ds = useDiscipleStore.getState();
   if (wounds.length === 0) {
-    ds.update(discipleId, { status: 'training', wounds: undefined });
+    ds.update(discipleId, { status: recoveredStatus(discipleId), wounds: undefined });
   } else {
     ds.update(discipleId, { status: 'injured', wounds });
   }

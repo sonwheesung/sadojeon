@@ -12,6 +12,7 @@ import { useTimeStore } from '../../src/stores/timeStore';
 import { TALLY, STREAK, GRADE_TALLY, DOMAIN_TALLY } from '../../src/data/tallyKeys';
 import { ACHIEVEMENTS } from '../../src/data/achievements';
 import { checkAchievements, seedUnlockedArts } from '../../src/systems/achievementSystem';
+import { finalizePendingGraduations } from '../../src/systems/graduationChoice';
 import { recordQuestResult } from '../../src/systems/questTally';
 import type { Disciple } from '../../src/types/disciple';
 import type { Quest } from '../../src/types/quest';
@@ -62,6 +63,25 @@ addDisc({ id: 'd1', status: 'graduated', graduatedJob: 'demon-god', darknessLeve
 checkAchievements();
 check('천마 졸업 → 천마(天魔) 달성', ach().has('ach-demon-god'));
 check('천마 → 천마신공 해금(codex)', hasArt('cheonma-singong'));
+
+// C2b (R17) 회차 마지막 제자가 직업 미확정 채 졸업 → endRun 직전 확정+스캔으로 천마신공 해금 보장.
+// 종전 C2 는 graduatedJob 을 직접 주입해 finalize·run-end 경로를 건너뛰어 이 누락을 못 잡았다(Part D ①②):
+//   실제론 마지막 제자가 졸업하면 phase='ended'→run-end 직행이라 직업 선택 서신이 방치돼 graduatedJob 이
+//   영영 안 박히고, checkAchievements 는 정산 훅에서만 돌아 업적·전설 무공서가 영구 소실됐다.
+reset();
+addDisc({
+  id: 'd1',
+  status: 'graduated',
+  darknessLevel: 4,
+  martialArts: [{ artId: 'hyeolma-gong', seong: 9 }],
+  personality: { integrity: 10, freedom: 50, warmth: 50, prudence: 50, mercy: 10, ambition: 90 },
+} as Partial<Disciple>);
+check('마지막 제자 — 직업 미확정 상태(graduatedJob 없음)', !useDiscipleStore.getState().disciples['d1']?.graduatedJob);
+finalizePendingGraduations(); // endRun 이 reset 전에 호출하는 안전망
+checkAchievements();
+check('미확정 졸업 → 직업 자동 확정(graduatedJob=demon-god)', useDiscipleStore.getState().disciples['d1']?.graduatedJob === 'demon-god');
+check('미확정 졸업도 천마 달성 — 누락 없음(R17)', ach().has('ach-demon-god'));
+check('미확정 졸업도 천마신공 해금 — 누락 없음(R17)', hasArt('cheonma-singong'));
 
 // C3 검성 졸업 → 독고구검 해금.
 reset();
