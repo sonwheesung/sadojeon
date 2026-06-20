@@ -21,6 +21,11 @@ export const SIMMA_ERUPT_THRESHOLD = 60;
 // 불안정 신호 임계 — 이 이상이면 "불안정한 기색"이 관찰되고(discipleMoodSystem), 발작 전 예방용
 // 안신단을 쓸 수 있다(docs/37 R20). 발작 임계(60)보다 살짝 낮아 경고 → 대처 창을 준다.
 export const SIMMA_SIGNAL_THRESHOLD = 55;
+// 흡공(흡성대법류) 결산 비율 — 실전서 빨아들인 적 내공(drainedQi) 1당 ① 영구 내공 전환분 ② 이종진기
+// 충돌 심마 누적분. 흡성대법의 정체성(공력 약탈)을 살리되, 이종진기 대가(심마)로 무한 흡공을 막는다.
+// 🔧 그레이박스 기본값 — `combatwiring.ts` 측정 후 조정(docs/37 R36). docs/35 §3-A·13.
+export const DRAIN_INTERNAL_RATIO = 0.4;
+export const DRAIN_SIMMA_RATIO = 0.3;
 const ANSIN_ID = 'ansin';
 
 export function getSimma(d: Disciple): number {
@@ -34,6 +39,21 @@ export function addSimma(discipleId: string, amount: number): void {
   if (!d) return;
   const next = clamp(Math.round((d.simma ?? 0) + amount), 0, 100);
   if (next !== (d.simma ?? 0)) ds.update(discipleId, { simma: next });
+}
+
+// 흡공(흡성대법류) 결산 — 실전(의뢰 결투·강호출행·습격)에서 전투 엔진이 보고한 `drainedQi`를 받아
+// ① 빨아들인 내공을 영구 내공(realmProgress.internal)으로 전환(float 유지) ② 이종진기 충돌로 심마 누적.
+// 대련·비무(동문 상대)에선 호출하지 않는다. 승패 무관(빨아들인 만큼). docs/37 R36 · docs/35 §3-A.
+export function absorbDrainedQi(discipleId: string, drainedQi: number): void {
+  if (!Number.isFinite(drainedQi) || drainedQi <= 0) return;
+  const ds = useDiscipleStore.getState();
+  const d = ds.disciples[discipleId];
+  if (!d) return;
+  const base = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
+  ds.update(discipleId, {
+    realmProgress: { ...base, internal: base.internal + drainedQi * DRAIN_INTERNAL_RATIO },
+  });
+  addSimma(discipleId, drainedQi * DRAIN_SIMMA_RATIO);
 }
 
 // 하루치 심마 드리프트(누적 − 진정) + 발작 굴림. 흑화 진행과 같은 결(triggerPostSettlement)에서 호출.

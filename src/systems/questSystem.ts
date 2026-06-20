@@ -45,6 +45,7 @@ import { BODY_EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
 import { consumeElixirItem } from './alchemySystem';
 import { inflictWound } from './woundSystem';
+import { absorbDrainedQi } from './simmaSystem';
 import { currentAge } from './discipleCtx';
 import type { WoundType } from '@/types/disciple';
 import type { MartialArtGrade, MartialArtSchool } from '@/types/martialArt';
@@ -915,6 +916,8 @@ function resolveDuelByEngine(active: ActiveQuest): DuelResolution | null {
     allowRetreat: false,
   });
   const me = r.combatants.find((c) => c.id === champion.id);
+  // 흡공(흡성대법류) — 실전서 빨아들인 적 내공을 영구 내공 전환 + 이종진기 심마(R36). 승패 무관.
+  if (me?.drainedQi) absorbDrainedQi(champion.id, me.drainedQi);
   const won = r.winner === 'A';
   // 만신창이 승리(피 흘리며 이김)만 위기후성공 — 가벼운 생채기는 완수.
   const bloodied = me?.wound != null && me.wound.severity <= 3;

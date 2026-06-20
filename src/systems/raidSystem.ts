@@ -14,6 +14,7 @@ import type { Combatant } from '@/types/combat';
 import { combatantFromDisciple, makeNpcCombatant, narrateCombat, simulateCombat } from './combat';
 import { currentAge } from './discipleCtx';
 import { inflictWound } from './woundSystem';
+import { absorbDrainedQi } from './simmaSystem';
 
 const RAID_DAILY_CHANCE = 0.012; // 🔧 연 ~4회 — 잦으면 소음, 드물면 잊힌다.
 const LOOT_MIN = 60; //            전리품(동) 🔧
@@ -70,6 +71,7 @@ export function triggerDailyRaid(): void {
     const d = ds.disciples[c.id];
     if (!d) continue;
     if (c.wound) inflictWound(c.id, c.wound.type, c.wound.severity, c.wound.days);
+    if (c.drainedQi) absorbDrainedQi(c.id, c.drainedQi); // 흡공 결산(R36)
     ds.update(c.id, {
       stress: clamp((d.stress ?? 0) + (won ? 4 : 10)),
       ...(won ? { fame: clamp((d.fame ?? 0) + 3) } : {}),

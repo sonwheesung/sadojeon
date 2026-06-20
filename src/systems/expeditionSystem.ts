@@ -29,6 +29,7 @@ import {
 } from './combat';
 import { addMaterial } from './alchemySystem';
 import { inflictWound } from './woundSystem';
+import { absorbDrainedQi } from './simmaSystem';
 import { shiftPersona } from './personaShift';
 import { attemptQuestEnlightenment } from './trainingSystem';
 import { gainMainSeongExpArts } from './martialExp';
@@ -259,6 +260,8 @@ function resolveCombat(active: ActiveActivity, dest: ExpeditionDest, e: Expediti
     allowRetreat: true,
   });
   const me = r.combatants.find((c) => c.id === champion.id);
+  // 흡공(흡성대법류) — 실전서 빨아들인 적 내공을 영구 내공 전환 + 이종진기 심마(R36). 승패 무관.
+  if (me?.drainedQi) absorbDrainedQi(champion.id, me.drainedQi);
   const won = r.winner === 'A';
 
   if (won) {
