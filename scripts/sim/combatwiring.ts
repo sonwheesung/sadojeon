@@ -13,6 +13,7 @@ import {
   DRAIN_INTERNAL_RATIO,
   DRAIN_SIMMA_RATIO,
 } from '../../src/systems/simmaSystem';
+import { inflictWound, hasWound } from '../../src/systems/woundSystem';
 import { seedAmbient } from '../../src/systems/rng';
 import type { Disciple } from '../../src/types';
 import type { Combatant } from '../../src/types/combat';
@@ -127,6 +128,44 @@ for (let i = 0; i < 100; i += 1) {
   if (r.combatants.find((c) => c.id === 'plain')?.drainedQi) plainDrain += 1;
 }
 ck('비-드레인 주력 → drainedQi 미보고(흡공 없음)', plainDrain === 0, `${plainDrain}/100`);
+
+// ── 4. 상처(wound) 배선 — 실전서 엔진이 wound 제안 → 호출측 inflictWound 재현 ──
+// (questSystem·expeditionSystem·raidSystem 의 `if (me?.wound) inflictWound(...)` 라인과 동형.)
+useDiscipleStore.getState().setAll([drainer('wnd', 150)]); // 약체 → 강적에 패해 부상
+let woundApplied = false;
+for (let i = 0; i < 50 && !woundApplied; i += 1) {
+  const me0 = combatantFromDisciple(useDiscipleStore.getState().disciples['wnd']);
+  const strongFoe: Combatant = { ...foe('boss'), realm: 'chojeoljeong', internal: 1100, strength: 80, agility: 80, endurance: 80 };
+  const r = simulateCombat([me0], [strongFoe], { mode: 'real', lethal: false });
+  const me = r.combatants.find((c) => c.id === 'wnd');
+  if (me?.wound) {
+    inflictWound('wnd', me.wound.type, me.wound.severity, me.wound.days); // ← 호출측 라인 재현
+    woundApplied = true;
+  }
+}
+ck('실전 상처 → 엔진 wound 제안 → inflictWound 배선', woundApplied && hasWound(useDiscipleStore.getState().disciples['wnd']), woundApplied ? 'wound 적용됨' : '50판 내 부상 미발생');
+
+// ── 5. 사고(accident) 배선 — 대련 사고 시 victim 에 wound 적용(daeryeon/sparring 재현) ──
+let accidentSeen = false,
+  accidentWound = false;
+for (let i = 0; i < 200 && !accidentSeen; i += 1) {
+  useDiscipleStore.getState().setAll([drainer('sa', 400), drainer('sb', 400)]);
+  const r = simulateCombat(
+    [combatantFromDisciple(useDiscipleStore.getState().disciples['sa'])],
+    [combatantFromDisciple(useDiscipleStore.getState().disciples['sb'])],
+    { mode: 'spar', extraAccidentChance: 1 },
+  );
+  if (r.accident) {
+    accidentSeen = true;
+    const victimId = r.accident.victimId;
+    const w = r.combatants.find((c) => c.id === victimId)?.wound;
+    if (w) {
+      inflictWound(victimId, w.type, w.severity, w.days); // ← daeryeon/sparring 사고 라인 재현
+      accidentWound = hasWound(useDiscipleStore.getState().disciples[victimId]);
+    }
+  }
+}
+ck('대련 사고(accident) → victim wound 적용 배선', accidentSeen && accidentWound, accidentSeen ? '사고 부상 적용됨' : '200판 내 사고 미발생(가산 1.0)');
 
 // ── 측정(비율 튜닝용) ──
 const avgDrainPerFight = drainedFights > 0 ? totalDrained / drainedFights : 0;
