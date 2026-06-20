@@ -108,7 +108,8 @@ export function dispatchExpedition(destId: string, discipleIds: string[]): boole
   const today = useTimeStore.getState().totalDay;
   const dueDay = today + dest.days;
   useActivityStore.getState().add({
-    id: `act-exp-${destId}-${today}`,
+    // id 에 파티 포함 — 같은 날 같은 행선에 다른 파티 파견 시 id 충돌 차단(docs/37 R22).
+    id: `act-exp-${destId}-${today}-${[...discipleIds].sort().join('.')}`,
     kind: 'expedition',
     destId,
     discipleIds,
@@ -336,14 +337,23 @@ export function applyExpeditionEventChoice(activityId: string, choice: Expeditio
   const active = store.active.find((a) => a.id === activityId);
   if (!active) return;
   const dest = active.destId ? findExpeditionDest(active.destId) : undefined;
-  if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
 
-  // 확률 판정 — 현재 역량 기반. 실패면 failEffect.
-  let e = choice.effect;
-  if (choice.roll) {
-    const cap = capValue(active, choice.roll.by);
-    const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
-    if (random() >= p) e = choice.failEffect ?? { resultText: '일은 뜻대로 풀리지 않았다.' };
+  // 해소 시점 잔액 재검증 — 발동 후 금고가 깎여 cost 를 못 내면, 종전엔 부족분만 0 클램프로 빠지고
+  // 효과는 전액 적용되는 underpayment 였다(docs/37 R30). 못 내면 비용 없이 실패 처리.
+  const resources = useSectStore.getState().sect?.resources ?? 0;
+  const unaffordable = choice.cost > 0 && choice.cost > resources;
+
+  // 확률 판정 — 현재 역량 기반. 실패(또는 비용 미지불)면 failEffect.
+  let e = unaffordable
+    ? (choice.failEffect ?? { resultText: '값을 치를 여력이 없어 일이 틀어졌다.' })
+    : choice.effect;
+  if (!unaffordable) {
+    if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
+    if (choice.roll) {
+      const cap = capValue(active, choice.roll.by);
+      const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
+      if (random() >= p) e = choice.failEffect ?? { resultText: '일은 뜻대로 풀리지 않았다.' };
+    }
   }
 
   const text = e.combat && dest ? resolveCombat(active, dest, e) : (applyNonCombat(active, e), e.resultText);

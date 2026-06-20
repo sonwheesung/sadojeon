@@ -58,7 +58,9 @@ export function dispatchGather(regionId: string, discipleIds: string[]): boolean
   if (!canGather(region, party).ok) return false;
   const today = useTimeStore.getState().totalDay;
   useActivityStore.getState().add({
-    id: `act-gather-${regionId}-${today}`,
+    // id 에 파티를 포함 — 같은 날 같은 지역에 다른 파티를 파견해도 id 충돌이 없게(docs/37 R22).
+    // 같은 파티 재파견은 점유(questing)로 이미 차단되므로 동일 id 가 두 번 생길 수 없다.
+    id: `act-gather-${regionId}-${today}-${[...discipleIds].sort().join('.')}`,
     kind: 'gather',
     regionId,
     discipleIds,

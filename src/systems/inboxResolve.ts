@@ -16,8 +16,6 @@ import { SECLUSION_PETITION_DAYS } from '@/data/realm';
 import { resolveGraduationPick, resolveGraduationConflict } from './graduationChoice';
 import { applyMeetingChoice } from './meetingSystem';
 import type { MeetingOption } from '@/data/scenarios/meetings';
-import { applyQuestEventChoice, type QuestEventChoiceView } from './questSystem';
-import { applyExpeditionEventChoice, type ExpeditionChoiceView } from './expeditionSystem';
 import { resolveMoralChoice } from './moralEventSystem';
 import { counselChoices, mediationChoices, resolveCounsel, resolveMediation } from './mediationSystem';
 import { issueOverride } from './overrideSystem';
@@ -98,22 +96,8 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   if (p.domain === 'counsel') {
     return counselChoices();
   }
-  if (p.domain === 'quest_event') {
-    const choices = (p.choices ?? []) as QuestEventChoiceView[];
-    return choices.map((c) => ({
-      key: c.key,
-      label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
-      disabled: !c.available,
-    }));
-  }
-  if (p.domain === 'expedition_event') {
-    const choices = (p.choices ?? []) as ExpeditionChoiceView[];
-    return choices.map((c) => ({
-      key: c.key,
-      label: c.available ? c.label : `${c.label} — ${c.note ?? '불가'}`,
-      disabled: !c.available,
-    }));
-  }
+  // quest_event·expedition_event(현장 급보)는 fieldEventStore/FieldEventOverlay 가 선택지를 그리므로
+  // inbox 선택지 빌더에선 폐지(docs/37 R24).
   if (p.domain === 'graduation' || p.domain === 'graduation_conflict') {
     const choices = (p.choices ?? []) as GraduationChoiceView[];
     return choices.map((c) => ({ key: c.key, label: c.label }));
@@ -198,17 +182,8 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   } else if (p.domain === 'counsel') {
     // 상담(1:1) — 그 제자의 인식만 약하게. docs/33 §3.
     resolveCounsel(String(p.subjectId ?? ''), String(p.otherId ?? ''), key);
-  } else if (p.domain === 'quest_event') {
-    const questId = String(p.questId ?? '');
-    const choices = (p.choices ?? []) as QuestEventChoiceView[];
-    const choice = choices.find((c) => c.key === key);
-    if (choice) applyQuestEventChoice(questId, choice);
-  } else if (p.domain === 'expedition_event') {
-    // 강호 출행 중 사건 — 선택 효과(전투·인연·횡재·위기) 적용 후 다음 사건/귀환 진행.
-    const activityId = String(p.activityId ?? '');
-    const choices = (p.choices ?? []) as ExpeditionChoiceView[];
-    const choice = choices.find((c) => c.key === key);
-    if (choice) applyExpeditionEventChoice(activityId, choice);
+    // quest_event·expedition_event(현장 급보)는 fieldEventStore/FieldEventOverlay 가 해소 — inbox 해소
+    // 경로 폐지. 옛 세이브 잔재 항목은 말미 remove 로 효과 없이 정리(fieldEvent 와 이중적용 차단). docs/37 R24.
   } else if (p.domain === 'graduation') {
     // 사부가 권한 강호 행로 — 제자 의지와 어긋나면 갈등 이벤트로, 아니면 확정. docs/28 §3·§3④.
     resolveGraduationPick(discipleId, key);

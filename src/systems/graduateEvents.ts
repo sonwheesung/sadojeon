@@ -236,7 +236,11 @@ export function tickGraduateEvents(): void {
       const b = live[j];
       const rel = relOf(a.id, b.id);
       for (const ev of PAIR_EVENTS) {
-        if (ev.applies(a, b, rel)) cands.push({ ev, a, b, rel, w: ev.weight(a, b, rel) });
+        if (!ev.applies(a, b, rel)) continue;
+        const w = ev.weight(a, b, rel);
+        // applies=true 라도 weight<=0 후보는 배제 — 가중 추첨에서 영영 안 뽑히면서 후보풀에 죽은 채
+        // 남아 budget 만 소진시키는 plug-in 계약 구멍 차단(docs/37 R19).
+        if (w > 0) cands.push({ ev, a, b, rel, w });
       }
     }
   }

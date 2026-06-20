@@ -12,7 +12,7 @@ import { useJianghuStore } from '../../src/stores/jianghuStore';
 import {
   canGather, dispatchGather, isAvailable, tickActivities,
 } from '../../src/systems/activitySystem';
-import { canExpedition, dispatchExpedition, tickExpedition } from '../../src/systems/expeditionSystem';
+import { canExpedition, dispatchExpedition, tickExpedition, applyExpeditionEventChoice } from '../../src/systems/expeditionSystem';
 import { inflictWound, tickWoundRecovery } from '../../src/systems/woundSystem';
 import { GATHER_REGIONS, findGatherRegion } from '../../src/data/activities';
 import { EXPEDITION_DESTS } from '../../src/data/expeditions';
@@ -83,6 +83,16 @@ ck('같은 제자 강호출행 동시 파견 → false(점유)', !dispatchExpedi
 ck('자유로운 다른 제자(B) 출행 파견 성공', dispatchExpedition(xFar.id, ['B']));
 // 두 활동이 동시에 등록됨
 ck('두 활동 동시 active 등록', useActivityStore.getState().active.length === 2);
+
+// R22 — 같은 날 같은 지역에 다른 파티 파견 → id 충돌 없음(remove 가 둘 다 지우던 버그). 종전 §2 는
+// 서로 다른 지역만 써서(id 자연 분리) 충돌 조합을 안 만들어 못 잡았다(사각 ⑥).
+reset();
+useDiscipleStore.getState().setAll([fighter('P1'), fighter('P2')]);
+dispatchGather(village.id, ['P1']);
+dispatchGather(village.id, ['P2']);
+const sameRegionIds = useActivityStore.getState().active.map((a) => a.id);
+ck('같은 날 같은 지역 다른 파티 — 활동 2건', useActivityStore.getState().active.length === 2);
+ck('같은 날 같은 지역 다른 파티 — id 유일(R22)', new Set(sameRegionIds).size === 2, sameRegionIds.join(' | '));
 
 // ──────────────────────────────────────────────────────────────────────────
 // 3. 채집 결산 — 귀환·재료 비음수·상처 심도 유효·자금 무관
@@ -196,6 +206,29 @@ ck('출행 중 상처 자연치유 — wounds 없음', !(w1.wounds?.length));
 ck('출행 중 상처 나아도 여정 점유 유지(questing, training 아님) — R16', w1.status === 'questing');
 ck('출행 중 회복 제자 — 다른 활동·일과 불가(isAvailable false)', !isAvailable(w1));
 ck('여정 활동은 그대로 active', useActivityStore.getState().active.some((a) => a.id === wexp.id));
+
+// ──────────────────────────────────────────────────────────────────────────
+// 8. 급보 비용 선택지 — 해소 시점 잔액 부족 시 비용 없이 실패(underpayment 차단, R30 / Part D ④)
+//    종전: 발동 후 금고가 깎여도 부족분만 0 클램프로 빠지고 효과는 전액 적용. 시뮬은 자금 비음수만 봤다.
+// ──────────────────────────────────────────────────────────────────────────
+const costChoice = {
+  key: 'bribe', label: '뇌물', cost: 100,
+  effect: { resultText: '뇌물로 무마했다.' }, failEffect: { resultText: '값을 못 치렀다.' },
+} as never;
+reset();
+useDiscipleStore.getState().setAll([fighter('C1'), fighter('C2')]);
+dispatchExpedition(xFar.id, ['C1', 'C2']);
+const cexp = useActivityStore.getState().active[0];
+useSectStore.getState().setSect({ name: 'x', hanjaName: 'x', reputation: 50, resources: 30, facilities: [] } as never);
+applyExpeditionEventChoice(cexp.id, costChoice);
+ck('급보 비용 선택 — 잔액 부족 시 비용 미차감(30 유지)', money() === 30, `money=${money()}`);
+reset();
+useDiscipleStore.getState().setAll([fighter('D1'), fighter('D2')]);
+dispatchExpedition(xFar.id, ['D1', 'D2']);
+const dexp = useActivityStore.getState().active[0];
+useSectStore.getState().setSect({ name: 'x', hanjaName: 'x', reputation: 50, resources: 1000, facilities: [] } as never);
+applyExpeditionEventChoice(dexp.id, costChoice);
+ck('급보 비용 선택 — 잔액 충분 시 정상 차감(1000→900)', money() === 900, `money=${money()}`);
 
 // ──────────────────────────────────────────────────────────────────────────
 // 6. canExpedition 게이트 — 험지 전투원 하드 게이트

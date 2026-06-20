@@ -445,14 +445,19 @@ export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceV
   const qs = useQuestStore.getState();
   const active = qs.active.find((a) => a.quest.id === questId);
   if (!active) return;
-  if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
+  // 해소 시점 잔액 재검증 — 못 내면 효과 없이 실패(docs/37 R30, underpayment 차단).
+  const resources = useSectStore.getState().sect?.resources ?? 0;
+  const unaffordable = choice.cost > 0 && choice.cost > resources;
 
-  // 확률 판정 — 현재 스탯/무공으로 성공률. 실패면 failEffect.
-  let e = choice.effect;
-  if (choice.roll) {
-    const cap = capValue(active, choice.roll.by);
-    const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
-    if (random() >= p) e = choice.failEffect ?? {};
+  // 확률 판정 — 현재 스탯/무공으로 성공률. 실패(또는 비용 미지불)면 failEffect.
+  let e = unaffordable ? (choice.failEffect ?? {}) : choice.effect;
+  if (!unaffordable) {
+    if (choice.cost > 0) useSectStore.getState().adjustResources(-choice.cost);
+    if (choice.roll) {
+      const cap = capValue(active, choice.roll.by);
+      const p = Math.max(0.1, Math.min(0.95, choice.roll.base + (cap / 100) * (1 - choice.roll.base)));
+      if (random() >= p) e = choice.failEffect ?? {};
+    }
   }
 
   // 구조 성공 시 정체 공개 → 문파 평판. (실패 effect엔 revealRescue 없음 = 죽어서 공개 X)
