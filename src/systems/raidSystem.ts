@@ -66,15 +66,19 @@ export function triggerDailyRaid(): void {
   const won = r.winner === 'A';
 
   // 결과 적용 — 부상(엔진 제안), 스트레스, 승리 보상.
+  const RAID_MVP_FAME_BONUS = 3; // 활약 1위(mvp) 추가 명성 — n:n(2인+)에서만 차등(docs/37 R37)
+  const aCount = r.combatants.filter((c) => c.side === 'A').length;
   for (const c of r.combatants) {
     if (c.side !== 'A') continue;
     const d = ds.disciples[c.id];
     if (!d) continue;
     if (c.wound) inflictWound(c.id, c.wound.type, c.wound.severity, c.wound.days);
     if (c.drainedQi) absorbDrainedQi(c.id, c.drainedQi); // 흡공 결산(R36)
+    // 활약 1위(엔진 mvpId)는 같은 위험에 더 큰 공 — n:n 보상 차등(R37). 단신(1인)이면 차등 무의미.
+    const mvpBonus = won && aCount >= 2 && c.id === r.mvpId ? RAID_MVP_FAME_BONUS : 0;
     ds.update(c.id, {
       stress: clamp((d.stress ?? 0) + (won ? 4 : 10)),
-      ...(won ? { fame: clamp((d.fame ?? 0) + 3) } : {}),
+      ...(won ? { fame: clamp((d.fame ?? 0) + 3 + mvpBonus) } : {}),
     });
   }
   let lootNote = '';

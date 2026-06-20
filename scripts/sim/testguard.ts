@@ -57,7 +57,7 @@ const RESULT_FIELDS: Record<string, { kind: FieldKind; consumers?: string[]; not
   // CombatResult
   mode: { kind: 'info' }, rounds: { kind: 'info' }, winner: { kind: 'info' }, margin: { kind: 'info' },
   tier: { kind: 'info' }, combatants: { kind: 'info' }, events: { kind: 'info' },
-  mvpId: { kind: 'optional', note: 'n:n 활약 보상 차등 — 엔진 보고하나 호출측 미구현(docs/37 R37)' },
+  mvpId: { kind: 'mustApply', consumers: ['raidSystem'] }, // R37 배선 — n:n 활약 1위 보상 가산(raid)
   accident: { kind: 'mustApply', consumers: ['daeryeonSystem', 'sparringSystem'] },
 };
 

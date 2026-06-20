@@ -167,6 +167,29 @@ for (let i = 0; i < 200 && !accidentSeen; i += 1) {
 }
 ck('대련 사고(accident) → victim wound 적용 배선', accidentSeen && accidentWound, accidentSeen ? '사고 부상 적용됨' : '200판 내 사고 미발생(가산 1.0)');
 
+// ── 6. 활약 1위(mvpId) 배선 — n:n 에서 mvp 가 보상 가산(raidSystem R37 재현) ──
+useDiscipleStore.getState().setAll([drainer('m1', 800), drainer('m2', 200)]); // m1 강 → 활약 1위 기대
+let mvpChecked = false;
+for (let i = 0; i < 80 && !mvpChecked; i += 1) {
+  const a1 = combatantFromDisciple(useDiscipleStore.getState().disciples['m1']);
+  const a2 = combatantFromDisciple(useDiscipleStore.getState().disciples['m2']);
+  const r = simulateCombat([a1, a2], [foe('w1'), foe('w2')], { mode: 'real', lethal: false });
+  if (r.winner !== 'A' || !r.mvpId) continue;
+  const aSide = r.combatants.filter((c) => c.side === 'A');
+  const top = aSide.reduce((x, y) => (y.dealtFrac > x.dealtFrac ? y : x));
+  ck('n:n mvpId = A편 활약(dealt) 1위', r.mvpId === top.id, `mvp=${r.mvpId}`);
+  // 호출측(raid) 재현 — 승리 시 전원 +3, mvp 만 +3 추가.
+  for (const c of aSide) {
+    const d = useDiscipleStore.getState().disciples[c.id];
+    useDiscipleStore.getState().update(c.id, { fame: (d.fame ?? 0) + 3 + (c.id === r.mvpId ? 3 : 0) } as never);
+  }
+  const fm = useDiscipleStore.getState().disciples;
+  const other = aSide.find((c) => c.id !== r.mvpId);
+  ck('mvp 보상 가산 → mvp 명성 > 비-mvp(R37)', !!other && (fm[r.mvpId].fame ?? 0) > (fm[other.id].fame ?? 0));
+  mvpChecked = true;
+}
+ck('n:n mvp 케이스 측정됨', mvpChecked, mvpChecked ? '' : '80판 내 A승 없음');
+
 // ── 측정(비율 튜닝용) ──
 const avgDrainPerFight = drainedFights > 0 ? totalDrained / drainedFights : 0;
 const avgInternalPerFight = avgDrainPerFight * DRAIN_INTERNAL_RATIO;
