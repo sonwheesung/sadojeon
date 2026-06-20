@@ -21,6 +21,7 @@ import {
 import { ConfirmProvider } from '@/components/common/ConfirmDialog';
 import { UpdateGate } from '@/components/common/UpdateGate';
 import { useAuthStore } from '@/stores/authStore';
+import { loadAccount } from '@/systems/accountSync';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -42,10 +43,18 @@ export default function RootLayout() {
 
   const status = useAuthStore((s) => s.status);
   const init = useAuthStore((s) => s.init);
+  const userId = useAuthStore((s) => s.session?.user?.id);
 
   useEffect(() => {
     init();
   }, [init]);
+
+  // 로그인·세션 복원·유저 전환 시 계정(업적·해금 무공서·집계·다이아)을 DB에서 로드. docs/31.
+  useEffect(() => {
+    if (status === 'authed') {
+      loadAccount().catch((e) => console.warn('[account] 로드 실패', e));
+    }
+  }, [status, userId]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

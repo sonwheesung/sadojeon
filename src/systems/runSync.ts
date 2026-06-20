@@ -18,6 +18,7 @@ import {
 } from '@/stores';
 import type { Disciple, GameTime, Master, SectState } from '@/types';
 import { RUN_CHILD_SLICES } from './runSlices';
+import { saveAccountSilently } from './accountSync';
 
 // 회차 경계(로드·새 회차·슬롯 전환)에서 비워야 하는 **휘발 큐** — GameState/영속 밖이라 자동 리셋 안 됨.
 // 안 비우면 직전 회차의 현장 급보·컷씬·정산·도덕 이벤트가 새 회차/다른 슬롯에 그대로 뜬다(docs/37 C10).
@@ -100,11 +101,13 @@ export function setAutoSaveEnabled(enabled: boolean): void {
 }
 
 // 진행 중 fire-and-forget 저장 — 실패해도 게임 흐름 안 막음.
+// 회차 자동저장 시점에 **계정(업적·해금 무공서·집계·다이아)도 함께** 저장(같은 게이트 공유). docs/31.
 export function saveCurrentRunSilently(): void {
   if (!autoSaveEnabled) return;
   saveCurrentRun().catch((e) => {
     if (typeof console !== 'undefined') console.warn('[runSync] 저장 실패', e);
   });
+  saveAccountSilently();
 }
 
 // 회차 핵심 → 스토어 복원.

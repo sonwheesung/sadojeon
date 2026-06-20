@@ -16,12 +16,14 @@ import {
 } from '@/stores';
 import { checkAchievements } from './achievementSystem';
 import { finalizePendingGraduations } from './graduationChoice';
+import { saveAccountSilently } from './accountSync';
 
 export function endRun(): void {
   // 회차 종료 직전 — 직업 미확정인 졸업 제자를 확정하고 업적을 스캔한다(제자 리셋 전).
   // 마지막 제자가 졸업 직업 선택을 못 한 채 회차가 끝나면 업적·전설 무공서 해금이 누락됐다(docs/37 R17).
   finalizePendingGraduations();
   checkAchievements();
+  saveAccountSilently(); // 회차 마지막 업적·해금 무공서를 계정 DB에 영속(리셋 전).
   useTimeStore.getState().reset();
   useDiscipleStore.getState().reset();
   useMasterStore.getState().reset();

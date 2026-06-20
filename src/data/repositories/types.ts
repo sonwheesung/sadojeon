@@ -120,6 +120,15 @@ export interface RunCore {
   disciples: RunDiscipleRecord[];
 }
 
+// ─── 계정(account_state) ──────────────────────────────────────────────────────
+// 회차를 넘어 누적되는 유저 단위 상태(업적·해금 무공서·집계·다이아). user_id당 1행 jsonb.
+export interface AccountRepository {
+  // 현재 유저의 계정 상태(없으면 null — 신규 유저).
+  getAccount(): Promise<Record<string, unknown> | null>;
+  // 현재 유저의 계정 상태 저장(upsert).
+  saveAccount(data: Record<string, unknown>): Promise<void>;
+}
+
 export interface RunRepository {
   // 현재 유저의 모든 회차 (슬롯 오름차순).
   listForUser(): Promise<RunRecord[]>;
