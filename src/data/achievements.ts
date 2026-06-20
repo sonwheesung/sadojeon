@@ -80,6 +80,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     category: 'career', reward: '어두운 전설 칭호 · **천마신공 해금**', unlockArtId: 'cheonma-singong', hidden: true,
     check: (c) => anyGraduatedAs(c, 'demon-god'),
   },
+  // 정점(peak) 직업 업적 — 정점 11종 전부 명명 업적 보유(2026-06-20 약왕·살수·도가·의적·상단 추가).
+  { id: 'ach-medicine-king', name: '약왕(藥王)', desc: '제자를 영약 제조의 정점, 약왕으로 졸업시키다', category: 'career', reward: '최고 칭호 · 다이아 다량', check: (c) => anyGraduatedAs(c, 'medicine-king') },
+  { id: 'ach-dark-blade', name: '어둠의 절세 살수', desc: '제자를 살수계의 정점으로 졸업시키다', category: 'career', reward: '어두운 칭호 · 다이아', hidden: true, check: (c) => anyGraduatedAs(c, 'dark-blade') },
+  { id: 'ach-daoist-master', name: '도가 명사(道家名士)', desc: '제자를 도가 사상의 정수, 도가 명사로 졸업시키다', category: 'career', reward: '칭호 · 다이아', check: (c) => anyGraduatedAs(c, 'daoist-master') },
+  { id: 'ach-chivalrous-chief', name: '의적 거두', desc: '제자를 천하 의적을 거느린 거두로 졸업시키다', category: 'career', reward: '최고 칭호 · 다이아 다량', check: (c) => anyGraduatedAs(c, 'chivalrous-chief') },
+  { id: 'ach-caravan-master', name: '상단 총관', desc: '제자를 거대 상단의 총관으로 졸업시키다', category: 'career', reward: '칭호 · 다이아', check: (c) => anyGraduatedAs(c, 'caravan-master') },
 
   // ── 강호 ──────────────────────────────────────────────────────────
   // 노선 정점 — 마도는 마교 호법(level 3)도 정점 인정(천마 level 4 한정 아님, 사용자 2026-06-20). 전 노선 level≥3.

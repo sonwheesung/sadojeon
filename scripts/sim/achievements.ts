@@ -113,6 +113,30 @@ addDisc({ id: 'd1', status: 'graduated', graduatedJob: 'sword-saint' } as Partia
 checkAchievements();
 check('검성 졸업 → 독고구검 해금', hasArt('dokgo-gugeom'));
 
+// C3b 정점 직업 업적 — 정점 11종 전부 명명 업적 보유(2026-06-20 추가분 5종 + 기존 6종).
+const PEAK_JOB_ACH: [string, string][] = [
+  ['medicine-king', 'ach-medicine-king'],
+  ['dark-blade', 'ach-dark-blade'],
+  ['daoist-master', 'ach-daoist-master'],
+  ['chivalrous-chief', 'ach-chivalrous-chief'],
+  ['caravan-master', 'ach-caravan-master'],
+  ['murim-lord', 'ach-murim-lord'],
+  ['divine-healer', 'ach-divine-healer'],
+  ['ganghos-shadow', 'ach-ganghos-shadow'],
+  ['demon-protector', 'ach-demon-protector'],
+  ['sword-saint', 'ach-sword-saint'],
+  ['demon-god', 'ach-demon-god'],
+];
+let peakOk = true;
+const peakMiss: string[] = [];
+for (const [jobId, achId] of PEAK_JOB_ACH) {
+  reset();
+  addDisc({ id: 'd1', status: 'graduated', graduatedJob: jobId } as Partial<Disciple>);
+  checkAchievements();
+  if (!ach().has(achId)) { peakOk = false; peakMiss.push(`${jobId}→${achId}`); }
+}
+check('정점 11직업 전부 졸업 업적 달성(약왕·살수·도가·의적·상단 포함)', peakOk, peakMiss.length ? `누락=${peakMiss.join(',')}` : '11/11');
+
 // C4 신품초 보유 → 신품을 캐다.
 reset();
 useItemStore.getState().add({ id: 'herb-divine', name: '신품 영초', category: 'material', count: 1 } as never);
