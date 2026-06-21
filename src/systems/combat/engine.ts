@@ -78,10 +78,25 @@ function aliveOf(fs: Fighter[], side: 'A' | 'B'): Fighter[] {
   return fs.filter((f) => f.side === side && f.state === 'standing');
 }
 
-function qiMult(f: Fighter): number {
-  if (f.qi <= QI_EMPTY) return 0.55;
-  if (f.qi <= QI_LOW) return 0.8;
+// ── 전투 공식 — 단일 소스(시뮬·문서가 베끼지 않게 export, 재구현 오라클 방지). docs/35 §3·§4. ──
+export function qiPowerMult(qi: number): number {
+  if (qi <= QI_EMPTY) return 0.55; // 내공 바닥 ×0.55
+  if (qi <= QI_LOW) return 0.8; //   내공 부족 ×0.8
   return 1;
+}
+export function startQiFor(staminaFrac: number): number {
+  return 100 * (0.6 + 0.4 * clamp(staminaFrac, 0, 1)); // 시작 내공 = 체력비율 60~100%
+}
+export function lethalChance(overkill: number, mercy: number, isMa: boolean, strength: number): number {
+  const mercyMult = mercy < 40 ? 1.3 : mercy > 65 ? 0.45 : 1; // 손속(자비)
+  return clamp((0.12 + overkill * 0.5) * mercyMult * (isMa ? 1.5 : 1) * (1 - strength / 220), 0, 0.6);
+}
+export function tierFor(margin: number): CombatTier {
+  return margin < 0.22 ? 'close' : margin < 0.5 ? 'edge' : 'crush';
+}
+
+function qiMult(f: Fighter): number {
+  return qiPowerMult(f.qi);
 }
 
 function effAtk(f: Fighter): number {
@@ -160,7 +175,7 @@ export function simulateCombat(
       sheet,
       side,
       hp: sheet.maxHp,
-      qi: 100 * (0.6 + 0.4 * clamp(c.staminaFrac, 0, 1)),
+      qi: startQiFor(c.staminaFrac),
       state: 'standing' as CombatantState,
       dealt: 0,
       taken: 0,
@@ -201,17 +216,8 @@ export function simulateCombat(
     // 실전 — 쓰러짐. 결정타 사망 굴림: 손속(자비)·마공 살기·넘친 힘·몸의 단단함. 🔧
     defender.state = 'downed';
     const overkill = Math.min(1, -defender.hp / defender.sheet.maxHp);
-    const mercyMult =
-      attacker.sheet.ref.mercy < 40 ? 1.3 : attacker.sheet.ref.mercy > 65 ? 0.45 : 1;
     const deathChance = lethal
-      ? clamp(
-          (0.12 + overkill * 0.5) *
-            mercyMult *
-            (attacker.sheet.isMa ? 1.5 : 1) *
-            (1 - defender.sheet.ref.strength / 220),
-          0,
-          0.6,
-        )
+      ? lethalChance(overkill, attacker.sheet.ref.mercy, attacker.sheet.isMa, defender.sheet.ref.strength)
       : 0;
     if (rng() < deathChance) {
       defender.state = 'dead';
@@ -392,7 +398,7 @@ export function simulateCombat(
             ? 'A'
             : 'B';
   const margin = safeClamp(Math.abs(rA - rB), 0, 1);
-  const tier: CombatTier = margin < 0.22 ? 'close' : margin < 0.5 ? 'edge' : 'crush';
+  const tier: CombatTier = tierFor(margin);
 
   // ── 대련 사고 — 판 전체에 1회 굴림. 현격한 차·호출측 가산(감정·살기)으로 오른다.
   let accident: CombatResult['accident'];

@@ -18,6 +18,10 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 
 // 발작 임계 — 이 이상에서 매일 낮은 확률로 주화입마를 굴린다.
 export const SIMMA_ERUPT_THRESHOLD = 60;
+// 발작 일일 확률 — 임계(60) 초과분 비례, 상한 0.05. 단일 소스(시뮬·문서가 베끼지 않게 export). docs/13.
+export function eruptionChance(simma: number): number {
+  return clamp((simma - SIMMA_ERUPT_THRESHOLD) / 40, 0, 1) * 0.05;
+}
 // 불안정 신호 임계 — 이 이상이면 "불안정한 기색"이 관찰되고(discipleMoodSystem), 발작 전 예방용
 // 안신단을 쓸 수 있다(docs/37 R20). 발작 임계(60)보다 살짝 낮아 경고 → 대처 창을 준다.
 export const SIMMA_SIGNAL_THRESHOLD = 55;
@@ -87,7 +91,7 @@ export function tickSimma(): void {
 
     // 발작 굴림 — 임계 초과분에 비례한 낮은 일일 확률.
     if (next >= SIMMA_ERUPT_THRESHOLD) {
-      const chance = clamp((next - SIMMA_ERUPT_THRESHOLD) / 40, 0, 1) * 0.05;
+      const chance = eruptionChance(next);
       if (random() < chance) triggerQiDeviation(id);
     }
   }

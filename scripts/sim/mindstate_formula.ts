@@ -13,7 +13,7 @@ import './_storageShim';
 import { useDiscipleStore } from '../../src/stores/discipleStore';
 import {
   addSimma, getSimma, tickSimma, triggerQiDeviation,
-  onForcedBreakthroughFail, consumeAnsinElixir, SIMMA_ERUPT_THRESHOLD,
+  onForcedBreakthroughFail, consumeAnsinElixir, SIMMA_ERUPT_THRESHOLD, eruptionChance,
 } from '../../src/systems/simmaSystem';
 import { darknessScore } from '../../src/systems/darknessSystem';
 import { seedAmbient } from '../../src/systems/rng';
@@ -79,7 +79,7 @@ addSimma('bf', 6); // 실전(의뢰) 돌파 실패 가산은 trainingSystem 에�
 ck('실전 돌파 실패 가산 +6 (누적 20)', simmaOf('bf') === 20, `${simmaOf('bf')}`);
 
 // ── 3. 발작 확률 곡선 골든값 (선형, 임계 60 위, 상한 0.05) ──
-const eruptChance = (s: number) => Math.max(0, Math.min(1, (s - SIMMA_ERUPT_THRESHOLD) / 40)) * 0.05;
+const eruptChance = eruptionChance; // 엔진 함수 직접 호출(재구현 X·단일 소스)
 ck('발작확률 simma=60 → 0 (임계서 0)', near(eruptChance(60), 0), `${eruptChance(60)}`);
 ck('발작확률 simma=80 → 0.025 (절반)', near(eruptChance(80), 0.025), `${eruptChance(80)}`);
 ck('발작확률 simma=100 → 0.05 (상한)', near(eruptChance(100), 0.05), `${eruptChance(100)}`);

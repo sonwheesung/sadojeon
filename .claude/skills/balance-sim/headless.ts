@@ -560,6 +560,7 @@ async function runFactorySweep(): Promise<void> {
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
   const f2pHdr = process.argv.includes('f2p');
   console.log(`=== 1무공+3서폿(연단공장) · ${years}년 · ${iters}회 평균 (${f2pHdr ? `무과금 현실: 신품영초 ${Number(process.env.HD_RUN ?? 2)}/회차 + 영물정수 1/회차` : '핵과금: 무한재료'}) ===`);
+  console.log('⚠️ god-mode 격리: 자금10만·벽곡단무한·비급전권(all)·폐관청원 자동승인 — 영약/재료 축만 격리한 수치. "현실 무과금 도달률" 아님(docs/37 사각⑦·40 §3-B). 충실 측정은 별도 무과금 sim 필요.');
   console.log('카리=yun-soso(검·화경 빌드). 서폿 3명=연단공장(공부+제조). 카리는 내공단 흡수+화경 벽서 구전대환단 복용.\n');
 
   let carryHwa = 0;

@@ -4,7 +4,7 @@
 // 실행: npx tsx scripts/sim/combat_formula.ts
 import { kitPower, combatRating, GRADE_COEF } from '../../src/systems/combatPower';
 import { buildSheet } from '../../src/systems/combat/sheet';
-import { simulateCombat } from '../../src/systems/combat/engine';
+import { simulateCombat, startQiFor, qiPowerMult, lethalChance, tierFor } from '../../src/systems/combat/engine';
 import { mulberry32 } from '../../src/systems/rng';
 import type { Combatant, CombatArt } from '../../src/types/combat';
 import type { Disciple } from '../../src/types';
@@ -187,14 +187,14 @@ console.log('\n── D. 엔진 임계/계수 (combat/engine.ts) ──');
 // D1: tier 밴드 경계 — margin 0.22는 edge(우세), 0.5는 crush(압도). 함수가 export 안되어 직접 구성 어렵다.
 //     대신 결과 객체에서 알려진 결정적 케이스로 tier 라벨 규칙을 간접 확인(경계 < 부등호).
 //     박빙<0.22 / 우세<0.5 / 압도. (코드: margin<0.22?close:margin<0.5?edge:crush)
-const tierOf = (m: number) => (m < 0.22 ? 'close' : m < 0.5 ? 'edge' : 'crush');
+const tierOf = tierFor; // 엔진 함수 직접 호출(재구현 X·단일 소스 — 드리프트 방지)
 ck('D1-tier 0.219 → close(박빙)', tierOf(0.219) === 'close');
 ck('D1-tier 0.22 경계 → edge(우세, 박빙 아님)', tierOf(0.22) === 'edge');
 ck('D1-tier 0.499 → edge(우세)', tierOf(0.499) === 'edge');
 ck('D1-tier 0.5 경계 → crush(압도, 우세 아님)', tierOf(0.5) === 'crush');
 
 // D2: 내공 위력 페널티 — qi≤12 ×0.55, qi≤35 ×0.8, 그 외 ×1. 경계 포함관계(≤).
-const qiMultRef = (qi: number) => (qi <= 12 ? 0.55 : qi <= 35 ? 0.8 : 1);
+const qiMultRef = qiPowerMult; // 엔진 함수 직접 호출(단일 소스)
 ck('D2-qi 12 경계 → 0.55(바닥 포함)', qiMultRef(12) === 0.55);
 ck('D2-qi 13 → 0.8(부족)', qiMultRef(13) === 0.8);
 ck('D2-qi 35 경계 → 0.8(부족 포함)', qiMultRef(35) === 0.8);
@@ -202,7 +202,7 @@ ck('D2-qi 36 → 1.0(정상)', qiMultRef(36) === 1);
 
 // D3: 시작 내공 — 100×(0.6+0.4×staminaFrac). frac1→100, frac0→60, frac0.5→80.
 //     결정적 시뮬에서 첫 합 전 qi 를 직접 못 보므로, 만전 1합 즉종결 케이스로 간접: 대신 공식 재현 단언.
-const startQi = (f: number) => 100 * (0.6 + 0.4 * Math.max(0, Math.min(1, f)));
+const startQi = startQiFor; // 엔진 함수 직접 호출(단일 소스)
 ck('D3-시작내공 frac1 → 100', eq(startQi(1), 100));
 ck('D3-시작내공 frac0 → 60', eq(startQi(0), 60));
 ck('D3-시작내공 frac0.5 → 80', eq(startQi(0.5), 80));
@@ -223,10 +223,7 @@ ck('D3-시작내공 frac0.5 → 80', eq(startQi(0.5), 80));
 
 // D5: 사망 굴림 손속·마공 계수 — clamp((0.12+overkill×0.5)×mercyMult×maMult×(1−str/220),0,0.6)
 //     공식 재현(엔진 내부 비공개 → 설계 계수 못박기). 자비<40→1.3, >65→0.45, 마공×1.5, 상한0.6.
-const deathChance = (overkill: number, mercy: number, isMa: boolean, str: number) => {
-  const mercyMult = mercy < 40 ? 1.3 : mercy > 65 ? 0.45 : 1;
-  return Math.max(0, Math.min(0.6, (0.12 + overkill * 0.5) * mercyMult * (isMa ? 1.5 : 1) * (1 - str / 220)));
-};
+const deathChance = lethalChance; // 엔진 함수 직접 호출(단일 소스 — 엔진이 계수 바꾸면 이 테스트가 즉시 깸)
 // overkill0, mercy50, 정파, str0 → 0.12×1×1×1 = 0.12
 ck('D5-사망 기본(overkill0,자비50,정,str0) → 0.12', eq(deathChance(0, 50, false, 0), 0.12));
 // 자비<40 ×1.3: 0.12×1.3 = 0.156
