@@ -61,6 +61,8 @@ export const GATHER_REGIONS: readonly GatherRegion[] = [
     drops: [
       { id: 'herb-poison', chance: 0.8, min: 1, max: 3 },
       { id: 'herb-rare', chance: 0.4, min: 1, max: 1 },
+      // 영물 묵린혈망(墨鱗血蟒) — 혈망 독정(독 치명약 만독불침단 재료). 회차당 종별 1(activitySystem 상한).
+      { id: 'essence-poison', chance: 0.3, min: 1, max: 1 },
     ],
   },
   {
@@ -79,6 +81,8 @@ export const GATHER_REGIONS: readonly GatherRegion[] = [
     drops: [
       { id: 'herb-cold', chance: 0.8, min: 1, max: 3 },
       { id: 'herb-rare', chance: 0.4, min: 1, max: 1 },
+      // 영물 현빙 영물 — 현빙 정수(동상 치명약 대양신단 재료). 회차당 종별 1.
+      { id: 'essence-frost', chance: 0.3, min: 1, max: 1 },
     ],
   },
   {
@@ -97,6 +101,8 @@ export const GATHER_REGIONS: readonly GatherRegion[] = [
     drops: [
       { id: 'herb-fire', chance: 0.8, min: 1, max: 3 },
       { id: 'herb-rare', chance: 0.4, min: 1, max: 1 },
+      // 영물 만년화리(火鯉) — 화린 정수(화상 치명약 옥로단 재료). 회차당 종별 1.
+      { id: 'essence-fire', chance: 0.3, min: 1, max: 1 },
     ],
   },
   {

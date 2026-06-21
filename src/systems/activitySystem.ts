@@ -83,11 +83,24 @@ function settleGather(act: ActiveActivity): Milestone | null {
 
   const lore = Math.max(...party.map(loreOf), 0);
   const loreMult = Math.max(0.5, lore / 20); // 흔한 약초는 지식만큼 더 캔다.
+  // 신급 재료 회차당 상한 — 무한 수급 차단(영물이 무한이면 동물과 다를 바 없음, 사용자 2026-06-21).
+  // **종(種)별** 상한: 신품 영초(식물) 2/회차 · 각 영물 정수(속성·영물재료)는 종마다 1/회차(등급 묶음 아님).
+  // 회차 리셋은 activityStore.reset(seedNewRun). 영물 종이 늘면 각 종이 자기 1/회차를 가짐.
+  const divineCap = (id: string): number | null =>
+    id === 'herb-divine' ? 2 : id === 'beast-essence' || id.startsWith('essence-') ? 1 : null;
   const haul: Record<string, number> = {};
   const give = (id: string, qty: number) => {
     if (qty <= 0) return;
-    addMaterial(id, qty);
-    haul[id] = (haul[id] ?? 0) + qty;
+    let n = qty;
+    const cap = divineCap(id);
+    if (cap != null) {
+      const got = useActivityStore.getState().divineDrops?.[id] ?? 0;
+      n = Math.min(qty, Math.max(0, cap - got)); // 회차 상한까지만
+      if (n <= 0) return;
+      useActivityStore.getState().bumpDivine(id, n);
+    }
+    addMaterial(id, n);
+    haul[id] = (haul[id] ?? 0) + n;
   };
 
   for (const drop of region.drops) {
@@ -96,13 +109,13 @@ function settleGather(act: ActiveActivity): Milestone | null {
     give(drop.id, Math.max(1, Math.round(base * (drop.id === 'herb-common' ? loreMult : 1))));
   }
 
-  // 영물(극험) — 그레이박스: 파티 전투력 합 게이트 굴림. 성공 시 신품초 보장, 실패 시 부상 가중.
+  // 영물(극험) — 그레이박스: 파티 전투력 합 게이트 굴림. 성공 시 영물 정수(회차당 1, give 가 상한 enforce).
   // TODO(Phase 3): combat engine 으로 실제 영물전 배선(docs/35·38 §2).
   let beastWon = true;
   if (region.spiritBeast) {
     const power = party.reduce((s, d) => s + combatSeong(d), 0);
     beastWon = random() < Math.min(0.85, 0.25 + power * 0.06);
-    if (beastWon) give('herb-divine', 1);
+    if (beastWon) give('beast-essence', 1);
   }
 
   // 환경 상처 — 파티 1인씩 굴림. 영물전 패배 시 위험·심도 가중.
@@ -121,7 +134,7 @@ function settleGather(act: ActiveActivity): Milestone | null {
     Object.entries(haul)
       .map(([id, n]) => `${MATERIAL_LABEL[id] ?? id} ×${n}`)
       .join(', ') || '이렇다 할 소득은 없었다';
-  const beastNote = region.spiritBeast ? (beastWon ? ' 영물을 베고 신품초를 얻었다.' : ' 영물에 밀려 빈손으로 물러났다.') : '';
+  const beastNote = region.spiritBeast ? (beastWon ? ' 영물을 베고 영물 정수를 거뒀다.' : ' 영물에 밀려 빈손으로 물러났다.') : '';
   const hurtNote = hurt.length ? `\n${hurt.join('·')}이(가) 부상을 입고 돌아왔다.` : '';
   return {
     id: `act-${act.id}-${act.dueDay}`,

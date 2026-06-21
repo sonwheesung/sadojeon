@@ -37,7 +37,13 @@ export const MATERIAL_LABEL: Record<string, string> = {
   'herb-poison': '해독초',
   'herb-cold': '한설초',
   'herb-rare': '진귀 영초',
-  'herb-divine': '신품 영초',
+  'herb-divine': '신품 영초', // 신급 식물 — 영산절지 채집·의뢰로 회차당 최대 2(희소). docs/38·40 §3-B.
+  // ── 신급 영물재료(영물 정수) — 영물은 무한 수급 불가, **종(種)별 회차당 1**(영물=동물 아님, 사용자 2026-06-21). ──
+  // 속성 정수는 속성별 영물에서. 정통 무협명: 만년화리(火鯉)·현빙 영물·묵린혈망(墨鱗血蟒)·영산 영물.
+  'essence-fire': '화린 정수', //   만년화리(火鯉) — 화산. 화속 치명 치료약(옥로단) 게이트.
+  'essence-frost': '현빙 정수', //  현빙 영물 — 설산. 동상 치명 치료약(대양신단) 게이트.
+  'essence-poison': '혈망 독정', // 묵린혈망(墨鱗血蟒) — 독곡. 독 치명 치료약(만독불침단) 게이트.
+  'beast-essence': '영물 정수', //  영산절지 영물(최상) — 화경 구전대환단 핵심 게이트.
 };
 
 // 스타터 연단 도감(레시피). 배운 레시피만 제조 가능(연단 비급).
@@ -52,22 +58,22 @@ export const ELIXIR_RECIPES: readonly ElixirRecipe[] = [
   // 중독(poison) — 독은 흔하다(당가·만천화우·살수 독침). 깊은 중독은 상급 해독약이라야.
   { id: 'haedokcho-go', name: '해독초고', category: 'heal', woundType: 'poison', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-poison', qty: 2 }], effect: '해독초를 짓이긴 응급 해독고 — 가벼운 중독(5등급)을 다스린다.' },
   { id: 'haedok-3', name: '해독단', category: 'heal', woundType: 'poison', grade: 3, alchemyReq: 30, craftDays: 6, materials: [{ id: 'herb-poison', qty: 3 }], effect: '중독(3등급)을 푼다.' },
-  { id: 'mandok-bulchimdan', name: '만독불침단', category: 'heal', woundType: 'poison', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-poison', qty: 3 }, { id: 'herb-divine', qty: 1 }], effect: '만 가지 독을 누른다 — 치명 중독(1등급)까지 풀어내는 해독의 정점(당가·의가 비전).' },
+  { id: 'mandok-bulchimdan', name: '만독불침단', category: 'heal', woundType: 'poison', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-poison', qty: 3 }, { id: 'essence-poison', qty: 1 }], effect: '만 가지 독을 누른다 — 치명 중독(1등급)까지 풀어내는 해독의 정점(당가·의가 비전). 묵린혈망의 혈망 독정이 핵심.' },
   // 화상(burn)
   { id: 'bingsim-san', name: '빙심산', category: 'heal', woundType: 'burn', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-fire', qty: 2 }], effect: '서늘한 가루로 가벼운 화상(5등급)을 식힌다.' },
   { id: 'cheongryang-4', name: '청량고', category: 'heal', woundType: 'burn', grade: 4, alchemyReq: 20, craftDays: 4, materials: [{ id: 'herb-fire', qty: 2 }], effect: '화상(4등급)을 식힌다.' },
-  { id: 'ongno-dan', name: '옥로단', category: 'heal', woundType: 'burn', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-fire', qty: 2 }, { id: 'herb-divine', qty: 1 }], effect: '타들어간 살을 옥 이슬로 되살린다 — 치명 화상(1등급)까지.' },
+  { id: 'ongno-dan', name: '옥로단', category: 'heal', woundType: 'burn', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-fire', qty: 2 }, { id: 'essence-fire', qty: 1 }], effect: '타들어간 살을 옥 이슬로 되살린다 — 치명 화상(1등급)까지. 만년화리의 화린 정수가 핵심.' },
   // 동상(frost)
   { id: 'onyang-go', name: '온양고', category: 'heal', woundType: 'frost', grade: 5, alchemyReq: 12, craftDays: 2, materials: [{ id: 'herb-cold', qty: 2 }], effect: '따뜻한 고약으로 가벼운 동상(5등급)을 녹인다.' },
   { id: 'onyang-3', name: '온양단', category: 'heal', woundType: 'frost', grade: 3, alchemyReq: 30, craftDays: 6, materials: [{ id: 'herb-cold', qty: 3 }], effect: '동상(3등급)을 녹인다.' },
-  { id: 'daeyang-singdan', name: '대양신단', category: 'heal', woundType: 'frost', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'herb-divine', qty: 1 }], effect: '꺼져가는 양기를 되살린다 — 치명 동상(1등급)까지.' },
+  { id: 'daeyang-singdan', name: '대양신단', category: 'heal', woundType: 'frost', grade: 1, alchemyReq: 52, craftDays: 12, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'essence-frost', qty: 1 }], effect: '꺼져가는 양기를 되살린다 — 치명 동상(1등급)까지. 현빙 영물의 현빙 정수가 핵심.' },
   // ── 내공단(속성·흡수) ──
   { id: 'naegong-fire', name: '양화내단', category: 'internal', attribute: 'fire', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-fire', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '화속 내공 120 — 20일 흡수(흡수 중 다른 영단 X).' },
   { id: 'naegong-water', name: '현음내단', category: 'internal', attribute: 'water', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '수속 내공 120 — 20일 흡수.' },
   // ── 심마 ──
   { id: 'ansin', name: '안신단', category: 'mind', alchemyReq: 40, craftDays: 8, materials: [{ id: 'herb-rare', qty: 2 }], effect: '심마·주화입마를 가라앉힌다(흑화·발작 완화).' },
   // ── 최상급(화경) ──
-  { id: 'guzeon-daehwandan', name: '구전대환단', category: 'utility', alchemyReq: 58, craftDays: 30, materials: [{ id: 'herb-divine', qty: 3 }, { id: 'herb-rare', qty: 3 }], effect: '화경의 벽을 넘는 신품 영약(최상급). 영약제조 특화 제자라야 닿는 경지. 제조 30일.' },
+  { id: 'guzeon-daehwandan', name: '구전대환단', category: 'utility', alchemyReq: 58, craftDays: 30, materials: [{ id: 'beast-essence', qty: 1 }, { id: 'herb-divine', qty: 2 }, { id: 'herb-rare', qty: 3 }], effect: '화경의 벽을 넘는 신품 영약(최상급). 영물 정수 1 + 신품 영초 2 — 회차당 신급 재료가 희소해 사실상 회차당 1과(무과금 화경 게이트). 제조 30일.' },
 ];
 
 export function findElixirRecipe(id: string): ElixirRecipe | undefined {
