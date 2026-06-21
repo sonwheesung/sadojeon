@@ -26,3 +26,4 @@ export { useFieldEventStore } from './fieldEventStore';
 export type { FieldEvent } from './fieldEventStore';
 export { useAchievementStore } from './achievementStore';
 export { useTallyStore } from './tallyStore';
+export { useOnboardingStore } from './onboardingStore';
