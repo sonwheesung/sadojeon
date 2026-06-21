@@ -15,6 +15,8 @@ import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { enableDaeohTelemetry, resetDaeoh, daeoh } from '@/systems/dev/daeohTelemetry';
+import { dispatchGather, canGather } from '@/systems/activitySystem';
+import { findGatherRegion } from '@/data/activities';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve, goalArtFor as goalArtForDiag } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { evaluateJobs } from '@/systems/jobSystem';
@@ -29,6 +31,7 @@ import { setFoodCost, setLabUpkeep, setPatronageMult } from '@/systems/economySy
 import { setQuestRewardMult } from '@/systems/questSystem';
 import { ELIXIR_RECIPES, DIVINE_ELIXIR_ID } from '@/data/elixirs';
 import { useItemStore } from '@/stores/itemStore';
+import { useActivityStore } from '@/stores/activityStore';
 import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -2212,6 +2215,10 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   // 각 영물정수 종별1). 비급은 carrysweep 이 회차 누적(no `all`)이라 그대로 충실. (벽곡단은 herb-common 으로
   // 값싸게 무한 입수 가능하므로 게이트 아님 — Infinity 유지·근사). docs/40 §3-B 충실 무과금 측정.
   const real = process.argv.includes('real');
+  // 'faithful' = 진짜 무과금: 신급 재료를 **지급하지 않고** 봇이 영산절지 극험 원정으로 직접 번다(영물전
+  // 승리=영물정수·채집=신품영초, 회차당 캡·치명상 위험·10일 점유). docs/37 ⑦·project_f2p_hwagyeong_untested.
+  // real 위에 얹는다(실경제+드랍무공서+재료획득). 일반~진귀 영초는 값싸 무한 근사 유지(게이트 아님).
+  const faithful = real && process.argv.includes('faithful');
   // 이월 비급만 complete 로(=새 사부 첫날 즉시 연구). 시작5권은 seedNewRun 이 이미 complete.
   for (const id of carriedIds) grantScroll(id);
   // 측정2 기준선 — 회차 시작 코드덱스(시작5권 ∪ 이월 비급). 이 이후 의뢰로 새로 든 권만 "새권".
@@ -2231,8 +2238,11 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   for (const id of RECIPE_IDS) learnRecipe(id);
   // 흔한~진귀 영초는 값싸고 채집 쉬워 무한 근사(게이트 아님). 신급은 real 이면 회차당 룰, 아니면 무한.
   for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare']) addMaterial(m, 9_999_999);
-  addMaterial('herb-divine', real ? 2 : 9_999_999);
-  for (const m of ['beast-essence', 'essence-fire', 'essence-frost', 'essence-poison']) addMaterial(m, real ? 1 : 9_999_999);
+  // 신급 재료: faithful=0(영산절지 원정으로 번다) · real=회차당 룰 지급 · 그 외=무한.
+  if (!faithful) {
+    addMaterial('herb-divine', real ? 2 : 9_999_999);
+    for (const m of ['beast-essence', 'essence-fire', 'essence-frost', 'essence-poison']) addMaterial(m, real ? 1 : 9_999_999);
+  }
   const carryId = 'yun-soso';
   const sparPartnerId = 'jang-cheol';
   const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId && id !== sparPartnerId);
@@ -2257,6 +2267,27 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
       sch.setDailyChoice(sparPartnerId, 'martial', daeryeonChoiceValue(carryId));
     }
     const dsNow = useDiscipleStore.getState();
+    // 충실 모드 — 영산절지 극험 원정으로 신급 재료를 번다. 약지식≥35 서폿 + 전투(대련상대) 파티.
+    // canGather 가 가용·약지식·전투 게이트(미충족·점유 중이면 자동 skip). 캡(영물정수1·신품영초2/회차)은
+    // settleGather 가 enforce → 매일 시도해도 무해(여분 원정은 진귀초·경험만). 카리는 빼 둠(의뢰=대오 우선).
+    // 캡 도달(영물정수1·신품영초2) 시 원정 중단 — 안 그러면 봇이 무한 원정해 대련상대·서폿을 영구히
+    // 빼가 카리 대련·의뢰 파티를 굶긴다(불구 회귀). 캡까지 ~3-4회만 다녀온다. 구전대환단 1과면 충분.
+    const divine = useActivityStore.getState().divineDrops;
+    const capsHit = (divine['beast-essence'] ?? 0) >= 1 && (divine['herb-divine'] ?? 0) >= 2;
+    if (faithful && !capsHit) {
+      const region = findGatherRegion('g-spirit-mountain');
+      const loreSup = supportIds.find((sid) => {
+        const sd = dsNow.disciples[sid];
+        return sd && Math.max(sd.stats?.alchemy?.level ?? 0, sd.stats?.medicine?.level ?? 0) >= 35;
+      });
+      if (region && loreSup) {
+        const partyIds = [sparPartnerId, loreSup];
+        const party = partyIds.map((pid) => dsNow.disciples[pid]).filter((x): x is Disciple => Boolean(x));
+        if (party.length === partyIds.length && canGather(region, party).ok) {
+          dispatchGather('g-spirit-mountain', partyIds);
+        }
+      }
+    }
     for (const sid of supportIds) {
       const sd = dsNow.disciples[sid];
       if (sd && sd.status === 'training') {
