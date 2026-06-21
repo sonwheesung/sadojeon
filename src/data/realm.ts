@@ -186,6 +186,12 @@ export const ENLIGHTENMENT_PITY_GUARANTEE = 12; // 누적 12회 실패 → 다�
 // 🔧 대오 배율 — 화경 천장 튜닝 손잡이(실전 대오에만). 기본 1. balance-sim 에서 `DAEOH_SCALE=N` env 로
 // sweep(앱은 env 없어 기본). 무과금 최적 화경 ≤20% 목표(docs/23 §화경 벽, 2026-06-21). 확정 후 base 에 굳힘.
 const DAEOH_QUEST_SCALE = Number(process.env.DAEOH_SCALE) || 1;
+
+// 🔧 외공(근력) 자연 성장 배율 — 화경 페이싱 손잡이(docs/23 §화경 벽, 2026-06-21). 외공이 화경 벽 마지막
+// 관문(받침 62)인데 자연 수련+실전으로 너무 빨리(8년차) 닿아 대오 굴림 창이 컸다. 자연 외공(단련+실전)을
+// 늦춰 무과금은 벽에 늦게(화경↓), 외공 영약(과금·연단)으로 가속하면 일찍(화경↑) 가른다. 단련·실전 양쪽 적용.
+// 기본 1. balance-sim `EXT_SCALE=N` env sweep. 확정 후 굳힘. (최대체력 endurance·금강불괴 굴림엔 미적용.)
+export const EXTERNAL_PACING_SCALE = Number(process.env.EXT_SCALE) || 1;
 export const GREAT_ENLIGHTENMENT = {
   secludePerDayBase: 0.0001, // 폐관 1일당 기본 0.01% — 폐관만 수년 돌려도 ~10%대(소극 플레이의 천장)
   secludePerDayPerInsight: 0.00004, // + 오성×0.004%p (오성4 ≈ 0.026%/일)

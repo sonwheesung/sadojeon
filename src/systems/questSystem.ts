@@ -17,7 +17,7 @@ import {
 import { QUEST_EVENTS, QUEST_EVENT_CHANCE } from '@/data/questEvents';
 import { MARTIAL_ARTS } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
-import { realmIndex } from '@/data/realm';
+import { realmIndex, EXTERNAL_PACING_SCALE } from '@/data/realm';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
@@ -1068,7 +1068,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
         gainMainSeongExp(d, Math.max(1, Math.round(QUEST_SEONG_EXP_PER_WEEK * expFactor)));
         const bodyTier = d.efficiency?.strength ?? '보통';
         const bodyExp = Math.round(
-          QUEST_BODY_EXP_PER_WEEK * expFactor * BODY_EFFICIENCY_MULTIPLIER[bodyTier] * bodyAgeMultiplier(currentAge(d)),
+          QUEST_BODY_EXP_PER_WEEK * expFactor * BODY_EFFICIENCY_MULTIPLIER[bodyTier] * bodyAgeMultiplier(currentAge(d)) * EXTERNAL_PACING_SCALE,
         );
         if (bodyExp > 0) ds.addStatExp(id, 'strength', bodyExp);
       }

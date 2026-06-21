@@ -63,6 +63,7 @@ import {
   realmCeiling,
   realmIndex,
   wallInternalReq,
+  EXTERNAL_PACING_SCALE,
 } from '@/data/realm';
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
@@ -107,6 +108,7 @@ export function bodyAgeMultiplier(age: number): number {
 
 // 환골탈태 후 나이 보정 하한 — 젊은 육체(15~16세 수준)로 회귀, 몸이 다시 자란다. docs/23 §5.
 export const BONE_REBIRTH_AGE_FLOOR = 2.4;
+
 
 // 단련/비무공 능력치 학습 효율 — 영역 효율맵. 미기재 영역 = '보통'. docs/28 §2.
 // 외공(근력·체력)은 무공보다 노력 의존(압축 효율) + 어릴 때 강함(나이 보정). docs/28 §5-1.
@@ -651,7 +653,9 @@ export function tickDailyTraining(): DiscipleTickReport[] {
     const statGains: StatGain[] = [];
     if (plan.grantStat && plan.expBase > 0 && progressMul > 0) {
       const aptMul = aptitudeMultiplier(d, plan.grantStat);
-      const expDelta = Math.max(1, Math.round(plan.expBase * aptMul * progressMul));
+      // 외공(strength)만 화경 페이싱 배율 적용 — 자연 수련을 늦춰 벽 도달을 미룬다(영약이 가속 경로).
+      const extScale = plan.grantStat === 'strength' ? EXTERNAL_PACING_SCALE : 1;
+      const expDelta = Math.max(1, Math.round(plan.expBase * aptMul * progressMul * extScale));
       const levelUps = store.addStatExp(id, plan.grantStat, expDelta);
       const track = store.disciples[id]?.stats?.[plan.grantStat];
       statGains.push({

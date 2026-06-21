@@ -43,6 +43,7 @@ const CATEGORY_LABEL: Record<ElixirRecipe['category'], string> = {
   heal: '치료',
   internal: '내공',
   mind: '심마',
+  body: '외공',
   utility: '유틸',
 };
 
