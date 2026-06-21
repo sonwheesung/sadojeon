@@ -558,7 +558,8 @@ async function runFactorySweep(): Promise<void> {
   const days = years * 336;
   const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
-  console.log(`=== 1무공+3서폿(연단공장) · ${years}년 · ${iters}회 평균 (무과금·무한재료) ===`);
+  const f2pHdr = process.argv.includes('f2p');
+  console.log(`=== 1무공+3서폿(연단공장) · ${years}년 · ${iters}회 평균 (${f2pHdr ? `무과금 현실: 신품영초 ${Number(process.env.HD_YEAR ?? 4)}/년` : '핵과금: 무한재료'}) ===`);
   console.log('카리=yun-soso(검·화경 빌드). 서폿 3명=연단공장(공부+제조). 카리는 내공단 흡수+화경 벽서 구전대환단 복용.\n');
 
   let carryHwa = 0;
@@ -566,6 +567,11 @@ async function runFactorySweep(): Promise<void> {
   let sumDivine = 0;
   let sumInternalDan = 0;
   const fullCodex = process.argv.includes('all'); // 'all' = 비급 전권 complete 시작 — 사슬 완성 게이트 격리(후기 회차 가정).
+  // 'f2p' = 무과금 현실: 신품 영초(herb-divine)만 무한→**현실 공급**으로 막는다(화경 실관문 = 구전대환단 재료).
+  // 다른 영초는 채집 쉬워 유지. HD_YEAR = 연간 신품 영초 graybox(영산절지 극험 채집 시간경쟁 반영·튜닝 레버,
+  // 환경변수로 조정 `HD_YEAR=N`). 시작 일괄 지급이라 *현실 트리클의 상한*(이것도 ≤20%면 트리클은 더 낮음). docs/40 §3-B②.
+  const f2p = process.argv.includes('f2p');
+  const HD_YEAR = Number(process.env.HD_YEAR ?? 4);
   for (let it = 0; it < iters; it += 1) {
     seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
     useGameStore.getState().setPhase('playing');
@@ -580,7 +586,9 @@ async function runFactorySweep(): Promise<void> {
     }
     buildAlchemyLab();
     for (const id of RECIPE_IDS) learnRecipe(id);
-    for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
+    for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare']) addMaterial(m, 9_999_999);
+    // 신품 영초: 기본(핵과금) 무한 / f2p(무과금) 현실 공급(연간 HD_YEAR개, 영산절지 채집 기반).
+    addMaterial('herb-divine', f2p ? Math.max(0, Math.floor(HD_YEAR * years)) : 9_999_999);
     const carryId = 'yun-soso';
     let questCount = 0; // 진단 — 카리 파견 횟수
     let wasQuesting = false;
