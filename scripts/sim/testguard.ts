@@ -104,8 +104,14 @@ for (const [t, m] of Object.entries(TRAITS)) {
 // 진단용 sim(출력 표·서술 추적 — 사람이 읽는 용도, PASS/FAIL 없음)은 가드가 아니므로 allowlist.
 // 새 sim 이 가드 의도인데 fail-hard 가 없으면 여기 안 걸려야 통과 → 누락이 잡힌다.
 const DIAGNOSTIC_SIMS = ['combatmatrix', 'statuseffect', 'statusmatrix', 'worldquest', 'woundsim'];
+// 가드도 진단도 아닌 **인프라**(헬퍼 모듈·도구) — PASS/FAIL 없는 라이브러리/CLI 라 가드 계약(process.exit·단언)
+// 대상이 아니다. 침묵 무시가 아니라 명시 분류(아래서 출력). buggify=결함주입 헬퍼 · statcheck=오차범위 도구.
+const NON_GUARD_SIMS = ['buggify', 'statcheck'];
 const simFiles = readdirSync(join(root, 'scripts/sim')).filter((f) => f.endsWith('.ts') && !f.startsWith('_'));
-const guardSims = simFiles.filter((f) => !DIAGNOSTIC_SIMS.includes(f.replace(/\.ts$/, '')));
+const guardSims = simFiles.filter((f) => {
+  const n = f.replace(/\.ts$/, '');
+  return !DIAGNOSTIC_SIMS.includes(n) && !NON_GUARD_SIMS.includes(n);
+});
 const noFail: string[] = [];
 const noAssert: string[] = [];
 for (const f of guardSims) {
@@ -118,6 +124,8 @@ ck('회귀 가드 sim 단언(check/ck/band/checks) 보유', noAssert.length === 
 // 진단용 sim 은 침묵 무시가 아니라 명시 — "회귀 가드 아님(출력 전용)"을 출력.
 const presentDiag = DIAGNOSTIC_SIMS.filter((d) => simFiles.includes(`${d}.ts`));
 console.log(`\n[진단용 sim(회귀 가드 아님·출력 전용)]: ${presentDiag.join(' · ')} — PASS/FAIL 없이 표·추적 출력. 가드로 쓰려면 밴드 assert 추가 필요.`);
+const presentNonGuard = NON_GUARD_SIMS.filter((d) => simFiles.includes(`${d}.ts`));
+console.log(`[인프라(가드·진단 아님)]: ${presentNonGuard.join(' · ')} — 헬퍼 모듈·도구(buggify 결함주입·statcheck 오차범위). 가드 계약 비대상.`);
 
 // optional(보고만·미구현) 추적 — 침묵 누락이 아니라 manifest 에 명시됐음을 출력.
 const opt = Object.entries(RESULT_FIELDS).filter(([, m]) => m.kind === 'optional');

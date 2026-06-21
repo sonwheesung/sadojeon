@@ -62,3 +62,6 @@ app-example
 
 # scripts/sim 헤드리스 러너 임시 번들 (프로세스별 고유 pid)
 scripts/sim/_run.*.cjs
+
+# 변이 테스트 진행 락(절대 커밋 금지 — pre-commit 훅이 차단)
+.mutation.lock
