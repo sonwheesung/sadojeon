@@ -183,11 +183,14 @@ export const ENLIGHTENMENT_PITY_GUARANTEE = 12; // 누적 12회 실패 → 다�
 //   "강호에서 깨닫는다". 위험을 감수하는 플레이(실력)가 운을 키운다. 🔧 그레이박스(시뮬 튜닝).
 // ✅ 목표 분포(사용자 확정 2026-06-12): 실력 없음(폐관만·오성 낮음) ≈ 10% / 적당한 실력+운 ≈ 50%
 // / 실력 최상+운 나쁨 ≈ 30% / 실력 최상+운 좋음 ≈ 80% (최상 실력 평균 ≈ 55~65%).
+// 🔧 대오 배율 — 화경 천장 튜닝 손잡이(실전 대오에만). 기본 1. balance-sim 에서 `DAEOH_SCALE=N` env 로
+// sweep(앱은 env 없어 기본). 무과금 최적 화경 ≤20% 목표(docs/23 §화경 벽, 2026-06-21). 확정 후 base 에 굳힘.
+const DAEOH_QUEST_SCALE = Number(process.env.DAEOH_SCALE) || 1;
 export const GREAT_ENLIGHTENMENT = {
   secludePerDayBase: 0.0001, // 폐관 1일당 기본 0.01% — 폐관만 수년 돌려도 ~10%대(소극 플레이의 천장)
   secludePerDayPerInsight: 0.00004, // + 오성×0.004%p (오성4 ≈ 0.026%/일)
-  questBase: 0.007, // 결투·큰의뢰 생환 1회당 기본 0.7% — 실전이 대오의 주 무대
-  questPerInsight: 0.0035, // + 오성×0.35%p (오성3 ≈ 1.75% · 오성4 ≈ 2.1% · 오성5 ≈ 2.45%/회)
+  questBase: 0.007 * DAEOH_QUEST_SCALE, // 결투·큰의뢰 생환 1회당 기본 0.7% — 실전이 대오의 주 무대
+  questPerInsight: 0.0035 * DAEOH_QUEST_SCALE, // + 오성×0.35%p (오성3 ≈ 1.75% · 오성4 ≈ 2.1% · 오성5 ≈ 2.45%/회)
 } as const;
 
 export function greatEnlightenmentChance(insight: number, mode: 'seclude' | 'quest'): number {

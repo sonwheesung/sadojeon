@@ -68,7 +68,7 @@ import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
 import { attemptBoneRebirth } from './boneRebirthSystem';
-import { recordDaeoh } from './dev/daeohTelemetry';
+import { recordDaeoh, recordWall } from './dev/daeohTelemetry';
 import { parseDaeryeonChoice, resolveDaeryeon } from './daeryeonSystem';
 import { applyPrereqTrickle } from './martialExp';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
@@ -413,6 +413,10 @@ function applyRealmTick(
 
   let forcedFail = false;
   if (atWall && wallTarget) {
+    // 화경 벽 첫 도달 진단(페이싱 측정) — 그 순간 세 기둥 스냅샷. sim 전용(off면 무비용).
+    if (wallTarget === 'hwagyeong') {
+      recordWall(useTimeStore.getState().totalDay, internal, external, mainSeong);
+    }
     if (isSeclusion) {
       // 폐관엔 **벽곡단**(곡기 끊는 단약)이 필수 — 2개/일. 없으면 그날 폐관 수행 불가(깨달음 굴림 X).
       if (!consumeByeokgokdan(BYEOKGOKDAN_PER_DAY)) {

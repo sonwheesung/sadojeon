@@ -571,6 +571,7 @@ async function runFactorySweep(): Promise<void> {
   // 대오 굴림 계측(화경 밸런스) — 벽+영약 상태서 실제 굴린 폐관·실전 대오 횟수·성공. docs/23·40 §3-B.
   enableDaeohTelemetry(true);
   let sumQRolls = 0, sumQWins = 0, sumSRolls = 0, sumSWins = 0;
+  let sumWallYear = 0, wallReached = 0, sumWallExt = 0, sumWallSeong = 0;
   const fullCodex = process.argv.includes('all'); // 'all' = 비급 전권 complete 시작 — 사슬 완성 게이트 격리(후기 회차 가정).
   // 'f2p' = 무과금 현실: 신급 재료만 무한→**회차당 룰 공급**으로 막는다(화경 실관문 = 구전대환단 재료).
   // 룰(사용자 2026-06-21): 신품 영초(식물) 회차당 2 + 영물 정수(영물재료) 회차당 1 → 구전대환단 딱 1과/회차.
@@ -681,6 +682,11 @@ async function runFactorySweep(): Promise<void> {
     sumInternalDan += internalDan;
     sumQRolls += daeoh.questRolls; sumQWins += daeoh.questWins;
     sumSRolls += daeoh.secludeRolls; sumSWins += daeoh.secludeWins;
+    if (Number.isFinite(daeoh.firstWallDay)) {
+      wallReached += 1;
+      sumWallYear += daeoh.firstWallDay / 336; // 입문(10세) 기준 경과 연차
+      sumWallExt += daeoh.wallExternal; sumWallSeong += daeoh.wallSeong;
+    }
     // 진단 — 카리 세 기둥 + 영약 재고 (화경 병목 추적)
     {
       const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
@@ -711,6 +717,11 @@ async function runFactorySweep(): Promise<void> {
   // 대오 굴림 실측(계산기 입력 Nq·Ns) — 벽+영약 상태서 굴린 횟수/회차 + 성공.
   console.log(
     `대오 굴림/회차(벽+영약 상태): 실전 ${(sumQRolls / iters).toFixed(1)}회(성공 ${(sumQWins / iters).toFixed(2)}) · 폐관 ${(sumSRolls / iters).toFixed(1)}일(성공 ${(sumSWins / iters).toFixed(2)}) — 계산기 EXTREME·SECLUDE 입력값.`,
+  );
+  console.log(
+    wallReached > 0
+      ? `화경 벽 첫 도달: 평균 ${(sumWallYear / wallReached).toFixed(1)}년차(${wallReached}/${iters}회 도달) · 그 순간 외공 ${(sumWallExt / wallReached).toFixed(0)}·주력 ${(sumWallSeong / wallReached).toFixed(1)}성. 늦을수록 굴림 창 좁음(페이싱 레버).`
+      : '화경 벽 도달 0회.',
   );
 }
 
