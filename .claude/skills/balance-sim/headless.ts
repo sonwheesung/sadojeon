@@ -2186,6 +2186,10 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
   seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
   useGameStore.getState().setPhase('playing');
+  // 'real' = 충실 무과금: god-mode(자금 10만·신급 재료 무한) 제거 → 실경제 + 신급 재료 회차당 룰(신품영초2·
+  // 각 영물정수 종별1). 비급은 carrysweep 이 회차 누적(no `all`)이라 그대로 충실. (벽곡단은 herb-common 으로
+  // 값싸게 무한 입수 가능하므로 게이트 아님 — Infinity 유지·근사). docs/40 §3-B 충실 무과금 측정.
+  const real = process.argv.includes('real');
   // 이월 비급만 complete 로(=새 사부 첫날 즉시 연구). 시작5권은 seedNewRun 이 이미 complete.
   for (const id of carriedIds) grantScroll(id);
   // 측정2 기준선 — 회차 시작 코드덱스(시작5권 ∪ 이월 비급). 이 이후 의뢰로 새로 든 권만 "새권".
@@ -2196,13 +2200,17 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   const seenDupIds = new Set<string>();
   setElixirBudget(0);
   setByeokgokdanBudget(Infinity);
-  {
+  if (!real) {
+    // 핵과금/천장 측정만 경제 게이트 제거. real(충실 무과금)은 기본 자금(5000)으로 실경제 운영.
     const sect = useSectStore.getState();
     if (sect.sect) sect.setSect({ ...sect.sect, resources: 100_000 });
   }
   buildAlchemyLab();
   for (const id of RECIPE_IDS) learnRecipe(id);
-  for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare', 'herb-divine']) addMaterial(m, 9_999_999);
+  // 흔한~진귀 영초는 값싸고 채집 쉬워 무한 근사(게이트 아님). 신급은 real 이면 회차당 룰, 아니면 무한.
+  for (const m of ['herb-common', 'herb-fire', 'herb-poison', 'herb-cold', 'herb-rare']) addMaterial(m, 9_999_999);
+  addMaterial('herb-divine', real ? 2 : 9_999_999);
+  for (const m of ['beast-essence', 'essence-fire', 'essence-frost', 'essence-poison']) addMaterial(m, real ? 1 : 9_999_999);
   const carryId = 'yun-soso';
   const sparPartnerId = 'jang-cheol';
   const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId && id !== sparPartnerId);
