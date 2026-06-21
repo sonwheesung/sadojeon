@@ -22,11 +22,11 @@ import type { Quest, MartialArtInstance } from '@/types';
 import { useQuestStore } from '@/stores/questStore';
 import { useCodexStore } from '@/stores/codexStore';
 import { setByeokgokdanBudget } from '@/systems/trainingSystem';
-import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir, isLabOperational } from '@/systems/alchemySystem';
+import { buildAlchemyLab, learnRecipe, addMaterial, startCraft, consumeInternalElixir, isLabOperational, sellElixir, elixirItemCount } from '@/systems/alchemySystem';
 import { tickWoundRecovery } from '@/systems/woundSystem';
 import { setFoodCost, setLabUpkeep, setPatronageMult } from '@/systems/economySystem';
 import { setQuestRewardMult } from '@/systems/questSystem';
-import { ELIXIR_RECIPES } from '@/data/elixirs';
+import { ELIXIR_RECIPES, DIVINE_ELIXIR_ID } from '@/data/elixirs';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
 import { isRespondable, resolveInboxItem, responseOptionsFor } from '@/systems/inboxResolve';
@@ -2272,6 +2272,15 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
     }
     useInboxStore.getState().reset();
     healWithSalve(false);
+    if (real) {
+      // 실플레이어처럼 잉여 영약을 팔아 사문 운영비를 번다(연단공장 주수입원 — docs/09 "영단 판매 켜져야 흑자").
+      // 카리 화경 열쇠 구전대환단 1과 + 흡수용 내공단 1개는 남기고 나머지 전량 판매(파산=측정 오염 차단).
+      for (const r of ELIXIR_RECIPES) {
+        const have = elixirItemCount(r.id);
+        const keep = r.id === DIVINE_ELIXIR_ID ? 1 : r.category === 'internal' ? 1 : 0;
+        if (have > keep) sellElixir(r.id, have - keep);
+      }
+    }
     markReach(d);
   }
   const carry = useDiscipleStore.getState().disciples[carryId];
