@@ -18,6 +18,7 @@ import { applyMeetingChoice } from './meetingSystem';
 import type { MeetingOption } from '@/data/scenarios/meetings';
 import { resolveMoralChoice } from './moralEventSystem';
 import { counselChoices, mediationChoices, resolveCounsel, resolveMediation } from './mediationSystem';
+import { ambitionChoices, resolveAmbitionConflict } from './ambitionConflictSystem';
 import { issueOverride } from './overrideSystem';
 import { saveCurrentRunSilently } from './runSync';
 import { ONE_LINER_TONE_ORDER, respondToOneLiner, type OneLinerTone } from './oneLinerSystem';
@@ -55,7 +56,8 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'graduation_conflict' ||
     d === 'meeting' ||
     d === 'mediation' ||
-    d === 'counsel'
+    d === 'counsel' ||
+    d === 'ambition_conflict'
   );
 }
 
@@ -96,6 +98,9 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   if (p.domain === 'counsel') {
     return counselChoices();
   }
+  if (p.domain === 'ambition_conflict') {
+    return ambitionChoices(String(p.aName ?? '한쪽'), String(p.bName ?? '다른 쪽'));
+  }
   // quest_event·expedition_event(현장 급보)는 fieldEventStore/FieldEventOverlay 가 선택지를 그리므로
   // inbox 선택지 빌더에선 폐지(docs/37 R24).
   if (p.domain === 'graduation' || p.domain === 'graduation_conflict') {
@@ -127,7 +132,7 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   const d0 = String(p.domain ?? '');
   let skipLeft = false;
   if (['oneLiner', 'wish', 'moral', 'meeting', 'seclusion_petition'].includes(d0)) skipLeft = hasLeft(discipleId);
-  else if (d0 === 'mediation') skipLeft = hasLeft(String(p.aId ?? '')) || hasLeft(String(p.bId ?? ''));
+  else if (d0 === 'mediation' || d0 === 'ambition_conflict') skipLeft = hasLeft(String(p.aId ?? '')) || hasLeft(String(p.bId ?? ''));
   else if (d0 === 'counsel') skipLeft = hasLeft(String(p.subjectId ?? '')) || hasLeft(String(p.otherId ?? ''));
   if (skipLeft) {
     useInboxStore.getState().remove(item.id);
@@ -179,6 +184,9 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   } else if (p.domain === 'mediation') {
     // 중재 면담(2인) — 사부의 관계 개입. docs/33 §3.
     resolveMediation(String(p.aId ?? ''), String(p.bId ?? ''), key);
+  } else if (p.domain === 'ambition_conflict') {
+    // 동문 야망 충돌 — 사부의 4선택(양보/동맹/격려/무관심). docs/19·33 §4.
+    resolveAmbitionConflict(String(p.aId ?? ''), String(p.bId ?? ''), key);
   } else if (p.domain === 'counsel') {
     // 상담(1:1) — 그 제자의 인식만 약하게. docs/33 §3.
     resolveCounsel(String(p.subjectId ?? ''), String(p.otherId ?? ''), key);

@@ -27,6 +27,7 @@ import { triggerDailyMeeting } from './meetingSystem';
 import { triggerDailySpar } from './sparringSystem';
 import { triggerDailyRaid } from './raidSystem';
 import { triggerDailyMediation } from './mediationSystem';
+import { triggerAmbitionConflict } from './ambitionConflictSystem';
 import { tickDarkness } from './darknessSystem';
 import { tickSimma } from './simmaSystem';
 import { tickCraft, tickElixirAbsorb } from './alchemySystem';
@@ -152,6 +153,7 @@ export function triggerPostSettlement(): void {
   triggerDailySpar(); // 동문 비무 — 전투력 양육기 노출(저확률). docs/27 §5
   triggerDailyRaid(); // 산적 습격 — 강호 사건, 전투 엔진 실전(저확률·사망 없음). docs/35 §7
   triggerDailyMediation(); // 중재 면담·상담 기회 — 응어리 쌍이 있을 때. docs/33 §3
+  triggerAmbitionConflict(); // 동문 야망 충돌 — 친밀+야망 쌍이 출도전기에 닿으면 사부 4선택. docs/19·33 §4
   tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
   tickSimma(); // 심마 누적·진정 + 주화입마 발작 굴림. docs/13·26
   checkAchievements(); // 업적 스캔 — 신규 "첫 X" 달성 기록 + 무공서 해금 + 알림. docs/32

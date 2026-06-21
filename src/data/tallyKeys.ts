@@ -39,6 +39,16 @@ export const TALLY = {
   divineElixir: 'quest.divineElixir', // 극험에서 신품 영약 천운
 } as const;
 
+// 마음(관계) 집계 — docs/19·33. 상태 스캔으로 못 잡는 **사건성 사실**(동문 야망 충돌 결정)을 적립.
+// 의뢰 tally 와 같은 계정 영속(metaStorage) — 회차 넘어 합산(첫 충돌·첫 동맹 등 업적 판정).
+export const MIND_TALLY = {
+  ambitionConflict: 'mind.ambitionConflict', // 동문 야망 충돌 결정을 마주한 횟수(분기 무관)
+  ambitionDefer: 'mind.ambitionDefer', //       A 양보 권유
+  ambitionAlly: 'mind.ambitionAlly', //         B 동맹 권유
+  ambitionDuel: 'mind.ambitionDuel', //         C 둘 다 격려(강호 결투 씨앗)
+  ambitionTragedy: 'mind.ambitionTragedy', //   D 무관심(비극 분기)
+} as const;
+
 // 연속 기록(현재값 + 최고값). 끊기면 현재값 0.
 export const STREAK = {
   flawless: 'quest.streak.flawless', // 연속 완벽 완수

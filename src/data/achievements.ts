@@ -3,7 +3,7 @@
 // unlockArtId = 달성 시 영구 해금되는 무공서(다회차 자산). 보상(reward)은 표시용 — 파워 영구증가 X(docs/32).
 
 import { realmIndex } from '@/data/realm';
-import { DOMAIN_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
+import { DOMAIN_TALLY, MIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
 import type { Disciple } from '@/types';
 import type { GraduateRecord } from '@/stores/graduateStore';
 
@@ -65,6 +65,11 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'ach-first-dark', name: '첫 그늘', desc: '제자가 처음 흑화하다', category: 'mind', reward: '다이아 · 도감', check: (c) => c.disciples.some((d) => (d.darknessLevel ?? 0) >= 1) },
   { id: 'ach-blackened', name: '어둠에 삼켜지다', desc: '제자 흑화 최대 단계', category: 'mind', reward: '어두운 칭호 · 다이아', hidden: true, check: (c) => c.disciples.some((d) => (d.darknessLevel ?? 0) >= 4) },
   { id: 'ach-sworn', name: '강호의 의형제', desc: '두 제자가 의형제(sworn)로 맺어지다', category: 'mind', reward: '다이아 · 도감', check: (c) => c.disciples.some((d) => Object.values(d.relationships ?? {}).includes('sworn' as never)) },
+  // 동문 야망 충돌(docs/19) — 출도전기 사부의 4선택. 충돌을 마주한 사실 + 분기별(계정 누적 집계).
+  { id: 'ach-ambition-conflict', name: '같은 자리를 둔 동문', desc: '친밀한 두 동문이 같은 자리를 욕망하는 결단에 서다', category: 'mind', reward: '다이아 · 도감', check: (c) => c.n(MIND_TALLY.ambitionConflict) >= 1 },
+  { id: 'ach-ambition-alliance', name: '두 손이 한 자리를', desc: '야망 충돌을 동맹으로 풀어 정파 황금기를 열다', category: 'mind', reward: '최고 칭호 · 다이아 다량', check: (c) => c.n(MIND_TALLY.ambitionAlly) >= 1 },
+  { id: 'ach-ambition-duel', name: '강호가 가른 동문', desc: '두 동문을 격려해 강호의 결투에 부치다', category: 'mind', reward: '칭호 · 다이아', check: (c) => c.n(MIND_TALLY.ambitionDuel) >= 1 },
+  { id: 'ach-ambition-tragedy', name: '갈라선 의형제', desc: '같은 자리를 둔 동문을 끝내 가르지 않아 비극으로 보내다', category: 'mind', reward: '어두운 칭호 · 다이아', hidden: true, check: (c) => c.n(MIND_TALLY.ambitionTragedy) >= 1 },
 
   // ── 활동 ──────────────────────────────────────────────────────────
   { id: 'ach-divine-herb', name: '신품을 캐다', desc: '신품 영초를 처음 손에 넣다', category: 'activity', reward: '칭호 · 다이아 다량', check: (c) => c.divineHerbs > 0 },

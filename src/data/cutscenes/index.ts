@@ -125,6 +125,37 @@ export const CUTSCENES: readonly CutsceneDef[] = [
       },
     },
   },
+  // ── 동문 야망 충돌 4결말(docs/19) — 친밀한 두 동문이 같은 자리를 욕망. {name}=두 동문 이름(A·B) ──
+  // 사부의 결정(양보/동맹/격려/무관심)이 갈림. 두 사람 공용 컷이라 byDisciple 없이 {name}만 치환.
+  {
+    eventId: 'ambition_defer',
+    hanzi: '讓',
+    title: '동문의 양보',
+    tone: 'gold',
+    defaultLine: '{name}. 한 사람이 한 발 물러섰다. 같은 꼭대기를 두고 다툴 뻔한 두 길이, 서로 다른 정점을 향해 나란히 갈라졌다 — 정으로.',
+  },
+  {
+    eventId: 'ambition_alliance',
+    hanzi: '盟',
+    title: '정파 황금기',
+    tone: 'gold',
+    defaultLine: '{name}. 두 손이 한 자리를 함께 떠받쳤다. 양강과 음유가 한 자리에서 균형을 이루니, 강호가 황금기를 본다.',
+  },
+  {
+    eventId: 'ambition_duel',
+    hanzi: '決',
+    title: '동문 결투',
+    tone: 'blood',
+    defaultLine: '{name}. 양피지가 펄럭이고, 두 자루 검이 부딪혔다. 같은 스승 아래 자란 둘이, 같은 자리를 두고 강호의 결판을 기다린다.',
+  },
+  {
+    eventId: 'ambition_tragedy',
+    hanzi: '岐',
+    title: '갈라선 길',
+    tone: 'ink',
+    defaultLine: '{name}. 사부가 끝내 가르지 않은 갈림길에서, 두 사람은 등을 돌렸다. 한때 의형제였던 자리에, 긴 그림자가 드리운다.',
+  },
+
   // 고향을 지키다 — 도적떼에게서 고향 마을을 구함(가족 위협·호위 의뢰). 청소년 시그니처 컷.
   {
     eventId: 'hometown_defense',
