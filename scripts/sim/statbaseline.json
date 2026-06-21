@@ -1,0 +1,24 @@
+{
+  "_note": "docs/36 통계 정본의 기계 판독용 사본. 36이 갱신되면 이 파일도 같이 갱신. 단일 진실은 docs/36. 절차 docs/42.",
+  "_fields": "id=고유키, doc=출처문서, metric=무엇, value=베이스라인 측정값, unit, band=[lo,hi] 기대범위, n=표본, date=측정일, sim=돌린 시뮬",
+  "baselines": [
+    { "id": "combat.mirror_winrate", "doc": "36/37 B1", "metric": "거울 매치(동일 3:3) 승률", "value": 50, "unit": "%", "band": [43, 58], "n": 10000, "date": "2026-06-14", "sim": "combat" },
+    { "id": "combat.rank_gap_winrate", "doc": "36/37 B1", "metric": "경지 1단계 차 1:1 상위 승률", "value": 100, "unit": "%", "band": [97, 100], "n": 10000, "date": "2026-06-14", "sim": "combatmatrix" },
+    { "id": "combat.same_rank_1v2", "doc": "36/37 B1", "metric": "동급 1 vs 2 소수 승률(0이어야)", "value": 0, "unit": "%", "band": [0, 3], "n": 10000, "date": "2026-06-14", "sim": "combatmatrix" },
+    { "id": "quest.optimal_success", "doc": "36/37 B6", "metric": "적정 의뢰 성공(완+성+위)", "value": 80, "unit": "%", "band": [75, 100], "n": 120, "date": "2026-06-11", "sim": "questmatrix" },
+    { "id": "quest.disaster_rate", "doc": "36/37 B6", "metric": "적정 재난율(낮을수록)", "value": 3, "unit": "%", "band": [0, 8], "n": 120, "date": "2026-06-11", "sim": "questmatrix" },
+    { "id": "extremerisk.jeoljeong7_success", "doc": "36 극험", "metric": "절정7성 극험 결투 성공", "value": 54.6, "unit": "%", "band": [45, 65], "n": 10000, "date": "2026-06-19", "sim": "extremerisk" },
+    { "id": "extremerisk.jeoljeong7_death", "doc": "36 극험", "metric": "절정7성 극험 사망", "value": 1.7, "unit": "%", "band": [0, 5], "n": 10000, "date": "2026-06-19", "sim": "extremerisk" },
+    { "id": "extremerisk.jeoljeong7_jeolpum", "doc": "36 극험", "metric": "절정7성 회차당 절품 무공서 획득", "value": 12.2, "unit": "%", "band": [10, 15], "n": 10000, "date": "2026-06-19", "sim": "extremerisk" },
+    { "id": "world.war_rate", "doc": "36/37 B5", "metric": "전쟁 발발 회차 비율", "value": 29, "unit": "%", "band": [22, 36], "n": 10000, "date": "2026-06-14", "sim": "world" },
+    { "id": "world.jeongpa_power_15y", "doc": "36/37 B5", "metric": "15년 후 정파 세력치(최강이어야)", "value": 68, "unit": "pt", "band": [60, 75], "n": 10000, "date": "2026-06-14", "sim": "world" },
+    { "id": "world.orthodox_extinction", "doc": "36/37 B5", "metric": "정통(정파·관) 멸문 건수(0 불변)", "value": 0, "unit": "건", "band": [0, 0], "n": 10000, "date": "2026-06-14", "sim": "world" },
+    { "id": "growth.factory_hwagyeong", "doc": "36 성장(경지)", "metric": "연단공장 빌드 화경 도달(변동 큼)", "value": 13, "unit": "%", "band": [0, 30], "n": 32, "date": "2026-06-14", "sim": "factorysweep" },
+    { "id": "growth.moderate_basic_ilryu", "doc": "36 성장(적당)", "metric": "무과금 기본(내공단X) 일류 도달", "value": 83, "unit": "%", "band": [70, 92], "n": 40, "date": "2026-06-14", "sim": "moderatesweep" },
+    { "id": "growth.moderate_danall_hwagyeong", "doc": "36 성장(적당)", "metric": "비급전권+내공단 화경 도달", "value": 75, "unit": "%", "band": [60, 85], "n": 40, "date": "2026-06-14", "sim": "moderatesweep dan all" },
+    { "id": "carry.run10_chojeoljeong", "doc": "36 회차이월", "metric": "10회차 카리 초절정 도달", "value": 100, "unit": "%", "band": [85, 100], "n": 10, "date": "2026-06-19", "sim": "carrysweep" },
+    { "id": "carry.run10_hwagyeong", "doc": "36 회차이월", "metric": "10회차 카리 화경 도달(CI 넓음)", "value": 60, "unit": "%", "band": [34, 86], "n": 10, "date": "2026-06-19", "sim": "carrysweep" },
+    { "id": "economy.bankruptcy", "doc": "36/37 B7", "metric": "파산 건수(0 불변)", "value": 0, "unit": "건", "band": [0, 0], "n": 30, "date": "2026-06-12", "sim": "economysweep" },
+    { "id": "drain.absorb_per_fight", "doc": "36/37 R36", "metric": "흡공 1판당 영구 내공 흡수", "value": 8, "unit": "pt", "band": [4, 14], "n": 1, "date": "2026-06-20", "sim": "combatwiring" }
+  ]
+}
