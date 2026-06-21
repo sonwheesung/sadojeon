@@ -14,6 +14,7 @@ import { useDiscipleStore } from '../../src/stores/discipleStore';
 import { useSectStore } from '../../src/stores/sectStore';
 import { useInboxStore } from '../../src/stores/inboxStore';
 import { currentAge } from '../../src/systems/discipleCtx';
+import { armBuggify, buggify, buggifyRange } from './buggify';
 
 const VALID_REALM = new Set(['none', 'samryu', 'iryu', 'ilryu', 'jeoljeong', 'chojeoljeong', 'hwagyeong']);
 const VALID_REL = new Set(['enemy', 'distant', 'neutral', 'friend', 'sworn']);
@@ -79,15 +80,23 @@ function selfTest(): boolean {
   return clean.length === 0 && broken.length >= 7;
 }
 
+// BUGGIFY 스트레서 — 자금을 유효 극단(0~30냥)으로 떨군다. 엔진은 유지비 미납→연단 정지·자금 floor 0 으로
+// 견뎌야 한다(docs/37 B7). 견디지 못해 자금 음수·NaN·크래시가 나면 그게 버그.
+function injectFundScarcity(): void {
+  const sect = useSectStore.getState();
+  if (sect.sect) sect.setSect({ ...sect.sect, resources: Math.floor(buggifyRange(0, 30)) });
+}
+
 async function main(): Promise<void> {
   setAutoSaveEnabled(false); // 순수 인메모리(DB 미접촉 — _run.cjs 가 supabase 스텁).
   const years = Number(process.argv[3] ?? 5);
   const seeds = (process.argv[4] ?? '1,2,3').split(',').map((s) => Number(s.trim())).filter(Number.isFinite);
   const days = years * 336;
   const cohort = ['yun-soso', 'i-cheongha', 'jin-sohwa', 'jang-cheol']; // 적대 시드쌍 포함(관계 콘텐츠 발화).
+  const BUGGIFY = process.argv.includes('buggify'); // C1 결함주입 모드 — 자금 결핍 등 유효 극단을 시드 결정론으로 주입.
 
   console.log('═══ fuzz — 원숭이 퍼징(실 게임루프 × 매일 불변식) ═══');
-  console.log(`시드 ${seeds.join(',')} × ${years}년(${days}일) · 코호트 ${cohort.join(',')}\n`);
+  console.log(`시드 ${seeds.join(',')} × ${years}년(${days}일) · 코호트 ${cohort.join(',')}${BUGGIFY ? ' · BUGGIFY 결함주입 ON' : ''}\n`);
 
   if (!selfTest()) {
     console.log('\n  FAIL  A/B 오라클 자가검증 실패 — 오라클을 신뢰할 수 없음(허위 오라클).');
@@ -101,6 +110,9 @@ async function main(): Promise<void> {
   let maxInbox = 0;
   let dayChecks = 0;    // 일 단위 불변식 검사 횟수(자금·다이아·서신·id유일성)
   let discChecks = 0;   // 제자 단위 불변식 검사 횟수(경지·내공·성·흑화·심마·관계 등 ~10항/제자)
+  let injections = 0;   // BUGGIFY 결함주입 횟수
+
+  if (BUGGIFY) armBuggify(0.03);
 
   for (const seed of seeds) {
     seedAmbient(seed);
@@ -132,7 +144,7 @@ async function main(): Promise<void> {
       await autoPlayRun(
         days,
         (e) => { events.push(e); domainTally[e.domain] = (domainTally[e.domain] ?? 0) + 1; },
-        (done) => { dayMax = done; inspect(done); },
+        (done) => { dayMax = done; if (BUGGIFY && buggify()) { injectFundScarcity(); injections += 1; } inspect(done); },
         undefined,
         RandomPolicy,
       );
@@ -152,6 +164,7 @@ async function main(): Promise<void> {
   const domains = Object.entries(domainTally).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' / ');
   console.log(`\n[커버리지] 발동 도메인: ${domains || '없음'}`);
   console.log(`[감시] 최대 서신함 ${maxInbox}건(cap ${INBOX_CAP})`);
+  if (BUGGIFY) console.log(`[BUGGIFY] 자금 결핍 결함주입 ${injections}회 — 엔진이 자금 floor·연단 정지로 견뎠나(위반 0이면 견딤)`);
   const evals = dayChecks * 4 + discChecks * 10; // 일검사 4항 + 제자검사 ~10항
   console.log(`[표본] 불변식 평가 ≈ ${evals.toLocaleString()}회 (일검사 ${dayChecks.toLocaleString()} × 4 + 제자검사 ${discChecks.toLocaleString()} × ~10)`);
   console.log(`\n═══ 결과: 시드 ${seeds.length}개 · 위반 ${totalViol}건 · 크래시 ${crashes}건 ═══`);
