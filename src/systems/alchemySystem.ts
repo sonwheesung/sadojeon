@@ -240,21 +240,6 @@ export function consumeInternalElixir(discipleId: string, recipeId: string): boo
   return true;
 }
 
-// 외공단(세수단 등 body) 복용 — 외공(strength) EXP 즉시 적립(흡수기간 없음). 화경 페이싱 가속 경로. docs/23.
-// 내공단과 달리 흡수 상태를 점유하지 않는다(근골은 단번에 굳는다) — 같은 날 다른 영단과 병행 가능.
-export function consumeBodyElixir(discipleId: string, recipeId: string): boolean {
-  const recipe = findElixirRecipe(recipeId);
-  if (!recipe || recipe.category !== 'body' || !recipe.bodyExp) return false;
-  const ds = useDiscipleStore.getState();
-  const d = ds.disciples[discipleId];
-  if (!d) return false;
-  const items = useItemStore.getState();
-  if (!items.items.find((i) => i.id === recipeId && i.count > 0)) return false;
-  items.adjustCount(recipeId, -1);
-  ds.addStatExp(discipleId, 'strength', recipe.bodyExp);
-  return true;
-}
-
 // 매일 — 흡수 중 제자에게 내공 perDay 적립. 만료 시 흡수 상태 해제.
 export function tickElixirAbsorb(): void {
   const today = useTimeStore.getState().totalDay;

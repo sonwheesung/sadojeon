@@ -9,9 +9,8 @@ import type { QiAttribute, WoundType } from '@/types/disciple';
 export type { WoundType };
 
 // ─── 연단(영단 제조) 데이터 모델 ─────────────────────────────────────────────
-// 영단 분류: heal(상처 치료·속성×등급) / internal(내공단·속성·흡수기간) / mind(심마) /
-//           body(외공·근골단 — 외공 EXP 즉시 적립, 화경 페이싱 가속) / utility(벽곡단·화경).
-export type ElixirCategory = 'heal' | 'internal' | 'mind' | 'body' | 'utility';
+// 영단 분류: heal(상처 치료·속성×등급) / internal(내공단·속성·흡수기간) / mind(심마) / utility(벽곡단·화경).
+export type ElixirCategory = 'heal' | 'internal' | 'mind' | 'utility';
 
 export interface ElixirRecipe {
   id: string;
@@ -24,8 +23,6 @@ export interface ElixirRecipe {
   attribute?: QiAttribute;
   internalAmount?: number;
   absorbDays?: number;
-  // body(외공단·근골단): 복용 즉시 외공(strength) EXP 적립(흡수기간 없음 — 근골은 단번에 굳는다).
-  bodyExp?: number;
   // 제조 — 요구 alchemy Lv, 제조 기간(효과 강할수록 오래), 재료(약초 등).
   alchemyReq: number;
   craftDays: number;
@@ -73,11 +70,6 @@ export const ELIXIR_RECIPES: readonly ElixirRecipe[] = [
   // ── 내공단(속성·흡수) ──
   { id: 'naegong-fire', name: '양화내단', category: 'internal', attribute: 'fire', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-fire', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '화속 내공 120 — 20일 흡수(흡수 중 다른 영단 X).' },
   { id: 'naegong-water', name: '현음내단', category: 'internal', attribute: 'water', internalAmount: 120, absorbDays: 20, alchemyReq: 35, craftDays: 10, materials: [{ id: 'herb-cold', qty: 3 }, { id: 'herb-rare', qty: 1 }], effect: '수속 내공 120 — 20일 흡수.' },
-  // ── 외공(근골) — 화경 페이싱 가속 영약 ──
-  // 세수단(洗髓丹) — 골수를 씻어 근골을 단번에 굳힌다. 외공(strength) EXP 즉시 적립. 화경 벽 마지막 관문인
-  // 외공(받침 62)을 자연 수련보다 빨리 채우는 **가속 경로** — 무과금은 연단으로 더디게, 과금은 직구매로
-  // 빠르게(화경 도달 시점 차 = 도파민·BM). docs/23 §화경 벽(2026-06-21). 🔧 EXP량·재료 그레이박스.
-  { id: 'sesu-dan', name: '세수단', category: 'body', bodyExp: 1500, alchemyReq: 42, craftDays: 8, materials: [{ id: 'herb-rare', qty: 2 }, { id: 'herb-common', qty: 4 }], effect: '골수를 씻어 근골을 단번에 굳힌다 — 외공(근력)을 크게 끌어올린다. 화경의 몸으로 가는 길을 앞당긴다.' },
   // ── 심마 ──
   { id: 'ansin', name: '안신단', category: 'mind', alchemyReq: 40, craftDays: 8, materials: [{ id: 'herb-rare', qty: 2 }], effect: '심마·주화입마를 가라앉힌다(흑화·발작 완화).' },
   // ── 최상급(화경) ──
