@@ -95,4 +95,6 @@ export function divineElixirItem(): StoredItem {
 }
 
 // 신품 영약 의뢰 드랍 확률 — 극험(extreme) 의뢰 완수 시. <10%(운). 과금 시 가중(후속). docs/28 §5-1.
-export const DIVINE_ELIXIR_DROP_RATE = 0.08;
+// ⚠️ 무과금 화경의 **주 공급원**(검·의뢰 빌드) — 재료 게이트(연단)와 별개 경로. 무과금 최적 화경 ≤20% 목표의
+// 핵심 레버. balance-sim 에서 `DIVINE_DROP=N` env 로 sweep(앱은 env 없어 기본 0.08). docs/40 §3-B. 🔧 그레이박스.
+export const DIVINE_ELIXIR_DROP_RATE = Number(process.env.DIVINE_DROP) || 0.08;
