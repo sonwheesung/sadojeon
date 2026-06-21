@@ -14,6 +14,7 @@ import { saveCurrentRun, setAutoSaveEnabled } from '@/systems/runSync';
 import { advanceTurn } from '@/systems/timeSystem';
 import { autoPlayRun, RandomPolicy, type AutoPlayEvent, type PlayPolicy } from '@/systems/dev/autoPlay';
 import { GrowthPolicy } from '@/systems/dev/growthPolicy';
+import { enableDaeohTelemetry, resetDaeoh, daeoh } from '@/systems/dev/daeohTelemetry';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve, goalArtFor as goalArtForDiag } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { evaluateJobs } from '@/systems/jobSystem';
@@ -567,6 +568,9 @@ async function runFactorySweep(): Promise<void> {
   const realmTally: Record<string, number> = {};
   let sumDivine = 0;
   let sumInternalDan = 0;
+  // 대오 굴림 계측(화경 밸런스) — 벽+영약 상태서 실제 굴린 폐관·실전 대오 횟수·성공. docs/23·40 §3-B.
+  enableDaeohTelemetry(true);
+  let sumQRolls = 0, sumQWins = 0, sumSRolls = 0, sumSWins = 0;
   const fullCodex = process.argv.includes('all'); // 'all' = 비급 전권 complete 시작 — 사슬 완성 게이트 격리(후기 회차 가정).
   // 'f2p' = 무과금 현실: 신급 재료만 무한→**회차당 룰 공급**으로 막는다(화경 실관문 = 구전대환단 재료).
   // 룰(사용자 2026-06-21): 신품 영초(식물) 회차당 2 + 영물 정수(영물재료) 회차당 1 → 구전대환단 딱 1과/회차.
@@ -576,6 +580,7 @@ async function runFactorySweep(): Promise<void> {
   const HD_RUN = Number(process.env.HD_RUN ?? 2);
   for (let it = 0; it < iters; it += 1) {
     seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
+    resetDaeoh();
     useGameStore.getState().setPhase('playing');
     if (fullCodex) for (const a of MARTIAL_ARTS) grantScroll(a.id); // 전권 complete — 의뢰 드랍 사슬 미완성 변수 제거
     setElixirBudget(0); // 무과금 — 화경 영약은 오직 서폿 연단으로
@@ -674,6 +679,8 @@ async function runFactorySweep(): Promise<void> {
     if (realm === 'hwagyeong') carryHwa += 1;
     sumDivine += divine;
     sumInternalDan += internalDan;
+    sumQRolls += daeoh.questRolls; sumQWins += daeoh.questWins;
+    sumSRolls += daeoh.secludeRolls; sumSWins += daeoh.secludeWins;
     // 진단 — 카리 세 기둥 + 영약 재고 (화경 병목 추적)
     {
       const mainId = carry?.mainMartialArtId ?? carry?.martialArts[0]?.artId;
@@ -701,6 +708,10 @@ async function runFactorySweep(): Promise<void> {
   const dist = REALM_ORDER.filter((r) => realmTally[r]).map((r) => `${REALM_LABEL[r]} ${Math.round((realmTally[r] / iters) * 100)}%`).join(' / ');
   console.log(`카리 화경 달성 ${Math.round((carryHwa / iters) * 100)}% · 카리 최종경지 분포: ${dist}`);
   console.log(`서폿 연단공장 산출/회: 구전대환단 ${(sumDivine / iters).toFixed(1)}과 · 내공단 ${(sumInternalDan / iters).toFixed(1)}과`);
+  // 대오 굴림 실측(계산기 입력 Nq·Ns) — 벽+영약 상태서 굴린 횟수/회차 + 성공.
+  console.log(
+    `대오 굴림/회차(벽+영약 상태): 실전 ${(sumQRolls / iters).toFixed(1)}회(성공 ${(sumQWins / iters).toFixed(2)}) · 폐관 ${(sumSRolls / iters).toFixed(1)}일(성공 ${(sumSWins / iters).toFixed(2)}) — 계산기 EXTREME·SECLUDE 입력값.`,
+  );
 }
 
 // ── 적당 연단(무과금 현실 플레이) — 공장(혹사) 대비 화경 도달 검증 ──

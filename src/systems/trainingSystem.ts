@@ -68,6 +68,7 @@ import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
 import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
 import { attemptBoneRebirth } from './boneRebirthSystem';
+import { recordDaeoh } from './dev/daeohTelemetry';
 import { parseDaeryeonChoice, resolveDaeryeon } from './daeryeonSystem';
 import { applyPrereqTrickle } from './martialExp';
 import { consumeElixirItem, elixirItemCount } from './alchemySystem';
@@ -426,8 +427,10 @@ function applyRealmTick(
         } else if (random() >= greatEnlightenmentChance(d.insight, 'seclude')) {
           // 대오(大悟)가 오지 않았다 — 마음이 열리기 전엔 약도 몸도 소용없다. 보장 없음(운×실력).
           // 폐관은 매일 굴리되 확률이 아주 낮다 — 화경 돈오는 실전(위험·극험 의뢰)에서 잘 온다.
+          recordDaeoh('seclude', false);
         } else if (attemptBoneRebirth(discipleId)) {
           // 여기 도달 = 폐관 안에서 화경 대오가 터진 희귀 순간 — 업적 "면벽돈오"(docs/32) 발화 지점.
+          recordDaeoh('seclude', true);
           consumeDivineElixir();
           internal = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약(화경 내공)
           realm = wallTarget;
@@ -436,6 +439,7 @@ function applyRealmTick(
           cancelOverride(discipleId);
         } else {
           // 주화입마 — 발작(내상)으로 폐관이 깨졌다. 영약은 토해내 보존, 회복 후 재청원 가능.
+          recordDaeoh('seclude', true); // 대오는 왔으나 환골탈태(심마) 실패
           petitioned = false;
           cancelOverride(discipleId);
         }
@@ -539,7 +543,9 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
     // 대오(大悟) — 실전에서 크게 깨닫는다(폐관보다 잘 옴). 보장 없음 — 운×실력. docs/23 §6.
     // chanceBonus(+0.3, 절정·초절정용 실전 보정)는 적용 X — 대오에 더하면 사실상 보장이 된다.
     // "실전이 더 잘 됨"은 greatEnlightenmentChance 의 quest 모드 자체에 이미 들어 있다.
-    if (random() >= greatEnlightenmentChance(d.insight, 'quest')) return null;
+    const daeohCame = random() < greatEnlightenmentChance(d.insight, 'quest');
+    recordDaeoh('quest', daeohCame);
+    if (!daeohCame) return null;
     if (!attemptBoneRebirth(discipleId)) return null; // 주화입마 — 영약 보존, 회복 후 재도전
     consumeDivineElixir();
     const boosted = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약
