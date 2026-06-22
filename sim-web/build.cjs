@@ -4,8 +4,28 @@
 //      node sim-web/build.cjs --watch (자동 재빌드)
 const esbuild = require('esbuild');
 const path = require('path');
+const fs = require('fs');
 const root = path.resolve(__dirname, '..');
 const stubs = path.join(root, '.claude/skills/balance-sim/_stubs');
+
+// .env(.development) 의 공개 키(EXPO_PUBLIC_*)를 읽어 번들에 주입 — 의뢰 등 스토어 그래프가 supabase 를
+// import 하는데 빈 URL 이면 createClient 가 throw 한다. anon 키는 공개 키(앱에도 박힘)라 콘솔 번들에 넣어도 안전.
+// 콘솔은 로컬 스토어만 쓰고 자동저장 OFF — 실제 DB 에 쓰지 않는다.
+function loadPublicEnv() {
+  const out = {};
+  for (const name of ['.env.development', '.env']) {
+    const p = path.join(root, name);
+    if (!fs.existsSync(p)) continue;
+    for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*(EXPO_PUBLIC_[A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (m && out[m[1]] === undefined) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  }
+  return out;
+}
+const env = loadPublicEnv();
+const envDefine = {};
+for (const [k, v] of Object.entries(env)) envDefine[`process.env.${k}`] = JSON.stringify(v);
 
 const opts = {
   entryPoints: [path.join(__dirname, 'main.ts')],
@@ -23,7 +43,7 @@ const opts = {
     'react-native-executorch-expo-resource-fetcher': path.join(stubs, 'empty.ts'),
   },
   tsconfig: path.join(root, 'tsconfig.json'), // @ 경로 별칭 해석
-  define: { __DEV__: 'false' },
+  define: { __DEV__: 'false', 'process.env.NODE_ENV': '"production"', ...envDefine },
   logLevel: 'info',
 };
 

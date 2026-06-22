@@ -3,6 +3,8 @@
 
 import { simulateCombat, makeNpcCombatant, narrateCombat, type NpcArchetype } from '@/systems/combat';
 import { defaultArtTraits } from '@/data/martialArts';
+import { mountQuestPanel } from './quest';
+import { el, $, opt, field } from './ui';
 import type { Realm } from '@/types/realm';
 import type { CombatMode, CombatResult, Combatant, CombatArt } from '@/types/combat';
 import type { MartialArtSchool, MartialArtGrade, MartialPath } from '@/types/martialArt';
@@ -46,15 +48,7 @@ function saveBuilds(): void { localStorage.setItem(LS_KEY, JSON.stringify(builds
 function newId(): string { return 'b' + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
 function findBuild(id: string): MartialBuild | undefined { return builds.find((b) => b.id === id); }
 
-// ─── DOM 헬퍼 ────────────────────────────────────────────────────────────────
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, children: (Node|string)[] = []): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag); Object.assign(e, props);
-  for (const c of children) e.append(typeof c === 'string' ? document.createTextNode(c) : c);
-  return e;
-}
-function $(id: string): HTMLElement { const e = document.getElementById(id); if (!e) throw new Error(`#${id}`); return e; }
-function opt(value: string, label: string, sel: boolean) { return el('option', { value, textContent: label, selected: sel }); }
-function field(label: string, control: Node) { return el('div', { className: 'field' }, [el('span', { className: 'flabel', textContent: label }), control]); }
+// DOM 공용 부품(el·$·opt·field)은 ui.ts 로 분리 — 모든 엔진 패널이 공유(공통화).
 
 // ─── 팀(그룹) 편집 ────────────────────────────────────────────────────────────
 function teamCount(team: Group[]): number { return team.reduce((s, g) => s + Math.max(0, g.count|0), 0); }
@@ -268,6 +262,18 @@ function boot(): void {
   renderTeam('A'); renderTeam('B');
   renderBuildList(); renderBuildEditor();
   ($('run') as HTMLButtonElement).onclick = run;
+
+  // 탭 전환 — 패널 토글. 의뢰 패널은 첫 진입 때 1회 마운트(무거운 엔진 셋업 지연).
+  let questMounted = false;
+  const tabs = Array.from(document.querySelectorAll('.tab[data-tab]')) as HTMLElement[];
+  const show = (name: string) => {
+    for (const t of tabs) t.classList.toggle('inactive', t.dataset.tab !== name);
+    $('panel-combat').classList.toggle('hidden', name !== 'combat');
+    $('panel-quest').classList.toggle('hidden', name !== 'quest');
+    if (name === 'quest' && !questMounted) { mountQuestPanel($('panel-quest')); questMounted = true; }
+  };
+  for (const t of tabs) t.onclick = () => show(t.dataset.tab!);
+  show('combat');
   ($('build-save') as HTMLButtonElement).onclick = () => {
     const nameInput = $('build-name') as HTMLInputElement;
     const name = nameInput.value.trim() || `빌드 ${builds.length+1}`;

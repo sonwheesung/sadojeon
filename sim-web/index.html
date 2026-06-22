@@ -13,8 +13,11 @@
   header .sub { color:var(--soft); font-size:12.5px; margin-top:3px; }
   .wrap { max-width:1180px; margin:0 auto; padding:20px 24px 80px; }
   .tabs { display:flex; gap:8px; margin:18px 0 16px; flex-wrap:wrap; }
-  .tab { padding:8px 18px; border-radius:var(--radius); font-weight:700; font-size:13px; border:1px solid var(--ink); background:var(--seal); color:#fff; }
-  .tab.off { background:transparent; color:var(--soft); border:1px dashed var(--line); }
+  .tab { padding:8px 18px; border-radius:var(--radius); font-weight:700; font-size:13px; border:1px solid var(--ink); background:var(--seal); color:#fff; cursor:pointer; }
+  .tab.inactive { background:transparent; color:var(--ink); border-color:var(--ink); }
+  .tab.off { background:transparent; color:var(--soft); border:1px dashed var(--line); cursor:default; }
+  .panel.hidden { display:none; }
+  .qhint { color:var(--soft); font-size:12px; margin:4px 2px 12px; }
 
   details.box { border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); margin-bottom:18px; box-shadow:var(--shadow); }
   details.box > summary { padding:13px 18px; font-weight:700; cursor:pointer; user-select:none; font-size:14px; }
@@ -81,6 +84,22 @@
   .narr { margin:14px 0; padding:13px 16px; border-left:3px solid var(--gold); background:var(--paper); border-radius:0 var(--radius) var(--radius) 0; font-size:13.5px; line-height:1.7; white-space:pre-wrap; }
   pre.log,pre.stats { background:#231c15; color:#ecdfc6; padding:14px 16px; border-radius:var(--radius); overflow:auto; font-size:13px; line-height:1.65; } pre.stats { font-size:14.5px; line-height:1.9; }
   details summary { cursor:pointer; }
+  /* 단판 — 현장 급보 4지선다 */
+  .chain { display:flex; flex-direction:column; gap:12px; margin-top:6px; }
+  .event-card { border:1px solid var(--gold); border-radius:var(--radius); background:#fbf3df; padding:14px 16px; }
+  .ev-title { font-weight:700; color:var(--gold); font-size:14px; }
+  .ev-scene { font-size:12.5px; color:var(--soft); margin:4px 0 8px; font-style:italic; }
+  .ev-prompt { font-size:13.5px; line-height:1.6; margin-bottom:10px; }
+  .ev-choices { display:flex; flex-direction:column; gap:7px; }
+  .ev-choice { text-align:left; padding:9px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; font-size:13px; }
+  .ev-choice:hover:not(:disabled) { border-color:var(--ink); background:#fff8ec; }
+  .ev-choice.off { color:var(--soft); background:#f1ece0; cursor:not-allowed; }
+  .ev-choice.chosen { border-color:var(--seal); background:#f6e7e3; font-weight:700; }
+  .ev-result { border-left:3px solid var(--seal); padding:8px 14px; background:var(--paper); border-radius:0 6px 6px 0; }
+  .ev-pick { font-weight:700; color:var(--seal); font-size:13px; }
+  .ev-rtext { font-size:13px; color:var(--ink); line-height:1.6; margin-top:4px; white-space:pre-wrap; }
+  .final-card { border:2px solid var(--ink); border-radius:var(--radius); background:var(--paper); padding:13px 16px; }
+  .fc-out { font-weight:700; font-size:16px; } .fc-meta { font-size:13px; color:var(--ink); margin-top:4px; }
 </style>
 </head>
 <body>
@@ -90,13 +109,15 @@
 </header>
 <div class="wrap">
   <div class="tabs">
-    <span class="tab">전투</span>
-    <span class="tab off" title="추후 추가">대련</span>
-    <span class="tab off" title="추후 추가">의뢰</span>
+    <span class="tab" data-tab="combat">전투</span>
+    <span class="tab" data-tab="quest">의뢰</span>
     <span class="tab off" title="추후 추가">관계</span>
     <span class="tab off" title="추후 추가">강호</span>
   </div>
 
+  <div id="panel-quest" class="panel hidden"></div>
+
+  <div id="panel-combat" class="panel">
   <details class="box">
     <summary>무공 빌드 — 저장해두고 그룹의 ‘무공/결’에서 불러쓰기</summary>
     <div class="box-inner">
@@ -127,6 +148,7 @@
   <div class="hint">반복 1회 → 한 판 상세(전투원 ≤16명 표 / 그 이상은 상태 집계) · 반복 2회↑ → 승률·사상률 통계</div>
 
   <div id="out"></div>
+  </div><!-- /panel-combat -->
 </div>
 <script src="./dist/bundle.js"></script>
 </body>
