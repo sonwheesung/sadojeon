@@ -1,5 +1,20 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[자동 알림] 방금 대화가 compact로 요약되어 docs/ 세부(수치·계약·구현 위치·파일 경로)가 유실됐을 수 있습니다. 다른 작업을 시작하기 전에 먼저 reload-docs 스킬을 실행해(Skill 도구로 reload-docs 호출) docs/ 전체를 다시 읽고 맥락을 복원하세요. 한 주제만 필요하면 해당 문서만 읽어도 됩니다.\"}}'",
+            "statusMessage": "compact 후 문서 재적재 안내"
+          }
+        ]
+      }
+    ]
   }
 }
