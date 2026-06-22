@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>사도전 — 엔진 테스트 콘솔</title>
+<style>
+  :root { --ink:#2b2620; --soft:#8a7f70; --line:#d8cdba; --paper:#f6f1e6; --seal:#a23b2e; --bg:#efe7d6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:14px 20px; border-bottom:2px solid var(--ink); background:var(--paper); }
+  header h1 { margin:0; font-size:18px; letter-spacing:1px; }
+  header .sub { color:var(--soft); font-size:12px; margin-top:2px; }
+  .wrap { max-width:1100px; margin:0 auto; padding:16px 20px 60px; }
+  .tabs { display:flex; gap:8px; margin:14px 0; }
+  .tab { padding:6px 14px; border:1px solid var(--ink); background:var(--seal); color:#fff; border-radius:4px; font-weight:700; }
+  .tab.off { background:var(--paper); color:var(--soft); border-color:var(--line); cursor:not-allowed; }
+  .teams { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .team { border:1px solid var(--line); border-radius:6px; background:var(--paper); padding:12px; }
+  .team h2 { margin:0 0 8px; font-size:14px; }
+  .team.A h2 { color:#2f6b4f; } .team.B h2 { color:var(--seal); }
+  .fighter { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:6px 0; border-bottom:1px dashed var(--line); }
+  .name { width:64px; }
+  input, select, button { font:inherit; }
+  input.name, .sel, input[type=number] { padding:4px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+  .qwrap { font-size:12px; color:var(--soft); display:flex; align-items:center; gap:4px; }
+  input.q { width:90px; }
+  .qval { width:30px; text-align:right; color:var(--ink); }
+  .del { border:none; background:none; color:var(--soft); cursor:pointer; font-size:14px; }
+  .add { margin-top:8px; border:1px dashed var(--soft); background:none; color:var(--soft); border-radius:4px; padding:4px 10px; cursor:pointer; }
+  .cfg { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:16px 0; padding:12px; border:1px solid var(--line); border-radius:6px; background:var(--paper); font-size:13px; }
+  .cfg label { display:flex; align-items:center; gap:5px; }
+  .cfg input[type=number] { width:64px; }
+  #run { margin-left:auto; padding:8px 22px; border:2px solid var(--seal); background:var(--seal); color:#fff; border-radius:5px; font-weight:700; cursor:pointer; }
+  #out { margin-top:18px; }
+  .verdict { font-size:16px; padding:10px 0; }
+  .warn { color:var(--seal); font-size:13px; padding-bottom:8px; }
+  .tbl { width:100%; border-collapse:collapse; font-size:13px; margin:8px 0; background:var(--paper); }
+  .tbl th, .tbl td { border:1px solid var(--line); padding:5px 8px; text-align:center; }
+  .tbl th { background:#e9dfca; }
+  .narr { margin:12px 0; padding:10px 12px; border-left:3px solid var(--soft); background:var(--paper); font-size:13px; line-height:1.6; white-space:pre-wrap; }
+  pre.log, pre.stats { background:#272019; color:#e8dcc4; padding:12px; border-radius:6px; overflow:auto; font-size:12px; line-height:1.5; }
+  pre.stats { font-size:14px; }
+  details summary { cursor:pointer; color:var(--soft); font-size:13px; margin-top:8px; }
+  .hint { color:var(--soft); font-size:12px; margin-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>사도전 — 엔진 테스트 콘솔</h1>
+  <div class="sub">PC 브라우저에서 게임 엔진을 직접 돌려 결과를 확인 · 백엔드 없음</div>
+</header>
+<div class="wrap">
+  <div class="tabs">
+    <span class="tab">전투</span>
+    <span class="tab off" title="추후 추가">대련</span>
+    <span class="tab off" title="추후 추가">의뢰</span>
+    <span class="tab off" title="추후 추가">관계</span>
+    <span class="tab off" title="추후 추가">강호</span>
+  </div>
+
+  <div class="teams">
+    <div class="team A"><h2>아군 (A)</h2><div id="team-A"></div></div>
+    <div class="team B"><h2>적 (B)</h2><div id="team-B"></div></div>
+  </div>
+  <div class="hint">전투원마다 경지 · 결(무공 갈래) · 영근 정도(0~1)를 정한다. 1:1 / 1:N / N:M 자유 구성.</div>
+
+  <div class="cfg">
+    <label>모드
+      <select id="mode"><option value="real">실전</option><option value="spar">대련</option></select>
+    </label>
+    <label><input type="checkbox" id="lethal" checked /> 사망 굴림(실전)</label>
+    <label><input type="checkbox" id="retreat" checked /> 패주 허용(실전)</label>
+    <label>합 상한 <input type="number" id="maxRounds" value="30" /></label>
+    <label>반복 <input type="number" id="runs" value="1" /></label>
+    <button id="run">전투 실행</button>
+  </div>
+  <div class="hint">반복=1 → 한 판 상세(전투원 상태·상처·서사·합 로그). 반복≥2 → 승률·사상률 통계.</div>
+
+  <div id="out"></div>
+</div>
+<script src="./dist/bundle.js"></script>
+</body>
+</html>
