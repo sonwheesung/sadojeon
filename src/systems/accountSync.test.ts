@@ -19,6 +19,7 @@ import { loadAccount, saveAccount } from './accountSync';
 import { account } from '@/data/repositories';
 import { useAchievementStore } from '@/stores/achievementStore';
 import { useTallyStore } from '@/stores/tallyStore';
+import { useCodexStore } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
 
 const acctMock = account as unknown as {
@@ -30,6 +31,7 @@ const acctMock = account as unknown as {
 function clearLocal() {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] } as never);
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} } as never);
+  useCodexStore.setState({ scrolls: [], elixirs: [] } as never);
   useGameStore.setState({ diamonds: 0 } as never);
 }
 
@@ -40,14 +42,17 @@ beforeEach(() => {
 });
 
 describe('accountSync — 계정 영구 진행 DB 라운드트립', () => {
-  it('저장 → (재설치 시뮬)비움 → 복원: 업적·해금무공·집계·다이아', async () => {
+  it('저장 → (재설치 시뮬)비움 → 복원: 업적·해금무공·집계·다이아·비급소유', async () => {
     useAchievementStore.setState({ unlocked: ['ach-demon-god'], unlockedArts: ['cheonma-singong'] } as never);
     useTallyStore.setState({ counts: { questDone: 10 }, streaks: {}, maxStreaks: { flawless: 5 } } as never);
     useGameStore.setState({ diamonds: 120 } as never);
+    // 비급 소유 = 계정 단위(2026-06-22) — 연구 진행도는 회차(run blob)라 소유만 왕복.
+    useCodexStore.setState({ scrolls: [{ artId: 'dokgo-gugeom', acquiredAtRun: 1, acquiredAtDay: 5, status: 'complete', researchProgress: 100, isTrap: false, isIncomplete: false }], elixirs: [] } as never);
     await saveAccount();
 
     clearLocal(); // 재설치/새 기기 — 로컬 비어 있음
     expect(useAchievementStore.getState().unlockedArts).toHaveLength(0);
+    expect(useCodexStore.getState().scrolls).toHaveLength(0);
 
     await loadAccount();
     expect(useAchievementStore.getState().unlockedArts).toContain('cheonma-singong');
@@ -55,6 +60,8 @@ describe('accountSync — 계정 영구 진행 DB 라운드트립', () => {
     expect(useTallyStore.getState().counts.questDone).toBe(10);
     expect(useTallyStore.getState().maxStreaks.flawless).toBe(5);
     expect(useGameStore.getState().diamonds).toBe(120);
+    // 비급 소유 복원 — 새 기기/재설치에서도 계정 비급 보존(연구 진행도는 기본값, 회차 로드가 덮음).
+    expect(useCodexStore.getState().scrolls.map((s) => s.artId)).toContain('dokgo-gugeom');
   });
 
   it('DB 비었을 때 load → 로컬 진행 보존 + DB 시드(save 호출)', async () => {

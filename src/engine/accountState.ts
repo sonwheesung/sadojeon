@@ -7,6 +7,7 @@
 import { useAchievementStore } from '@/stores/achievementStore';
 import { useTallyStore } from '@/stores/tallyStore';
 import { useTutorialStore } from '@/stores/tutorialStore';
+import { useCodexStore, type OwnedScroll } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
 
 const ACCOUNT_STORES = {
@@ -23,9 +24,10 @@ type DataOnly<T> = {
 
 // 업적·집계 + **다이아**(계정 단위 재화 — gameStore.diamonds, 연구 즉시완료 등에 소비).
 // 다이아도 회차 무관 계정 상태라 GameState 가 아니라 여기. 서버에서 유저별 로드/격리 대상.
+// 비급 소유(codexScrolls)도 계정 단위 — 모든 사문 공통(2026-06-22, docs/16·45). 연구 진행도는 제외(회차별 run blob).
 export type AccountState = {
   [K in keyof AccountStores]: DataOnly<ReturnType<AccountStores[K]['getState']>>;
-} & { diamonds: number };
+} & { diamonds: number; codexScrolls: OwnedScroll[] };
 
 function dataOnly<T extends object>(state: T): DataOnly<T> {
   const out: Record<string, unknown> = {};
@@ -40,6 +42,7 @@ export function captureAccountState(): AccountState {
     acc[key] = dataOnly(ACCOUNT_STORES[key].getState());
   }
   acc.diamonds = useGameStore.getState().diamonds;
+  acc.codexScrolls = useCodexStore.getState().dumpOwnership(); // 비급 소유 — 계정 단위
   return acc as AccountState;
 }
 
@@ -50,6 +53,7 @@ export function commitAccountState(state: AccountState): void {
     store.setState(state[key]);
   }
   useGameStore.setState({ diamonds: state.diamonds });
+  useCodexStore.getState().commitOwnership(state.codexScrolls ?? []); // 비급 소유 반영(연구는 run blob 이 덮음)
 }
 
 // 계정 스토어를 빈 상태로 — 서버 요청 클린 슬레이트(이전 유저 잔여 차단). 유저 로드 전 호출.
@@ -57,5 +61,6 @@ export function resetAccountState(): void {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] } as never);
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} } as never);
   useTutorialStore.setState({ seen: [] } as never); // 신규 유저 클린 슬레이트 — 안내 노출
+  useCodexStore.setState({ scrolls: [] } as never); // 비급 소유도 유저별 — 요청 클린 슬레이트(이전 유저 잔여 차단)
   useGameStore.setState({ diamonds: 0 }); // 다이아도 유저별 — 요청 클린 슬레이트
 }

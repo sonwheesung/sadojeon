@@ -32,14 +32,30 @@ import { useEventHistoryStore } from '@/stores/eventHistoryStore';
 import { useOutreachStore } from '@/stores/outreachStore';
 
 describe('블롭 슬라이스 DB 라운드트립 (저장→비움→복원)', () => {
-  it('codex(무공서·영약) — 비급 풀 복원', async () => {
+  // 비급 소유는 계정(accountState)로 분리됨(2026-06-22) — run blob 은 **연구 진행도(회차별)·영약만** 왕복한다.
+  it('codex — 회차 연구 진행도 복원(소유는 계정, 연구만 run blob)', async () => {
     const scroll = { artId: 'cheonma-singong', acquiredAtRun: 1, acquiredAtDay: 0, status: 'complete', researchProgress: 100, isTrap: false, isIncomplete: false };
     useCodexStore.setState({ scrolls: [scroll], elixirs: [] } as never);
     await codexSlice.save('r1');
-    useCodexStore.setState({ scrolls: [], elixirs: [] } as never);
+    // 회차 재로드 시뮬: 소유는 loadAccount 가 깔아둔 상태(미연구 기본), 연구만 run blob 이 덮는다.
+    useCodexStore.setState({ scrolls: [{ ...scroll, status: 'identified', researchProgress: 0 }], elixirs: [] } as never);
     await codexSlice.load('r1');
     expect(useCodexStore.getState().scrolls).toHaveLength(1);
-    expect(useCodexStore.getState().scrolls[0].artId).toBe('cheonma-singong');
+    expect(useCodexStore.getState().scrolls[0].researchProgress).toBe(100);
+    expect(useCodexStore.getState().scrolls[0].status).toBe('complete');
+  });
+
+  it('codex — 구버전 blob({scrolls}) 마이그레이션: 소유 병합 + 연구 적용(기존 플레이어 비급 보존)', async () => {
+    // 구버전(소유가 run_state 에 있던 시절) blob 을 직접 주입.
+    const legacy = { scrolls: [{ artId: 'yeokgeun-gyeong', acquiredAtRun: 2, acquiredAtDay: 3, status: 'complete', researchProgress: 100, isTrap: false, isIncomplete: false }], elixirs: [] };
+    // mem 에 직접 심기 위해 save 경로 재사용: 신포맷 save 대신 repo mock 에 구포맷을 넣는다.
+    const { runs } = jest.requireMock('@/data/repositories') as { runs: { saveRunState: (r: string, d: string, x: unknown) => Promise<void> } };
+    await runs.saveRunState('rLegacy', 'codex', legacy);
+    useCodexStore.setState({ scrolls: [], elixirs: [] } as never);
+    await codexSlice.load('rLegacy');
+    expect(useCodexStore.getState().scrolls).toHaveLength(1);
+    expect(useCodexStore.getState().scrolls[0].artId).toBe('yeokgeun-gyeong');
+    expect(useCodexStore.getState().scrolls[0].researchProgress).toBe(100);
   });
 
   it('quest(의뢰) — 진행 중 파견 복원', async () => {

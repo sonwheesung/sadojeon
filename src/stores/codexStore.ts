@@ -7,18 +7,37 @@ import type {
   ScrollInventoryItem,
 } from '@/types';
 import { MARTIAL_ARTS } from '@/data/martialArts';
-import { slotAwareStorage } from './persistStorage';
+import { metaStorage } from './persistStorage';
 
 // 사문 자산 도감.
-// - 비급(scrolls): 회차 영속. 원본은 회차 종결 후에도 다음 사부에게 인계.
-//   단 researchProgress 와 status 는 회차마다 리셋 — 새 사부가 다시 풀어야 함.
-//   docs/16_회차_다회차.md "비급(무공서)만 영구 누적"
-// - 영약(elixirs): 회차마다 초기화. 말년 비축 방지.
-//   docs/05_연구_거래.md "영약 입수 경로 — 회차 누적 X"
+// - 비급 소유(scrolls 의 artId·acquiredAt·isTrap·isIncomplete): **계정 단위 영속**(2026-06-22) —
+//   모든 사문 공통(해금 무공서·다이아처럼). accountState 로 DB 동기화 + 로컬 metaStorage. 사문(슬롯)을
+//   삭제·완결해도 비급은 계정에 남는다. docs/16·45.
+// - 비급 연구(status·researchProgress·타이머): **회차(슬롯)별** — 회차마다 리셋, run blob(codexSlice)에 저장.
+//   새 사부가 다시 풀어야 가르침 가능. docs/05.
+// - 영약(elixirs): 회차마다 초기화(run blob). 말년 비축 방지. docs/05.
+// 인메모리는 ScrollInventoryItem 한 배열로 합쳐 둔다(소비처 무변) — 영속 시 소유/연구로 쪼갠다.
+
+// 소유 정보(계정) — 연구 필드를 뺀 비급 신원.
+export type OwnedScroll = Pick<
+  ScrollInventoryItem,
+  'artId' | 'acquiredAtRun' | 'acquiredAtDay' | 'isTrap' | 'isIncomplete'
+>;
+// 연구 상태(회차) — artId → 진행. run blob 으로 저장·복원.
+export type ScrollResearch = Pick<
+  ScrollInventoryItem,
+  'status' | 'researchProgress' | 'researchStartAt' | 'researchEndAt'
+>;
 
 interface CodexStore {
   scrolls: ScrollInventoryItem[];
   elixirs: ElixirInventoryItem[];
+
+  // ── 영속 분리(소유=계정 / 연구=회차) ────────────────────────────────────
+  dumpOwnership: () => OwnedScroll[]; // 계정 저장용(accountState)
+  commitOwnership: (owned: OwnedScroll[]) => void; // 계정 로드 — 소유 반영(연구는 보존/기본값)
+  dumpResearch: () => Record<string, ScrollResearch>; // 회차 저장용(run blob)
+  applyResearch: (research: Record<string, ScrollResearch>) => void; // 회차 로드 — 연구 덮어쓰기
 
   // ── 비급 인벤토리 ────────────────────────────────────────────────────
   addScroll: (item: ScrollInventoryItem) => void;
@@ -45,6 +64,56 @@ export const useCodexStore = create<CodexStore>()(
     (set, get) => ({
       scrolls: [],
       elixirs: [],
+
+      // ── 영속 분리 ─────────────────────────────────────────────────────
+      dumpOwnership: () =>
+        get().scrolls.map((s) => ({
+          artId: s.artId,
+          acquiredAtRun: s.acquiredAtRun,
+          acquiredAtDay: s.acquiredAtDay,
+          isTrap: s.isTrap,
+          isIncomplete: s.isIncomplete,
+        })),
+
+      // 계정 소유 반영 — 이미 들고 있던 비급의 연구 상태는 보존, 새 소유는 미연구(identified·0) 기본.
+      // (loadAccount 가 loadRun 보다 먼저 → 기본값으로 깔고, 이어서 run blob 이 연구를 덮는다.)
+      commitOwnership: (owned) =>
+        set((s) => {
+          const prev = new Map(s.scrolls.map((x) => [x.artId, x]));
+          return {
+            scrolls: owned.map((o) => {
+              const ex = prev.get(o.artId);
+              return ex
+                ? { ...ex, ...o }
+                : {
+                    ...o,
+                    status: 'identified' as ResearchStatus,
+                    researchProgress: 0,
+                  };
+            }),
+          };
+        }),
+
+      dumpResearch: () => {
+        const out: Record<string, ScrollResearch> = {};
+        for (const s of get().scrolls) {
+          out[s.artId] = {
+            status: s.status,
+            researchProgress: s.researchProgress,
+            researchStartAt: s.researchStartAt,
+            researchEndAt: s.researchEndAt,
+          };
+        }
+        return out;
+      },
+
+      applyResearch: (research) =>
+        set((s) => ({
+          scrolls: s.scrolls.map((x) => {
+            const r = research[x.artId];
+            return r ? { ...x, ...r } : x;
+          }),
+        })),
 
       addScroll: (item) =>
         set((s) => {
@@ -133,8 +202,10 @@ export const useCodexStore = create<CodexStore>()(
       resetAll: () => set({ scrolls: [], elixirs: [] }),
     }),
     {
+      // 비급 소유가 계정 단위라 로컬 캐시도 계정 키(metaStorage) — 슬롯 무관 공유. 권위는 DB(account_state +
+      // run_state). 연구·영약은 회차 로드(run blob)·seedNewRun 이 덮으므로 캐시 staleness 는 무해.
       name: 'codex',
-      storage: createJSONStorage(() => slotAwareStorage),
+      storage: createJSONStorage(() => metaStorage),
       partialize: (s) => ({ scrolls: s.scrolls, elixirs: s.elixirs }),
     },
   ),

@@ -38,13 +38,36 @@ function makeBlobSlice(key: string, get: () => Blob, set: (data: Blob) => void):
   };
 }
 
+// 비급 소유는 계정(accountState)로 빠졌다 — 회차 blob 은 **연구 진행도(회차별)·영약만** 저장한다. docs/16·45.
+// load: 소유는 이미 loadAccount 가 깔아둠 → 연구만 덮는다. 구버전 blob({scrolls,...})은 마이그레이션
+// (소유 병합 + 그 안의 연구 적용) — 기존 플레이어 비급이 계정으로 승격되며 보존된다.
 export const codexSlice = makeBlobSlice(
   'codex',
   () => {
     const s = useCodexStore.getState();
-    return { scrolls: s.scrolls, elixirs: s.elixirs };
+    return { research: s.dumpResearch(), elixirs: s.elixirs };
   },
-  (d) => useCodexStore.setState(d as never),
+  (d) => {
+    const codex = useCodexStore.getState();
+    const legacy = (d as { scrolls?: import('@/types').ScrollInventoryItem[] }).scrolls;
+    if (Array.isArray(legacy)) {
+      // 구버전 — 소유가 run_state 에 있던 시절. 계정으로 병합(중복 무시) + 연구 적용.
+      const research: Record<string, import('@/stores/codexStore').ScrollResearch> = {};
+      for (const sc of legacy) {
+        if (!codex.hasScroll(sc.artId)) codex.addScroll(sc);
+        research[sc.artId] = {
+          status: sc.status,
+          researchProgress: sc.researchProgress,
+          researchStartAt: sc.researchStartAt,
+          researchEndAt: sc.researchEndAt,
+        };
+      }
+      codex.applyResearch(research);
+    } else {
+      codex.applyResearch((d as { research?: Record<string, import('@/stores/codexStore').ScrollResearch> }).research ?? {});
+    }
+    useCodexStore.setState({ elixirs: ((d as { elixirs?: unknown }).elixirs as never) ?? [] });
+  },
 );
 
 export const questSlice = makeBlobSlice(
