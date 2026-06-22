@@ -83,13 +83,23 @@ function renderTeam(side: 'A' | 'B'): void {
     const qSlider = el('input', { className: 'q', type: 'range', min: '0', max: '1', step: '0.05', value: String(f.quality) });
     qSlider.oninput = () => { f.quality = Number(qSlider.value); qVal.textContent = f.quality.toFixed(2); };
 
-    const del = el('button', { className: 'del', textContent: '✕', title: '제거' });
+    const del = el('button', { className: 'del', textContent: '✕', title: '이 전투원 제거' });
     del.onclick = () => { team.splice(i, 1); if (team.length === 0) team.push(defaultFighter(side, 0)); renderTeam(side); };
 
+    const field = (label: string, control: Node) =>
+      el('div', { className: 'field' }, [el('span', { className: 'flabel', textContent: label }), control]);
+
     host.append(el('div', { className: 'fighter' }, [
-      nameInput, realmSel, archSel,
-      el('label', { className: 'qwrap' }, ['영근 ', qSlider, qVal]),
-      del,
+      el('div', { className: 'frow-top' }, [
+        el('span', { className: 'fnum', textContent: `${side}${i + 1}` }),
+        nameInput,
+        del,
+      ]),
+      el('div', { className: 'fgrid' }, [
+        field('경지', realmSel),
+        field('결(무공 갈래)', archSel),
+        field('영근 정도', el('div', { className: 'qrow' }, [qSlider, qVal])),
+      ]),
     ]));
   });
   const add = el('button', { className: 'add', textContent: '+ 전투원' });

@@ -5,50 +5,85 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>사도전 — 엔진 테스트 콘솔</title>
 <style>
-  :root { --ink:#2b2620; --soft:#8a7f70; --line:#d8cdba; --paper:#f6f1e6; --seal:#a23b2e; --bg:#efe7d6; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); }
-  header { padding:14px 20px; border-bottom:2px solid var(--ink); background:var(--paper); }
-  header h1 { margin:0; font-size:18px; letter-spacing:1px; }
-  header .sub { color:var(--soft); font-size:12px; margin-top:2px; }
-  .wrap { max-width:1100px; margin:0 auto; padding:16px 20px 60px; }
-  .tabs { display:flex; gap:8px; margin:14px 0; }
-  .tab { padding:6px 14px; border:1px solid var(--ink); background:var(--seal); color:#fff; border-radius:4px; font-weight:700; }
-  .tab.off { background:var(--paper); color:var(--soft); border-color:var(--line); cursor:not-allowed; }
-  .teams { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .team { border:1px solid var(--line); border-radius:6px; background:var(--paper); padding:12px; }
-  .team h2 { margin:0 0 8px; font-size:14px; }
-  .team.A h2 { color:#2f6b4f; } .team.B h2 { color:var(--seal); }
-  .fighter { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:6px 0; border-bottom:1px dashed var(--line); }
-  .name { width:64px; }
-  input, select, button { font:inherit; }
-  input.name, .sel, input[type=number] { padding:4px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; }
-  .qwrap { font-size:12px; color:var(--soft); display:flex; align-items:center; gap:4px; }
-  input.q { width:90px; }
-  .qval { width:30px; text-align:right; color:var(--ink); }
-  .del { border:none; background:none; color:var(--soft); cursor:pointer; font-size:14px; }
-  .add { margin-top:8px; border:1px dashed var(--soft); background:none; color:var(--soft); border-radius:4px; padding:4px 10px; cursor:pointer; }
-  .cfg { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:16px 0; padding:12px; border:1px solid var(--line); border-radius:6px; background:var(--paper); font-size:13px; }
-  .cfg label { display:flex; align-items:center; gap:5px; }
-  .cfg input[type=number] { width:64px; }
-  #run { margin-left:auto; padding:8px 22px; border:2px solid var(--seal); background:var(--seal); color:#fff; border-radius:5px; font-weight:700; cursor:pointer; }
-  #out { margin-top:18px; }
-  .verdict { font-size:16px; padding:10px 0; }
-  .warn { color:var(--seal); font-size:13px; padding-bottom:8px; }
-  .tbl { width:100%; border-collapse:collapse; font-size:13px; margin:8px 0; background:var(--paper); }
-  .tbl th, .tbl td { border:1px solid var(--line); padding:5px 8px; text-align:center; }
-  .tbl th { background:#e9dfca; }
-  .narr { margin:12px 0; padding:10px 12px; border-left:3px solid var(--soft); background:var(--paper); font-size:13px; line-height:1.6; white-space:pre-wrap; }
-  pre.log, pre.stats { background:#272019; color:#e8dcc4; padding:12px; border-radius:6px; overflow:auto; font-size:12px; line-height:1.5; }
-  pre.stats { font-size:14px; }
-  details summary { cursor:pointer; color:var(--soft); font-size:13px; margin-top:8px; }
-  .hint { color:var(--soft); font-size:12px; margin-top:6px; }
+  :root {
+    --ink:#272019; --soft:#8a7f70; --line:#ded3bf; --paper:#faf6ee; --bg:#ece3d2;
+    --seal:#a23b2e; --green:#2f6b4f; --gold:#9a7b2e;
+    --radius:8px; --shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font-family: system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); font-size:14px; line-height:1.45; }
+  header { padding:16px 24px; border-bottom:2px solid var(--ink); background:var(--paper); }
+  header h1 { margin:0; font-size:19px; letter-spacing:.5px; }
+  header .sub { color:var(--soft); font-size:12.5px; margin-top:3px; }
+  .wrap { max-width:1180px; margin:0 auto; padding:20px 24px 80px; }
+
+  .tabs { display:flex; gap:8px; margin:18px 0 20px; flex-wrap:wrap; }
+  .tab { padding:8px 18px; border-radius:var(--radius); font-weight:700; font-size:13px; border:1px solid var(--ink); background:var(--seal); color:#fff; }
+  .tab.off { background:transparent; color:var(--soft); border:1px dashed var(--line); }
+
+  /* 팀 */
+  .teams { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:760px){ .teams{ grid-template-columns:1fr; } }
+  .team { border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); padding:16px; box-shadow:var(--shadow); }
+  .team h2 { margin:0 0 4px; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .team .badge { font-size:11px; font-weight:700; color:#fff; padding:2px 9px; border-radius:99px; }
+  .team.A .badge { background:var(--green); } .team.B .badge { background:var(--seal); }
+  .team .cnt { color:var(--soft); font-size:12px; font-weight:400; margin-left:auto; }
+
+  .fighter { border:1px solid var(--line); border-radius:var(--radius); background:#fff; padding:12px 13px; margin-top:12px; }
+  .frow-top { display:flex; align-items:center; gap:9px; margin-bottom:11px; }
+  .fnum { font-size:11px; font-weight:700; color:var(--soft); background:#f0e9da; border-radius:5px; padding:3px 8px; flex:none; }
+  input.name { flex:1; min-width:0; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; font-size:14px; }
+  .del { flex:none; width:30px; height:30px; border:1px solid var(--line); background:#fff; color:var(--soft); border-radius:6px; cursor:pointer; font-size:13px; }
+  .del:hover { border-color:var(--seal); color:var(--seal); }
+
+  .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .field:last-child { grid-column:1 / -1; }            /* 영근 슬라이더는 한 줄 전체 */
+  .flabel { font-size:11.5px; color:var(--soft); font-weight:600; }
+  .sel { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; font-size:14px; cursor:pointer; }
+  .qrow { display:flex; align-items:center; gap:10px; }
+  input.q { flex:1; height:4px; accent-color:var(--seal); }
+  .qval { flex:none; width:36px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+
+  .add { width:100%; margin-top:12px; padding:9px; border:1px dashed var(--soft); background:transparent; color:var(--soft); border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; }
+  .add:hover { border-color:var(--ink); color:var(--ink); }
+
+  .vs { text-align:center; color:var(--soft); font-weight:700; font-size:13px; letter-spacing:2px; margin:14px 0; }
+
+  /* 설정 바 */
+  .cfg { display:flex; flex-wrap:wrap; align-items:flex-end; gap:18px; margin:8px 0 4px; padding:16px 18px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); box-shadow:var(--shadow); }
+  .cfg .cf { display:flex; flex-direction:column; gap:5px; }
+  .cfg .cf > .flabel { font-size:11.5px; }
+  .cfg .chk { flex-direction:row; align-items:center; gap:7px; padding-bottom:9px; }
+  .cfg .chk input { width:17px; height:17px; accent-color:var(--seal); }
+  .cfg select, .cfg input[type=number] { padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; font-size:14px; }
+  .cfg input[type=number] { width:84px; }
+  #run { margin-left:auto; padding:11px 30px; border:none; background:var(--seal); color:#fff; border-radius:7px; font-weight:700; font-size:15px; cursor:pointer; box-shadow:var(--shadow); }
+  #run:hover { filter:brightness(1.08); }
+  .hint { color:var(--soft); font-size:12px; margin:8px 2px 0; }
+
+  /* 결과 */
+  #out { margin-top:22px; }
+  #out:empty::after { content:"위에서 팀을 구성하고 ‘전투 실행’을 눌러줘."; color:var(--soft); font-size:13px; }
+  .verdict { font-size:17px; padding:12px 16px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; box-shadow:var(--shadow); }
+  .verdict b { font-size:19px; }
+  .warn { color:var(--seal); font-size:13px; margin:-6px 0 12px; font-weight:600; }
+  .tbl { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; margin:6px 0 14px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .tbl th, .tbl td { padding:9px 10px; text-align:center; border-bottom:1px solid var(--line); }
+  .tbl th { background:#ece2cd; font-size:12px; color:var(--ink); }
+  .tbl tr:last-child td { border-bottom:none; }
+  .narr { margin:14px 0; padding:13px 16px; border-left:3px solid var(--gold); background:var(--paper); border-radius:0 var(--radius) var(--radius) 0; font-size:13.5px; line-height:1.7; white-space:pre-wrap; }
+  pre.log, pre.stats { background:#231c15; color:#ecdfc6; padding:14px 16px; border-radius:var(--radius); overflow:auto; font-size:13px; line-height:1.65; margin:6px 0; }
+  pre.stats { font-size:14.5px; line-height:1.9; }
+  details summary { cursor:pointer; color:var(--soft); font-size:13px; margin-top:6px; user-select:none; }
 </style>
 </head>
 <body>
 <header>
-  <h1>사도전 — 엔진 테스트 콘솔</h1>
-  <div class="sub">PC 브라우저에서 게임 엔진을 직접 돌려 결과를 확인 · 백엔드 없음</div>
+  <h1>사도전 · 엔진 테스트 콘솔</h1>
+  <div class="sub">PC 브라우저에서 게임 엔진을 직접 돌려 결과를 검증 · 백엔드 없음</div>
 </header>
 <div class="wrap">
   <div class="tabs">
@@ -60,22 +95,22 @@
   </div>
 
   <div class="teams">
-    <div class="team A"><h2>아군 (A)</h2><div id="team-A"></div></div>
-    <div class="team B"><h2>적 (B)</h2><div id="team-B"></div></div>
+    <div class="team A"><h2><span class="badge">아군 A</span><span class="cnt">우리 제자 측</span></h2><div id="team-A"></div></div>
+    <div class="team B"><h2><span class="badge">적 B</span><span class="cnt">상대 측</span></h2><div id="team-B"></div></div>
   </div>
-  <div class="hint">전투원마다 경지 · 결(무공 갈래) · 영근 정도(0~1)를 정한다. 1:1 / 1:N / N:M 자유 구성.</div>
+  <div class="vs">— A vs B · 1:1 / 1:N / N:M 자유 구성 —</div>
 
   <div class="cfg">
-    <label>모드
+    <div class="cf"><span class="flabel">모드</span>
       <select id="mode"><option value="real">실전</option><option value="spar">대련</option></select>
-    </label>
-    <label><input type="checkbox" id="lethal" checked /> 사망 굴림(실전)</label>
-    <label><input type="checkbox" id="retreat" checked /> 패주 허용(실전)</label>
-    <label>합 상한 <input type="number" id="maxRounds" value="30" /></label>
-    <label>반복 <input type="number" id="runs" value="1" /></label>
-    <button id="run">전투 실행</button>
+    </div>
+    <label class="cf chk"><input type="checkbox" id="lethal" checked /> 사망 굴림(실전)</label>
+    <label class="cf chk"><input type="checkbox" id="retreat" checked /> 패주 허용(실전)</label>
+    <div class="cf"><span class="flabel">합 상한</span><input type="number" id="maxRounds" value="30" /></div>
+    <div class="cf"><span class="flabel">반복 횟수</span><input type="number" id="runs" value="1" /></div>
+    <button id="run">전투 실행 ▶</button>
   </div>
-  <div class="hint">반복=1 → 한 판 상세(전투원 상태·상처·서사·합 로그). 반복≥2 → 승률·사상률 통계.</div>
+  <div class="hint">반복 1회 → 한 판 상세(전투원 상태·상처·서사·합 로그) · 반복 2회↑ → 승률·사상률 통계</div>
 
   <div id="out"></div>
 </div>
