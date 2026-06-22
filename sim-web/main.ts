@@ -4,6 +4,7 @@
 import { simulateCombat, makeNpcCombatant, narrateCombat, type NpcArchetype } from '@/systems/combat';
 import { defaultArtTraits } from '@/data/martialArts';
 import { mountQuestPanel } from './quest';
+import { mountCareerPanel } from './career';
 import { el, $, opt, field } from './ui';
 import type { Realm } from '@/types/realm';
 import type { CombatMode, CombatResult, Combatant, CombatArt } from '@/types/combat';
@@ -263,14 +264,18 @@ function boot(): void {
   renderBuildList(); renderBuildEditor();
   ($('run') as HTMLButtonElement).onclick = run;
 
-  // 탭 전환 — 패널 토글. 의뢰 패널은 첫 진입 때 1회 마운트(무거운 엔진 셋업 지연).
-  let questMounted = false;
+  // 탭 전환 — 패널 토글. 무거운 엔진 패널(의뢰·직업)은 첫 진입 때 1회 마운트.
+  const mounted: Record<string, boolean> = {};
+  const PANELS = ['combat', 'quest', 'career'];
   const tabs = Array.from(document.querySelectorAll('.tab[data-tab]')) as HTMLElement[];
   const show = (name: string) => {
     for (const t of tabs) t.classList.toggle('inactive', t.dataset.tab !== name);
-    $('panel-combat').classList.toggle('hidden', name !== 'combat');
-    $('panel-quest').classList.toggle('hidden', name !== 'quest');
-    if (name === 'quest' && !questMounted) { mountQuestPanel($('panel-quest')); questMounted = true; }
+    for (const p of PANELS) $(`panel-${p}`).classList.toggle('hidden', p !== name);
+    if (!mounted[name]) {
+      if (name === 'quest') mountQuestPanel($('panel-quest'));
+      if (name === 'career') mountCareerPanel($('panel-career'));
+      mounted[name] = true;
+    }
   };
   for (const t of tabs) t.onclick = () => show(t.dataset.tab!);
   show('combat');

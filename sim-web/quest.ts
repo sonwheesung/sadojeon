@@ -18,6 +18,7 @@ import {
 import type { Quest, MartialArtInstance } from '@/types';
 import type { FieldEvent } from '@/stores/fieldEventStore';
 import { el, $, opt, field } from './ui';
+import { ensureRun, ds } from './runenv';
 
 const inst = (artId: string, seong: number): MartialArtInstance => ({ artId, seong, exp: 0, unlockedAt: 0 });
 const PRESETS = {
@@ -36,7 +37,6 @@ const OUTCOME_BY_TITLE: [string, string][] = [
   ['의뢰 실패', 'fail'], ['의뢰 재난', 'disaster'],
 ];
 
-const ds = () => useDiscipleStore.getState();
 
 // 제자에 프리셋 적용 — 전투 빌드(경지·무공·근골) + 의뢰 도메인 역량 스탯. questmatrix applyPreset 확장.
 function setupMember(id: string, p: (typeof PRESETS)[PresetKey], q: Quest): void {
@@ -53,16 +53,6 @@ function setupMember(id: string, p: (typeof PRESETS)[PresetKey], q: Quest): void
     stats: stats as never,
     status: 'training', wounds: undefined, stress: 0, simma: 0,
   });
-}
-
-let inited = false;
-function ensureInit(): void {
-  if (inited) return;
-  setAutoSaveEnabled(false); // 브라우저 — Supabase 저장 안 함
-  seedNewRun(['jang-cheol', 'jin-sohwa', 'yun-soso', 'baek-yeon']);
-  useGameStore.getState().setPhase('playing');
-  setFoodCost(0); setPatronageMult(0); setGeumchangBudget(Infinity);
-  inited = true;
 }
 
 // 파견 직전까지 셋업(배치·단판 공용) — 제자 프리셋·나이·사부·평판·게시판. 반환=파견조·캐리·자금 기준.
@@ -156,7 +146,7 @@ function askChoice(ev: FieldEvent, host: HTMLElement): Promise<{ key: string; la
 }
 
 async function runInteractive(q: Quest, presets: PresetKey[], out: HTMLElement): Promise<void> {
-  ensureInit();
+  ensureRun();
   const { party, carry, money0 } = prepare(q, presets);
   out.replaceChildren();
   if (!dispatchQuest(q.id, party)) { out.textContent = '파견 게이트 미달 — 극험은 역량 하드 게이트라 못 보냄. 프리셋을 올려줘.'; return; }
@@ -254,7 +244,7 @@ export function mountQuestPanel(host: HTMLElement): void {
       if (mode === 'single') {
         await runInteractive(q, presets, out);
       } else {
-        ensureInit();
+        ensureRun();
         const reps = Math.max(1, Number(repsInput.value) | 0);
         const c = { full: 0, partial: 0, crisis: 0, fail: 0, disaster: 0, gate: 0 } as Record<string, number>;
         let dead = 0, fatal = 0, money = 0, counted = 0;

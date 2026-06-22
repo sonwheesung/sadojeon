@@ -100,6 +100,13 @@
   .ev-rtext { font-size:13px; color:var(--ink); line-height:1.6; margin-top:4px; white-space:pre-wrap; }
   .final-card { border:2px solid var(--ink); border-radius:var(--radius); background:var(--paper); padding:13px 16px; }
   .fc-out { font-weight:700; font-size:16px; } .fc-meta { font-size:13px; color:var(--ink); margin-top:4px; }
+  /* 직업 */
+  .arch-row { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 14px; }
+  .jobrow { display:flex; align-items:center; gap:10px; padding:7px 4px; border-bottom:1px solid var(--line); }
+  .jobname { width:160px; font-weight:600; font-size:13px; }
+  .jobbar-wrap { flex:1; height:14px; background:#e9dfca; border-radius:7px; overflow:hidden; }
+  .jobbar { height:100%; background:var(--seal); }
+  .jobpct { width:54px; text-align:right; font-variant-numeric:tabular-nums; font-size:13px; }
 </style>
 </head>
 <body>
@@ -111,11 +118,13 @@
   <div class="tabs">
     <span class="tab" data-tab="combat">전투</span>
     <span class="tab" data-tab="quest">의뢰</span>
+    <span class="tab" data-tab="career">직업</span>
     <span class="tab off" title="추후 추가">관계</span>
     <span class="tab off" title="추후 추가">강호</span>
   </div>
 
   <div id="panel-quest" class="panel hidden"></div>
+  <div id="panel-career" class="panel hidden"></div>
 
   <div id="panel-combat" class="panel">
   <details class="box">
