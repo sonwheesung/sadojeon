@@ -11,6 +11,7 @@ import {
   QUEST_GRADE_LABEL,
   QUEST_GRADE_RISK,
 } from '@/data/quests';
+import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useDiscipleStore, useQuestStore, useTimeStore } from '@/stores';
 import { canDispatch, dispatchQuest, fitPhrase, generateBoard } from '@/systems/questSystem';
 import { colors, spacing, typography } from '@/theme';
@@ -19,6 +20,7 @@ import type { ActiveQuest, Disciple, Quest } from '@/types';
 // 의뢰 화면 — 파견 중 + 게시판. 파견은 모달. 결산은 서신함(마일스톤). docs/28 §4.
 
 export default function QuestScreen() {
+  useTutorialOnFocus('quest'); // 의뢰 첫 진입 — 파견의 득·실 안내. docs/44
   const board = useQuestStore((s) => s.board);
   const active = useQuestStore((s) => s.active);
   const [dispatchQuest_, setDispatchQuest] = useState<Quest | null>(null);

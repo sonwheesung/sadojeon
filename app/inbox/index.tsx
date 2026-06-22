@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { colors, spacing, typography } from '@/theme';
@@ -47,6 +48,7 @@ function relativeDayLabel(diff: number): string {
 // ─── Screen ─────────────────────────────────────────────────────────────────
 
 export default function InboxScreen() {
+  useTutorialOnFocus('inbox'); // 서신함 첫 진입 — 결정형 서신 안내. docs/44
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
   const markRead = useInboxStore((s) => s.markRead);

@@ -19,6 +19,7 @@ import {
   loreOf,
 } from '@/systems/activitySystem';
 import { canExpedition, dispatchExpedition } from '@/systems/expeditionSystem';
+import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useActivityStore } from '@/stores/activityStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import type { Disciple } from '@/types';
@@ -36,6 +37,7 @@ const MODE_TITLE: Record<Mode, string> = {
 };
 
 export default function ActivityHubScreen() {
+  useTutorialOnFocus('activity'); // 활동 허브 첫 진입 — 일과 밖 파견 안내. docs/44
   const confirm = useConfirm();
   const order = useDiscipleStore((s) => s.order);
   const disciples = useDiscipleStore((s) => s.disciples);

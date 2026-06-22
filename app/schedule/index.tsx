@@ -8,6 +8,7 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { useGameDateLabel } from '@/hooks/useGameDateLabel';
+import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -29,6 +30,7 @@ const SECT_TARGET = 'sect';
 // - 사문: 사문 기본 주간 패턴 (모든 제자의 기본값)
 // - 제자: 개인 주간 패턴 (사문보다 우선). 고치면 개인 일정이 되고, 되돌리기로 사문 복귀.
 export default function ScheduleScreen() {
+  useTutorialOnFocus('schedule'); // 일과 첫 진입 — 수련 편성 안내. docs/44
   const dateLabel = useGameDateLabel();
   const time = useTimeStore((s) => s.current);
   const totalDay = useTimeStore((s) => s.totalDay);

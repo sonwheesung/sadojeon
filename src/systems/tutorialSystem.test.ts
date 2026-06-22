@@ -4,12 +4,33 @@
 jest.mock('@/systems/accountSync', () => ({ saveAccountSilently: jest.fn() }));
 
 import { triggerTutorial, dismissTutorial } from './tutorialSystem';
+import { TUTORIALS } from '@/data/tutorials';
 import { useTutorialStore } from '@/stores/tutorialStore';
 import { useTutorialUiStore } from '@/stores/tutorialUiStore';
 
 beforeEach(() => {
   useTutorialStore.setState({ seen: [] });
   useTutorialUiStore.setState({ active: null });
+});
+
+describe('튜토리얼 데이터 정합', () => {
+  it('모든 주제는 맵 key 와 topic.key 가 일치하고, 카드가 비어 있지 않다', () => {
+    for (const [mapKey, topic] of Object.entries(TUTORIALS)) {
+      expect(topic.key).toBe(mapKey);
+      expect(topic.cards.length).toBeGreaterThan(0);
+      for (const c of topic.cards) {
+        expect(c.seal).toBeTruthy();
+        expect(c.title).toBeTruthy();
+        expect(c.body).toBeTruthy();
+      }
+    }
+  });
+
+  it('현재 배선된 주제(intro·schedule·quest·inbox·activity·alchemy)가 모두 등록돼 있다', () => {
+    for (const key of ['intro', 'schedule', 'quest', 'inbox', 'activity', 'alchemy']) {
+      expect(TUTORIALS[key]).toBeTruthy();
+    }
+  });
 });
 
 describe('맥락형 튜토리얼 — 트리거', () => {
