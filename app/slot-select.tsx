@@ -294,6 +294,18 @@ function Footer() {
   return (
     <View style={styles.footer}>
       <View style={styles.footerDivider} />
+      {/* 업적은 모든 사문 공통(계정 단위) — 회차 안이 아니라 사문 선택 화면에서 연다. */}
+      <Pressable
+        style={({ pressed }) => [styles.achievementsBtn, pressed && styles.achievementsBtnPressed]}
+        onPress={() => router.push('/achievements' as Href)}
+        accessibilityRole="button"
+        accessibilityLabel="업적·도감 보기"
+      >
+        <View style={styles.achievementsSeal}>
+          <Text style={styles.achievementsSealLabel}>業</Text>
+        </View>
+        <Text style={styles.achievementsLabel}>업적 · 도감</Text>
+      </Pressable>
       <Text style={styles.footerLine}>사부의 일생은 한 회차, 사문은 영속</Text>
     </View>
   );
@@ -539,11 +551,45 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     paddingTop: spacing.sm,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   footerDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.inkSoft,
+  },
+  achievementsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.seal,
+    borderRadius: 4,
+    backgroundColor: colors.paperBright,
+  },
+  achievementsBtnPressed: { opacity: 0.85 },
+  achievementsSeal: {
+    width: 22,
+    height: 22,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.seal,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  achievementsSealLabel: {
+    fontFamily: typography.serifCN,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+  },
+  achievementsLabel: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.sm,
+    color: colors.seal,
+    letterSpacing: typography.letterSpacing.wide,
   },
   footerLine: {
     textAlign: 'center',
