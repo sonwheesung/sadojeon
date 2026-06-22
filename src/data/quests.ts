@@ -96,11 +96,12 @@ export function maxGradeForReputation(rep: number): QuestGrade {
 // 보수 재조정(2026-06-22): 의뢰 자금을 경제 규모에 맞게 전면 상향. 종전 위험 90동(=45만원)·극험 210동은
 // "목숨값"으로 말이 안 되고, 잡일 보수가 유지비(식비~99/월·연단실 100/월)에 못 미쳐 초반이 굶주림 스파이럴이었다.
 // 기준 = 팀이 이미 쓰는 강호사건 보상표 GRADE_REWARD(잡일60·소무150·보통280·위험480·극험1000) 사다리에 정렬.
-// 환산 1동=5천원: 잡일 ~25만 · 위험 ~240만 · 극험 ~500~800만. 명성(fame)은 페이싱 유지(건드리지 않음).
+// 환산 1동=5천원: 위험 ~240만 · 극험 ~500~800만. 명성(fame)은 페이싱 유지(건드리지 않음).
+// 잡일(25동)은 "1주일 버퍼" 목표 — 순수 생활비(식비+유지비, 후원 제외) 기준 제자 4명이 약 7일(2026-06-22 사용자 조정).
 // 결과 outcome 배수·후원 1.4×·귀인 1.5× 별도. 재검증: economysweep. 🔧
 export const QUEST_POOL: readonly Quest[] = [
-  // ── 잡일 ── (유지비 위로 — 초반 생존 가능)
-  { id: 'q-market', domain: 'guard', grade: 'menial', title: '시장 짐 운반', client: '마을 노점', preview: '사흘간 짐 옮길 일손이 필요합니다.', weeks: 1, days: 3, reward: { money: 50, fame: 1 }, recommended: 1, minStat: 0 },
+  // ── 잡일 ── (생활비 위로 — 1주일 버퍼: 4명 순생활비 99/월 → 25동≈7일)
+  { id: 'q-market', domain: 'guard', grade: 'menial', title: '시장 짐 운반', client: '마을 노점', preview: '사흘간 짐 옮길 일손이 필요합니다.', weeks: 1, days: 3, reward: { money: 25, fame: 1 }, recommended: 1, minStat: 0 },
   // (약초 채집은 의뢰가 아니라 활동(activitySystem·app/activity)으로 이관 — 2026-06-16. docs/38)
   // ── 소무 ──
   { id: 'q-patrol', domain: 'guard', grade: 'minor', title: '마을 야경', client: '촌장', preview: '밤마다 마을을 지킨다.', weeks: 1, reward: { money: 100, fame: 2 }, recommended: 1, minStat: 5 },
