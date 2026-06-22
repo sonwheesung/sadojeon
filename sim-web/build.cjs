@@ -44,6 +44,9 @@ const opts = {
   },
   tsconfig: path.join(root, 'tsconfig.json'), // @ 경로 별칭 해석
   define: { __DEV__: 'false', 'process.env.NODE_ENV': '"production"', ...envDefine },
+  // 브라우저엔 process 가 없다 — realm.ts 등이 process.env.EXT_SCALE/DAEOH_SCALE 를 모듈 로드 때 읽어
+  // ReferenceError 로 전 번들이 죽는다. 빈 env 셰임 주입(정의된 EXPO_PUBLIC_*·NODE_ENV 는 define 이 우선 치환).
+  banner: { js: 'globalThis.process||(globalThis.process={env:{}});' },
   logLevel: 'info',
 };
 

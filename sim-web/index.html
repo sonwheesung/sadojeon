@@ -163,6 +163,12 @@
   <div id="out"></div>
   </div><!-- /panel-combat -->
 </div>
+<script>
+  // 로드/런타임 에러를 화면에 띄운다(콘솔 안 봐도 보이게 — 조용한 백지 화면 방지).
+  function __showErr(m){ if(document.getElementById('__err'))return; document.body.insertAdjacentHTML('afterbegin','<pre id="__err" style="color:#a23b2e;white-space:pre-wrap;padding:12px;background:#fdecea;margin:0;font-size:12px">⚠ 에러\n'+m+'</pre>'); }
+  window.addEventListener('error',function(e){ __showErr((e.error&&e.error.stack)||e.message); });
+  window.addEventListener('unhandledrejection',function(e){ __showErr('reject: '+((e.reason&&e.reason.stack)||e.reason)); });
+</script>
 <script src="./dist/bundle.js"></script>
 </body>
 </html>

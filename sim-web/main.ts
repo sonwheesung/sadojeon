@@ -292,4 +292,8 @@ function boot(): void {
     saveBuilds(); nameInput.value=''; refreshBuildsEverywhere();
   };
 }
-boot();
+try { boot(); } catch (e) {
+  const m = (e as Error)?.stack || String(e);
+  document.body.insertAdjacentHTML('afterbegin', `<pre style="color:#a23b2e;white-space:pre-wrap;padding:12px;background:#fee">BOOT ERROR\n${m}</pre>`);
+  console.error('[sim-web boot]', e);
+}
