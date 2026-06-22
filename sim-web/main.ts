@@ -5,6 +5,7 @@ import { simulateCombat, makeNpcCombatant, narrateCombat, type NpcArchetype } fr
 import { defaultArtTraits } from '@/data/martialArts';
 import { mountQuestPanel } from './quest';
 import { mountCareerPanel } from './career';
+import { mountGrowthPanel } from './growth';
 import { el, $, opt, field } from './ui';
 import type { Realm } from '@/types/realm';
 import type { CombatMode, CombatResult, Combatant, CombatArt } from '@/types/combat';
@@ -266,7 +267,7 @@ function boot(): void {
 
   // 탭 전환 — 패널 토글. 무거운 엔진 패널(의뢰·직업)은 첫 진입 때 1회 마운트.
   const mounted: Record<string, boolean> = {};
-  const PANELS = ['combat', 'quest', 'career'];
+  const PANELS = ['combat', 'quest', 'career', 'growth'];
   const tabs = Array.from(document.querySelectorAll('.tab[data-tab]')) as HTMLElement[];
   const show = (name: string) => {
     for (const t of tabs) t.classList.toggle('inactive', t.dataset.tab !== name);
@@ -274,6 +275,7 @@ function boot(): void {
     if (!mounted[name]) {
       if (name === 'quest') mountQuestPanel($('panel-quest'));
       if (name === 'career') mountCareerPanel($('panel-career'));
+      if (name === 'growth') mountGrowthPanel($('panel-growth'));
       mounted[name] = true;
     }
   };
