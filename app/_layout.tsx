@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/noto-serif-sc';
 
 import { ConfirmProvider } from '@/components/common/ConfirmDialog';
+import { TutorialHost } from '@/components/tutorial/TutorialHost';
 import { UpdateGate } from '@/components/common/UpdateGate';
 import { useAuthStore } from '@/stores/authStore';
 import { loadAccount } from '@/systems/accountSync';
@@ -110,6 +111,8 @@ export default function RootLayout() {
               <Stack.Screen name="login" />
             </Stack.Protected>
           </Stack>
+          {/* 맥락형 튜토리얼 오버레이 — 루트 1회 마운트(확인창과 같은 결). 활성 주제 있을 때만 표시. docs/44 */}
+          <TutorialHost />
         </ConfirmProvider>
         </UpdateGate>
       </SafeAreaProvider>

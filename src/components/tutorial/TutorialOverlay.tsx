@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ONBOARDING_STEPS } from '@/data/onboarding';
+import type { TutorialCard } from '@/data/tutorials';
 import { colors, radius, spacing, typography } from '@/theme';
 
-// 첫 안내(온보딩) 오버레이 — 계정 1회, 첫 사문 개창 직전에 핵심 루프를 일러준다. docs/44.
-// 양피지 카드 + 인장 결(StartSelectModal 과 같은 모달 톤). 단계는 ONBOARDING_STEPS(데이터 주도).
-// 그레이박스 단계 — 비주얼 폴리시(일러스트·연출)는 후속. 지금은 글·인장·진행점으로만.
+// 튜토리얼 카드 오버레이(프레젠테이션 전용) — 한 주제의 카드들을 한 장씩 넘긴다. docs/44.
+// 양피지 + 인장 결(StartSelectModal 과 같은 모달 톤). 어느 주제를 띄울지는 TutorialHost 가 정함.
+// 그레이박스 단계 — 비주얼 폴리시(일러스트·스포트라이트)는 후속. 지금은 글·인장·진행점만.
 interface Props {
-  visible: boolean;
-  /** 마지막 단계 [시작] 또는 [건너뛰기] — 안내 종료(계정에 본 것으로 기록). */
+  cards: TutorialCard[];
+  /** 마지막 카드 [시작] 또는 [건너뛰기] — 안내 종료. */
   onDone: () => void;
 }
 
-export function OnboardingOverlay({ visible, onDone }: Props) {
+export function TutorialOverlay({ cards, onDone }: Props) {
   const [index, setIndex] = useState(0);
 
-  // 열릴 때마다 첫 단계부터(재진입 안전).
+  // 카드 묶음이 바뀌면(=다른 주제) 첫 장부터.
   useEffect(() => {
-    if (visible) setIndex(0);
-  }, [visible]);
+    setIndex(0);
+  }, [cards]);
 
-  const step = ONBOARDING_STEPS[index];
-  const total = ONBOARDING_STEPS.length;
+  const total = cards.length;
+  const card = cards[index];
   const isLast = index >= total - 1;
 
   const next = () => {
@@ -30,31 +30,33 @@ export function OnboardingOverlay({ visible, onDone }: Props) {
     else setIndex((i) => Math.min(i + 1, total - 1));
   };
 
-  if (!step) return null;
+  if (!card) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.seal}>
-            <Text style={styles.sealLabel}>{step.seal}</Text>
+            <Text style={styles.sealLabel}>{card.seal}</Text>
           </View>
 
-          <Text style={styles.title}>{step.title}</Text>
+          <Text style={styles.title}>{card.title}</Text>
 
           <ScrollView
             style={styles.bodyScroll}
             contentContainerStyle={styles.bodyContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.body}>{step.body}</Text>
+            <Text style={styles.body}>{card.body}</Text>
           </ScrollView>
 
-          <View style={styles.dots}>
-            {ONBOARDING_STEPS.map((s, i) => (
-              <View key={s.id} style={[styles.dot, i === index && styles.dotOn]} />
-            ))}
-          </View>
+          {total > 1 && (
+            <View style={styles.dots}>
+              {cards.map((_, i) => (
+                <View key={i} style={[styles.dot, i === index && styles.dotOn]} />
+              ))}
+            </View>
+          )}
 
           <View style={styles.actions}>
             <Pressable
@@ -70,9 +72,9 @@ export function OnboardingOverlay({ visible, onDone }: Props) {
               style={({ pressed }) => [styles.next, pressed && styles.pressed]}
               onPress={next}
               accessibilityRole="button"
-              accessibilityLabel={isLast ? '안내 마치고 시작' : '다음 안내'}
+              accessibilityLabel={isLast ? '안내 닫기' : '다음 안내'}
             >
-              <Text style={styles.nextLabel}>{isLast ? '시작 ▶' : '다음 ▶'}</Text>
+              <Text style={styles.nextLabel}>{isLast ? '알겠습니다 ▶' : '다음 ▶'}</Text>
             </Pressable>
           </View>
         </View>

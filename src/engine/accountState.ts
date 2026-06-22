@@ -6,13 +6,13 @@
 
 import { useAchievementStore } from '@/stores/achievementStore';
 import { useTallyStore } from '@/stores/tallyStore';
-import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useTutorialStore } from '@/stores/tutorialStore';
 import { useGameStore } from '@/stores/gameStore';
 
 const ACCOUNT_STORES = {
   achievement: useAchievementStore,
   tally: useTallyStore,
-  onboarding: useOnboardingStore, // 첫 안내 본 여부 — 계정 1회(docs/44)
+  tutorial: useTutorialStore, // 본 튜토리얼 주제 집합 — 계정 단위(docs/44)
 } as const;
 
 type AccountStores = typeof ACCOUNT_STORES;
@@ -56,6 +56,6 @@ export function commitAccountState(state: AccountState): void {
 export function resetAccountState(): void {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] } as never);
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} } as never);
-  useOnboardingStore.setState({ seen: false } as never); // 신규 유저 클린 슬레이트 — 안내 노출
+  useTutorialStore.setState({ seen: [] } as never); // 신규 유저 클린 슬레이트 — 안내 노출
   useGameStore.setState({ diamonds: 0 }); // 다이아도 유저별 — 요청 클린 슬레이트
 }

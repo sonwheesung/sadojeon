@@ -28,6 +28,7 @@ import {
 } from '@/systems/alchemySystem';
 import { healWound, listWounded, treatableElixirsFor, woundLabel, woundsOf } from '@/systems/woundSystem';
 import { consumeAnsinElixir, hasAnsinElixir, listUnstable } from '@/systems/simmaSystem';
+import { triggerTutorial } from '@/systems/tutorialSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -82,7 +83,10 @@ export default function AlchemyScreen() {
       message: `자금 ${coin(ALCHEMY_LAB_BUILD_COST)}을 들여 연단실을 엽니다. 매월 유지비가 듭니다.`,
       confirmLabel: '건설',
     });
-    if (ok && buildAlchemyLab()) force();
+    if (ok && buildAlchemyLab()) {
+      triggerTutorial('alchemy'); // 연단실을 처음 지었을 때 — 연단 안내(계정 1회). docs/44
+      force();
+    }
   };
 
   const onLearn = (recipe: ElixirRecipe) => async () => {

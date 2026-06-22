@@ -13,21 +13,14 @@ import { MilestoneModal } from '@/components/dialogue/MilestoneModal';
 import { MonthlyReportModal } from '@/components/dialogue/MonthlyReportModal';
 import { MonthlyScheduleModal } from '@/components/dialogue/MonthlyScheduleModal';
 import { StartSelectModal } from '@/components/dialogue/StartSelectModal';
-import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
 import { DailyLogPanel } from '@/components/sect/DailyLogPanel';
 import { DiscipleMoodPanel } from '@/components/sect/DiscipleMoodPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
-import {
-  useGameStore,
-  useMasterStore,
-  usePendingStore,
-  useInboxStore,
-  useOnboardingStore,
-} from '@/stores';
+import { useGameStore, useMasterStore, usePendingStore, useInboxStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
-import { saveAccountSilently } from '@/systems/accountSync';
+import { triggerTutorial } from '@/systems/tutorialSystem';
 import { saveCurrentRunSilently } from '@/systems/runSync';
 import { getGameApi } from '@/engine/gameApi';
 import { colors, spacing } from '@/theme';
@@ -42,11 +35,6 @@ export default function SectScreen() {
   // master 가 비어 있으면 회차 첫 진입 → 시작 선택 모달.
   // 사용자가 풀에서 2~4명 선택 + 시작 → seedNewRun 호출 → master 채워짐 → 자동 숨김.
   const isFresh = useMasterStore((s) => s.master == null);
-
-  // 첫 안내(온보딩) — 계정 1회. 사문 개창 직전 핵심 루프를 일러주고, 끝나면 시작 선택 모달로. docs/44.
-  const onboardingSeen = useOnboardingStore((s) => s.seen);
-  const markOnboardingSeen = useOnboardingStore((s) => s.markSeen);
-  const showOnboarding = isFresh && !onboardingSeen;
 
   // 진행 → 일일 세부 선택 모달 → 확정 시 하루 진행(GameApi).
   const [choiceOpen, setChoiceOpen] = useState(false);
@@ -106,15 +94,13 @@ export default function SectScreen() {
             });
         }}
       />
-      <OnboardingOverlay
-        visible={showOnboarding}
-        onDone={() => {
-          markOnboardingSeen();
-          saveAccountSilently(); // 본 것으로 계정 영속(DB·로컬)
+      <StartSelectModal
+        visible={isFresh}
+        onComplete={() => {
+          saveCurrentRunSilently();
+          triggerTutorial('intro'); // 첫 사문 개창 직후 — 핵심 루프 안내(계정 1회). docs/44
         }}
       />
-      {/* 안내가 끝난(또는 이미 본) 뒤에야 시작 선택 — 두 모달 겹침 방지. */}
-      <StartSelectModal visible={isFresh && onboardingSeen} onComplete={() => saveCurrentRunSilently()} />
       <MonthlyReportModal />
       <MonthlyScheduleModal />
       <DailySettlementModal />
