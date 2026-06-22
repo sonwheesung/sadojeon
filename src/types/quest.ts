@@ -9,6 +9,11 @@ export type QuestDomain = 'guard' | 'scout' | 'duel' | 'medicine' | 'assassin' |
 export type QuestGrade = 'menial' | 'minor' | 'normal' | 'dangerous' | 'extreme';
 //                        잡일      소무      보통      위험         극험
 
+// 특수 의뢰 유형 — 기존 도메인 위에 얹는 "결". 보상 특징·업적·표시에 쓰인다(없으면 일반 의뢰).
+// codex=비급 회수(무공서 확정) · hostage=인질 구출(정체공개) · bounty=현상금(자금↑) ·
+// beast=요수 토벌(전투) · mediation=문파 중재(양쪽 평판↑). docs/29 §9.
+export type QuestKind = 'codex' | 'hostage' | 'bounty' | 'beast' | 'mediation';
+
 // 결산 분기 — docs/08 의뢰 결과.
 export type QuestOutcome = 'full' | 'partial' | 'crisis' | 'fail' | 'disaster';
 //                          완전성공 부분성공   위기후성공 실패     재난(중상·사망)
@@ -33,6 +38,7 @@ export interface Quest {
   gray?: boolean; // 도덕 회색 의뢰
   faction?: string; // 후원 문파 id(있으면 우호 문파 후원 의뢰) — 완수 시 그 문파 평판↑. docs/30
   woundType?: WoundType; // 환경 위험 상처 속성(화공·설산·맹독 등). 없으면 도메인 기본(대개 외상). docs/04
+  kind?: QuestKind; // 특수 유형(비급회수·인질·현상금·요수·중재). 보상 특징·업적 결. docs/29 §9
 }
 
 export interface ActiveQuest {

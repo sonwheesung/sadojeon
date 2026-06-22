@@ -1,7 +1,16 @@
 // 의뢰 데이터 — docs/28 §4 경로 B. 그레이박스 수치(밸런싱 전 임시).
 
-import type { Quest, QuestDomain, QuestGrade } from '@/types';
+import type { Quest, QuestDomain, QuestGrade, QuestKind } from '@/types';
 import type { StatId } from '@/types/training';
+
+// 특수 의뢰 유형 표시 라벨. docs/29 §9.
+export const QUEST_KIND_LABEL: Record<QuestKind, string> = {
+  codex: '비급 회수',
+  hostage: '인질 구출',
+  bounty: '현상금',
+  beast: '요수 토벌',
+  mediation: '문파 중재',
+};
 
 export const QUEST_DOMAIN_LABEL: Record<QuestDomain, string> = {
   guard: '호위',
@@ -122,4 +131,24 @@ export const QUEST_POOL: readonly Quest[] = [
   { id: 'q-grand-noble', domain: 'grand', grade: 'dangerous', title: '명문 가문 의뢰', client: '명문가', preview: '큰 가문이 사문에 손을 내밀었다.', weeks: 3, reward: { money: 96, fame: 9 }, recommended: 2, minStat: 45 },
   { id: 'q-grand-sapa', domain: 'grand', grade: 'extreme', title: '사파 거두 토벌', client: '무림맹', preview: '한 시대의 악을 끊는다.', weeks: 4, reward: { money: 172, fame: 16 }, recommended: 3, minStat: 65 },
   { id: 'q-grand-evil', domain: 'grand', grade: 'extreme', title: '극악 정벌', client: '무림맹', preview: '강호의 명운이 걸린 대전.', weeks: 4, reward: { money: 210, fame: 18 }, recommended: 3, minStat: 70 },
+
+  // ── 신규 유형 5종 (docs/29 §9) — 기존 도메인 위에 kind 로 특징 보상을 얹는다 ──
+  // 소무 변형 2 — 낮은 명성(초반)부터 새 유형을 만나게 + 평온 게시판의 평화잡일 비중 유지(questboard 계약).
+  { id: 'q-mediation-petty', domain: 'scout', grade: 'minor', kind: 'mediation', title: '이웃 분쟁 중재', client: '마을 어른', preview: '사소한 다툼이 커지기 전에 양쪽을 달래 다오.', weeks: 1, reward: { money: 22, fame: 2 }, recommended: 1, minStat: 5 },
+  { id: 'q-beast-strays', domain: 'duel', grade: 'minor', kind: 'beast', title: '들짐승 쫓기', client: '농가', preview: '밭을 망치는 사나운 들짐승을 쫓아 달라.', weeks: 1, reward: { money: 20, fame: 2 }, recommended: 1, minStat: 5 },
+  // 비급 회수(codex) — 정탐. 성공 시 무공서 확정 드랍(등급 사다리 내, 절품/전설 보장 X → 보통·위험까지만).
+  { id: 'q-codex-tomb', domain: 'scout', grade: 'normal', kind: 'codex', title: '고묘(古墓) 탐사', client: '서생', preview: '버려진 옛 무덤에 무공 비급이 잠들었다 한다.', weeks: 2, reward: { money: 40, fame: 5 }, recommended: 1, minStat: 22 },
+  { id: 'q-codex-relic', domain: 'scout', grade: 'dangerous', kind: 'codex', title: '폐문(廢門)의 비고', client: '수집가', preview: '멸문한 문파의 비고 자리. 노리는 자도 많아 위험하다.', weeks: 3, reward: { money: 80, fame: 9 }, recommended: 2, minStat: 45 },
+  // 인질 구출(hostage) — 호위. 성공 시 구한 이의 정체 공개(평판·귀인).
+  { id: 'q-hostage', domain: 'guard', grade: 'normal', kind: 'hostage', title: '인질 구출', client: '애타는 가족', preview: '붙잡혀 간 사람을 구해 달라.', weeks: 2, reward: { money: 42, fame: 5 }, recommended: 1, minStat: 22 },
+  { id: 'q-hostage-noble', domain: 'guard', grade: 'dangerous', kind: 'hostage', title: '귀인 구출', client: '명문가 집사', preview: '사로잡힌 귀인을 산 채로 모셔 와야 한다.', weeks: 3, reward: { money: 90, fame: 10 }, recommended: 2, minStat: 45 },
+  // 현상금 사냥(bounty) — 결투(전투 결산). 현상금 프리미엄(자금↑).
+  { id: 'q-bounty', domain: 'duel', grade: 'dangerous', kind: 'bounty', title: '현상수배 추격', client: '관아', preview: '목에 현상금이 걸린 흉수를 잡아들인다.', weeks: 3, reward: { money: 120, fame: 8 }, recommended: 1, minStat: 45 },
+  { id: 'q-bounty-big', domain: 'duel', grade: 'extreme', kind: 'bounty', title: '거물 현상수배', client: '무림맹', preview: '강호를 어지럽힌 거물에 거액이 걸렸다.', weeks: 4, reward: { money: 240, fame: 15 }, recommended: 2, minStat: 65 },
+  // 요수 토벌(beast) — 결투(전투 결산). 사람 아닌 요수가 상대.
+  { id: 'q-beast', domain: 'duel', grade: 'dangerous', kind: 'beast', title: '요수 토벌', client: '산촌 사람들', preview: '산을 어지럽히는 사나운 요수를 잡아 달라.', weeks: 3, reward: { money: 85, fame: 9 }, recommended: 2, minStat: 42 },
+  { id: 'q-beast-big', domain: 'duel', grade: 'extreme', kind: 'beast', title: '마수(魔獸) 토벌', client: '무림맹', preview: '오래 묵어 영물이 된 마수가 마을을 삼킨다.', weeks: 4, reward: { money: 180, fame: 16 }, recommended: 3, minStat: 65 },
+  // 문파 중재(mediation) — 큰의뢰. 성공 시 무작위 두 문파 평판 동시↑.
+  { id: 'q-mediation', domain: 'grand', grade: 'normal', kind: 'mediation', title: '문파 분쟁 중재', client: '중립 노고수', preview: '반목하는 두 문파 사이를 달래 다오.', weeks: 2, reward: { money: 44, fame: 6 }, recommended: 1, minStat: 25 },
+  { id: 'q-mediation-big', domain: 'grand', grade: 'dangerous', kind: 'mediation', title: '강호 회맹(會盟) 중재', client: '무림맹', preview: '큰 세력 간 일촉즉발의 갈등을 풀어야 한다.', weeks: 3, reward: { money: 95, fame: 11 }, recommended: 2, minStat: 45 },
 ] as const;

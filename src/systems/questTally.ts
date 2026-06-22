@@ -2,7 +2,7 @@
 // questSystem.resolveQuest 끝에서 **한 번만** 호출(단일 seam) — questSystem 은 tally 내부를 모른다.
 // 적립값은 업적(data/achievements)이 선언적으로 읽어 "첫 X·N건·연속" 판정에 쓴다.
 
-import { DOMAIN_TALLY, GRADE_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
+import { DOMAIN_TALLY, GRADE_TALLY, KIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
 import { useTallyStore } from '@/stores/tallyStore';
 import type { Quest, QuestOutcome } from '@/types';
 
@@ -44,6 +44,7 @@ export function recordQuestResult(r: QuestResultTally): void {
     if (r.partySize <= 1) t.bump(TALLY.solo);
     if (r.partySize >= 3) t.bump(TALLY.party);
     if (r.noble) t.bump(TALLY.noble);
+    if (r.quest.kind) t.bump(KIND_TALLY[r.quest.kind]); // 특수 유형 첫 완수(docs/29 §9)
   }
 
   // 생사·노획은 성공 여부와 무관(재난에도, 실패에도 일어날 수 있음).

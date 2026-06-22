@@ -3,7 +3,7 @@
 // unlockArtId = 달성 시 영구 해금되는 무공서(다회차 자산). 보상(reward)은 표시용 — 파워 영구증가 X(docs/32).
 
 import { realmIndex } from '@/data/realm';
-import { DOMAIN_TALLY, MIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
+import { DOMAIN_TALLY, KIND_TALLY, MIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
 import type { Disciple } from '@/types';
 import type { GraduateRecord } from '@/stores/graduateStore';
 
@@ -137,6 +137,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'ach-quest-divine-elixir', name: '천운(天運)', desc: '극험의 끝에서 신품 영약을 얻다', category: 'quest', reward: '최고 칭호 · 다이아 다량', hidden: true, check: (c) => c.n(TALLY.divineElixir) >= 1 },
   { id: 'ach-quest-fatal-survived', name: '사지에서 돌아오다', desc: '치명상을 입고도 살아 돌아오다', category: 'quest', reward: '칭호 · 다이아', hidden: true, check: (c) => c.n(TALLY.disasterSurvived) >= 1 },
   { id: 'ach-quest-death', name: '잃어버린 동문', desc: '의뢰 중 제자를 잃다', category: 'quest', reward: '도감', hidden: true, check: (c) => c.n(TALLY.death) >= 1 },
+
+  // 신규 의뢰 유형 — 각 유형 첫 완수(docs/29 §9).
+  { id: 'ach-quest-codex', name: '되찾은 비급', desc: '비급 회수 의뢰를 처음 완수하다', category: 'quest', reward: '도감 · 다이아', check: (c) => c.n(KIND_TALLY.codex) >= 1 },
+  { id: 'ach-quest-hostage', name: '구출(救出)', desc: '인질 구출 의뢰를 처음 완수하다', category: 'quest', reward: '다이아', check: (c) => c.n(KIND_TALLY.hostage) >= 1 },
+  { id: 'ach-quest-bounty', name: '현상금 사냥꾼', desc: '현상금 의뢰를 처음 완수하다', category: 'quest', reward: '칭호 · 다이아', check: (c) => c.n(KIND_TALLY.bounty) >= 1 },
+  { id: 'ach-quest-beast', name: '요수를 베다', desc: '요수 토벌 의뢰를 처음 완수하다', category: 'quest', reward: '칭호 · 다이아', check: (c) => c.n(KIND_TALLY.beast) >= 1 },
+  { id: 'ach-quest-mediation', name: '강호의 중재자', desc: '문파 분쟁을 처음 중재하다', category: 'quest', reward: '칭호 · 다이아', check: (c) => c.n(KIND_TALLY.mediation) >= 1 },
 ];
 
 export function findAchievement(id: string): Achievement | undefined {

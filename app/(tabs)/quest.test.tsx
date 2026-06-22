@@ -28,6 +28,8 @@ jest.mock('@/components/common/SectionLabel', () => {
   const { Text } = require('react-native');
   return { SectionLabel: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text> };
 });
+// 맥락형 튜토리얼 훅 — 포커스 시 발화(expo-router 네비 컨텍스트 필요). 화면 단위 테스트에선 no-op 격리.
+jest.mock('@/hooks/useTutorialOnFocus', () => ({ useTutorialOnFocus: () => {} }));
 
 // ── 시스템·스토어 mock ──
 // @/stores 는 factory mock — 실제 barrel 을 평가하면 gameStore→AsyncStorage(네이티브) 가 깨진다.

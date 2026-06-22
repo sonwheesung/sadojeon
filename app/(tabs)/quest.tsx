@@ -10,6 +10,7 @@ import {
   QUEST_DOMAIN_LABEL,
   QUEST_GRADE_LABEL,
   QUEST_GRADE_RISK,
+  QUEST_KIND_LABEL,
 } from '@/data/quests';
 import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useDiscipleStore, useQuestStore, useTimeStore } from '@/stores';
@@ -99,6 +100,7 @@ function BoardCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
             [{QUEST_DOMAIN_LABEL[quest.domain]}·{QUEST_GRADE_LABEL[quest.grade]}]
           </Text>{' '}
           {quest.title}
+          {quest.kind ? <Text style={styles.kindTag}> · {QUEST_KIND_LABEL[quest.kind]}</Text> : null}
           <Text style={styles.client}> — {quest.client}</Text>
           {quest.gray ? <Text style={styles.gray}> · 회색</Text> : null}
         </Text>
@@ -280,6 +282,7 @@ const styles = StyleSheet.create({
   tag: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.inkSoft },
   client: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkSoft },
   gray: { color: colors.seal, fontSize: typography.sizes.xs },
+  kindTag: { fontFamily: typography.serifMedium, color: colors.brown, fontSize: typography.sizes.xs },
   preview: { fontFamily: typography.serif, fontSize: typography.sizes.xs, color: colors.inkLight, lineHeight: 16 },
   footer: { fontFamily: typography.serifMedium, fontSize: typography.sizes.xs, color: colors.ink, marginTop: 2 },
   footerWarn: { color: colors.seal },

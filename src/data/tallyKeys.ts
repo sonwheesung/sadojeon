@@ -2,7 +2,7 @@
 // 계정 단위로 적립하기 위한 카운터 키. questTally(적립) ↔ achievements(판정)가 공유한다.
 // 데이터 모듈에 두어 systems(적립)·data(판정) 양쪽이 의존 방향 충돌 없이 참조.
 
-import type { QuestDomain, QuestGrade } from '@/types';
+import type { QuestDomain, QuestGrade, QuestKind } from '@/types';
 
 // 단조 증가 카운터.
 export const TALLY = {
@@ -37,6 +37,12 @@ export const TALLY = {
   // 노획
   scrollFound: 'quest.scroll', //    의뢰로 비급 입수
   divineElixir: 'quest.divineElixir', // 극험에서 신품 영약 천운
+  // 특수 유형별 첫 완수(docs/29 §9)
+  kindCodex: 'quest.kind.codex', //       비급 회수
+  kindHostage: 'quest.kind.hostage', //   인질 구출
+  kindBounty: 'quest.kind.bounty', //     현상금 사냥
+  kindBeast: 'quest.kind.beast', //       요수 토벌
+  kindMediation: 'quest.kind.mediation', // 문파 중재
 } as const;
 
 // 마음(관계) 집계 — docs/19·33. 상태 스캔으로 못 잡는 **사건성 사실**(동문 야망 충돌 결정)을 적립.
@@ -69,4 +75,12 @@ export const DOMAIN_TALLY: Record<QuestDomain, string> = {
   medicine: TALLY.domMedicine,
   assassin: TALLY.domAssassin,
   grand: TALLY.domGrand,
+};
+
+export const KIND_TALLY: Record<QuestKind, string> = {
+  codex: TALLY.kindCodex,
+  hostage: TALLY.kindHostage,
+  bounty: TALLY.kindBounty,
+  beast: TALLY.kindBeast,
+  mediation: TALLY.kindMediation,
 };

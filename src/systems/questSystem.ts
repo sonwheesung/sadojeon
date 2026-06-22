@@ -441,6 +441,18 @@ function rollRescueReveal(active: ActiveQuest): {
   };
 }
 
+// 문파 분쟁 중재(mediation 의뢰) — 성공 시 무작위 두 문파 평판 동시↑(양쪽을 달랜다). docs/29 §9·30.
+function applyMediation(active: ActiveQuest, present: string[]): string {
+  const shuffled = FACTIONS.map((f) => ({ f, r: random() })).sort((a, b) => a.r - b.r);
+  const pair = shuffled.slice(0, 2).map((x) => x.f);
+  if (pair.length < 2) return '두 세력 사이를 중재했다.';
+  for (const f of pair) {
+    adjustSectRep(f.id, 5);
+    for (const id of present) adjustDiscipleRep(id, f.id, 2);
+  }
+  return `${josa(pair[0].name, '과', '와')} ${pair[1].name} 사이의 다툼을 중재해, 두 문파 모두와의 관계가 두터워졌다.`;
+}
+
 // 서신함 해소 → 선택 효과를 의뢰·제자에 적용. inboxResolve 에서 호출.
 export function applyQuestEventChoice(questId: string, choice: QuestEventChoiceView): void {
   const qs = useQuestStore.getState();
@@ -544,9 +556,11 @@ const DOMAIN_SCHOOL_AFFINITY: Record<QuestDomain, MartialArtSchool[]> = {
   grand: ['sword', 'saber', 'fist', 'qigong', 'external'],
 };
 
-function maybeDropScroll(q: Quest): boolean {
+// guaranteed=true(비급 회수 의뢰)면 확률 굴림 없이 등급 사다리 안에서 확정 드랍(절품/전설 보장 X — 사다리 유지). docs/29 §9.
+function maybeDropScroll(q: Quest, guaranteed = false): boolean {
   const rule = SCROLL_DROP[q.grade];
-  if (!rule || random() >= rule.chance) return false;
+  if (!rule) return false;
+  if (!guaranteed && random() >= rule.chance) return false;
   const codex = useCodexStore.getState();
   // 풀 = 의뢰 등급에 맞는 비급(보유/미보유 모두) ∪ **다음 권**(선행 비급을 모두 보유한 미보유 무공 — 등급 무관).
   // 트리가 깊어진 카탈로그(640권)에서 고급 의뢰만 돌면 사다리 중간 권이 영영 안 모이는 문제 봉합:
@@ -866,6 +880,11 @@ const DUEL_FOE_NAME: Record<string, string> = {
   'q-bandit': '산채 두목',
   'q-duel-master': '이름난 무인',
   'q-hyeolsu': "'혈수'",
+  // 신규 의뢰(현상금·요수) — docs/29 §9
+  'q-bounty': '수배된 흉수',
+  'q-bounty-big': "현상수배 거물 '독안검'",
+  'q-beast': '산을 어지럽히는 요수',
+  'q-beast-big': '오래 묵은 마수(魔獸)',
 };
 
 interface DuelResolution {
@@ -973,11 +992,30 @@ function resolveQuest(active: ActiveQuest): Milestone {
     }
   }
 
+  // 특수 의뢰 보상(docs/29 §9) — 성공 시에만. 인질=정체공개(평판·귀인), 중재=양쪽 평판.
+  const success = outcome === 'full' || outcome === 'partial' || outcome === 'crisis';
+  let kindRewardMult = 1;
+  let kindNoble = false;
+  const kindNotes: string[] = [];
+  if (success) {
+    if (q.kind === 'hostage') {
+      const rev = rollRescueReveal(active);
+      kindRewardMult *= rev.rewardMult;
+      if (rev.rewardFlag === 'noble') kindNoble = true;
+      kindNotes.push(rev.text);
+    } else if (q.kind === 'mediation') {
+      kindNotes.push(applyMediation(active, present));
+    }
+  }
+
   const scale = OUTCOME_SCALE[outcome];
   const stat = QUEST_DOMAIN_STAT[q.domain];
   const isMartial = MARTIAL_DOMAINS.includes(q.domain);
-  // 돌발 이벤트 보상 배수 + 귀인(noble) 후사.
-  const mult = (active.rewardMult ?? 1) * (active.rewardFlag === 'noble' ? 1.5 : 1);
+  // 돌발 이벤트 보상 배수 + 귀인(noble) 후사 + 특수 의뢰 보정.
+  const mult =
+    (active.rewardMult ?? 1) *
+    (active.rewardFlag === 'noble' || kindNoble ? 1.5 : 1) *
+    kindRewardMult;
 
   if (scale.money > 0) {
     useSectStore.getState().adjustResources(Math.round(q.reward.money * scale.money * mult * questRewardMult));
@@ -1040,7 +1078,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
 
   // 비급 드랍 — 의뢰 성공(완수·위기) 시 등급·도메인에 맞는 미보유 비급을 얻을 수 있다. docs/05·04·09.
-  const scrollFound = (outcome === 'full' || outcome === 'crisis') ? maybeDropScroll(q) : false;
+  // 비급 회수(codex) 의뢰는 성공 시 확정 드랍(등급 사다리 내 — 절품/전설 보장 X). docs/29 §9.
+  const scrollFound = (outcome === 'full' || outcome === 'crisis') ? maybeDropScroll(q, q.kind === 'codex') : false;
 
   // 결투 의뢰는 싸운 당사자(대표)가 위험을 진다 — 그 외엔 무작위.
   const victimIdx = duel
@@ -1170,6 +1209,8 @@ function resolveQuest(active: ActiveQuest): Milestone {
   }
   // 결투 의뢰 — 엔진이 굴린 실제 싸움의 풍경을 싣는다(docs/35 §7).
   if (duel) body += `\n\n${duel.note}`;
+  // 특수 의뢰 결말(정체 공개·중재 등) 한 줄.
+  if (kindNotes.length) body += `\n\n${kindNotes.join('\n')}`;
 
   // 업적 집계 — 결산 결과 한 건을 계정 누적에 적립(단일 seam). docs/32.
   recordQuestResult({
@@ -1180,7 +1221,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
     fatalSurvived: rescueRoute != null, // 치명상에서 살아 돌아옴
     scrollFound,
     divineElixir,
-    noble: active.rewardFlag === 'noble',
+    noble: active.rewardFlag === 'noble' || kindNoble,
   });
 
   return {
