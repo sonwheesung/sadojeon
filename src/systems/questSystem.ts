@@ -228,12 +228,13 @@ const WORLD_QUEST_TEMPLATE: Record<
   },
 };
 
+// 강호 사건 의뢰 보상 — 정적 풀(QUEST_POOL) 재조정(2026-06-22)에 맞춰 등급 상한 동반 상향(대형 위기는 프리미엄).
 const GRADE_REWARD: Record<QuestGrade, { money: number; fame: number; minStat: number; weeks: number }> = {
-  menial: { money: 60, fame: 1, minStat: 0, weeks: 1 },
-  minor: { money: 150, fame: 4, minStat: 20, weeks: 2 },
-  normal: { money: 280, fame: 8, minStat: 35, weeks: 3 },
-  dangerous: { money: 480, fame: 14, minStat: 55, weeks: 4 },
-  extreme: { money: 1000, fame: 28, minStat: 72, weeks: 6 },
+  menial: { money: 80, fame: 1, minStat: 0, weeks: 1 },
+  minor: { money: 200, fame: 4, minStat: 20, weeks: 2 },
+  normal: { money: 350, fame: 8, minStat: 35, weeks: 3 },
+  dangerous: { money: 650, fame: 14, minStat: 55, weeks: 4 },
+  extreme: { money: 1600, fame: 28, minStat: 72, weeks: 6 },
 };
 
 // 큰 강호 사건 결말 → 관련 의뢰를 게시판에 띄운다. 사문 평판 등급으로 상한(약한 사문엔 극험 안 뜸).
@@ -407,13 +408,14 @@ function maybeFireEvent(active: ActiveQuest): void {
 
 // 구한 이의 정체 공개 — 평민/명문(정파)/사파 무작위. 명문·사파는 그 문파 평판↑(동행 제자 인연도).
 // docs/30. 명문=귀인 보상(noble), 사파=은밀한 사례(소폭 보상).
-function rollRescueReveal(active: ActiveQuest): {
+// forceNoble=true(귀인 구출 의뢰)면 명문 귀인 확정 — "귀인을 구하라"는 의뢰가 평민으로 나오는 모순 차단. docs/29 §9-1.
+function rollRescueReveal(active: ActiveQuest, forceNoble = false): {
   text: string;
   rewardFlag?: 'noble';
   rewardMult: number;
 } {
   const r = random();
-  if (r < 0.5) {
+  if (!forceNoble && r < 0.5) {
     // 평민 — 특정 문파 X. 선행 소문이 돌아 사문 전반의 덕망(명성)↑.
     useSectStore.getState().adjustReputation(3);
     return {
@@ -421,7 +423,7 @@ function rollRescueReveal(active: ActiveQuest): {
       rewardMult: 1,
     };
   }
-  const isRight = r < 0.9; // 0.5~0.9 명문 정파 / 0.9~ 사파
+  const isRight = forceNoble || r < 0.9; // 귀인 확정이거나 0.5~0.9 명문 정파 / 0.9~ 사파
   const pool = FACTIONS.filter((f) => f.alignment === (isRight ? 'right' : 'sapa'));
   const f = pool[Math.floor(random() * pool.length)];
   if (!f) return { text: '구한 이는 말없이 사라졌다.', rewardMult: 1 };
@@ -999,7 +1001,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
   const kindNotes: string[] = [];
   if (success) {
     if (q.kind === 'hostage') {
-      const rev = rollRescueReveal(active);
+      const rev = rollRescueReveal(active, q.nobleRescue);
       kindRewardMult *= rev.rewardMult;
       if (rev.rewardFlag === 'noble') kindNoble = true;
       kindNotes.push(rev.text);

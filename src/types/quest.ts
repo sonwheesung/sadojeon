@@ -39,6 +39,7 @@ export interface Quest {
   faction?: string; // 후원 문파 id(있으면 우호 문파 후원 의뢰) — 완수 시 그 문파 평판↑. docs/30
   woundType?: WoundType; // 환경 위험 상처 속성(화공·설산·맹독 등). 없으면 도메인 기본(대개 외상). docs/04
   kind?: QuestKind; // 특수 유형(비급회수·인질·현상금·요수·중재). 보상 특징·업적 결. docs/29 §9
+  nobleRescue?: boolean; // hostage 의뢰 중 구하는 이가 명문 귀인으로 확정(귀인 구출). 정체공개=명문 고정. docs/29 §9-1
 }
 
 export interface ActiveQuest {
