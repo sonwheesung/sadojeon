@@ -161,9 +161,9 @@ function toCombatArt(a: ArtInput): CombatArt {
 function buildCombatants(team: Group[], side: 'A'|'B'): Combatant[] {
   const out: Combatant[] = []; let n = 0;
   for (const g of team) {
-    const isBuild = g.loadout.kind === 'build';
-    const arch: NpcArchetype = isBuild ? 'orthodox' : g.loadout.archetype;
-    const build = isBuild ? findBuild(g.loadout.buildId) : undefined;
+    const lo = g.loadout;
+    const arch: NpcArchetype = lo.kind === 'build' ? 'orthodox' : lo.archetype;
+    const build = lo.kind === 'build' ? findBuild(lo.buildId) : undefined;
     for (let k = 0; k < Math.max(1, g.count|0); k++) {
       const id = `${side}${n}`; n++;
       const c = makeNpcCombatant({ id, name:id, realm:g.realm, archetype:arch, quality:g.quality, rng:Math.random });

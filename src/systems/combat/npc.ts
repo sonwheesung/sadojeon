@@ -32,7 +32,8 @@ interface ArchetypeSpec {
 }
 
 const ARCHETYPES: Record<NpcArchetype, ArchetypeSpec> = {
-  bandit: { school: 'saber', path: 'jung', mercy: 30, prudence: 35 },
+  // 보조 무공(sub) — 같은 경지면 격이 동등하도록 모든 결에 보조 1종(강약은 경지·quality 로만 표현, archetype 은 갈래 차이일 뿐).
+  bandit: { school: 'saber', path: 'jung', mercy: 30, prudence: 35, sub: 'external' },
   soldier: { school: 'saber', path: 'jeong', mercy: 55, prudence: 55, sub: 'external' },
   orthodox: { school: 'sword', path: 'jeong', mercy: 70, prudence: 60, sub: 'lightness' },
   rogue: { school: 'sword', path: 'sa', mercy: 35, prudence: 40, sub: 'hidden' },

@@ -69,6 +69,7 @@ function prepare(q: Quest, presets: PresetKey[]): { party: string[]; carry: stri
   useReputationStore.getState().reset();
   useGameStore.getState().setPhase('playing');
   useQuestStore.setState({ board: [q], active: [] } as never);
+  setGeumchangBudget(geumchang); // 회당 구급영약 — ensureRun 무한을 매 회차 실제 설정값으로 덮음(무과금 사망 검증)
   return { party, carry: party[0], money0: useSectStore.getState().sect?.resources ?? 0 };
 }
 
@@ -99,10 +100,14 @@ async function once(q: Quest, presets: PresetKey[]): Promise<Once> {
       for (const [t, o] of OUTCOME_BY_TITLE) if (mi.title === t) outcome = o;
     }
     await settleTick();
-    // 현장 급보(돌발 사건) — 배치는 첫 가용 선택지로 자동 해소(미해소 드롭 방지).
+    // 현장 급보(돌발 사건) — 미해소 드롭 방지로 자동 해소. autoFavorable=true 면 성공도(successDelta)가
+    // 가장 높은 선택(유리), false 면 가장 낮은 선택(보수)으로 — 선택이 결산에 주는 영향을 양 극단으로 본다.
     const ev = useFieldEventStore.getState().queue[0];
     if (ev && ev.source === 'quest' && ev.refId === q.id) {
-      const k = ev.choices.find((c) => c.available)?.key ?? ev.choices[0]?.key;
+      const avail = ev.choices.filter((c) => c.available);
+      const sd = (c: typeof avail[number]) => (c.effect as { successDelta?: number } | undefined)?.successDelta ?? 0;
+      const sorted = [...avail].sort((a, z) => sd(z) - sd(a)); // 성공도 내림차순
+      const k = (autoFavorable ? sorted[0] : sorted[sorted.length - 1])?.key ?? ev.choices[0]?.key;
       if (k) resolveFieldEvent(ev, k);
       useFieldEventStore.getState().pop();
     }
@@ -174,7 +179,7 @@ async function runInteractive(q: Quest, presets: PresetKey[], out: HTMLElement):
       const result = useInboxStore.getState().items.find((i) => !before.has(i.id));
       chain.append(el('div', { className: 'ev-result' }, [
         el('div', { className: 'ev-pick', textContent: `▶ 내 선택: ${chosen.label}` }),
-        el('div', { className: 'ev-rtext', textContent: result?.body ?? '선택이 의뢰 성공도·위험도에 반영됐다.' }),
+        el('div', { className: 'ev-rtext', textContent: (result as { body?: string } | undefined)?.body ?? '선택이 의뢰 성공도·위험도에 반영됐다.' }),
       ]));
     }
   }
@@ -196,6 +201,8 @@ async function runInteractive(q: Quest, presets: PresetKey[], out: HTMLElement):
 // ─── 패널 UI ──────────────────────────────────────────────────────────────────
 const slots: (PresetKey | '')[] = ['jeol7', 'jeol7', '', ''];
 let curQuestId = QUEST_POOL.find((q) => q.grade === 'dangerous')?.id ?? QUEST_POOL[0].id;
+let geumchang = 0; // 회당 구급영약 개수(0=무과금 — docs extremerisk 기준). 치명상 1회 소생.
+let autoFavorable = true; // 배치: 돌발 사건을 첫 가용(대개 유리) 선택지로 자동. 끄면 무판정 기본 선택만.
 
 export function mountQuestPanel(host: HTMLElement): void {
   host.replaceChildren();
@@ -263,6 +270,14 @@ export function mountQuestPanel(host: HTMLElement): void {
     }
   };
 
+  // 구급영약 개수(0=무과금) — 치명상 소생, 무과금 사망률 검증용.
+  const geumInput = el('input', { className: 'count', type: 'number', value: String(geumchang), min: '0' });
+  geumInput.oninput = () => { geumchang = Math.max(0, Number(geumInput.value) | 0); };
+  // 사건 자동선택 정책.
+  const autoChk = el('input', { type: 'checkbox' }) as HTMLInputElement;
+  autoChk.checked = autoFavorable;
+  autoChk.onchange = () => { autoFavorable = autoChk.checked; };
+
   host.append(
     field('의뢰 선택', qSel),
     el('div', { className: 'qhint', textContent: '파견조 — 캐리(파견 1) 필수. 비전투 의뢰는 프리셋 도메인 역량, 결투·큰의뢰는 전투력으로 결산.' }),
@@ -270,9 +285,11 @@ export function mountQuestPanel(host: HTMLElement): void {
     el('div', { className: 'cfg' }, [
       field('모드', modeSel),
       repsWrap,
+      field('구급영약(회당·0=무과금)', geumInput),
+      el('label', { className: 'cf chk' }, [autoChk, ' 사건 유리선택(끄면 보수)']),
       runBtn,
     ]),
-    el('div', { className: 'hint', textContent: '통계 = questmatrix 동일 셋업으로 N회(사건 자동 선택). 단판 = 의뢰 도중 돌발 사건이 뜨면 네가 4지선다 직접 고르고 → 결과로 이어지는 걸 본다.' }),
+    el('div', { className: 'hint', textContent: '구급영약 0 = 무과금(치명상 소생 없음 → docs extremerisk 기준). 사건 유리선택 끄면 돌발 사건을 보수적으로 골라 성공률 부풀림 제거. 단판은 사건을 직접 선택.' }),
     out,
   );
 }

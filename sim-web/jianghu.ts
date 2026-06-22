@@ -49,7 +49,10 @@ function run(years: number, out: HTMLElement): void {
     const before = new Set(useInboxStore.getState().items.map((i) => i.id));
     tickGraduateEvents();
     for (const it of useInboxStore.getState().items) {
-      if (!before.has(it.id)) events.push(`[${y + 1}년차] ${it.title} — ${it.preview ?? it.body?.split('\n')[0] ?? ''}`);
+      if (!before.has(it.id)) {
+        const body = (it as { preview?: string; body?: string }).preview ?? (it as { body?: string }).body ?? '';
+        events.push(`[${y + 1}년차] ${it.title} — ${body.split('\n')[0]}`);
+      }
     }
   }
 

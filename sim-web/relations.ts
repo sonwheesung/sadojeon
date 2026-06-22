@@ -40,7 +40,7 @@ function runChoice(key: string, out: HTMLElement): void {
       line('상호 관계', REL_LABEL[before.rel], REL_LABEL[relOf(aId, bId)]),
     ]),
   ]));
-  if (report) out.append(el('div', { className: 'narr', textContent: report.body }));
+  if (report) out.append(el('div', { className: 'narr', textContent: (report as { body?: string }).body ?? '' }));
 }
 
 export function mountRelationsPanel(host: HTMLElement): void {
