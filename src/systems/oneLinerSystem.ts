@@ -136,7 +136,8 @@ function buildSelectPrompt(disciple: Disciple, ctx: OneLinerCtx, cands: OneLiner
   ].join('\n');
 }
 
-function parsePick(raw: string): string | null {
+// LLM 응답에서 고른 id 추출 — 정상 JSON 우선, 깨진 출력엔 관대 정규식 폴백, 실패 시 null. 단위테스트 대상.
+export function parsePick(raw: string): string | null {
   try {
     const j = JSON.parse(raw) as { pick?: unknown };
     if (typeof j.pick === 'string') return j.pick;
@@ -147,7 +148,8 @@ function parsePick(raw: string): string | null {
   return m ? m[1] : null;
 }
 
-async function selectOneLinerLlm(disciple: Disciple, ctx: OneLinerCtx): Promise<OneLinerTemplate | null> {
+// LLM function-calling 선택 — 후보 중 상황 맞는 하나. 모델 off·실패·미선택이면 룰 폴백. 단위테스트 대상.
+export async function selectOneLinerLlm(disciple: Disciple, ctx: OneLinerCtx): Promise<OneLinerTemplate | null> {
   const cands = candidateOneLiners(ctx);
   if (cands.length === 0) return null;
   if (cands.length === 1) return cands[0];

@@ -103,7 +103,7 @@ for (const [t, m] of Object.entries(TRAITS)) {
 // ⑥ 회귀 가드 sim 이 실패 종료(process.exit/exitCode)+단언을 갖나(빈·항상통과 테스트 차단).
 // 진단용 sim(출력 표·서술 추적 — 사람이 읽는 용도, PASS/FAIL 없음)은 가드가 아니므로 allowlist.
 // 새 sim 이 가드 의도인데 fail-hard 가 없으면 여기 안 걸려야 통과 → 누락이 잡힌다.
-const DIAGNOSTIC_SIMS = ['combatmatrix', 'statuseffect', 'statusmatrix', 'worldquest', 'woundsim', 'hwagyeong_calc', 'onelinerhistory'];
+const DIAGNOSTIC_SIMS = ['combatmatrix', 'statuseffect', 'statusmatrix', 'worldquest', 'woundsim', 'hwagyeong_calc'];
 // 가드도 진단도 아닌 **인프라**(헬퍼 모듈·도구) — PASS/FAIL 없는 라이브러리/CLI 라 가드 계약(process.exit·단언)
 // 대상이 아니다. 침묵 무시가 아니라 명시 분류(아래서 출력). buggify=결함주입 헬퍼 · statcheck=오차범위 도구.
 const NON_GUARD_SIMS = ['buggify', 'statcheck'];

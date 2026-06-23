@@ -83,7 +83,7 @@ const CONFLICT = new Set<string>(
 async function main(): Promise<void> {
   setAutoSaveEnabled(false);
   const years = Number(process.argv[3] ?? 15);
-  const seeds = (process.argv[4] ?? '1,2,3,4,5,6').split(',').map((s) => Number(s.trim())).filter(Number.isFinite);
+  const seeds = (process.argv[4] ?? '1,2,3,4').split(',').map((s) => Number(s.trim())).filter(Number.isFinite);
   const days = years * 336;
 
   instrument();
@@ -204,6 +204,46 @@ async function main(): Promise<void> {
   console.log(`특이 중복 ${dupHits.length} · 모순의심 ${conflicts.length}`);
   console.log(`죽은 대사: ${dead.map((t) => t.id).join(', ') || '없음'}`);
   console.log(`→ 상세: _oneliner_report.md`);
+
+  // ───────── 회귀 가드 (밴드 단언) ───────── docs/37 Part D 사각⑧ 닫음 / B11.
+  // "진짜 모순"만 가드 — 평온↔(흑화·불신·적의). calm↔weary·pride↔weary 같은 자연 기복은 제외(⑤ 의심엔 잡히되 가드 X).
+  const HARD = new Set(['calm|darkening', 'calm|distrust', 'calm|enmity']);
+  let hardConflict = 0;
+  for (const seed of seeds) for (const id of ALL) {
+    const rs = records.filter((x) => x.seed === seed && x.discipleId === id).sort((a, b) => a.day - b.day);
+    for (let i = 1; i < rs.length; i++) {
+      const key = [rs[i - 1].mood, rs[i].mood].sort().join('|');
+      if (HARD.has(key) && rs[i].day - rs[i - 1].day <= 28) hardConflict++;
+    }
+  }
+  // 회차당 최다 반복 = 제자별 최다 템플릿 횟수 / 시드수, 그 최대값.
+  let maxRepPerRun = 0;
+  for (const id of ALL) {
+    const rs = records.filter((r) => r.discipleId === id);
+    if (rs.length === 0) continue;
+    const nSeeds = new Set(rs.map((r) => r.seed)).size || 1;
+    const cnt: Record<string, number> = {};
+    for (const r of rs) cnt[r.templateId] = (cnt[r.templateId] ?? 0) + 1;
+    const top = Math.max(...Object.values(cnt)) / nSeeds;
+    if (top > maxRepPerRun) maxRepPerRun = top;
+  }
+
+  const REP_CAP = 28; // 현재 ~13~16. 폭증(once-only 회귀로 공용 풀 떨어짐) 감지 — 250+ 였던 과거 회귀 가드.
+  const DEAD_CAP = 28; // 현재 ~12~18(seong 게이트 t6·pr* + RNG 미발화). 카테고리 통째 사망(200+) 감지.
+  console.log('\n--- 회귀 밴드 ---');
+  let pass = 0;
+  let fail = 0;
+  function check(name: string, ok: boolean, got: string | number): void {
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (측정 ${got})`);
+    if (ok) pass++;
+    else fail++;
+  }
+  check('무거운 감정 대사 중복=0(특이 1회)', dupHits.length === 0, dupHits.length);
+  check('모순=0(평온↔흑화/불신/적의)', hardConflict === 0, hardConflict);
+  check(`회차당 최다 반복 ≤${REP_CAP}`, maxRepPerRun <= REP_CAP, maxRepPerRun.toFixed(1));
+  check(`활성 죽은 대사 ≤${DEAD_CAP}`, dead.length <= DEAD_CAP, dead.length);
+  console.log(`\n═══ 결과: ${pass} PASS · ${fail} FAIL ═══`);
+  if (fail > 0) process.exit(1);
 }
 
 void main();
