@@ -8,8 +8,10 @@ import { useGraduateStore } from '../../src/stores/graduateStore';
 import { useInboxStore } from '../../src/stores/inboxStore';
 import { useItemStore } from '../../src/stores/itemStore';
 import { useTallyStore } from '../../src/stores/tallyStore';
+import { useMetNpcStore } from '../../src/stores/metNpcStore';
 import { useTimeStore } from '../../src/stores/timeStore';
-import { TALLY, STREAK, GRADE_TALLY, DOMAIN_TALLY } from '../../src/data/tallyKeys';
+import { TALLY, STREAK, GRADE_TALLY, DOMAIN_TALLY, GANGHOS_TALLY } from '../../src/data/tallyKeys';
+import { NAMED_NPCS } from '../../src/data/npcs';
 import { ACHIEVEMENTS } from '../../src/data/achievements';
 import { checkAchievements, seedUnlockedArts } from '../../src/systems/achievementSystem';
 import { finalizePendingGraduations } from '../../src/systems/graduationChoice';
@@ -33,6 +35,7 @@ function reset(): void {
   useCodexStore.setState({ scrolls: [] });
   useInboxStore.getState().reset();
   useTimeStore.getState().reset();
+  useMetNpcStore.getState().reset();
 }
 // 의뢰 결산 한 건 — 등급·도메인·결과를 받아 집계 적립(recordQuestResult 경유).
 function quest(over: Partial<Quest> = {}): Quest {
@@ -255,6 +258,23 @@ const QUEST_KEYS = [TALLY.questDone, TALLY.questFull, GRADE_TALLY.dangerous, GRA
   TALLY.scrollFound, TALLY.divineElixir, TALLY.disasterSurvived, TALLY.death];
 const missing = QUEST_KEYS.filter((k) => !bumped.has(k));
 check('업적이 읽는 의뢰 TALLY 키 전부 적립 경로 존재', missing.length === 0, missing.length ? `누락=${missing.join(',')}` : '전부 적립');
+
+// G1 강호(도감·조우) 업적 — 압도적 고수 조우 / 死地 생환 / 도감 완성.
+reset();
+useTallyStore.getState().bump(GANGHOS_TALLY.masterAmbush);
+checkAchievements();
+check('압도적 고수 조우 → 마주하다', ach().has('ach-master-ambush'));
+check('조우 전 死地 생환 미달성', !ach().has('ach-death-ground'));
+useTallyStore.getState().bump(GANGHOS_TALLY.deathGround);
+checkAchievements();
+check('死地 생환 → 돌아오다', ach().has('ach-death-ground'));
+
+reset();
+checkAchievements();
+check('도감 미완성 — 강호를 두루 알다 미달성', !ach().has('ach-codex-complete'));
+for (const n of NAMED_NPCS) useMetNpcStore.getState().markMet(n.id);
+checkAchievements();
+check('네임드 전원 만남 → 강호를 두루 알다', ach().has('ach-codex-complete'), `n=${NAMED_NPCS.length}`);
 
 // E5 seedUnlockedArts 재호출 멱등 — codex 중복 없음.
 reset();

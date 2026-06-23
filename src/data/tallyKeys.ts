@@ -55,6 +55,12 @@ export const MIND_TALLY = {
   ambitionTragedy: 'mind.ambitionTragedy', //   D 무관심(비극 분기)
 } as const;
 
+// 강호(조우) 집계 — docs/24·38. 현장 급보 사건성 사실(압도적 고수 조우·死地 생환)을 계정 누적.
+export const GANGHOS_TALLY = {
+  masterAmbush: 'ganghos.masterAmbush', // 압도적 고수(死地) 조우
+  deathGround: 'ganghos.deathGround', //  압도적 고수에 맞서(맞선다) 살아 돌아옴
+} as const;
+
 // 연속 기록(현재값 + 최고값). 끊기면 현재값 0.
 export const STREAK = {
   flawless: 'quest.streak.flawless', // 연속 완벽 완수

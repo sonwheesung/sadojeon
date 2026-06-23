@@ -17,6 +17,8 @@ import { useFieldEventStore, type FieldEventChoiceView } from '@/stores/fieldEve
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
 import { useSectStore } from '@/stores/sectStore';
+import { useTallyStore } from '@/stores/tallyStore';
+import { GANGHOS_TALLY } from '@/data/tallyKeys';
 import { useTimeStore } from '@/stores/timeStore';
 import { worldThreat } from './worldSystem';
 import { combatRating } from './combatPower';
@@ -216,6 +218,7 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
       prompt = `${master.affiliation}의 ${master.name}(${master.realm})이(가) 길을 막아섰다. ${event.prompt}`;
       sceneLine = `${names}의 앞을, 압도적인 기세의 고수가 가로막았다.`;
       meetNpc(master.id); // 조우 — 도감에서 베일이 벗겨진다(포켓몬 결). 단일 seam. docs/24
+      useTallyStore.getState().bump(GANGHOS_TALLY.masterAmbush); // 업적 "압도적 고수와 마주하다". docs/32
     }
   }
   useFieldEventStore.getState().push({
@@ -318,6 +321,8 @@ function resolveCombat(active: ActiveActivity, dest: ExpeditionDest, e: Expediti
       if (e.enlighten) attemptQuestEnlightenment(champion.id, 0.2);
     }
   }
+  // 死地 생환 — 맞선다(boss) 골라 살아 돌아옴(lethal:false라 생존). 업적 "死地에서 돌아오다". docs/32
+  if (e.boss && me?.state !== 'dead') useTallyStore.getState().bump(GANGHOS_TALLY.deathGround);
   return `${e.resultText}\n${narrateCombat(r)}`;
 }
 

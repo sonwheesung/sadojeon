@@ -10,8 +10,10 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGraduateStore } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useItemStore } from '@/stores/itemStore';
+import { useMetNpcStore } from '@/stores/metNpcStore';
 import { useTallyStore } from '@/stores/tallyStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { NAMED_NPCS } from '@/data/npcs';
 import type { Disciple } from '@/types';
 
 function buildCtx(): AchCtx {
@@ -19,7 +21,8 @@ function buildCtx(): AchCtx {
   const graduates = useGraduateStore.getState().records;
   const divineHerbs = useItemStore.getState().items.find((i) => i.id === 'herb-divine')?.count ?? 0;
   const tally = useTallyStore.getState();
-  return { disciples, graduates, divineHerbs, n: tally.n, streak: tally.streak };
+  const metNpc = useMetNpcStore.getState().met.length;
+  return { disciples, graduates, divineHerbs, metNpc, namedNpcTotal: NAMED_NPCS.length, n: tally.n, streak: tally.streak };
 }
 
 // 업적 해금 무공서를 현 회차 codex 에 (이미 있으면 무시). 보상은 즉시 연구 완료 상태.

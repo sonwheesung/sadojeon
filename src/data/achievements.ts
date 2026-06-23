@@ -3,7 +3,7 @@
 // unlockArtId = 달성 시 영구 해금되는 무공서(다회차 자산). 보상(reward)은 표시용 — 파워 영구증가 X(docs/32).
 
 import { realmIndex } from '@/data/realm';
-import { DOMAIN_TALLY, KIND_TALLY, MIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
+import { DOMAIN_TALLY, GANGHOS_TALLY, KIND_TALLY, MIND_TALLY, STREAK, TALLY } from '@/data/tallyKeys';
 import type { Disciple } from '@/types';
 import type { GraduateRecord } from '@/stores/graduateStore';
 
@@ -23,6 +23,8 @@ export interface AchCtx {
   disciples: Disciple[]; // 현재 사문 제자(졸업 제자 포함 — status='graduated' 로 남음, graduatedJob 보유)
   graduates: GraduateRecord[]; // 졸업 궤적 레코드
   divineHerbs: number; // 신품 영초(herb-divine) 보유 수
+  metNpc: number; // 만난 네임드 수(강호 도감) — metNpcStore
+  namedNpcTotal: number; // 네임드 총수(도감 완성 판정 분모)
   n: (key: string) => number; // 누적 카운터(의뢰 완수 수 등) — tallyStore
   streak: (key: string) => number; // 최고 연속(연속 무사고 등) — tallyStore
 }
@@ -73,6 +75,11 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
 
   // ── 활동 ──────────────────────────────────────────────────────────
   { id: 'ach-divine-herb', name: '신품을 캐다', desc: '신품 영초를 처음 손에 넣다', category: 'activity', reward: '칭호 · 다이아 다량', check: (c) => c.divineHerbs > 0 },
+
+  // ── 강호(도감·조우) ── (2026-06-23 추가 — 사용자 일괄 검수 대상. docs/24·38)
+  { id: 'ach-master-ambush', name: '압도적 고수와 마주하다', desc: '행로에서 차원이 다른 고수와 맞닥뜨리다', category: 'ganghos', reward: '다이아 · 도감', check: (c) => c.n(GANGHOS_TALLY.masterAmbush) >= 1 },
+  { id: 'ach-death-ground', name: '死地에서 돌아오다', desc: '압도적 고수에 맞서 살아 돌아오다', category: 'ganghos', reward: '칭호 · 다이아', check: (c) => c.n(GANGHOS_TALLY.deathGround) >= 1 },
+  { id: 'ach-codex-complete', name: '강호를 두루 알다', desc: '강호 도감의 모든 인물을 만나다', category: 'ganghos', reward: '최고 칭호 · 다이아 다량', check: (c) => c.namedNpcTotal > 0 && c.metNpc >= c.namedNpcTotal },
 
   // ── 직업·졸업 ─────────────────────────────────────────────────────
   { id: 'ach-graduate', name: '강호로', desc: '제자를 처음 하산시키다', category: 'career', reward: '다이아 소량 · 도감', check: (c) => c.graduates.length > 0 },
