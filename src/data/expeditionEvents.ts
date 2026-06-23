@@ -52,6 +52,71 @@ export const EXPEDITION_EVENTS: readonly ExpeditionEvent[] = [
       },
     ],
   },
+  {
+    // 압도적 고수(死地) 조우 — 험한 원행 한정. "이기기"가 아니라 "살아 나가기" 결정. docs/38 ①-A.
+    // 고수는 발동 시 활성 사파/마교 네임드에서 뽑혀 본문에 등장(흑백쌍노 등 추가 시 자동 후보).
+    id: 'x-master-ambush',
+    category: 'combat',
+    weight: 3,
+    minDanger: 0.6,
+    prompt: '한 발짝 다가설 때마다 살갗이 저릿한 기세 — 우리로선 가늠조차 안 되는 격의 고수다. 길을 막아선 채, 비킬 생각이 없어 보인다.',
+    choices: [
+      {
+        key: 'stand',
+        label: '맞선다 (死地)',
+        effect: {
+          resultText: '질 줄 알면서도 검을 뽑았다. 死地에서 한 수 한 수가 뼈에 새겨진다.',
+          combat: true,
+          boss: true,
+          enlighten: true,
+          fame: 3,
+          stressDelta: 6,
+          jianghuNews: '죽음의 문턱에서 그 고수의 무공을 두 눈에 새겼다 — 제자가 떨리는 손으로 전해 왔다.',
+        },
+      },
+      {
+        key: 'retreat',
+        label: '적의를 보이지 않고 물러선다',
+        roll: { by: 'etiquette', base: 0.5 },
+        effect: {
+          resultText: '예를 갖춰 조용히 물러서니, 고수는 흥, 하고 길을 비켰다. 훗날을 기약하며 발길을 돌렸다.',
+          fame: -1,
+          persona: { prudence: 1 },
+          jianghuNews: '물러서며 엿본 그 고수의 정체와 행로를, 제자가 어렴풋이 전해 왔다.',
+        },
+        failEffect: {
+          resultText: '겁에 질려 비굴하게 굽신거렸다. 고수는 코웃음 치며 보내줬으나, 그 꼴이 강호에 소문났다.',
+          fame: -3,
+          stressDelta: 8,
+          persona: { ambition: -1 },
+        },
+      },
+      {
+        key: 'scatter',
+        label: '연막을 치고 흩어져 달아난다',
+        roll: { by: 'scouting', base: 0.4 },
+        effect: {
+          resultText: '몸을 날려 지형에 숨고, 사방으로 흩어져 자취를 감췄다. 빈손이나 무사히 빠져나왔다.',
+          persona: { prudence: 1 },
+        },
+        failEffect: {
+          resultText: '발 느린 이가 따라잡혀 호되게 당했다. 가까스로 끌고 빠져나왔다.',
+          woundSeverity: 3,
+          stressDelta: 5,
+        },
+      },
+      {
+        key: 'tribute',
+        label: '가진 것을 바치고 길을 산다',
+        require: { money: 200 },
+        effect: {
+          resultText: '노자와 전리품을 죄다 바치니 고수가 만족하여 길을 텄다. 목숨값 치고는 싸다 여겼다.',
+          fame: -2,
+          jianghuNews: '그 사문은 으르면 곳간을 연다 — 만만한 표적이라는 말이 사파 쪽에 돌더라고.',
+        },
+      },
+    ],
+  },
   // ── 인연 ──────────────────────────────────────────────────────────────
   {
     id: 'x-companion',

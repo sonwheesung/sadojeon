@@ -45,8 +45,9 @@ import type {
   ExpeditionRoll,
 } from '@/types/activity';
 import type { CutsceneTone } from '@/data/cutscenes';
-import type { Realm } from '@/types/realm';
+import { REALM_ORDER, type Realm } from '@/types/realm';
 import type { StatId } from '@/types/training';
+import { NAMED_NPCS } from '@/data/npcs';
 
 // 사건 결 → 컷씬 한자·톤(그레이박스). 전투·위기=혈(붉음), 인연·횡재=금, 풍문=먹.
 const EXP_CAT_SCENE: Record<ExpeditionEventCategory, { hanzi: string; tone: CutsceneTone }> = {
@@ -205,6 +206,16 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
   // 현장 급보 — 서신함이 아니라 컷씬+모달로 그 자리에서 선택. 사건 결마다 한자·톤. docs/20·38.
   const scene = EXP_CAT_SCENE[event.category];
   const evId = `xevent-${active.id}-${event.id}-${fired}`;
+  let prompt = event.prompt;
+  let sceneLine = `${names}의 여정 중, 길 위에서 일이 벌어졌다.`;
+  // 압도적 고수 습격 — 활성 사파/마교 네임드를 뽑아 사건 본문에 등장시킨다. docs/38 ①-A·24.
+  if (event.id === 'x-master-ambush') {
+    const master = pickAmbushMaster();
+    if (master) {
+      prompt = `${master.affiliation}의 ${master.name}(${master.realm})이(가) 길을 막아섰다. ${event.prompt}`;
+      sceneLine = `${names}의 앞을, 압도적인 기세의 고수가 가로막았다.`;
+    }
+  }
   useFieldEventStore.getState().push({
     id: evId,
     source: 'expedition',
@@ -212,8 +223,8 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
     title: `강호 출행 — ${dest.name}`,
     hanzi: scene.hanzi,
     tone: scene.tone,
-    sceneLine: `${names}의 여정 중, 길 위에서 일이 벌어졌다.`,
-    prompt: event.prompt,
+    sceneLine,
+    prompt,
     who: names,
     choices: choices as unknown as FieldEventChoiceView[],
   });
@@ -235,6 +246,20 @@ function foeForDanger(danger: number): { realm: Realm; quality: number } {
 
 const EXP_ARCHETYPES: NpcArchetype[] = ['orthodox', 'rogue', 'soldier', 'assassin'];
 
+// 압도적 고수(死地) — 제자보다 2경지 위. 군계일학·검기로 압살하는 사파 거두 급. docs/38 ①-A.
+function bossFoe(championRealm: Realm): { realm: Realm; quality: number } {
+  const idx = Math.max(0, REALM_ORDER.indexOf(championRealm));
+  const bossIdx = Math.min(REALM_ORDER.length - 1, idx + 2);
+  return { realm: REALM_ORDER[bossIdx], quality: 0.7 + random() * 0.3 };
+}
+
+// 압도적 고수 습격의 고수 성격 출처 — 활성 사파/마교 네임드에서 뽑는다(혈수나찰·천면랑, 추후 흑백쌍노).
+// NAMED_NPCS 에 사파 네임드를 추가하면 자동 후보(SOLID). mercy/purpose 보정은 Phase 2. docs/38·24.
+function pickAmbushMaster(): (typeof NAMED_NPCS)[number] | undefined {
+  const pool = NAMED_NPCS.filter((n) => n.faction === 'sapa' || n.faction === 'magyo');
+  return pool.length ? pool[Math.floor(random() * pool.length)] : undefined;
+}
+
 // 실전 EXP — 그레이박스(의뢰 보통급 1판 어림). 승리 시만.
 const EXP_SEONG_WIN = 40;
 const EXP_BODY_WIN = 30;
@@ -246,12 +271,16 @@ function resolveCombat(active: ActiveActivity, dest: ExpeditionDest, e: Expediti
   const party = partyOf(active).filter((d) => d.status !== 'departed');
   if (party.length === 0) return e.resultText;
   const champion = party.reduce((a, b) => (combatRating(a) >= combatRating(b) ? a : b));
-  const foe = foeForDanger(dest.danger);
+  const foe = e.boss ? bossFoe(champion.realm) : foeForDanger(dest.danger);
   const npc = makeNpcCombatant({
     id: 'exp-foe',
-    name: '강호의 맞수',
+    name: e.boss ? '압도적 고수' : '강호의 맞수',
     realm: foe.realm,
-    archetype: EXP_ARCHETYPES[Math.floor(random() * EXP_ARCHETYPES.length)],
+    archetype: e.boss
+      ? random() < 0.5
+        ? 'rogue'
+        : 'assassin'
+      : EXP_ARCHETYPES[Math.floor(random() * EXP_ARCHETYPES.length)],
     quality: foe.quality,
   });
   const r = simulateCombat([combatantFromDisciple(champion)], [npc], {
@@ -281,6 +310,11 @@ function resolveCombat(active: ActiveActivity, dest: ExpeditionDest, e: Expediti
     const sev = me?.wound ? Math.max(2, me.wound.severity) : 3;
     const days = me?.wound?.days ?? 21;
     inflictWound(champion.id, dest.woundType, sev, days);
+    // 死地(압도적 고수)에 맞섰다 살아 돌아옴 — 명성·풍문·깨달음 불씨는 패배여도 남는다(생존 체인). docs/38 ①-A.
+    if (e.boss) {
+      applyNonCombat(active, { ...e, combat: false, resultText: '', woundSeverity: undefined });
+      if (e.enlighten) attemptQuestEnlightenment(champion.id, 0.2);
+    }
   }
   return `${e.resultText}\n${narrateCombat(r)}`;
 }

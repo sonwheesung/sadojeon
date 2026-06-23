@@ -28,6 +28,10 @@ export interface NamedNpc {
   ageKnown: boolean; // false = 베일('??'). 마교·사파 핵심 등
   bio: string; // 한 줄 요약 (이름 아래)
   lore: string; // 일대기 — 세계관 설명 (상세 화면)
+  // ── 조우 성격 (선택) — 압도적 고수 습격(docs/38 ①-A) 등에서 ②물러섬·④헌납 성패·명성손실 보정.
+  //    살수형(predator·자비↓)이면 굴복·헌납이 위험, 목적형(purposed)이면 물러섬이 잘 통한다. (Phase 2 배선)
+  mercy?: number; // 자비 0~100 (낮을수록 잘 죽인다)
+  purpose?: 'predator' | 'purposed'; // 살수형 / 목적형
 }
 
 // 현재 나이 표기 — 게임 연차에 따라 증가. 베일 인물은 '??'.
@@ -147,6 +151,8 @@ export const NAMED_NPCS: readonly NamedNpc[] = [
     ageKnown: false, // 사파 — 베일
     bio: '강남 사파를 호령하는 거두.',
     lore: '녹림의 거두. 손에 피를 묻히는 데 거리낌이 없다 전한다. 출신과 나이는 분명치 않다. (그레이박스)',
+    mercy: 20, // 살수형 — 굴복·헌납이 통하지 않는 잔혹한 손속
+    purpose: 'predator',
   },
   {
     id: 'haomun-ju',
@@ -161,6 +167,8 @@ export const NAMED_NPCS: readonly NamedNpc[] = [
     ageKnown: false, // 사파 — 베일
     bio: '강호의 정보를 쥔 자.',
     lore: '천 개의 얼굴을 가졌다는 하오문주. 진짜 얼굴을 본 자가 없다. (그레이박스)',
+    mercy: 55, // 목적형 — 잡졸을 굳이 베지 않는다. 예를 갖춰 물러서면 길을 튼다
+    purpose: 'purposed',
   },
 
   // ── 중도 ──

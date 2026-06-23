@@ -53,7 +53,7 @@ export type ExpeditionEventCategory = 'combat' | 'bond' | 'rumor' | 'fortune' | 
 
 // 능력 판정 — 의뢰 돌발과 같은 결(주력 무공 성 또는 능력치 Lv).
 export interface ExpeditionRoll {
-  by: 'martial' | 'scouting' | 'guarding' | 'medicine' | 'endurance' | 'formation';
+  by: 'martial' | 'scouting' | 'guarding' | 'medicine' | 'endurance' | 'formation' | 'etiquette';
   base: number; // 역량 0일 때 성공률(0~1)
 }
 
@@ -77,6 +77,7 @@ export interface ExpeditionEffect {
   woundSeverity?: number; // 환경/사고 상처(1=치명 ~ 5=경미) — dest.woundType 속성
   jianghuNews?: string; // 풍문 서신(읽기 전용)
   enlighten?: boolean; // 실전 깨달음 시도(전투 승리 시 자동)
+  boss?: boolean; // 압도적 고수(死地) — 제자 +2경지 상대. 거의 짐(생존 체인), 死地 생환 시 명성·깨달음. docs/38 ①-A
 }
 
 export interface ExpeditionChoice {
