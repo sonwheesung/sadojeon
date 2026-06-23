@@ -57,7 +57,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 't3', category: 'training', body: '몸이 무겁습니다. 결이 안 잡히는 날입니다.', when: { stressMin: 50 } },
   { id: 't4', category: 'training', body: '진행도가 좀처럼 오르지 않아 답답합니다.', when: { stressMin: 45 } },
   { id: 't5', category: 'training', body: '검이 손에서 겉돕니다. 너무 지쳤나 봅니다.', when: { staminaPctMax: 35 } },
-  { id: 't6', category: 'training', body: '이 무공, 이제 어느 정도 알 듯합니다.', when: { seongMin: 5, stressMax: 60 } },
+  { id: 't6', category: 'training', body: '이 무공, 이제 어느 정도 알 듯합니다.', when: { seongMin: 4, stressMax: 60 } },
 
   // 일상 — 대체로 무관
   { id: 'd1', category: 'daily', body: '아침 안개가 산문을 덮었습니다. 좋은 날입니다.', when: { stressMax: 60 } },
@@ -117,9 +117,9 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'wr2', category: 'training', mood: 'weary', body: '머릿속이 멍합니다. 검을 휘둘러도 형이 그려지질 않아요.', when: { staminaPctMax: 30 } },
   { id: 'wr3', category: 'worry', mood: 'weary', body: '요즘은... 무엇을 위해 이리 버티는지 모르겠습니다.', when: { stressMin: 70 } },
   // 자만 — 앞서가는 자
-  { id: 'pr1', category: 'training', mood: 'pride', body: '이 정도면 산 아래 웬만한 무사들은 상대도 안 되겠지요?', when: { seongMin: 6, stressMax: 55 } },
-  { id: 'pr2', category: 'relation', mood: 'pride', body: '솔직히 사문에서 저만큼 하는 사람도 없지 않습니까.', when: { seongMin: 7 } },
-  { id: 'pr3', category: 'worry', mood: 'pride', body: '사부님께 더 배울 게 남았는지... 가끔 그런 생각이 스칩니다.', when: { seongMin: 8 } },
+  { id: 'pr1', category: 'training', mood: 'pride', body: '이 정도면 산 아래 웬만한 무사들은 상대도 안 되겠지요?', when: { seongMin: 5, stressMax: 55 } },
+  { id: 'pr2', category: 'relation', mood: 'pride', body: '솔직히 사문에서 저만큼 하는 사람도 없지 않습니까.', when: { seongMin: 6 } },
+  { id: 'pr3', category: 'worry', mood: 'pride', body: '사부님께 더 배울 게 남았는지... 가끔 그런 생각이 스칩니다.', when: { seongMin: 7 } },
   // 정체성·진로
   { id: 'id1', category: 'worry', mood: 'identity', body: '사부님, 저는 강호에 나가면 어떤 무인이 되어 있을까요.', when: { ageMin: 13 } },
   { id: 'id2', category: 'worry', mood: 'identity', body: '제가 가야 할 길이 정말 이쪽이 맞는지, 요즘 자주 묻게 됩니다.', when: { ageMin: 14 } },
@@ -130,6 +130,46 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   // 적의·응어리
   { id: 'en1', category: 'relation', mood: 'enmity', body: '... 한 사람과는, 아무리 해도 같은 자리에 못 있겠습니다.', when: { hasEnemy: true } },
   { id: 'en2', category: 'worry', mood: 'enmity', body: '사부님, 미워하는 마음을 다스리는 것도... 무공입니까.', when: { hasEnemy: true, stressMin: 40 } },
+
+  // ════ 공용 일상 잡담 — 결 없음(반복 허용). 단조 방지용 대량 풀(이력분석 2026-06-23, 같은 줄 250+회 반복 해소) ════
+  // 사문 생활의 결: 마당·계절·끼니·소제·산·연무장. 숨은 변수 직설 X, 나이대 무난한 말투.
+  { id: 'amb1', category: 'daily', body: '사부님, 오늘 아침 마당을 쓸다 동백이 핀 걸 봤습니다.', when: { stressMax: 65 } },
+  { id: 'amb2', category: 'daily', body: '장작을 패 두었습니다. 겨울 채비는 일찍 해 두는 게 좋겠지요.', when: { stressMax: 60 } },
+  { id: 'amb3', category: 'daily', body: '우물물이 차갑습니다. 세수를 하고 나니 정신이 번쩍 듭니다.' },
+  { id: 'amb4', category: 'daily', body: '산새 우는 소리에 눈을 떴습니다. 오늘은 일찍 시작하겠습니다.', when: { stressMax: 60 } },
+  { id: 'amb5', category: 'daily', body: '점심 죽이 참 따뜻했습니다. 잘 먹었습니다, 사부님.' },
+  { id: 'amb6', category: 'daily', body: '연무장 바닥을 다시 골라 두었습니다. 발이 한결 편합니다.', when: { stressMax: 60 } },
+  { id: 'amb7', category: 'daily', body: '간밤에 비가 와 계곡물이 불었습니다. 물소리가 우렁찹니다.' },
+  { id: 'amb8', category: 'daily', body: '마당 약초밭에 싹이 올라왔습니다. 사부님, 보셨어요?', when: { stressMax: 60 } },
+  { id: 'amb9', category: 'daily', body: '검을 손질해 두었습니다. 날이 다시 곱게 섭니다.', when: { stressMax: 60 } },
+  { id: 'amb10', category: 'daily', body: '오늘은 바람이 좋아, 산마루까지 단숨에 뛰어 올랐습니다.', when: { stressMax: 55 } },
+  { id: 'amb11', category: 'daily', body: '서고를 정리하다 오래된 권보를 하나 찾았습니다. 손때가 묻었더군요.', when: { stressMax: 60 } },
+  { id: 'amb12', category: 'daily', body: '달이 밝아 잠이 오질 않습니다. 마당이나 한 바퀴 돌고 오겠습니다.', when: { stressMax: 60 } },
+  { id: 'amb13', category: 'daily', body: '동문들과 장작 나르기 내기를 했습니다. ... 제가 졌습니다.', when: { stressMax: 60 } },
+  { id: 'amb14', category: 'daily', body: '짚신이 다 닳았습니다. 새로 한 켤레 삼아야겠어요.' },
+  { id: 'amb15', category: 'daily', body: '처마 밑 제비가 새끼를 쳤습니다. 아침마다 시끌벅적합니다.', when: { stressMax: 60 } },
+  { id: 'amb16', category: 'daily', body: '오늘은 하늘이 유난히 높습니다. 가을인가 봅니다.' },
+  { id: 'amb17', category: 'daily', body: '발끝이 시립니다. 첫서리가 내렸나 봅니다.' },
+  { id: 'amb18', category: 'daily', body: '오늘은 수련보다 빨래가 더 힘들었습니다. ... 농입니다, 사부님.', when: { stressMax: 55 } },
+  { id: 'amb19', category: 'relation', body: '오늘 동문이 떡을 나눠줬습니다. 같이 먹으니 더 맛있더군요.', when: { stressMax: 60 } },
+  { id: 'amb20', category: 'daily', body: '약방 냄새가 좋습니다. 코끝이 알싸해요.' },
+
+  // 수련 결 — 느는 감각/막히는 감각(가벼움, 반복 허용)
+  { id: 'tx1', category: 'training', body: '오늘은 자세가 어제보다 낮게 잡힙니다. 조금씩은 느는 모양입니다.', when: { stressMax: 60 } },
+  { id: 'tx2', category: 'training', body: '같은 초식을 백 번 그었습니다. 손이 먼저 길을 압니다.', when: { stressMax: 55 } },
+  { id: 'tx3', category: 'training', body: '호흡이 길어졌습니다. 내쉴 때 검끝이 덜 떨립니다.', when: { stressMax: 55 } },
+  { id: 'tx4', category: 'training', body: '어제 짚어주신 곳을 고치니 한결 매끄럽습니다.', when: { stressMax: 60, trustMin: 45 } },
+  { id: 'tx5', category: 'training', body: '발 디딤이 자꾸 엉킵니다. 보법은 아직 멀었나 봅니다.', when: { stressMin: 40 } },
+
+  // 지침 변주 — weary 과다(이력분석 21%) 단조 해소
+  { id: 'wr4', category: 'training', mood: 'weary', body: '오늘은 목검이 쇳덩이 같습니다.', when: { stressMin: 55 } },
+  { id: 'wr5', category: 'daily', mood: 'weary', body: '눈꺼풀이 자꾸 내려앉습니다. ... 죄송합니다, 사부님.', when: { staminaPctMax: 35 } },
+  { id: 'wr6', category: 'training', mood: 'weary', body: '손에 물집이 또 잡혔습니다. ... 괜찮습니다, 곧 굳겠지요.', when: { stressMin: 50 } },
+  { id: 'wr7', category: 'daily', mood: 'weary', body: '잠깐 앉아도 되겠습니까. ... 숨 좀 고르고 다시 하겠습니다.', when: { staminaPctMax: 30 } },
+
+  // 평온 변주 — calm 은 신뢰 받쳐줄 때만(모순 방지 moodConsistent 와 합치). 반복 허용.
+  { id: 'ca3', category: 'daily', mood: 'calm', body: '사부님 곁에 있으면 마음이 놓입니다. ... 별 이유는 없어요.', when: { trustMin: 55, stressMax: 40 } },
+  { id: 'ca4', category: 'training', mood: 'calm', body: '오늘은 검을 쥐어도 마음이 고요합니다. 이런 날이 좋습니다.', when: { stressMax: 30, trustMin: 45 } },
 
   // ════ 캐릭터 시그니처 — 한바람·윤소소·이청하·백연·진백호·사천화 (disciples/*.md 기반) ════
   // 한바람 — 거리에서 자란 자유·떠돌이, 흑화 위험, 부모 상실.
@@ -220,7 +260,9 @@ export function isDistinctiveOneLiner(t: OneLinerTemplate): boolean {
 // 모순 방지 — 결이 현재 상태와 톤이 어긋나면 배제. 핵심: 흑화 기미 중엔 '평온'한 한 마디 금지
 // ("누군가를 꺾고 싶다" 직후 "차 한 잔이 제일 좋습니다" 류 톤 충돌 차단). when 게이트로 못 막는 결 모순 보강.
 function moodConsistent(t: OneLinerTemplate, c: OneLinerCtx): boolean {
-  if (t.mood === 'calm' && c.darknessRisk !== 'low') return false;
+  // 평온은 흑화 기미 없고(흑화↔평온 차단) + 사부 신뢰가 최소선은 될 때만 — 불신(저신뢰)과 평온이
+  // 며칠 새 오가는 톤 급변 차단(이력분석 2026-06-23: 백연 calm↔distrust 다발). distrust 게이트는 trustMax≤38.
+  if (t.mood === 'calm' && (c.darknessRisk !== 'low' || c.trust < 40)) return false;
   return true;
 }
 
