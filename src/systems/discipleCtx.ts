@@ -31,6 +31,7 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
   }
   const isWeakest = activeOthers.length > 0 && activeOthers.every((o) => mainSeongOf(o) >= mainSeong);
   return {
+    discipleId: d.id,
     stress: d.stress ?? 0,
     staminaPct: Math.round((d.stamina / maxSt) * 100),
     trust: d.trustToMaster ?? 0,

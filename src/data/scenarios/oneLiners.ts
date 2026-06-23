@@ -30,6 +30,7 @@ export interface OneLinerTemplate {
   category: OneLinerCategory;
   body: string;
   when?: OneLinerCondition; // 없으면 언제든 가능
+  onlyFor?: string; // 캐릭터 전용 시그니처 — 그 제자(poolId)일 때만. 없으면 공용. docs/12·15
 }
 
 export const ONE_LINERS: OneLinerTemplate[] = [
@@ -63,10 +64,30 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'w5', category: 'worry', body: '사부님... 강한 자가 약한 자를 누르는 것이, 정녕 그른 일입니까.', when: { darknessRiskMin: 'medium' } },
   { id: 'w6', category: 'worry', body: '요즘은 검을 쥐면, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
   { id: 'w7', category: 'worry', body: '... 그날 그자의 눈을, 아직도 잊지 못합니다.', when: { darknessRiskMin: 'high', hasEnemy: true } },
+
+  // ── 캐릭터 시그니처 ── (onlyFor=poolId, 나이대 분산. disciples/*.md 기반. 작성원칙: want·나이대 말투·숨은변수 직설 X)
+  // 장철(jang-cheol) — 산촌 농가 둘째, 가족 그리움·우직·마을 지킴, 야망 낮음.
+  { id: 'sig-jang-1', category: 'daily', body: '어머니가 만들어주신 떡이 그리워요. 이맘때면 김이 모락모락 났는데.', onlyFor: 'jang-cheol', when: { ageMax: 11 } },
+  { id: 'sig-jang-2', category: 'daily', body: '사부님, 우리 형은 농사일 잘하고 있을까요? 비는 제때 왔을지...', onlyFor: 'jang-cheol', when: { ageMax: 11 } },
+  { id: 'sig-jang-3', category: 'training', body: '사부님, 저는 강한 무공보다 마을 지키는 무공이 좋아요.', onlyFor: 'jang-cheol', when: { ageMin: 11, ageMax: 13 } },
+  { id: 'sig-jang-4', category: 'daily', body: '어머니께 편지 한 통 부쳐도 될까요? 잘 지낸다고요.', onlyFor: 'jang-cheol', when: { ageMin: 11, ageMax: 13 } },
+  { id: 'sig-jang-5', category: 'worry', body: '강호엔 나쁜 자가 많다던데... 제가 거기서 살아남을 수 있을까요.', onlyFor: 'jang-cheol', when: { ageMin: 13 } },
+  { id: 'sig-jang-6', category: 'worry', body: '큰 무인이 못 되어도 괜찮습니다. 저는 고향을 지킬 수 있으면 그걸로 족해요.', onlyFor: 'jang-cheol', when: { ageMin: 15 } },
+  { id: 'sig-jang-7', category: 'relation', body: '사부님 가르침, 평생 잊지 않겠습니다. 산을 내려가도요.', onlyFor: 'jang-cheol', when: { ageMin: 15 } },
+
+  // 진소화(jin-sohwa) — 약방 딸, 의술·다정·자비, 동문 돌봄, 살상 거부.
+  { id: 'sig-sohwa-1', category: 'relation', body: '동문이 어디 다친 데는 없는지, 제가 좀 봐드려도 될까요?', onlyFor: 'jin-sohwa', when: { ageMax: 12 } },
+  { id: 'sig-sohwa-2', category: 'daily', body: '오늘 산에서 백출을 캐왔어요. 내일은 환을 한번 빚어볼게요.', onlyFor: 'jin-sohwa', when: { ageMax: 12 } },
+  { id: 'sig-sohwa-3', category: 'daily', body: '사부님, 어제 잘 못 주무셨지요? 안색이 좋지 않으세요.', onlyFor: 'jin-sohwa' },
+  { id: 'sig-sohwa-4', category: 'training', body: '강한 무공보다, 사람을 살리는 손이 되고 싶어요.', onlyFor: 'jin-sohwa', when: { ageMin: 12 } },
+  { id: 'sig-sohwa-5', category: 'worry', body: '강호엔 정말로 사람을 해치는 이들이 있나요? 저는... 잘 모르겠어요.', onlyFor: 'jin-sohwa', when: { ageMin: 13 } },
+  { id: 'sig-sohwa-6', category: 'worry', body: '사람을 베는 무공만은, 저는 끝내 못 익힐 것 같아요. 그래도 될까요?', onlyFor: 'jin-sohwa', when: { ageMin: 13 } },
+  { id: 'sig-sohwa-7', category: 'worry', body: '저는 무인이라기보단 의원에 가까운 것 같아요. 사부님은 어떻게 보세요?', onlyFor: 'jin-sohwa', when: { ageMin: 15 } },
 ];
 
 // 한 마디 발화 컨텍스트 — 제자 현재 상태 스냅샷(oneLinerSystem 에서 산출).
 export interface OneLinerCtx {
+  discipleId: string; // 발화 제자(poolId) — 캐릭터 전용 시그니처 필터용
   stress: number;
   staminaPct: number;
   trust: number;
@@ -113,9 +134,14 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   return true;
 }
 
-// 현재 상태에 맞는 한 마디 중 무작위 1개. 맞는 게 없으면 null(그 날은 발화 X).
+// 현재 상태에 맞는 한 마디 중 1개. 캐릭터 전용 시그니처가 있으면 우선(60%) — 매일 보는 한 마디가
+// 제자마다 달라지게(캐릭터 매력). 다른 제자 전용은 자동 제외. 맞는 게 없으면 null(그 날 발화 X). docs/12.
 export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null {
-  const pool = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
+  const matched = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
+  const sig = matched.filter((t) => t.onlyFor === c.discipleId);
+  const uni = matched.filter((t) => !t.onlyFor);
+  const useSig = sig.length > 0 && (uni.length === 0 || random() < 0.6);
+  const pool = useSig ? sig : uni;
   if (pool.length === 0) return null;
   return pool[Math.floor(random() * pool.length)];
 }
@@ -164,8 +190,9 @@ export const ONE_LINER_RESPONSES: Record<OneLinerTone, readonly string[]> = {
 };
 
 export function pickRandomOneLiner(): OneLinerTemplate {
-  const idx = Math.floor(random() * ONE_LINERS.length);
-  return ONE_LINERS[idx];
+  // 제자 무관 무작위 — 캐릭터 전용은 제외(엉뚱한 제자에 시그니처가 붙지 않게).
+  const pool = ONE_LINERS.filter((t) => !t.onlyFor);
+  return pool[Math.floor(random() * pool.length)];
 }
 
 export function pickResponse(tone: OneLinerTone): string {
