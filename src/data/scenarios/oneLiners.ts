@@ -25,12 +25,28 @@ export interface OneLinerCondition {
   isWeakest?: boolean; // 사문에서 자신이 제일 약할 때
 }
 
+// 상황 결(mood) — LLM function-calling 선택의 메뉴 라벨. 룰 조건(when)과 별개로,
+// "지금 이 제자의 결"을 한 단어로(흑화·불신·지침·자만·정체성·평온·향수·라이벌·적의·일상).
+// 없으면 'normal'. docs/12·17.
+export type OneLinerMood =
+  | 'normal'
+  | 'darkening' // 흑화 기미
+  | 'distrust' // 사부 불신(저신뢰)
+  | 'weary' // 지침·스트레스
+  | 'pride' // 자만(앞서감)
+  | 'identity' // 정체성·진로 회의
+  | 'calm' // 평온·좋은 날
+  | 'homesick' // 향수·가족
+  | 'rival' // 비교·서열
+  | 'enmity'; // 적의·응어리
+
 export interface OneLinerTemplate {
   id: string;
   category: OneLinerCategory;
   body: string;
   when?: OneLinerCondition; // 없으면 언제든 가능
   onlyFor?: string; // 캐릭터 전용 시그니처 — 그 제자(poolId)일 때만. 없으면 공용. docs/12·15
+  mood?: OneLinerMood; // LLM 선택 메뉴 라벨(없으면 normal)
 }
 
 export const ONE_LINERS: OneLinerTemplate[] = [
@@ -83,6 +99,83 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'sig-sohwa-5', category: 'worry', body: '강호엔 정말로 사람을 해치는 이들이 있나요? 저는... 잘 모르겠어요.', onlyFor: 'jin-sohwa', when: { ageMin: 13 } },
   { id: 'sig-sohwa-6', category: 'worry', body: '사람을 베는 무공만은, 저는 끝내 못 익힐 것 같아요. 그래도 될까요?', onlyFor: 'jin-sohwa', when: { ageMin: 13 } },
   { id: 'sig-sohwa-7', category: 'worry', body: '저는 무인이라기보단 의원에 가까운 것 같아요. 사부님은 어떻게 보세요?', onlyFor: 'jin-sohwa', when: { ageMin: 15 } },
+
+  // ════ 상황별 공용 — 흑화·불신·지침·자만·정체성·평온·적의(mood 로 LLM 메뉴화) ════
+  // 흑화 기미 — '어둠' 라벨 X, 관찰 가능한 말·태도로만(feedback_hidden_game_state)
+  { id: 'dk1', category: 'worry', mood: 'darkening', body: '손에 힘을 줄 때마다... 누군가를 꺾고 싶다는 생각이 듭니다.', when: { darknessRiskMin: 'medium' } },
+  { id: 'dk2', category: 'daily', mood: 'darkening', body: '요즘은 사문 규율이 거추장스럽게 느껴집니다. 왜 그런지 모르겠어요.', when: { darknessRiskMin: 'medium' } },
+  { id: 'dk3', category: 'relation', mood: 'darkening', body: '동문들이 저를 슬슬 피하는 듯합니다. ... 뭐, 상관없습니다만.', when: { darknessRiskMin: 'high' } },
+  { id: 'dk4', category: 'worry', mood: 'darkening', body: '약한 것은, 결국 약한 게 죄 아닙니까. ... 사부님은 다르게 보십니까.', when: { darknessRiskMin: 'high' } },
+  // 사부 불신 — 저신뢰
+  { id: 'ds1', category: 'worry', mood: 'distrust', body: '... 됐습니다. 어차피 말해도 달라질 게 없겠지요.', when: { trustMax: 30 } },
+  { id: 'ds2', category: 'daily', mood: 'distrust', body: '사부님은 제게 별 관심이 없으신 듯합니다. ... 괜찮습니다.', when: { trustMax: 25 } },
+  { id: 'ds3', category: 'training', mood: 'distrust', body: '시키시는 대로는 하겠습니다. 그뿐입니다.', when: { trustMax: 30 } },
+  { id: 'ds4', category: 'worry', mood: 'distrust', body: '제 말을 들어주실 줄은... 솔직히 기대하지 않았습니다.', when: { trustMax: 38, stressMin: 40 } },
+  // 지침 — 스트레스·체력
+  { id: 'wr1', category: 'daily', mood: 'weary', body: '사부님... 오늘 하루만 쉬어가도 되겠습니까. 몸이 천근만근입니다.', when: { stressMin: 60 } },
+  { id: 'wr2', category: 'training', mood: 'weary', body: '머릿속이 멍합니다. 검을 휘둘러도 형이 그려지질 않아요.', when: { staminaPctMax: 30 } },
+  { id: 'wr3', category: 'worry', mood: 'weary', body: '요즘은... 무엇을 위해 이리 버티는지 모르겠습니다.', when: { stressMin: 70 } },
+  // 자만 — 앞서가는 자
+  { id: 'pr1', category: 'training', mood: 'pride', body: '이 정도면 산 아래 웬만한 무사들은 상대도 안 되겠지요?', when: { seongMin: 6, stressMax: 55 } },
+  { id: 'pr2', category: 'relation', mood: 'pride', body: '솔직히 사문에서 저만큼 하는 사람도 없지 않습니까.', when: { seongMin: 7 } },
+  { id: 'pr3', category: 'worry', mood: 'pride', body: '사부님께 더 배울 게 남았는지... 가끔 그런 생각이 스칩니다.', when: { seongMin: 8 } },
+  // 정체성·진로
+  { id: 'id1', category: 'worry', mood: 'identity', body: '사부님, 저는 강호에 나가면 어떤 무인이 되어 있을까요.', when: { ageMin: 13 } },
+  { id: 'id2', category: 'worry', mood: 'identity', body: '제가 가야 할 길이 정말 이쪽이 맞는지, 요즘 자주 묻게 됩니다.', when: { ageMin: 14 } },
+  { id: 'id3', category: 'worry', mood: 'identity', body: '하산이 멀지 않았다 들었습니다. 두렵기도, 설레기도 합니다.', when: { ageMin: 15 } },
+  // 평온
+  { id: 'ca1', category: 'daily', mood: 'calm', body: '오늘은 마음이 참 잔잔합니다. 이런 날엔 수련도 잘 됩니다.', when: { stressMax: 30 } },
+  { id: 'ca2', category: 'daily', mood: 'calm', body: '사부님과 마시는 차 한 잔이, 요즘은 하루 중 제일 좋습니다.', when: { stressMax: 35, trustMin: 50 } },
+  // 적의·응어리
+  { id: 'en1', category: 'relation', mood: 'enmity', body: '... 한 사람과는, 아무리 해도 같은 자리에 못 있겠습니다.', when: { hasEnemy: true } },
+  { id: 'en2', category: 'worry', mood: 'enmity', body: '사부님, 미워하는 마음을 다스리는 것도... 무공입니까.', when: { hasEnemy: true, stressMin: 40 } },
+
+  // ════ 캐릭터 시그니처 — 한바람·윤소소·이청하·백연·진백호·사천화 (disciples/*.md 기반) ════
+  // 한바람 — 거리에서 자란 자유·떠돌이, 흑화 위험, 부모 상실.
+  { id: 'sig-baram-1', category: 'daily', mood: 'normal', body: '사부님, 잠깐 산 아래 좀 다녀와도 돼요? 안이 답답해서요.', onlyFor: 'han-baram', when: { ageMax: 11 } },
+  { id: 'sig-baram-2', category: 'worry', mood: 'homesick', body: '... 부모님이 어떤 분들이었는지, 저는 잘 기억이 안 나요.', onlyFor: 'han-baram', when: { ageMax: 12 } },
+  { id: 'sig-baram-3', category: 'training', mood: 'normal', body: '보법은 금세 늘어요! 더 빠른 거, 더 어려운 거 가르쳐줘요.', onlyFor: 'han-baram', when: { ageMin: 11, ageMax: 13 } },
+  { id: 'sig-baram-4', category: 'worry', mood: 'distrust', body: '사부님이 절 거둔 거... 그냥 의리 때문이에요?', onlyFor: 'han-baram', when: { trustMax: 35 } },
+  { id: 'sig-baram-5', category: 'daily', mood: 'darkening', body: '산 아래서 만난 무인이 좋은 비급을 보여줬어요. 그거, 익혀도 돼요?', onlyFor: 'han-baram', when: { darknessRiskMin: 'medium' } },
+  { id: 'sig-baram-6', category: 'worry', mood: 'identity', body: '사부님 가르침은 고맙지만... 저는 한곳에 매여선 못 사는 사람 같아요.', onlyFor: 'han-baram', when: { ageMin: 13 } },
+  { id: 'sig-baram-7', category: 'relation', mood: 'normal', body: '정파 의적이 되려고요. 가난한 사람들 돕는. ... 저답죠?', onlyFor: 'han-baram', when: { ageMin: 15 } },
+  // 윤소소 — 양반가 정파 검녀, 복수의 트라우마, 일방적 적대(이청하).
+  { id: 'sig-yun-1', category: 'training', mood: 'normal', body: '사부님, 검법을 더 가르쳐주세요. 더 빨리, 더 깊이요.', onlyFor: 'yun-soso', when: { ageMax: 12 } },
+  { id: 'sig-yun-2', category: 'daily', mood: 'normal', body: '어머니께서 굳세게 자라라 하셨습니다. 저는 시집 따위 가지 않아요.', onlyFor: 'yun-soso', when: { ageMax: 12 } },
+  { id: 'sig-yun-3', category: 'worry', mood: 'identity', body: '올곧은 검을 쥔, 정파의 검객이 되고 싶습니다.', onlyFor: 'yun-soso', when: { ageMin: 12 } },
+  { id: 'sig-yun-4', category: 'relation', mood: 'enmity', body: '... 그 아이만 보면 가슴이 차갑게 굳습니다. 이유는 묻지 말아 주세요.', onlyFor: 'yun-soso', when: { hasEnemy: true } },
+  { id: 'sig-yun-5', category: 'worry', mood: 'darkening', body: '사부님, 복수가... 정녕 그릇된 마음입니까.', onlyFor: 'yun-soso', when: { darknessRiskMin: 'medium' } },
+  { id: 'sig-yun-6', category: 'worry', mood: 'identity', body: '죽은 이는 돌아오지 않는데... 제가 쥔 이 검은 무엇을 위한 걸까요.', onlyFor: 'yun-soso', when: { ageMin: 14 } },
+  { id: 'sig-yun-7', category: 'daily', mood: 'calm', body: '오래 품고 있던 것을, 이제 그만 내려놓으려 합니다.', onlyFor: 'yun-soso', when: { ageMin: 15, stressMax: 50 } },
+  // 이청하 — 어둠에서 빠져나온 살수, 죄책감, 자기 본성과의 싸움.
+  { id: 'sig-cheong-1', category: 'worry', mood: 'distrust', body: '... 사부님은 왜 저 같은 아이를 거두셨습니까.', onlyFor: 'i-cheongha', when: { trustMax: 35 } },
+  { id: 'sig-cheong-2', category: 'daily', mood: 'weary', body: '어젯밤도 그 꿈을 꿨습니다. 어떤 사람의... 마지막 눈빛을요.', onlyFor: 'i-cheongha', when: { stressMin: 45 } },
+  { id: 'sig-cheong-3', category: 'training', mood: 'normal', body: '검을 쥐면 옛 손버릇이 자꾸 올라옵니다. ... 그게 두렵습니다.', onlyFor: 'i-cheongha', when: { ageMin: 11, ageMax: 14 } },
+  { id: 'sig-cheong-4', category: 'relation', mood: 'normal', body: '동문들이 점점 따뜻하게 느껴집니다. ... 익숙하지 않은 기분이에요.', onlyFor: 'i-cheongha', when: { trustMin: 45 } },
+  { id: 'sig-cheong-5', category: 'worry', mood: 'darkening', body: '사부님... 저는 끝내, 용서받을 수 있는 사람일까요.', onlyFor: 'i-cheongha', when: { darknessRiskMin: 'medium' } },
+  { id: 'sig-cheong-6', category: 'worry', mood: 'identity', body: '어둠에서 빠져나온 이 손으로, 이젠 사람을 지키고 싶습니다. 가능할까요.', onlyFor: 'i-cheongha', when: { ageMin: 14 } },
+  // 백연 — 도사의 딸, 평정·자비, 어두운 동문 보살핌.
+  { id: 'sig-baek-1', category: 'daily', mood: 'calm', body: '아버지께서 그러셨어요. 마음을 비우면 도(道)가 가까이 온다고요.', onlyFor: 'baek-yeon', when: { ageMax: 12 } },
+  { id: 'sig-baek-2', category: 'relation', mood: 'normal', body: '사부님, 마음이 어두워 보이는 동문이 있어요. 함께 명상해도 될까요?', onlyFor: 'baek-yeon' },
+  { id: 'sig-baek-3', category: 'training', mood: 'calm', body: '흰 연꽃은 진흙에서 피어도 맑습니다. 저도 그러고 싶어요.', onlyFor: 'baek-yeon', when: { stressMax: 55 } },
+  { id: 'sig-baek-4', category: 'worry', mood: 'identity', body: '사부님, 도(道)와 무(武)의 균형은 어디에 있는 걸까요.', onlyFor: 'baek-yeon', when: { ageMin: 13 } },
+  { id: 'sig-baek-5', category: 'worry', mood: 'normal', body: '강호의 다툼이 안타깝습니다. ... 도(道)로는 풀 수 없는 걸까요.', onlyFor: 'baek-yeon', when: { ageMin: 13 } },
+  { id: 'sig-baek-6', category: 'relation', mood: 'calm', body: '졸업하면 아버지 곁으로 돌아가, 자비의 손길을 펴고 싶어요.', onlyFor: 'baek-yeon', when: { ageMin: 15 } },
+  // 진백호 — 떠돌이 천재, 자유·자만, 자유 폭발 위험, 한바람과 옛 인연.
+  { id: 'sig-baekho-1', category: 'training', mood: 'pride', body: '사부님, 이 검법 어렵지 않은데요? 다른 거 가르쳐주세요.', onlyFor: 'jin-baekho', when: { ageMax: 12 } },
+  { id: 'sig-baekho-2', category: 'relation', mood: 'normal', body: '한바람 형이랑 같은 사문이 되다니, 세상 참 좁네요.', onlyFor: 'jin-baekho', when: { ageMax: 13 } },
+  { id: 'sig-baekho-3', category: 'relation', mood: 'pride', body: '동문들이 왜 저 무공을 어려워하는지 모르겠어요. ... 제가 빠른 거겠죠.', onlyFor: 'jin-baekho', when: { seongMin: 5 } },
+  { id: 'sig-baekho-4', category: 'worry', mood: 'identity', body: '저는 무엇이 되고 싶은지 모르겠어요. 무림맹주? ... 답답한걸요.', onlyFor: 'jin-baekho', when: { ageMin: 13 } },
+  { id: 'sig-baekho-5', category: 'daily', mood: 'darkening', body: '사문이 좁게 느껴져요. 그냥... 강호로 나가버리고 싶어요.', onlyFor: 'jin-baekho', when: { darknessRiskMin: 'medium' } },
+  { id: 'sig-baekho-6', category: 'worry', mood: 'distrust', body: '사부님... 제 양육이 부족했다 여기실까 봐, 그게 좀 무서워요.', onlyFor: 'jin-baekho', when: { trustMax: 40 } },
+  { id: 'sig-baekho-7', category: 'relation', mood: 'normal', body: '저는 자유로운 검의 길로 가겠어요. 사부님 가르침은 안고서요.', onlyFor: 'jin-baekho', when: { ageMin: 15 } },
+  // 사천화 — 약·독 의가의 딸, 신중·자존, 가전을 노리는 외부 위협.
+  { id: 'sig-cheonhwa-1', category: 'daily', mood: 'normal', body: '사부님, 이 약초는 향이 익숙합니다. 집에서도 다뤘거든요.', onlyFor: 'sa-cheonhwa', when: { ageMax: 12 } },
+  { id: 'sig-cheonhwa-2', category: 'training', mood: 'normal', body: '암기와 독은 깊이가 끝이 없어요. 더 깊이 배우고 싶습니다.', onlyFor: 'sa-cheonhwa', when: { ageMin: 11 } },
+  { id: 'sig-cheonhwa-3', category: 'worry', mood: 'homesick', body: '집에 위기가 있다는 소식이 왔어요. ... 가봐야 할까요, 사부님.', onlyFor: 'sa-cheonhwa', when: { ageMin: 12 } },
+  { id: 'sig-cheonhwa-4', category: 'relation', mood: 'enmity', body: '... 가전을 노리는 자들의 그림자가, 사문에까지 닿을까 두렵습니다.', onlyFor: 'sa-cheonhwa', when: { hasEnemy: true } },
+  { id: 'sig-cheonhwa-5', category: 'worry', mood: 'identity', body: '약왕(藥王)이 되고 싶어요. 단, 집안도 잇고 싶고요. ... 둘 다 욕심일까요.', onlyFor: 'sa-cheonhwa', when: { ageMin: 14 } },
+  { id: 'sig-cheonhwa-6', category: 'worry', mood: 'darkening', body: '어둠은 어둠으로 갚는 수밖에 없는 걸까요. ... 가끔 그런 생각이 듭니다.', onlyFor: 'sa-cheonhwa', when: { darknessRiskMin: 'medium' } },
 ];
 
 // 한 마디 발화 컨텍스트 — 제자 현재 상태 스냅샷(oneLinerSystem 에서 산출).
@@ -144,6 +237,15 @@ export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null 
   const pool = useSig ? sig : uni;
   if (pool.length === 0) return null;
   return pool[Math.floor(random() * pool.length)];
+}
+
+// LLM function-calling 선택용 후보 — 조건 맞는 대사(전용 있으면 전용+공용). LLM 이 이 중 하나를
+// 상황에 맞게 고른다. 폴백(모델 off·실패)은 pickContextualOneLiner(룰, 전용 우선). docs/12·17.
+export function candidateOneLiners(c: OneLinerCtx): OneLinerTemplate[] {
+  const matched = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
+  const sig = matched.filter((t) => t.onlyFor === c.discipleId);
+  const uni = matched.filter((t) => !t.onlyFor);
+  return sig.length ? [...sig, ...uni] : uni;
 }
 
 // 본문 변수 치환 — {rival}=최강 동문 이름. 발화 시점에 실제 이름으로 박는다.

@@ -12,9 +12,12 @@
 
 import { random } from '@/systems/rng';
 import {
+  candidateOneLiners,
   fillOneLinerBody,
   pickContextualOneLiner,
   pickResponse,
+  type OneLinerCtx,
+  type OneLinerTemplate,
 } from '@/data/scenarios/oneLiners';
 import { buildDiscipleCtx } from './discipleCtx';
 import { useDiscipleStore } from '@/stores/discipleStore';
@@ -27,7 +30,7 @@ import type {
   OneLinerTonePreferences,
   PersonalityTraits,
 } from '@/types';
-import { canGenerate, generate } from './llm/executorchClient';
+import { canGenerate, generate, isReadySync } from './llm/executorchClient';
 import { applyAdjustments } from './eventEngine/llmPrompt';
 
 export type { OneLinerTone } from '@/data/scenarios/oneLiners';
@@ -70,7 +73,95 @@ export function tonePreferencesFor(d: Disciple): OneLinerTonePreferences {
 // 매일 한 마디 발화 확률 — docs/12.
 export const ONE_LINER_DAILY_CHANCE = 0.6;
 
+// 선택된 한 마디를 서신함에 적재(모달 대신 쌓아둔다). 룰·LLM 선택 공용.
+function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneLinerCtx): void {
+  const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름
+  const day = useTimeStore.getState().totalDay;
+  const responses = {
+    encourage: pickResponse('encourage'),
+    nod: pickResponse('nod'),
+    caution: pickResponse('caution'),
+    ignore: pickResponse('ignore'),
+  };
+  useInboxStore.getState().add({
+    id: `oneliner-${disciple.id}-${day}`,
+    kind: 'one_liner', // 한 마디 (응답 가능)
+    title: `${disciple.name}의 한 마디`,
+    preview: body,
+    body,
+    priority: 'normal',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: { domain: 'oneLiner', templateId: template.id, discipleId: disciple.id, responses },
+  });
+}
+
+// LLM function-calling 선택 — 후보 중 상황에 가장 맞는 한 마디 1개. 점수가 아니라 "고르기".
+// {"pick":"<id>"} 만 받는다. 실패·미선택이면 룰 폴백(pickContextualOneLiner). docs/12·17.
+function buildSelectPrompt(disciple: Disciple, ctx: OneLinerCtx, cands: OneLinerTemplate[]): string {
+  const menu = cands.map((t) => `- ${t.id} [${t.mood ?? 'normal'}] "${t.body}"`).join('\n');
+  return [
+    '너는 무협 양육 시뮬의 "한 마디" 선택기다.',
+    '제자의 지금 상황에 가장 어울리는 한 마디를 아래 후보 중에서 정확히 하나 고른다.',
+    'JSON 한 줄 외 텍스트·설명·코드펜스 금지. 형식: {"pick":"후보의 id"}',
+    '',
+    '[제자]',
+    `- 이름: ${disciple.name}`,
+    `- 상황: 신뢰 ${ctx.trust} · 스트레스 ${ctx.stress} · 체력 ${ctx.staminaPct}% · 흑화위험 ${ctx.darknessRisk} · 적대 ${ctx.hasEnemy ? '있음' : '없음'} · 주력 성 ${ctx.mainSeong}`,
+    '',
+    '[후보 — id [결] "대사"]',
+    menu,
+    '',
+    '[출력 — 위 id 중 하나를 골라 그대로. 형식 예시]',
+    '{"pick":"id"}',
+  ].join('\n');
+}
+
+function parsePick(raw: string): string | null {
+  try {
+    const j = JSON.parse(raw) as { pick?: unknown };
+    if (typeof j.pick === 'string') return j.pick;
+  } catch {
+    /* 관대 파싱 폴백 */
+  }
+  const m = raw.match(/"pick"\s*:\s*"([^"]+)"/);
+  return m ? m[1] : null;
+}
+
+async function selectOneLinerLlm(disciple: Disciple, ctx: OneLinerCtx): Promise<OneLinerTemplate | null> {
+  const cands = candidateOneLiners(ctx);
+  if (cands.length === 0) return null;
+  if (cands.length === 1) return cands[0];
+
+  let chosen: OneLinerTemplate | null = null;
+  let llmCalled = false;
+  let debugPrompt: string | undefined;
+  let debugRaw: string | undefined;
+  if (await canGenerate()) {
+    debugPrompt = buildSelectPrompt(disciple, ctx, cands);
+    try {
+      const raw = await generate(debugPrompt);
+      debugRaw = raw;
+      const id = parsePick(raw);
+      chosen = cands.find((t) => t.id === id) ?? null;
+      llmCalled = chosen != null;
+    } catch (e) {
+      debugRaw = `[error] ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  usePendingStore.getState().pushLlmDebug({
+    source: 'oneLiner',
+    discipleName: disciple.name,
+    llmCalled,
+    prompt: debugPrompt,
+    raw: debugRaw,
+  });
+  return chosen ?? pickContextualOneLiner(ctx); // 룰 폴백(전용 우선)
+}
+
 // 매일 진행 시 호출. 확률 통과 시 활동 가능한 제자 중 무작위 1명에게 한 마디 부여.
+// 모델 준비 시 LLM 이 상황 맞는 대사를 function-calling 으로 고른다(백그라운드). 아니면 룰(즉시).
 export function triggerDailyOneLiner(): void {
   if (random() >= ONE_LINER_DAILY_CHANCE) return;
 
@@ -87,40 +178,29 @@ export function triggerDailyOneLiner(): void {
   if (candidates.length === 0) return;
 
   const disciple = candidates[Math.floor(random() * candidates.length)];
-
-  // 상황 컨텍스트 — 현재 상태에 맞는 한 마디만 발화(무작위 X). docs/12.
   const others = candidates.filter((d) => d.id !== disciple.id);
   const ctx = buildDiscipleCtx(disciple, others);
-  const template = pickContextualOneLiner(ctx);
-  if (!template) return; // 지금 상태에 맞는 한 마디 없음 — 그 날은 발화 X
-  const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름
-  const day = useTimeStore.getState().totalDay;
 
-  const responses = {
-    encourage: pickResponse('encourage'),
-    nod: pickResponse('nod'),
-    caution: pickResponse('caution'),
-    ignore: pickResponse('ignore'),
-  };
+  // 룰 경로(모델 off — 시뮬·기본·다운로드 전): 즉시 동기 선택·적재.
+  if (!isReadySync()) {
+    const template = pickContextualOneLiner(ctx);
+    if (template) queueOneLiner(disciple, template, ctx); // 맞는 게 없으면 그 날 발화 X
+    return;
+  }
 
-  // 모달 대신 서신함에 적재 — 진행 중엔 화면에 안 띄우고 쌓아둔다.
-  useInboxStore.getState().add({
-    id: `oneliner-${disciple.id}-${day}`,
-    kind: 'one_liner', // 한 마디 (응답 가능)
-    title: `${disciple.name}의 한 마디`,
-    preview: body,
-    body,
-    priority: 'normal',
-    createdAtDay: day,
-    read: false,
-    resolved: false,
-    payload: {
-      domain: 'oneLiner',
-      templateId: template.id,
-      discipleId: disciple.id,
-      responses,
-    },
-  });
+  // LLM 경로: 백그라운드 선택 — 정산 모달이 inflight 로 대기(응답 처리와 같은 패턴). docs/07.
+  const pend = usePendingStore.getState();
+  pend.beginResolution();
+  void selectOneLinerLlm(disciple, ctx)
+    .then((template) => {
+      if (template) queueOneLiner(disciple, template, ctx);
+    })
+    .catch((e) => {
+      if (typeof console !== 'undefined') console.warn('[oneLiner] 선택 실패 — 룰 폴백', e);
+      const template = pickContextualOneLiner(ctx);
+      if (template) queueOneLiner(disciple, template, ctx);
+    })
+    .finally(() => usePendingStore.getState().endResolution());
 }
 
 // LLM 프롬프트 — 한 마디 응답 전용. 점수만 출력 (텍스트·풍경 X).

@@ -218,6 +218,13 @@ export async function canGenerate(): Promise<boolean> {
   return s.loadStatus === 'ready' && instance != null;
 }
 
+// 동기 준비 체크 — 비동기 흐름을 못 타는 곳(한 마디 트리거)에서 LLM 경로/룰 폴백을 가르는 데 쓴다.
+// canGenerate 와 같은 조건의 동기판. 모델 미로드(시뮬·테스트·다운로드 전)면 false → 룰 폴백.
+export function isReadySync(): boolean {
+  const s = useLlmSettingsStore.getState();
+  return s.enabled && s.perRunCallCount < s.perRunCap && s.loadStatus === 'ready' && instance != null;
+}
+
 // 사용자가 토글 OFF 시 메모리 해제.
 export function unload(): void {
   if (instance) {
