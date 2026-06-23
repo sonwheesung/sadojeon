@@ -148,5 +148,9 @@ export interface Disciple {
   // 시드 시점에 미리 채워두면 그 값이 우선.
   tonePreferences?: OneLinerTonePreferences;
 
+  // 이미 건넨 "특이한" 한 마디 템플릿 id 들(회차 단위). 시그니처·무거운 감정결 대사는 한 번만 —
+  // 두 번 이상 안 나오게 후보에서 배제. 일상 잡담은 여기 안 쌓이고 반복 허용. docs/12.
+  saidOneLiners?: string[];
+
   notes: string[];
 }

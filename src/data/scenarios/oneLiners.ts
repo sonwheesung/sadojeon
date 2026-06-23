@@ -17,6 +17,7 @@ export interface OneLinerCondition {
   trustMin?: number;
   trustMax?: number; // 신뢰 ≤ (마음 닫음)
   darknessRiskMin?: 'medium' | 'high'; // 흑화 위험 ≥
+  darknessRiskMax?: 'low' | 'medium'; // 흑화 위험 ≤ (모순 방지 — 흑화 중엔 천진한 대사 차단)
   hasEnemy?: boolean; // 적대 관계 보유 시에만
   ageMin?: number;
   ageMax?: number;
@@ -65,21 +66,21 @@ export const ONE_LINERS: OneLinerTemplate[] = [
 
   // 관계
   // 비교·서열 — {rival}=자기보다 앞선 최강 동문 이름. 어림/연상 말투, 최약 여부로 분기.
-  { id: 'r1-young', category: 'relation', body: '사부님! {rival}는 어떻게 그렇게 잘해요? 저도 빨리 그렇게 되고 싶어요.', when: { ageMax: 11, needsRival: true } },
-  { id: 'r1-weak', category: 'relation', body: '사부님... 솔직히 제가 사문에서 제일 약한 것 같아요. {rival}만큼 하려면 멀었어요.', when: { isWeakest: true, needsRival: true } },
-  { id: 'r1-old', category: 'relation', body: '{rival}를 보면 아직 멀었구나 싶습니다. 더 갈아야겠지요.', when: { ageMin: 12, needsRival: true } },
+  { id: 'r1-young', category: 'relation', mood: 'rival', body: '사부님! {rival}는 어떻게 그렇게 잘해요? 저도 빨리 그렇게 되고 싶어요.', when: { ageMax: 11, needsRival: true } },
+  { id: 'r1-weak', category: 'relation', mood: 'rival', body: '사부님... 솔직히 제가 사문에서 제일 약한 것 같아요. {rival}만큼 하려면 멀었어요.', when: { isWeakest: true, needsRival: true } },
+  { id: 'r1-old', category: 'relation', mood: 'rival', body: '{rival}를 보면 아직 멀었구나 싶습니다. 더 갈아야겠지요.', when: { ageMin: 12, needsRival: true } },
   { id: 'r2', category: 'relation', body: '오늘 동문과 한 마디 나눴습니다. 마음이 풀립니다.', when: { stressMax: 65 } },
-  { id: 'r3', category: 'relation', body: '... 누군가 저를 자꾸 쳐다보는 듯합니다.', when: { hasEnemy: true } },
+  { id: 'r3', category: 'relation', mood: 'enmity', body: '... 누군가 저를 자꾸 쳐다보는 듯합니다.', when: { hasEnemy: true } },
 
   // 고민
-  { id: 'w1', category: 'worry', body: '제 길이 정녕 이쪽인지 가끔 묻게 됩니다.', when: { ageMin: 12 } },
-  { id: 'w2', category: 'worry', body: '강호엔 제 또래가 벌써 이름을 냈다더군요. 저는 아직 산문 안인데...', when: { ageMin: 12 } },
-  { id: 'w3', category: 'worry', body: '... 별것 아닙니다. 신경 쓰지 마십시오.', when: { trustMax: 40 } },
+  { id: 'w1', category: 'worry', mood: 'identity', body: '제 길이 정녕 이쪽인지 가끔 묻게 됩니다.', when: { ageMin: 12 } },
+  { id: 'w2', category: 'worry', mood: 'rival', body: '강호엔 제 또래가 벌써 이름을 냈다더군요. 저는 아직 산문 안인데...', when: { ageMin: 12 } },
+  { id: 'w3', category: 'worry', mood: 'distrust', body: '... 별것 아닙니다. 신경 쓰지 마십시오.', when: { trustMax: 40 } },
   { id: 'w4', category: 'worry', body: '사부님은 제 재능을 어떻게 보십니까.' },
   // 흑화 기미 — '어둠'을 라벨하지 않고 관찰 가능한 말·태도로만(feedback_hidden_game_state)
-  { id: 'w5', category: 'worry', body: '사부님... 강한 자가 약한 자를 누르는 것이, 정녕 그른 일입니까.', when: { darknessRiskMin: 'medium' } },
-  { id: 'w6', category: 'worry', body: '요즘은 검을 쥐면, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
-  { id: 'w7', category: 'worry', body: '... 그날 그자의 눈을, 아직도 잊지 못합니다.', when: { darknessRiskMin: 'high', hasEnemy: true } },
+  { id: 'w5', category: 'worry', mood: 'darkening', body: '사부님... 강한 자가 약한 자를 누르는 것이, 정녕 그른 일입니까.', when: { darknessRiskMin: 'medium' } },
+  { id: 'w6', category: 'worry', mood: 'darkening', body: '요즘은 검을 쥐면, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
+  { id: 'w7', category: 'worry', mood: 'enmity', body: '... 그날 그자의 눈을, 아직도 잊지 못합니다.', when: { darknessRiskMin: 'high', hasEnemy: true } },
 
   // ── 캐릭터 시그니처 ── (onlyFor=poolId, 나이대 분산. disciples/*.md 기반. 작성원칙: want·나이대 말투·숨은변수 직설 X)
   // 장철(jang-cheol) — 산촌 농가 둘째, 가족 그리움·우직·마을 지킴, 야망 낮음.
@@ -190,6 +191,7 @@ export interface OneLinerCtx {
   mainSeong: number;
   rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
   isWeakest: boolean; // 사문 최약
+  saidIds: string[]; // 이미 건넨 특이 대사 id — 중복 배제(같은 특이 대사 2번 금지). docs/12
 }
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
@@ -206,6 +208,30 @@ function toContentAge(realAge: number): number {
   return CONTENT_ENTRY_AGE + (realAge - CONTENT_ENTRY_AGE) * (CONTENT_ARC / RAISING_ARC);
 }
 
+// "특이한" 한 마디로 보는 결 — 무거운 감정 비트는 한 번만(두 번 이상 금지). 가벼운 결
+// (normal·calm·weary·pride·rival)은 평상시 기복이라 반복 허용. docs/12. (사용자 룰 2026-06-23)
+const ONCE_ONLY_MOODS = new Set<OneLinerMood>(['darkening', 'distrust', 'enmity', 'identity', 'homesick']);
+
+// 한 번만 써야 하는 특이 대사인가 — 캐릭터 전용(시그니처) 또는 무거운 감정결.
+export function isDistinctiveOneLiner(t: OneLinerTemplate): boolean {
+  return t.onlyFor != null || (t.mood != null && ONCE_ONLY_MOODS.has(t.mood));
+}
+
+// 모순 방지 — 결이 현재 상태와 톤이 어긋나면 배제. 핵심: 흑화 기미 중엔 '평온'한 한 마디 금지
+// ("누군가를 꺾고 싶다" 직후 "차 한 잔이 제일 좋습니다" 류 톤 충돌 차단). when 게이트로 못 막는 결 모순 보강.
+function moodConsistent(t: OneLinerTemplate, c: OneLinerCtx): boolean {
+  if (t.mood === 'calm' && c.darknessRisk !== 'low') return false;
+  return true;
+}
+
+// 이번 ctx 에서 발화 가능한 템플릿인가 — 상태(when) + 모순(mood) + 중복(특이 대사 1회).
+function eligible(t: OneLinerTemplate, c: OneLinerCtx): boolean {
+  if (!matchesCondition(t.when, c)) return false;
+  if (!moodConsistent(t, c)) return false;
+  if (isDistinctiveOneLiner(t) && c.saidIds.includes(t.id)) return false; // 이미 건넨 특이 대사 = 제외
+  return true;
+}
+
 // 상황 조건 매처 — 한마디·면담 공용.
 export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCtx): boolean {
   if (!w) return true;
@@ -215,6 +241,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   if (w.trustMin != null && c.trust < w.trustMin) return false;
   if (w.trustMax != null && c.trust > w.trustMax) return false;
   if (w.darknessRiskMin != null && RISK_RANK[c.darknessRisk] < RISK_RANK[w.darknessRiskMin]) return false;
+  if (w.darknessRiskMax != null && RISK_RANK[c.darknessRisk] > RISK_RANK[w.darknessRiskMax]) return false;
   if (w.hasEnemy != null && c.hasEnemy !== w.hasEnemy) return false;
   if (w.ageMin != null || w.ageMax != null) {
     const a = toContentAge(c.age); // 실제 나이 → 옛 5년 호 스케일로 압축해 비교
@@ -230,7 +257,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
 // 현재 상태에 맞는 한 마디 중 1개. 캐릭터 전용 시그니처가 있으면 우선(60%) — 매일 보는 한 마디가
 // 제자마다 달라지게(캐릭터 매력). 다른 제자 전용은 자동 제외. 맞는 게 없으면 null(그 날 발화 X). docs/12.
 export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null {
-  const matched = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
+  const matched = ONE_LINERS.filter((t) => eligible(t, c)); // 상태+모순+중복 게이트
   const sig = matched.filter((t) => t.onlyFor === c.discipleId);
   const uni = matched.filter((t) => !t.onlyFor);
   const useSig = sig.length > 0 && (uni.length === 0 || random() < 0.6);
@@ -242,10 +269,20 @@ export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null 
 // LLM function-calling 선택용 후보 — 조건 맞는 대사(전용 있으면 전용+공용). LLM 이 이 중 하나를
 // 상황에 맞게 고른다. 폴백(모델 off·실패)은 pickContextualOneLiner(룰, 전용 우선). docs/12·17.
 export function candidateOneLiners(c: OneLinerCtx): OneLinerTemplate[] {
-  const matched = ONE_LINERS.filter((t) => matchesCondition(t.when, c));
+  const matched = ONE_LINERS.filter((t) => eligible(t, c)); // 중복·모순 제거된 후보만 LLM 에 노출
   const sig = matched.filter((t) => t.onlyFor === c.discipleId);
   const uni = matched.filter((t) => !t.onlyFor);
   return sig.length ? [...sig, ...uni] : uni;
+}
+
+// 발화 이력 id → 최근 본문 N개(LLM 모순 방지 프롬프트용). 모르는 id(삭제된 대사)는 건너뜀.
+export function recentSaidBodies(saidIds: string[], n: number): string[] {
+  const out: string[] = [];
+  for (let i = saidIds.length - 1; i >= 0 && out.length < n; i--) {
+    const t = ONE_LINERS.find((x) => x.id === saidIds[i]);
+    if (t) out.push(t.body);
+  }
+  return out;
 }
 
 // 본문 변수 치환 — {rival}=최강 동문 이름. 발화 시점에 실제 이름으로 박는다.

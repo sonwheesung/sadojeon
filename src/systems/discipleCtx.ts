@@ -41,5 +41,6 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
     mainSeong,
     rivalName,
     isWeakest,
+    saidIds: d.saidOneLiners ?? [], // 이미 건넨 특이 대사 — 후보에서 중복 배제용
   };
 }

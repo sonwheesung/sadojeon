@@ -138,6 +138,7 @@ function withDefaults(d: Disciple): Disciple {
       pity: d.realmProgress?.pity ?? 0,
       petitioned: d.realmProgress?.petitioned ?? false,
     },
+    saidOneLiners: d.saidOneLiners ?? [], // 한 마디 발화 이력 — 구버전 세이브 방어
   };
 }
 

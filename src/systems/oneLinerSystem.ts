@@ -14,8 +14,10 @@ import { random } from '@/systems/rng';
 import {
   candidateOneLiners,
   fillOneLinerBody,
+  isDistinctiveOneLiner,
   pickContextualOneLiner,
   pickResponse,
+  recentSaidBodies,
   type OneLinerCtx,
   type OneLinerTemplate,
 } from '@/data/scenarios/oneLiners';
@@ -75,6 +77,13 @@ export const ONE_LINER_DAILY_CHANCE = 0.6;
 
 // 선택된 한 마디를 서신함에 적재(모달 대신 쌓아둔다). 룰·LLM 선택 공용.
 function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneLinerCtx): void {
+  // 특이 대사(시그니처·무거운 감정결)는 발화 이력에 기록 — 같은 제자에게 두 번 안 나오게(중복 금지). docs/12.
+  if (isDistinctiveOneLiner(template)) {
+    const said = disciple.saidOneLiners ?? [];
+    if (!said.includes(template.id)) {
+      useDiscipleStore.getState().update(disciple.id, { saidOneLiners: [...said, template.id] });
+    }
+  }
   const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름
   const day = useTimeStore.getState().totalDay;
   const responses = {
@@ -101,14 +110,20 @@ function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneL
 // {"pick":"<id>"} 만 받는다. 실패·미선택이면 룰 폴백(pickContextualOneLiner). docs/12·17.
 function buildSelectPrompt(disciple: Disciple, ctx: OneLinerCtx, cands: OneLinerTemplate[]): string {
   const menu = cands.map((t) => `- ${t.id} [${t.mood ?? 'normal'}] "${t.body}"`).join('\n');
+  const recent = recentSaidBodies(ctx.saidIds, 3); // 최근 한 말 — 모순(톤 급변) 방지
+  const recentBlock = recent.length
+    ? ['', '[이 제자가 최근에 한 말 — 이와 어긋나거나 모순되는 결은 피한다]', ...recent.map((b) => `- "${b}"`)]
+    : [];
   return [
     '너는 무협 양육 시뮬의 "한 마디" 선택기다.',
     '제자의 지금 상황에 가장 어울리는 한 마디를 아래 후보 중에서 정확히 하나 고른다.',
+    '최근에 한 말과 흐름이 이어지게 — 갑자기 정반대 결(예: 흑화 직후 천진한 평온)로 튀지 않게 고른다.',
     'JSON 한 줄 외 텍스트·설명·코드펜스 금지. 형식: {"pick":"후보의 id"}',
     '',
     '[제자]',
     `- 이름: ${disciple.name}`,
     `- 상황: 신뢰 ${ctx.trust} · 스트레스 ${ctx.stress} · 체력 ${ctx.staminaPct}% · 흑화위험 ${ctx.darknessRisk} · 적대 ${ctx.hasEnemy ? '있음' : '없음'} · 주력 성 ${ctx.mainSeong}`,
+    ...recentBlock,
     '',
     '[후보 — id [결] "대사"]',
     menu,

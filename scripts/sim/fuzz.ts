@@ -27,6 +27,7 @@ interface DLike {
   stats?: Record<string, { level?: number } | undefined>;
   martialArts?: { artId?: string; seong?: number }[];
   relationships?: Record<string, string>;
+  saidOneLiners?: string[];
 }
 
 const fin = (n: unknown): boolean => typeof n === 'number' && Number.isFinite(n);
@@ -57,6 +58,12 @@ function check(ds: DLike[], resources: number, diamonds: number, inbox: number, 
       if (!VALID_REL.has(lv)) v.push(`${nm}->${oid}=${lv}`);
       if (oid === d.id) v.push(`${nm} 자기관계`);
     }
+    // 특이 한 마디 2회 금지(사용자 룰) — 발화 이력에 같은 id 중복이면 위반. docs/12.
+    const said = d.saidOneLiners;
+    if (said) {
+      const seenLine = new Set<string>();
+      for (const sid of said) { if (seenLine.has(sid)) v.push(`${nm} 한마디중복=${sid}`); seenLine.add(sid); }
+    }
   }
   if (!finNonNeg(resources)) v.push(`자금=${resources}`);
   if (!finNonNeg(diamonds)) v.push(`다이아=${diamonds}`);
@@ -73,7 +80,7 @@ function selfTest(): boolean {
   };
   const clean = check([good], 100, 0, 10, ['g']);
   const broken = check(
-    [{ ...good, martialArts: [{ artId: 'x', seong: 99 }], realmProgress: { internal: NaN }, darknessLevel: 9, relationships: { g: 'enemy', q: 'bogus' } }],
+    [{ ...good, martialArts: [{ artId: 'x', seong: 99 }], realmProgress: { internal: NaN }, darknessLevel: 9, relationships: { g: 'enemy', q: 'bogus' }, saidOneLiners: ['dk1', 'dk1'] }],
     -5, -1, 9999, ['g', 'g'],
   );
   console.log(`  A/B 오라클: clean ${clean.length}위반(0 기대) · broken ${broken.length}위반(≥7 기대) — ${broken.slice(0, 8).join(', ')}`);

@@ -32,6 +32,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     mainSeong: 4,
     rivalName: null,
     isWeakest: false,
+    saidIds: [],
     ...over,
   };
 }
@@ -90,7 +91,33 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('맞는 후보 있을 때 null 아님', nullCount === 0);
 }
 
-// 6) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)
+// 6) 중복 금지 — 이미 건넨 특이 대사는 후보에서 빠진다
+{
+  const base = ctx({ discipleId: 'jin-sohwa', darknessRisk: 'medium', age: 16, trust: 25 });
+  const before = candidateOneLiners(base);
+  const distinctive = before.find((t) => t.onlyFor || (t.mood && t.mood !== 'normal'));
+  check('특이 대사 후보 존재(중복 테스트용)', distinctive != null, distinctive?.id);
+  if (distinctive) {
+    const after = candidateOneLiners({ ...base, saidIds: [distinctive.id] });
+    check('이미 건넨 특이 대사 → 후보 제외', !after.some((t) => t.id === distinctive.id));
+  }
+  // 일상(normal·결없음) 대사는 saidIds 에 넣어도 계속 후보(반복 허용)
+  const filler = before.find((t) => !t.onlyFor && (!t.mood || t.mood === 'normal'));
+  if (filler) {
+    const after = candidateOneLiners({ ...base, saidIds: [filler.id] });
+    check('일상 대사는 반복 허용(제외 안 됨)', after.some((t) => t.id === filler.id), filler.id);
+  }
+}
+
+// 7) 모순 금지 — 흑화 기미(medium+) 중엔 '평온(calm)' 대사가 후보에 안 뜬다
+{
+  const dark = candidateOneLiners(ctx({ discipleId: 'baek-yeon', darknessRisk: 'medium', age: 16 }));
+  check('흑화 중 → calm 대사 배제(모순 방지)', !dark.some((t) => t.mood === 'calm'));
+  const lowRisk = candidateOneLiners(ctx({ discipleId: 'baek-yeon', darknessRisk: 'low', age: 16, stress: 20, trust: 60 }));
+  check('평온 상태 → calm 대사 등장 가능', lowRisk.some((t) => t.mood === 'calm'));
+}
+
+// 8) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)
 {
   const DISCIPLE_POOL = new Set([
     'jang-cheol', 'jin-sohwa', 'han-baram', 'yun-soso', 'gang-muyeol',
@@ -100,7 +127,7 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('전용 onlyFor 모두 유효 제자', bad.length === 0, bad.map((t) => `${t.id}:${t.onlyFor}`).join(','));
 }
 
-// 7) 조건 매처 정합 — 빈 조건은 항상 통과
+// 9) 조건 매처 정합 — 빈 조건은 항상 통과
 check('빈 조건 통과', matchesCondition(undefined, ctx({})));
 
 const total = ONE_LINERS.length;
