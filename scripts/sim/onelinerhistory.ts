@@ -144,11 +144,11 @@ async function main(): Promise<void> {
   for (const seed of seeds) for (const id of ALL) {
     const seen = new Set<string>();
     for (const r of records.filter((x) => x.seed === seed && x.discipleId === id).sort((a, b) => a.day - b.day)) {
-      const distinctive = r.onlyFor || ['darkening', 'distrust', 'enmity', 'identity', 'homesick'].includes(r.mood);
+      const distinctive = ['darkening', 'distrust', 'enmity', 'identity'].includes(r.mood); // 무거운 감정만 once-only
       if (distinctive) { if (seen.has(r.templateId)) dupHits.push(`시드${seed} ${r.name} ${r.templateId} 재발`); seen.add(r.templateId); }
     }
   }
-  out(`## ④ 특이 대사 중복(0 기대): ${dupHits.length}건`);
+  out(`## ④ 무거운 감정 대사 중복(0 기대): ${dupHits.length}건`);
   for (const h of dupHits.slice(0, 20)) out(`- ${h}`);
   out('');
 
@@ -168,14 +168,16 @@ async function main(): Promise<void> {
   out('');
 
   // ⑥ 일상 대사 반복 단조 — 제자별 최다 반복 템플릿(특이 제외)
-  out(`## ⑥ 일상 대사 반복 단조 — 제자별 최다 반복(횟수≥5만)`);
+  out(`## ⑥ 반복 단조 — 제자별 최다 반복 템플릿(전체, 단일 시드 기준 환산)`);
   for (const id of ALL) {
-    const rs = records.filter((r) => r.discipleId === id && !r.onlyFor && r.mood === 'normal');
+    const rs = records.filter((r) => r.discipleId === id);
     if (rs.length === 0) continue;
+    const nSeeds = new Set(rs.map((r) => r.seed)).size || 1;
     const cnt: Record<string, number> = {};
     for (const r of rs) cnt[r.templateId] = (cnt[r.templateId] ?? 0) + 1;
-    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).filter(([, n]) => n >= 5).slice(0, 3);
-    if (top.length) out(`- ${rs[0].name}: ${top.map(([t, n]) => `${t}×${n}`).join(', ')}`);
+    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    // 시드당 평균으로 환산(한 회차에서 그 줄을 몇 번 보는지)
+    out(`- ${rs[0].name}: ${top.map(([t, n]) => `${t}×${(n / nSeeds).toFixed(1)}`).join(', ')} (회차당)`);
   }
   out('');
 

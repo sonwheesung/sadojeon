@@ -573,6 +573,7 @@ export interface OneLinerCtx {
   rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
   isWeakest: boolean; // 사문 최약
   saidIds: string[]; // 이미 건넨 특이 대사 id — 중복 배제(같은 특이 대사 2번 금지). docs/12
+  recentIds: string[]; // 최근 건넨 한 마디 id(최대 12) — recency 회피("방금 한 말" 임시 배제). docs/12
 }
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
@@ -589,13 +590,15 @@ function toContentAge(realAge: number): number {
   return CONTENT_ENTRY_AGE + (realAge - CONTENT_ENTRY_AGE) * (CONTENT_ARC / RAISING_ARC);
 }
 
-// "특이한" 한 마디로 보는 결 — 무거운 감정 비트는 한 번만(두 번 이상 금지). 가벼운 결
-// (normal·calm·weary·pride·rival)은 평상시 기복이라 반복 허용. docs/12. (사용자 룰 2026-06-23)
-const ONCE_ONLY_MOODS = new Set<OneLinerMood>(['darkening', 'distrust', 'enmity', 'identity', 'homesick']);
+// "특이한" 한 마디 = 무거운 감정의 일회성 고백(흑화·불신·적의·정체성 위기)만. 한 번만(두 번 금지).
+// 가벼운 결(normal·calm·weary·pride·rival·homesick)은 캐릭터 전용이어도 평상 기복이라 반복 허용.
+// ※ onlyFor 만으로 once-only 처리하면 30개 일상 시그니처가 금세 소진→공용 풀로 떨어져 같은 줄이
+//   폭증한다(이력분석 2026-06-23: 같은 줄 80+회). 그래서 무거운 감정결만 once-only로 좁힌다. docs/12.
+const ONCE_ONLY_MOODS = new Set<OneLinerMood>(['darkening', 'distrust', 'enmity', 'identity']);
 
-// 한 번만 써야 하는 특이 대사인가 — 캐릭터 전용(시그니처) 또는 무거운 감정결.
+// 한 번만 써야 하는 특이 대사인가 — 무거운 감정결(흑화·불신·적의·정체성)뿐. 그 외(일상·평온·향수 등)는 반복 가능.
 export function isDistinctiveOneLiner(t: OneLinerTemplate): boolean {
-  return t.onlyFor != null || (t.mood != null && ONCE_ONLY_MOODS.has(t.mood));
+  return t.mood != null && ONCE_ONLY_MOODS.has(t.mood);
 }
 
 // 모순 방지 — 결이 현재 상태와 톤이 어긋나면 배제. 핵심: 흑화 기미 중엔 '평온'한 한 마디 금지
@@ -613,6 +616,14 @@ function eligible(t: OneLinerTemplate, c: OneLinerCtx): boolean {
   if (!moodConsistent(t, c)) return false;
   if (isDistinctiveOneLiner(t) && c.saidIds.includes(t.id)) return false; // 이미 건넨 특이 대사 = 제외
   return true;
+}
+
+// recency 회피 — "방금 한 말"(recentIds)은 후보에서 임시로 뺀다. 단 풀이 너무 작아지면(≤3) 무시(고갈 방지).
+// "같은 대사 또 나오네" 체감을 없애는 핵심 레버. 큰 일상 풀과 합쳐 회차당 같은 줄 노출을 크게 낮춘다. docs/12.
+function freshen(pool: OneLinerTemplate[], c: OneLinerCtx): OneLinerTemplate[] {
+  if (pool.length <= 3 || c.recentIds.length === 0) return pool;
+  const fresh = pool.filter((t) => !c.recentIds.includes(t.id));
+  return fresh.length >= 3 ? fresh : pool;
 }
 
 // 상황 조건 매처 — 한마디·면담 공용.
@@ -641,8 +652,8 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
 // 제자마다 달라지게(캐릭터 매력). 다른 제자 전용은 자동 제외. 맞는 게 없으면 null(그 날 발화 X). docs/12.
 export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null {
   const matched = ONE_LINERS.filter((t) => eligible(t, c)); // 상태+모순+중복 게이트
-  const sig = matched.filter((t) => t.onlyFor === c.discipleId);
-  const uni = matched.filter((t) => !t.onlyFor);
+  const sig = freshen(matched.filter((t) => t.onlyFor === c.discipleId), c); // 최근 발화 제외
+  const uni = freshen(matched.filter((t) => !t.onlyFor), c);
   const useSig = sig.length > 0 && (uni.length === 0 || random() < 0.6);
   const pool = useSig ? sig : uni;
   if (pool.length === 0) return null;
@@ -653,8 +664,8 @@ export function pickContextualOneLiner(c: OneLinerCtx): OneLinerTemplate | null 
 // 상황에 맞게 고른다. 폴백(모델 off·실패)은 pickContextualOneLiner(룰, 전용 우선). docs/12·17.
 export function candidateOneLiners(c: OneLinerCtx): OneLinerTemplate[] {
   const matched = ONE_LINERS.filter((t) => eligible(t, c)); // 중복·모순 제거된 후보만 LLM 에 노출
-  const sig = matched.filter((t) => t.onlyFor === c.discipleId);
-  const uni = matched.filter((t) => !t.onlyFor);
+  const sig = freshen(matched.filter((t) => t.onlyFor === c.discipleId), c); // 최근 발화 제외(recency)
+  const uni = freshen(matched.filter((t) => !t.onlyFor), c);
   return sig.length ? [...sig, ...uni] : uni;
 }
 

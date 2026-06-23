@@ -139,6 +139,7 @@ function withDefaults(d: Disciple): Disciple {
       petitioned: d.realmProgress?.petitioned ?? false,
     },
     saidOneLiners: d.saidOneLiners ?? [], // 한 마디 발화 이력 — 구버전 세이브 방어
+    recentOneLiners: d.recentOneLiners ?? [], // 최근 발화(recency 회피) — 구버전 세이브 방어
   };
 }
 

@@ -73,17 +73,20 @@ export function tonePreferencesFor(d: Disciple): OneLinerTonePreferences {
 }
 
 // 매일 한 마디 발화 확률 — docs/12.
-export const ONE_LINER_DAILY_CHANCE = 0.6;
+export const ONE_LINER_DAILY_CHANCE = 0.45;
 
 // 선택된 한 마디를 서신함에 적재(모달 대신 쌓아둔다). 룰·LLM 선택 공용.
 function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneLinerCtx): void {
-  // 특이 대사(시그니처·무거운 감정결)는 발화 이력에 기록 — 같은 제자에게 두 번 안 나오게(중복 금지). docs/12.
+  // 무거운 감정결 특이 대사는 영구 이력 — 같은 제자에게 두 번 안 나오게(중복 금지). docs/12.
+  const patch: Partial<Disciple> = {};
   if (isDistinctiveOneLiner(template)) {
     const said = disciple.saidOneLiners ?? [];
-    if (!said.includes(template.id)) {
-      useDiscipleStore.getState().update(disciple.id, { saidOneLiners: [...said, template.id] });
-    }
+    if (!said.includes(template.id)) patch.saidOneLiners = [...said, template.id];
   }
+  // 최근 발화 이력(recency) — 모든 한 마디. 최근 8개만 유지(적격 풀보다 작게 잡아 확실히 회전). docs/12.
+  const recent = [...(disciple.recentOneLiners ?? []), template.id].slice(-8);
+  patch.recentOneLiners = recent;
+  useDiscipleStore.getState().update(disciple.id, patch);
   const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름
   const day = useTimeStore.getState().totalDay;
   const responses = {

@@ -33,6 +33,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     rivalName: null,
     isWeakest: false,
     saidIds: [],
+    recentIds: [],
     ...over,
   };
 }
@@ -91,21 +92,22 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('맞는 후보 있을 때 null 아님', nullCount === 0);
 }
 
-// 6) 중복 금지 — 이미 건넨 특이 대사는 후보에서 빠진다
+// 6) 중복 금지 — 이미 건넨 "무거운 감정" 특이 대사는 후보에서 빠진다(흑화·불신·적의·정체성만 once-only)
 {
+  const HEAVY = ['darkening', 'distrust', 'enmity', 'identity'];
   const base = ctx({ discipleId: 'jin-sohwa', darknessRisk: 'medium', age: 16, trust: 25 });
   const before = candidateOneLiners(base);
-  const distinctive = before.find((t) => t.onlyFor || (t.mood && t.mood !== 'normal'));
-  check('특이 대사 후보 존재(중복 테스트용)', distinctive != null, distinctive?.id);
+  const distinctive = before.find((t) => t.mood && HEAVY.includes(t.mood));
+  check('무거운 감정 후보 존재(중복 테스트용)', distinctive != null, distinctive?.id);
   if (distinctive) {
     const after = candidateOneLiners({ ...base, saidIds: [distinctive.id] });
-    check('이미 건넨 특이 대사 → 후보 제외', !after.some((t) => t.id === distinctive.id));
+    check('이미 건넨 무거운 감정 대사 → 후보 제외', !after.some((t) => t.id === distinctive.id));
   }
-  // 일상(normal·결없음) 대사는 saidIds 에 넣어도 계속 후보(반복 허용)
-  const filler = before.find((t) => !t.onlyFor && (!t.mood || t.mood === 'normal'));
+  // 일상·전용 가벼운 대사는 saidIds 에 넣어도 계속 후보(반복 허용) — onlyFor 라도 normal/calm 등은 반복
+  const filler = before.find((t) => !t.mood || !HEAVY.includes(t.mood));
   if (filler) {
     const after = candidateOneLiners({ ...base, saidIds: [filler.id] });
-    check('일상 대사는 반복 허용(제외 안 됨)', after.some((t) => t.id === filler.id), filler.id);
+    check('가벼운 대사는 반복 허용(제외 안 됨)', after.some((t) => t.id === filler.id), filler.id);
   }
 }
 
@@ -127,7 +129,25 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('전용 onlyFor 모두 유효 제자', bad.length === 0, bad.map((t) => `${t.id}:${t.onlyFor}`).join(','));
 }
 
-// 9) 조건 매처 정합 — 빈 조건은 항상 통과
+// 9) recency 회피 — 최근 발화는 후보에서 임시로 빠진다(풀 충분할 때)
+{
+  const base = ctx({ discipleId: 'jang-cheol', age: 16, trust: 60, stress: 30 });
+  const all = candidateOneLiners(base);
+  check('jang 후보 풀 충분(recency 테스트)', all.length > 6, `${all.length}종`);
+  if (all.length > 6) {
+    const recent = all.slice(0, 4).map((t) => t.id);
+    const after = candidateOneLiners({ ...base, recentIds: recent });
+    const leaked = after.filter((t) => recent.includes(t.id));
+    check('최근 발화는 후보에서 제외', leaked.length === 0, `누수 ${leaked.length}`);
+  }
+  // 풀이 작으면 recency 무시(고갈 방지) — 좁은 상태로 압박
+  const narrow = ctx({ discipleId: 'none', darknessRisk: 'high', trust: 90, stress: 5, age: 16 });
+  const np = candidateOneLiners(narrow);
+  const np2 = candidateOneLiners({ ...narrow, recentIds: np.map((t) => t.id) });
+  check('풀 고갈 시 recency 무시(후보 유지)', np2.length > 0, `${np2.length}종`);
+}
+
+// 10) 조건 매처 정합 — 빈 조건은 항상 통과
 check('빈 조건 통과', matchesCondition(undefined, ctx({})));
 
 const total = ONE_LINERS.length;
