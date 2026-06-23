@@ -7,6 +7,7 @@
 import { useAchievementStore } from '@/stores/achievementStore';
 import { useTallyStore } from '@/stores/tallyStore';
 import { useTutorialStore } from '@/stores/tutorialStore';
+import { useMetNpcStore } from '@/stores/metNpcStore';
 import { useCodexStore, type OwnedScroll } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
 
@@ -14,6 +15,7 @@ const ACCOUNT_STORES = {
   achievement: useAchievementStore,
   tally: useTallyStore,
   tutorial: useTutorialStore, // 본 튜토리얼 주제 집합 — 계정 단위(docs/44)
+  metNpc: useMetNpcStore, // 만난 네임드 NPC 집합 — 계정 단위 도감(docs/24·38)
 } as const;
 
 type AccountStores = typeof ACCOUNT_STORES;
@@ -47,12 +49,15 @@ export function captureAccountState(): AccountState {
 }
 
 // AccountState 를 스토어에 반영(유저 로드).
+// **전방호환**: 옛 account(새 스토어 키 없음)를 로드해도 누락 키는 건너뛰어 기본값 유지 — 새 계정
+// 스토어 추가 시 기존 유저 account_state 로드가 그 스토어를 undefined 로 날리지 않게(gameState R12 동류). docs/37 C10.
 export function commitAccountState(state: AccountState): void {
   for (const key of Object.keys(ACCOUNT_STORES) as (keyof AccountStores)[]) {
+    if (state[key] == null) continue; // 누락 키 — 클린 슬레이트(reset) 기본값 유지
     const store = ACCOUNT_STORES[key] as unknown as { setState: (partial: unknown) => void };
     store.setState(state[key]);
   }
-  useGameStore.setState({ diamonds: state.diamonds });
+  if (state.diamonds != null) useGameStore.setState({ diamonds: state.diamonds });
   useCodexStore.getState().commitOwnership(state.codexScrolls ?? []); // 비급 소유 반영(연구는 run blob 이 덮음)
 }
 
@@ -61,6 +66,7 @@ export function resetAccountState(): void {
   useAchievementStore.setState({ unlocked: [], unlockedArts: [] } as never);
   useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} } as never);
   useTutorialStore.setState({ seen: [] } as never); // 신규 유저 클린 슬레이트 — 안내 노출
+  useMetNpcStore.setState({ met: [] } as never); // 도감 만남 기록도 유저별 — 요청 클린 슬레이트
   useCodexStore.setState({ scrolls: [] } as never); // 비급 소유도 유저별 — 요청 클린 슬레이트(이전 유저 잔여 차단)
   useGameStore.setState({ diamonds: 0 }); // 다이아도 유저별 — 요청 클린 슬레이트
 }

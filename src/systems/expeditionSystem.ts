@@ -16,6 +16,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useFieldEventStore, type FieldEventChoiceView } from '@/stores/fieldEventStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
+import { useMetNpcStore } from '@/stores/metNpcStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { worldThreat } from './worldSystem';
@@ -214,6 +215,7 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
     if (master) {
       prompt = `${master.affiliation}의 ${master.name}(${master.realm})이(가) 길을 막아섰다. ${event.prompt}`;
       sceneLine = `${names}의 앞을, 압도적인 기세의 고수가 가로막았다.`;
+      useMetNpcStore.getState().markMet(master.id); // 조우 — 도감에서 베일이 벗겨진다(포켓몬 결). docs/24
     }
   }
   useFieldEventStore.getState().push({

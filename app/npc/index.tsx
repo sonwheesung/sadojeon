@@ -11,7 +11,14 @@ import {
   type RunNpc,
 } from '@/data/npcs';
 import { useNpcStore } from '@/stores/npcStore';
+import { useMetNpcStore } from '@/stores/metNpcStore';
 import { colors, radius, spacing, typography } from '@/theme';
+
+// 도감 공개 규칙(포켓몬 결) — 공개 인물(ageKnown)은 강호에 이름나 기본 공개,
+// 베일 인물(사파·마교 핵심)은 강호에서 만나야(met) 실루엣이 벗겨진다. docs/24·38.
+function isRevealed(npc: RunNpc, met: string[]): boolean {
+  return npc.ageKnown || met.includes(npc.id);
+}
 
 // 네임드 도감 — 강호 화면 [도감] 진입. 회차별 살아있는 상태(npcStore) 기준.
 // 세력 카테고리 탭 + 2열 그리드(직급순). 사망·멸망은 흐리게.
@@ -19,6 +26,7 @@ export default function NpcCodexScreen() {
   const [faction, setFaction] = useState<NpcFaction>('right');
   const npcs = useNpcStore((s) => s.npcs);
   const seedDefaults = useNpcStore((s) => s.seedDefaults);
+  const met = useMetNpcStore((s) => s.met);
 
   // 비어 있으면(구 회차 등) 기본 시드 — 화면이 비지 않게.
   useEffect(() => {
@@ -64,11 +72,16 @@ export default function NpcCodexScreen() {
           {list.length === 0 ? (
             <Text style={styles.empty}>아직 알려진 인물이 없다.</Text>
           ) : (
-            <View style={styles.grid}>
-              {list.map((npc) => (
-                <NpcCard key={npc.id} npc={npc} />
-              ))}
-            </View>
+            <>
+              <Text style={styles.progress}>
+                만남 {list.filter((n) => isRevealed(n, met)).length} / {list.length}
+              </Text>
+              <View style={styles.grid}>
+                {list.map((npc) => (
+                  <NpcCard key={npc.id} npc={npc} revealed={isRevealed(npc, met)} />
+                ))}
+              </View>
+            </>
           )}
         </ScrollView>
       </PaperCard>
@@ -97,7 +110,28 @@ function Header() {
   );
 }
 
-function NpcCard({ npc }: { npc: RunNpc }) {
+function NpcCard({ npc, revealed }: { npc: RunNpc; revealed: boolean }) {
+  // 미발견(베일) — 실루엣 카드. 세력(탭)만 알 뿐 정체는 가린다.
+  if (!revealed) {
+    return (
+      <Pressable
+        style={[styles.card, styles.cardLocked]}
+        onPress={() => router.push(`/npc/${npc.id}` as Href)}
+        accessibilityRole="button"
+        accessibilityLabel="아직 만나지 못한 인물"
+      >
+        <View style={styles.portrait}>
+          <Text style={styles.silhouette}>?</Text>
+        </View>
+        <Text style={styles.affiliation} numberOfLines={1}>
+          베일에 싸인 인물
+        </Text>
+        <Text style={styles.name} numberOfLines={1}>
+          ???
+        </Text>
+      </Pressable>
+    );
+  }
   const gone = npc.status !== 'active'; // 사망·멸망
   const statusLabel = npc.status === 'dead' ? '사망' : npc.status === 'fallen' ? '멸문' : null;
   return (
@@ -238,6 +272,22 @@ const styles = StyleSheet.create({
   },
   cardGone: {
     opacity: 0.45,
+  },
+  cardLocked: {
+    opacity: 0.6,
+    backgroundColor: colors.paperLight,
+  },
+  silhouette: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xl,
+    color: colors.inkSoft,
+  },
+  progress: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.inkSoft,
+    textAlign: 'right',
+    paddingBottom: spacing.xs,
   },
   statusLabel: {
     fontFamily: typography.serifBold,

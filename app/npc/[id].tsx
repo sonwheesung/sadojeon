@@ -6,6 +6,7 @@ import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { findNpc, npcAgeLabel, NPC_FACTION_LABEL, type RunNpc } from '@/data/npcs';
 import { useNpcStore } from '@/stores/npcStore';
+import { useMetNpcStore } from '@/stores/metNpcStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -17,6 +18,7 @@ export default function NpcDetailScreen() {
   const fromRun = useNpcStore((s) => (id ? s.npcs.find((n) => n.id === id) : undefined));
   const npc: RunNpc | undefined = fromRun ?? (id ? (findNpc(id) as RunNpc | undefined) : undefined);
   const currentYear = useTimeStore((s) => s.current.year);
+  const met = useMetNpcStore((s) => s.met);
 
   if (!npc) {
     return (
@@ -25,6 +27,27 @@ export default function NpcDetailScreen() {
           <Header />
           <View style={styles.empty}>
             <Text style={styles.emptyLabel}>알려지지 않은 인물이다.</Text>
+          </View>
+        </PaperCard>
+      </SafetyZone>
+    );
+  }
+
+  // 미발견(베일) 인물 — 정체를 가린다(포켓몬 결). 강호에서 만나야 행적이 드러난다. docs/24·38.
+  const revealed = npc.ageKnown || met.includes(npc.id);
+  if (!revealed) {
+    return (
+      <SafetyZone variant="modal" background={colors.background}>
+        <PaperCard>
+          <Header />
+          <View style={styles.lockedWrap}>
+            <View style={styles.portrait}>
+              <Text style={styles.silhouette}>?</Text>
+            </View>
+            <Text style={styles.lockedName}>베일에 싸인 인물</Text>
+            <Text style={styles.lockedHint}>
+              아직 만나지 못한 강호의 인물이다. 길 위에서 마주치면, 그 정체와 행적이 드러날 것이다.
+            </Text>
           </View>
         </PaperCard>
       </SafetyZone>
@@ -227,5 +250,33 @@ const styles = StyleSheet.create({
     fontFamily: typography.serif,
     fontSize: typography.sizes.sm,
     color: colors.inkSoft,
+  },
+
+  // 미발견(베일) 잠금 화면
+  lockedWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.base,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  silhouette: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.xl,
+    color: colors.inkSoft,
+  },
+  lockedName: {
+    fontFamily: typography.serifBold,
+    fontSize: typography.sizes.lg,
+    color: colors.inkSoft,
+    letterSpacing: typography.letterSpacing.wide,
+  },
+  lockedHint: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.sm,
+    color: colors.inkSoft,
+    textAlign: 'center',
+    lineHeight: typography.sizes.sm * 1.6,
   },
 });
