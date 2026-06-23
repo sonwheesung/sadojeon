@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import { resolveFieldEvent } from '@/systems/fieldEventSystem';
+import { meetNpcsInText } from '@/systems/npcEncounter';
 import type { CutsceneTone } from '@/data/cutscenes';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -27,6 +28,8 @@ export function FieldEventOverlay() {
   const resolvedRef = useRef<string | null>(null); // 마지막 처리한 사건 id — 이중 탭 멱등 가드
   useEffect(() => {
     setPhase('scene'); // 새 사건마다 컷씬부터.
+    // 현장 급보 본문에 네임드가 나오면 도감 만남 자동 처리 — 모든 field event(의뢰·출행) 공통 경로. docs/24.
+    if (current) meetNpcsInText(current.title, current.sceneLine, current.prompt);
   }, [current?.id]);
 
   if (!current || settlement) {

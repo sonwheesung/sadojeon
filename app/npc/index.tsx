@@ -12,6 +12,7 @@ import {
 } from '@/data/npcs';
 import { useNpcStore } from '@/stores/npcStore';
 import { useMetNpcStore } from '@/stores/metNpcStore';
+import { meetAllNpcs } from '@/systems/npcEncounter';
 import { colors, radius, spacing, typography } from '@/theme';
 
 // 도감 공개 규칙(포켓몬 결) — 공개 인물(ageKnown)은 강호에 이름나 기본 공개,
@@ -73,9 +74,16 @@ export default function NpcCodexScreen() {
             <Text style={styles.empty}>아직 알려진 인물이 없다.</Text>
           ) : (
             <>
-              <Text style={styles.progress}>
-                만남 {list.filter((n) => isRevealed(n, met)).length} / {list.length}
-              </Text>
+              <View style={styles.progressRow}>
+                <Text style={styles.progress}>
+                  만남 {list.filter((n) => isRevealed(n, met)).length} / {list.length}
+                </Text>
+                {__DEV__ ? (
+                  <Pressable onPress={() => meetAllNpcs()} hitSlop={6} accessibilityRole="button">
+                    <Text style={styles.devBtn}>전체 만남(개발)</Text>
+                  </Pressable>
+                ) : null}
+              </View>
               <View style={styles.grid}>
                 {list.map((npc) => (
                   <NpcCard key={npc.id} npc={npc} revealed={isRevealed(npc, met)} />
@@ -282,12 +290,22 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     color: colors.inkSoft,
   },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: spacing.xs,
+  },
   progress: {
     fontFamily: typography.serif,
     fontSize: typography.sizes.xs,
     color: colors.inkSoft,
-    textAlign: 'right',
-    paddingBottom: spacing.xs,
+  },
+  devBtn: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.xs,
+    color: colors.seal,
+    textDecorationLine: 'underline',
   },
   statusLabel: {
     fontFamily: typography.serifBold,

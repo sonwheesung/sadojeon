@@ -16,7 +16,6 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useFieldEventStore, type FieldEventChoiceView } from '@/stores/fieldEventStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
-import { useMetNpcStore } from '@/stores/metNpcStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { worldThreat } from './worldSystem';
@@ -34,6 +33,7 @@ import { absorbDrainedQi } from './simmaSystem';
 import { shiftPersona } from './personaShift';
 import { attemptQuestEnlightenment } from './trainingSystem';
 import { gainMainSeongExpArts } from './martialExp';
+import { meetNpc, meetNpcsInText } from './npcEncounter';
 import type { Disciple, Milestone, PersonalityTraits } from '@/types';
 import { REL_UP } from '@/data/relationTransitions';
 import type {
@@ -215,7 +215,7 @@ function fireEvent(active: ActiveActivity, dest: ExpeditionDest): void {
     if (master) {
       prompt = `${master.affiliation}의 ${master.name}(${master.realm})이(가) 길을 막아섰다. ${event.prompt}`;
       sceneLine = `${names}의 앞을, 압도적인 기세의 고수가 가로막았다.`;
-      useMetNpcStore.getState().markMet(master.id); // 조우 — 도감에서 베일이 벗겨진다(포켓몬 결). docs/24
+      meetNpc(master.id); // 조우 — 도감에서 베일이 벗겨진다(포켓몬 결). 단일 seam. docs/24
     }
   }
   useFieldEventStore.getState().push({
@@ -341,6 +341,7 @@ function applyNonCombat(active: ActiveActivity, e: ExpeditionEffect): void {
     if (victim && dest) inflictWound(victim.id, dest.woundType, e.woundSeverity, (6 - e.woundSeverity) * 5);
   }
   if (e.jianghuNews) {
+    meetNpcsInText(e.jianghuNews); // 풍문에 네임드가 거론되면 도감 만남 자동 처리. docs/24
     const day = useTimeStore.getState().totalDay;
     useInboxStore.getState().add({
       id: `xnews-${active.id}-${day}`,
