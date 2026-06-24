@@ -1,5 +1,6 @@
 {
   "_note": "docs/36 통계 정본의 기계 판독용 사본. 36이 갱신되면 이 파일도 같이 갱신. 단일 진실은 docs/36. 절차 docs/42.",
+  "_band_semantics": "band = statcheck.ts 의 WARN/기대범위(측정값 둘레 통계 CI)일 뿐, PASS/FAIL 을 결정하지 않는다(statcheck 주석). 각 sim 코드의 band()/check() 하드 FAIL 게이트와 다를 수 있고(게이트는 안티플레이크로 더 넓게 잡음) 그게 정상이다 — 예: extremerisk death WARN[0,5] vs 코드 게이트[0.5,8], world war_rate WARN[22,36] vs 코드[18,40]. 둘이 다르다고 회귀가 아니다(2026-06-24 케이스감사 오탐 방지).",
   "_fields": "id=고유키, doc=출처문서, metric=무엇, value=베이스라인 측정값, unit, band=[lo,hi] 기대범위, n=표본, date=측정일, sim=돌린 시뮬",
   "baselines": [
     { "id": "combat.mirror_winrate", "doc": "36/37 B1", "metric": "거울 매치(동일 3:3) 승률", "value": 50, "unit": "%", "band": [43, 58], "n": 10000, "date": "2026-06-14", "sim": "combat" },
