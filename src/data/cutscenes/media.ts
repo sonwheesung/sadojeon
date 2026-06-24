@@ -36,14 +36,9 @@ export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> 
 
 // 보조판(가로 등 다른 비율) — 두 버전 다 보존(✅ 사용자 결정 2026-06-12).
 // 인게임 트리거는 기본판만 재생, 시뮬랩 미리보기는 기본+보조 모두 큐에 올려 비교.
-export const CUTSCENE_MEDIA_ALT: Record<string, Record<string, CutsceneMediaEntry>> = {
-  enlightenment: {
-    'jang-cheol': {
-      source: require('../../../assets/images/cutscenes/enlightenment/jang-cheol.webp'),
-      fit: 'letterbox',
-    },
-  },
-};
+// (깨달음 가로 레거시(새벽마당판)는 2026-06-24 폐관 세로판 재작업으로 폐기 — ALT 비움.
+//  옛 가로 파일(enlightenment/jang-cheol.webp 등)은 orphan, 정리 대상.)
+export const CUTSCENE_MEDIA_ALT: Record<string, Record<string, CutsceneMediaEntry>> = {};
 
 export function findCutsceneMedia(
   eventId: string,
