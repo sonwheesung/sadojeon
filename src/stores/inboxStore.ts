@@ -24,7 +24,10 @@ export const useInboxStore = create<InboxStore>()(
     (set, get) => ({
       items: [],
 
-      add: (item) => set((s) => ({ items: [item, ...s.items] })),
+      // 같은 id 중복 적재 방지 — 시간차 적재(한 마디 .then)나 같은 날 재트리거로 동일 id 가 들어와도
+      // 둘이 공존하면 markRead/remove 가 양쪽을 건드린다(docs/37 B11·사각⑥). 이미 있으면 무시.
+      add: (item) =>
+        set((s) => (s.items.some((it) => it.id === item.id) ? s : { items: [item, ...s.items] })),
 
       addMany: (items) => set((s) => ({ items: [...items, ...s.items] })),
 

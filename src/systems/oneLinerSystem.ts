@@ -76,19 +76,26 @@ export function tonePreferencesFor(d: Disciple): OneLinerTonePreferences {
 export const ONE_LINER_DAILY_CHANCE = 0.45;
 
 // 선택된 한 마디를 서신함에 적재(모달 대신 쌓아둔다). 룰·LLM 선택 공용.
-function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneLinerCtx): void {
+// ⚠ LLM 경로는 시간차 적재(`.then`)다 — 트리거 시점 스냅샷(disciple)이 아니라 **적재 순간의 실시간
+//   상태**로 중복·recency를 재확인·기록한다. "특이 대사 2회 금지"를 정산 직렬화에 기대지 않고 여기서
+//   원자적으로 보장한다(docs/37 B11 비동기 적재 원자성). createdAtDay 는 트리거 시점으로 스냅샷.
+export function queueOneLiner(disciple: Disciple, template: OneLinerTemplate, ctx: OneLinerCtx, createdAtDay: number): void {
+  const live = useDiscipleStore.getState().get(disciple.id);
+  if (!live) return; // 적재 전에 떠난·삭제된 제자 — 발화 취소(시간차 사이 전이 방어)
   // 무거운 감정결 특이 대사는 영구 이력 — 같은 제자에게 두 번 안 나오게(중복 금지). docs/12.
+  // 실시간 이력 기준 — 같은 스냅샷을 본 두 트리거가 겹쳐도 두 번째는 여기서 걸러 발화 취소.
   const patch: Partial<Disciple> = {};
   if (isDistinctiveOneLiner(template)) {
-    const said = disciple.saidOneLiners ?? [];
-    if (!said.includes(template.id)) patch.saidOneLiners = [...said, template.id];
+    const said = live.saidOneLiners ?? [];
+    if (said.includes(template.id)) return; // 이미 건넨 특이 대사 → 그날 발화 취소(서신 미적재)
+    patch.saidOneLiners = [...said, template.id];
   }
   // 최근 발화 이력(recency) — 모든 한 마디. 최근 8개만 유지(적격 풀보다 작게 잡아 확실히 회전). docs/12.
-  const recent = [...(disciple.recentOneLiners ?? []), template.id].slice(-8);
+  const recent = [...(live.recentOneLiners ?? []), template.id].slice(-8);
   patch.recentOneLiners = recent;
   useDiscipleStore.getState().update(disciple.id, patch);
   const body = fillOneLinerBody(template.body, ctx); // {rival} → 실제 이름
-  const day = useTimeStore.getState().totalDay;
+  const day = createdAtDay;
   const responses = {
     encourage: pickResponse('encourage'),
     nod: pickResponse('nod'),
@@ -200,11 +207,12 @@ export function triggerDailyOneLiner(): void {
   const disciple = candidates[Math.floor(random() * candidates.length)];
   const others = candidates.filter((d) => d.id !== disciple.id);
   const ctx = buildDiscipleCtx(disciple, others);
+  const createdAtDay = useTimeStore.getState().totalDay; // 발화일은 트리거 시점으로 고정(시간차 적재 일관성)
 
   // 룰 경로(모델 off — 시뮬·기본·다운로드 전): 즉시 동기 선택·적재.
   if (!isReadySync()) {
     const template = pickContextualOneLiner(ctx);
-    if (template) queueOneLiner(disciple, template, ctx); // 맞는 게 없으면 그 날 발화 X
+    if (template) queueOneLiner(disciple, template, ctx, createdAtDay); // 맞는 게 없으면 그 날 발화 X
     return;
   }
 
@@ -213,12 +221,12 @@ export function triggerDailyOneLiner(): void {
   pend.beginResolution();
   void selectOneLinerLlm(disciple, ctx)
     .then((template) => {
-      if (template) queueOneLiner(disciple, template, ctx);
+      if (template) queueOneLiner(disciple, template, ctx, createdAtDay);
     })
     .catch((e) => {
       if (typeof console !== 'undefined') console.warn('[oneLiner] 선택 실패 — 룰 폴백', e);
       const template = pickContextualOneLiner(ctx);
-      if (template) queueOneLiner(disciple, template, ctx);
+      if (template) queueOneLiner(disciple, template, ctx, createdAtDay);
     })
     .finally(() => usePendingStore.getState().endResolution());
 }

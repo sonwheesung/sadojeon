@@ -10,8 +10,15 @@ jest.mock('./llm/executorchClient', () => ({
   currentModelId: () => 'test-model', // pendingStore.pushLlmDebug 가 참조
 }));
 
-import { parsePick, selectOneLinerLlm } from './oneLinerSystem';
-import { candidateOneLiners, type OneLinerCtx } from '@/data/scenarios/oneLiners';
+import { parsePick, selectOneLinerLlm, queueOneLiner } from './oneLinerSystem';
+import {
+  candidateOneLiners,
+  isDistinctiveOneLiner,
+  ONE_LINERS,
+  type OneLinerCtx,
+} from '@/data/scenarios/oneLiners';
+import { useDiscipleStore } from '@/stores/discipleStore';
+import { useInboxStore } from '@/stores/inboxStore';
 import * as exec from './llm/executorchClient';
 import type { Disciple } from '@/types';
 
@@ -101,5 +108,53 @@ describe('selectOneLinerLlm — 선택과 폴백', () => {
     const r = await selectOneLinerLlm(D, c);
     expect(r).not.toBeNull();
     expect(inPool(c, r!.id)).toBe(true);
+  });
+});
+
+// 비동기 적재 원자성(docs/37 B11·Part D 사각⑦ 추가) — LLM 경로는 시간차 적재라 두 트리거가 같은 낡은
+// 스냅샷을 볼 수 있다. queueOneLiner 가 적재 순간 실시간 상태로 중복·id 를 막는지 검증(정산 직렬화에 안 기댐).
+describe('queueOneLiner — 비동기 적재 원자성(겹침 방어)', () => {
+  const DISC_ID = 'jang-cheol';
+  const distinctive = ONE_LINERS.find((t) => isDistinctiveOneLiner(t))!;
+  const distinctive2 = ONE_LINERS.find(
+    (t) => isDistinctiveOneLiner(t) && t.id !== distinctive.id,
+  )!;
+  const disc = { id: DISC_ID, name: '장철' } as unknown as Disciple;
+  const idOnDay = (day: number) => `oneliner-${DISC_ID}-${day}`;
+
+  beforeEach(() => {
+    useDiscipleStore.getState().reset();
+    useInboxStore.getState().reset();
+    useDiscipleStore.getState().setAll([disc]);
+  });
+
+  it('전제 — 서로 다른 특이 대사 2종 존재', () => {
+    expect(distinctive).toBeTruthy();
+    expect(distinctive2).toBeTruthy();
+  });
+
+  it('같은 특이 대사 2회 적재(겹침) → 서신 1건·기록 1회(중복 차단)', () => {
+    const c = ctx({ discipleId: DISC_ID, saidIds: [] }); // 낡은 스냅샷(둘 다 saidIds=[])
+    queueOneLiner(disc, distinctive, c, 10);
+    queueOneLiner(disc, distinctive, c, 10); // 같은 스냅샷 재적재 — pre-fix 면 서신 2건
+    const items = useInboxStore.getState().items.filter((it) => it.id === idOnDay(10));
+    expect(items).toHaveLength(1); // ← 핵심: 동일 id 중복 적재 차단
+    const said = useDiscipleStore.getState().get(DISC_ID)!.saidOneLiners ?? [];
+    expect(said.filter((x) => x === distinctive.id)).toHaveLength(1); // 특이 대사 1회만 기록
+  });
+
+  it('서로 다른 정상 한 마디(다른 날) → 둘 다 적재(과잉 차단 아님)', () => {
+    queueOneLiner(disc, distinctive, ctx({ discipleId: DISC_ID }), 10);
+    queueOneLiner(disc, distinctive2, ctx({ discipleId: DISC_ID }), 11);
+    expect(useInboxStore.getState().items.filter((it) => it.id === idOnDay(10))).toHaveLength(1);
+    expect(useInboxStore.getState().items.filter((it) => it.id === idOnDay(11))).toHaveLength(1);
+    const said = useDiscipleStore.getState().get(DISC_ID)!.saidOneLiners ?? [];
+    expect(said).toEqual(expect.arrayContaining([distinctive.id, distinctive2.id]));
+  });
+
+  it('적재 직전 제자가 떠남(remove) → 발화 취소(서신 미적재)', () => {
+    useDiscipleStore.getState().remove(DISC_ID);
+    queueOneLiner(disc, distinctive, ctx({ discipleId: DISC_ID }), 12);
+    expect(useInboxStore.getState().items.filter((it) => it.id === idOnDay(12))).toHaveLength(0);
   });
 });

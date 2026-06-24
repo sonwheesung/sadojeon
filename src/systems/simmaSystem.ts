@@ -135,7 +135,7 @@ export function triggerQiDeviation(discipleId: string, severityOverride?: number
 
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `simma-${d.name}-${day}`,
+    id: `simma-${discipleId}-${day}`, // 이름 아닌 id 로 — 동명 제자·동일 제자 동일 날 충돌·소실 방지(docs/37 형제 사냥)
     kind: 'report',
     title: `${d.name} — 주화입마`,
     preview: `${d.name}이(가) 수련 중 진기가 역류해 쓰러졌다.`,

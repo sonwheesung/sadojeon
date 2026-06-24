@@ -69,7 +69,7 @@ export function tickElixirCraft(): void {
   if (made === 0) return; // 재료 없으면 제련 없음(신급 재료 게이트 — 무한 공급 차단)
   const day = useTimeStore.getState().totalDay;
   useInboxStore.getState().add({
-    id: `craft-${day}`,
+    id: `craft-${crafter.id}-${day}`, // crafter 포함 — 같은 날 두 연단사 제련이 같은 id 로 충돌·소실 방지(docs/37 형제 사냥)
     kind: 'report',
     title: `${crafter.name} — 신품 영약 제련 (${made}과)`,
     preview: `${josa(crafter.name, '이', '가')} 한 해의 연단 끝에 신품 영약 구전대환단 ${made}과를 빚어냈다.`,
