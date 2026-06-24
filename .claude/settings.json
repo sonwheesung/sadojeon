@@ -10,10 +10,18 @@
           {
             "type": "command",
             "shell": "bash",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[자동 알림] 방금 대화가 compact로 요약되어 docs/ 세부(수치·계약·구현 위치·파일 경로)가 유실됐을 수 있습니다. 다른 작업을 시작하기 전에 먼저 reload-docs 스킬을 실행해(Skill 도구로 reload-docs 호출) docs/ 전체를 다시 읽고 맥락을 복원하세요. 한 주제만 필요하면 해당 문서만 읽어도 됩니다.\"}}'",
-            "statusMessage": "compact 후 문서 재적재 안내"
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[자동 알림 — 컴팩트 복원] 방금 대화가 compact로 요약돼 docs/ 세부와 진행 중이던 작업 상태(예: 버그 수정 중 남은 형제 사냥)가 유실됐을 수 있다. ① 먼저 reload-docs 스킬로 docs/ 전체를 재적재해 맥락을 복원하라. ② 복원 후에도 3대 규율을 지켜라 — 문서 먼저(코드보다 docs 우선 갱신)·버그 발견 시 사각 분석+형제 사냥 후에야 완료·추측 금지(실물 확인 후 단정). ③ 직전 턴에 「완료」라고 한 작업이 있어도 형제 사냥·문서화가 끝났는지 다시 확인하라.\"}}'",
+            "statusMessage": "compact 후 문서 재적재 + 3대 규율 상기"
           }
         ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "shell": "bash",
+        "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"[규율 강제 — 매 턴 상기] 컴팩트로 자주 어기는 3대 규율을 이번 턴에도 지킨다.\\n① 문서 먼저: 코드·수치·시스템을 만들거나 바꾸기 전 docs/ 를 먼저 작성·갱신한다(코드는 틀려도 고치면 되지만 문서가 틀리면 안 된다). 코드 변경 턴은 docs/ 동시 갱신.\\n② 버그·오류 발견 시: 수정 → 사각 분석(왜 기존 테스트가 못 잡았나, docs/37 Part D) → 형제 사냥(같은 근본원인이 다른 모듈에도 있는지 grep 전수)까지 한 뒤에야 「완료」. 형제 사냥 전 완료 보고 금지.\\n③ 추측·추정 금지: 파일 내용·수치·계약은 Read/Grep 로 실물 확인 후 단정한다. 모르면 확인 불가라고 명시.\"}}'",
+        "statusMessage": "3대 규율 주입(문서먼저·버그시사각+형제·추측금지)"
       }
     ]
   }
