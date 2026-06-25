@@ -70,6 +70,15 @@ export const GRADUATION = {
   RAISING_YEARS: 15,
 } as const;
 
+// 도입 튜토리얼 회차 — docs/46. 짧은 스크립트 아크: 일류 도달 시 조기 졸업(정규 15년 게이트와 별개,
+// isTutorialRun 일 때만) → 표국 무사(말단) 고정 → 결산 시 중품 비급 1권 + 다이아 보상(2회차 훅).
+// leaf 상수로 둔다(graduationSystem 이 import 해도 사이클 없게 — introRun/newRun 우회).
+export const TUTORIAL = {
+  GRADUATION_REALM: 'ilryu', // 이 경지(일류) 도달 시 도입 회차 조기 졸업
+  JOB_ID: 'escort-warrior', // 표국 무사(상단 호위 말단)
+  REWARD_DIAMONDS: 20,
+} as const;
+
 // 회차 — docs/16_회차_다회차.md, docs/23_경지_시스템.md
 export const RUN = {
   AVG_YEARS: 25, // 양육 20~30년 (사부가 제자를 직접 키우는 한 일생). 정확한 값은 플레이테스트로 확정

@@ -22,6 +22,13 @@ function finalizeGraduation(d: Disciple, jobId: string): void {
   graduateToCareer(d, jobId);
 }
 
+// 스크립트 졸업 — 직업을 강제 지정해 즉시 확정(선택 서신 없이). 도입 튜토리얼 회차가 표국 무사로 확정할 때. docs/46.
+export function graduateWithJob(discipleId: string, jobId: string): void {
+  const d = useDiscipleStore.getState().disciples[discipleId];
+  if (!d) return;
+  finalizeGraduation(d, jobId);
+}
+
 // 회차 종료 직전 안전망 — 졸업했으나 아직 직업 미확정인 제자를 최선 후보로 자동 확정한다.
 // 마지막 제자가 졸업하면 같은 패스에서 phase='ended' → run-end 로 직행해(서신함 도달 불가) 졸업 직업
 // 선택이 영영 방치되고, graduatedJob 이 안 박혀 직업 업적·전설 무공서 해금(천마신공·독고구검 등)이

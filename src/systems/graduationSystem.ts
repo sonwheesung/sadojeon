@@ -5,14 +5,17 @@
 import { josa } from '@/utils/korean';
 import { findMartialArt, seongToStage } from '@/data/martialArts';
 import { JOB_TIER_LABEL } from '@/data/jobs';
-import { GRADUATION } from '@/data/constants';
+import { GRADUATION, TUTORIAL } from '@/data/constants';
 import { evaluateJobs, type JobChance } from './jobSystem';
+import { graduateWithJob } from './graduationChoice';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { usePendingStore } from '@/stores/pendingStore';
+import { useRunMetaStore } from '@/stores/runMetaStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, DiscipleStatus, Milestone } from '@/types';
+import { REALM_ORDER, type Realm } from '@/types/realm';
 import { MARTIAL_STAGE_LABEL } from '@/types/martialArt';
 
 // 적합도 확률 → 관찰 풍경(숨겨진 변수 직접 노출 X, feedback_hidden_game_state).
@@ -115,6 +118,14 @@ export function isGraduationEligible(d: Disciple, currentYear: number): boolean 
   return currentYear - d.entryYear >= GRADUATION.RAISING_YEARS;
 }
 
+// 도입 튜토리얼 회차 조기 졸업 — isTutorialRun 일 때만, 목표 경지(일류) 도달 시 15년 게이트와 무관하게 하산.
+// BUSY(의뢰·폐관 중)는 정규와 똑같이 존중(끝난 뒤 하산). 정규 회차엔 영향 0. docs/46.
+function isTutorialGraduationEligible(d: Disciple): boolean {
+  if (!useRunMetaStore.getState().isTutorialRun) return false;
+  if (GRADUATION_BUSY.includes(d.status)) return false;
+  return REALM_ORDER.indexOf(d.realm) >= REALM_ORDER.indexOf(TUTORIAL.GRADUATION_REALM as Realm);
+}
+
 // 매일 진행 후 호출. 졸업 가능한 활성 제자를 graduated 처리 + milestone 큐에 추가.
 // 활성 제자가 0이면 phase='ended' → 메인이 run-end 라우트로 진입.
 export function checkGraduations(): void {
@@ -125,7 +136,9 @@ export function checkGraduations(): void {
 
   for (const id of ds.order) {
     const d = ds.disciples[id];
-    if (!d || !isGraduationEligible(d, currentYear)) continue;
+    if (!d) continue;
+    const tutorial = isTutorialGraduationEligible(d);
+    if (!isGraduationEligible(d, currentYear) && !tutorial) continue;
     ds.update(id, { status: 'graduated' });
     const grade = evaluateGraduation(d);
     newMilestones.push({
@@ -136,8 +149,13 @@ export function checkGraduations(): void {
       title: '하산',
       body: `${josa(d.name, '이', '가')} 사부에게 마지막 절을 올렸다.\n${mainArtSummary(d)} — ${GRADE_LABEL[grade]}.\n강호로 나간다.`,
     });
-    // 강호 행로(직업)는 서신함 강제 결정으로. docs/28 §3.
-    enqueueGraduationChoice(d, day);
+    if (tutorial) {
+      // 도입 회차 — 직업 선택 서신 없이 표국 무사(말단)로 즉시 확정(스크립트 졸업). docs/46.
+      graduateWithJob(id, TUTORIAL.JOB_ID);
+    } else {
+      // 강호 행로(직업)는 서신함 강제 결정으로. docs/28 §3.
+      enqueueGraduationChoice(d, day);
+    }
   }
 
   if (newMilestones.length > 0) {
