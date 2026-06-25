@@ -3,7 +3,7 @@
 //   DB → GameState → 순수 엔진 → GameState → DB.
 // 클라는 그동안 Zustand 스토어를 화면 모델로 유지 — capture/commit 이 스토어 ↔ GameState 다리.
 //
-// 포함: **회차 상태(slotAware 18 스토어)** 만. 계정 상태(achievement·tally·llmSettings)는 별도 트랙,
+// 포함: **회차 상태(slotAware 19 스토어)** 만. 계정 상태(achievement·tally·llmSettings)는 별도 트랙,
 // 휘발/출력(pending·fieldEvent·moral·cutscene)은 엔진의 events(응답)이지 영속 상태가 아니라 제외,
 // 클라 세션(game·auth)도 제외. (docs/31 §컴포넌트·reduce(state,action)→{state,events})
 //
@@ -27,6 +27,7 @@ import { useOutreachStore } from '@/stores/outreachStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useReputationStore } from '@/stores/reputationStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useRunMetaStore } from '@/stores/runMetaStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -34,6 +35,7 @@ import { useTimeStore } from '@/stores/timeStore';
 // 회차 상태 스토어 레지스트리 — 키 = GameState 슬롯 이름. 새 회차 스토어는 여기 한 줄 추가.
 const RUN_STORES = {
   time: useTimeStore,
+  runMeta: useRunMetaStore,
   master: useMasterStore,
   sect: useSectStore,
   sectAtmosphere: useSectAtmosphereStore,
@@ -92,7 +94,7 @@ export function commitGameState(state: GameState): void {
     const slice = (state as Record<string, unknown> | null | undefined)?.[key];
     if (slice == null || typeof slice !== 'object') continue;
     // 각 스토어의 setState — 데이터 슬라이스로 덮어쓴다(객체 → 얕은 병합, 액션 메서드·미제공 필드 보존).
-    // 18종 스토어의 setState 시그니처 유니온은 단일 호출로 안 잡혀 최소 형태로 캐스팅.
+    // 19종 스토어의 setState 시그니처 유니온은 단일 호출로 안 잡혀 최소 형태로 캐스팅.
     const store = RUN_STORES[key] as unknown as { setState: (partial: unknown) => void };
     store.setState(slice);
   }

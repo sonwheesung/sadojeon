@@ -24,6 +24,7 @@ import {
   useOutreachStore,
   useMasterStore,
   useQuestStore,
+  useRunMetaStore,
   useScheduleStore,
   useSectAtmosphereStore,
   useSectStore,
@@ -178,8 +179,21 @@ function seedStartingRelations(list: Disciple[]): void {
 
 // ─── Entry ──────────────────────────────────────────────────────────────────
 
+export interface SeedRunOptions {
+  // 도입 튜토리얼 회차로 시작 — 짧은 스크립트 아크(장철 1명·조기 졸업·표국 무사·보상). docs/46.
+  tutorial?: boolean;
+}
+
+// 도입 튜토리얼 회차 시작 — 장철 1명 고정 시드 + 회차 메타 플래그. docs/46.
+// 계정 1회 강제 진입은 호출부(슬롯 진입)에서 useTutorialStore.hasSeen('intro-run') 로 판정.
+export const TUTORIAL_DISCIPLE_ID = 'jang-cheol';
+export function startTutorialRun(): void {
+  seedNewRun([TUTORIAL_DISCIPLE_ID], { tutorial: true });
+}
+
 // 회차 새 시작 — 사용자가 시작 선택 모달에서 고른 2~4명을 받는다.
-export function seedNewRun(selectedPoolIds: string[]): void {
+// opts.tutorial 이면 도입 튜토리얼 회차(회차 메타 플래그 set).
+export function seedNewRun(selectedPoolIds: string[], opts: SeedRunOptions = {}): void {
   useTimeStore.getState().reset();
   useMasterStore.getState().setMaster(defaultMaster());
   useSectStore.getState().setSect(defaultSect());
@@ -202,6 +216,10 @@ export function seedNewRun(selectedPoolIds: string[]): void {
   }
   // 업적으로 영구 해금된 무공서(천마신공·독고구검·역근경 등)를 새 회차 서고에. docs/32.
   seedUnlockedArts();
+  // 회차 메타 — 기본 초기화 후, 도입 튜토리얼 회차면 플래그 set. docs/46.
+  // (서버/헤드리스 경로도 seedNewRun 을 거치므로 여기 둔다 — endRun 미경유 누수 차단, codex.resetForNewRun 과 같은 결.)
+  useRunMetaStore.getState().reset();
+  if (opts.tutorial) useRunMetaStore.getState().setTutorialRun(true);
   // 회차 격리 store 리셋 — docs/16 회차 누적 정책 + project_run_loop_carryover.
   useSectAtmosphereStore.getState().reset();
   resetAlchemy(); // 연단 상태(학습 레시피·재료·진행 중 제조) 회차 초기화

@@ -14,6 +14,7 @@ import {
   useGameStore,
   useInboxStore,
   useMasterStore,
+  useRunMetaStore,
   useScheduleStore,
   useSectStore,
   useTimeStore,
@@ -26,6 +27,7 @@ import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 export async function resetEverything(): Promise<void> {
   // 1. 메모리 — 각 store reset 액션 호출.
   useTimeStore.getState().reset();
+  useRunMetaStore.getState().reset();
   useDiscipleStore.getState().reset();
   useMasterStore.getState().reset();
   useSectStore.getState().reset();

@@ -10,6 +10,7 @@ import {
   useDiscipleStore,
   useInboxStore,
   useMasterStore,
+  useRunMetaStore,
   useScheduleStore,
   useSectStore,
   useTimeStore,
@@ -25,6 +26,7 @@ export function endRun(): void {
   checkAchievements();
   saveAccountSilently(); // 회차 마지막 업적·해금 무공서를 계정 DB에 영속(리셋 전).
   useTimeStore.getState().reset();
+  useRunMetaStore.getState().reset(); // 회차 메타(도입 튜토리얼 여부 등) 초기화. docs/46
   useDiscipleStore.getState().reset();
   useMasterStore.getState().reset();
   useSectStore.getState().reset();
@@ -36,6 +38,7 @@ export function endRun(): void {
 
 export function endSlot(): void {
   useTimeStore.getState().reset();
+  useRunMetaStore.getState().reset();
   useDiscipleStore.getState().reset();
   useMasterStore.getState().reset();
   useSectStore.getState().reset();

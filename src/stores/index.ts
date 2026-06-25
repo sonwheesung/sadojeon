@@ -26,5 +26,6 @@ export { useFieldEventStore } from './fieldEventStore';
 export type { FieldEvent } from './fieldEventStore';
 export { useAchievementStore } from './achievementStore';
 export { useTallyStore } from './tallyStore';
+export { useRunMetaStore } from './runMetaStore';
 export { useTutorialStore } from './tutorialStore';
 export { useTutorialUiStore } from './tutorialUiStore';
