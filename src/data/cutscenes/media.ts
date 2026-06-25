@@ -39,6 +39,14 @@ export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> 
       fit: 'cover',
     },
   },
+  fatal_rescue_village: {
+    // 세로 9:16 — 구사일생 마을 사투(命). 익명의 구조자(검은 실루엣)가 장철을 업고 빗속을 달려 마을 등불로. 2026-06-25.
+    // 제작 B방식(단일 베이스·무프롬프트 자유 생성) 첫 적용 — 동적 액션 컷(docs/20·46).
+    'jang-cheol': {
+      source: require('../../../assets/images/cutscenes/fatal_rescue_village/jang-cheol.webp'),
+      fit: 'cover',
+    },
+  },
 };
 
 // 보조판(가로 등 다른 비율) — 두 버전 다 보존(✅ 사용자 결정 2026-06-12).
