@@ -11,6 +11,7 @@ import { useGraduateStore } from '@/stores/graduateStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useMetNpcStore } from '@/stores/metNpcStore';
+import { useRunMetaStore } from '@/stores/runMetaStore';
 import { useTallyStore } from '@/stores/tallyStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { NAMED_NPCS } from '@/data/npcs';
@@ -65,6 +66,9 @@ function announce(a: Achievement, unlockedArt?: string): void {
 
 // 정산 훅 — 현재 상태로 미달성 업적을 스캔, 신규 달성 기록 + 해금 + 알림.
 export function checkAchievements(): void {
+  // 생애경계 — 도입 튜토리얼 회차는 "연습"이라 업적 해금·다이아·무공서 해금을 일절 적립하지 않는다.
+  // 진짜 첫 회차부터 카운트(docs/46 step6). 매일·endRun 양쪽에서 호출되므로 여기 단일 가드.
+  if (useRunMetaStore.getState().isTutorialRun) return;
   const store = useAchievementStore.getState();
   const ctx = buildCtx();
   for (const a of ACHIEVEMENTS) {

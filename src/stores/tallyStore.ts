@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { metaStorage } from './persistStorage';
+import { useRunMetaStore } from './runMetaStore';
 
 // 업적 집계 — **계정 단위 영속**(회차·슬롯 무관, metaStorage). docs/32.
 // 상태 스캔으로 못 잡는 누적 사실(의뢰 N건 완수·연속 무사고 등)을 적립한다.
@@ -28,10 +29,17 @@ export const useTallyStore = create<TallyStore>()(
       maxStreaks: {},
       n: (key) => get().counts[key] ?? 0,
       streak: (key) => get().maxStreaks[key] ?? 0,
+      // 생애경계 — 도입 튜토리얼 회차에선 누적 집계를 쌓지 않는다(업적 오염 방지, docs/46 step6).
+      // 모든 적립(questTally·expedition·ambition)이 이 두 메서드를 거치는 단일 통로라 여기서 차단.
       bump: (key, by = 1) =>
-        set((s) => ({ counts: { ...s.counts, [key]: (s.counts[key] ?? 0) + by } })),
+        set((s) =>
+          useRunMetaStore.getState().isTutorialRun
+            ? s
+            : { counts: { ...s.counts, [key]: (s.counts[key] ?? 0) + by } },
+        ),
       bumpStreak: (key) =>
         set((s) => {
+          if (useRunMetaStore.getState().isTutorialRun) return s;
           const cur = (s.streaks[key] ?? 0) + 1;
           const max = Math.max(cur, s.maxStreaks[key] ?? 0);
           return { streaks: { ...s.streaks, [key]: cur }, maxStreaks: { ...s.maxStreaks, [key]: max } };

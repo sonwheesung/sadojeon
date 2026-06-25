@@ -15,6 +15,7 @@ jest.mock('@/systems/runSync', () => ({
 
 import { seedNewRun, startTutorialRun } from './newRun';
 import { checkGraduations } from './graduationSystem';
+import { checkAchievements } from './achievementSystem';
 import { endRun } from './runLifecycle';
 import { grantIntroRunReward, pickIntroRunRewardArtId } from './introRunReward';
 import { TUTORIAL } from '@/data/constants';
@@ -23,6 +24,8 @@ import { useGameStore } from '@/stores/gameStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useCodexStore } from '@/stores/codexStore';
 import { useRunMetaStore } from '@/stores/runMetaStore';
+import { useAchievementStore } from '@/stores/achievementStore';
+import { useTallyStore } from '@/stores/tallyStore';
 import { findMartialArt } from '@/data/martialArts';
 
 function setRealm(id: string, realm: string): void {
@@ -112,5 +115,38 @@ describe('도입 회차 — 보상', () => {
     endRun();
     // 도입 보상은 튜토리얼 회차에만 — 정규 종료는 비급 안 줌.
     expect(useCodexStore.getState().hasScroll(artId as string)).toBe(false);
+  });
+});
+
+describe('도입 회차 — 생애경계(업적·집계 제외, step6)', () => {
+  it('도입 회차는 하산해도 업적 0 — 플래그 끄면 같은 상태에서 해금(checkAchievements 단일 가드)', () => {
+    useAchievementStore.setState({ unlocked: [], unlockedArts: [] });
+    startTutorialRun();
+    setRealm('jang-cheol', TUTORIAL.GRADUATION_REALM);
+    checkGraduations(); // 장철 졸업 → 졸업 기록 생성(isTutorialRun=true)
+
+    checkAchievements();
+    expect(useAchievementStore.getState().unlocked).toEqual([]); // 도입 회차 = 업적 해금 0
+
+    // 대조: 같은 졸업 상태에서 튜토리얼 플래그만 끄면 '강호로'(ach-graduate) 해금.
+    useRunMetaStore.getState().setTutorialRun(false);
+    checkAchievements();
+    expect(useAchievementStore.getState().unlocked).toContain('ach-graduate');
+  });
+
+  it('tally bump/bumpStreak — 도입 회차 no-op, 평시 적립(모든 적립의 단일 통로)', () => {
+    useTallyStore.setState({ counts: {}, streaks: {}, maxStreaks: {} });
+
+    useRunMetaStore.getState().setTutorialRun(true);
+    useTallyStore.getState().bump('q');
+    useTallyStore.getState().bumpStreak('s');
+    expect(useTallyStore.getState().n('q')).toBe(0);
+    expect(useTallyStore.getState().streak('s')).toBe(0);
+
+    useRunMetaStore.getState().setTutorialRun(false);
+    useTallyStore.getState().bump('q');
+    useTallyStore.getState().bumpStreak('s');
+    expect(useTallyStore.getState().n('q')).toBe(1);
+    expect(useTallyStore.getState().streak('s')).toBe(1);
   });
 });
