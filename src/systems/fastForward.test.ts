@@ -20,9 +20,19 @@ import type { InboxItem, Milestone } from '@/types';
 // 한 날의 advance 때 스토어를 조작할 스크립트(day 1-기준). settle 직전 상태를 만든다.
 type DayScript = (day: number) => void;
 
+interface StubOpts {
+  // 정산을 set하지 않을 날(월 시작 early-return 모사) — 그 날은 settle 이 호출되면 안 된다.
+  noSettlementOn?: number[];
+}
+
 // 스텁 GameApi — advance 가 정산을 set(루프가 settle 경로를 타게) + day 스크립트 실행.
-function makeStubApi(script?: DayScript): { api: GameApi; advanceCalls: () => number } {
+function makeStubApi(
+  script?: DayScript,
+  opts: StubOpts = {},
+): { api: GameApi; advanceCalls: () => number; settleCalls: () => number } {
   let day = 0;
+  let settleCalls = 0;
+  const noSettlement = new Set(opts.noSettlementOn ?? []);
   const api: GameApi = {
     authoritative: false,
     async newRun() {
@@ -30,18 +40,21 @@ function makeStubApi(script?: DayScript): { api: GameApi; advanceCalls: () => nu
     },
     async advance() {
       day += 1;
-      // 일반 날처럼 정산 데이터 set(루프가 clearSettlement+settle 경로를 타도록).
-      usePendingStore.setState({
-        settlement: { dateLabel: `d${day}`, log: { entries: [] }, badges: {}, llmDebugs: [] },
-      } as never);
+      if (!noSettlement.has(day)) {
+        // 일반 날처럼 정산 데이터 set(루프가 clearSettlement+settle 경로를 타도록).
+        usePendingStore.setState({
+          settlement: { dateLabel: `d${day}`, log: { entries: [] }, badges: {}, llmDebugs: [] },
+        } as never);
+      }
       script?.(day);
       return {} as never;
     },
     async settle() {
+      settleCalls += 1;
       return {} as never;
     },
   };
-  return { api, advanceCalls: () => day };
+  return { api, advanceCalls: () => day, settleCalls: () => settleCalls };
 }
 
 function addDecisionLetter(id: string): void {
@@ -121,6 +134,61 @@ describe('빠른 진행 — 정지 조건', () => {
     expect(r.reason).toBe('decision');
     expect(r.days).toBe(0);
     expect(advanceCalls()).toBe(0); // advance 자체가 안 불림
+  });
+});
+
+describe('빠른 진행 — 엣지(docs/43 5렌즈)', () => {
+  it('maxDays=1 → 딱 하루만 진행(상한 경계)', async () => {
+    const { api, advanceCalls } = makeStubApi();
+    __setGameApi(api);
+    const r = await fastForward(1);
+    expect(r.reason).toBe('maxDays');
+    expect(r.days).toBe(1);
+    expect(advanceCalls()).toBe(1);
+  });
+
+  it('월 시작 날(정산 없음) → 그 날도 진행 카운트, settle 미호출, 다음 날 계속(자원경합)', async () => {
+    // 2일째는 월 시작처럼 정산이 없고 월간 모달이 떠 있다 — 모달 닫고 settle 없이 넘어가야 한다.
+    const { api, settleCalls } = makeStubApi(
+      (day) => {
+        if (day === 2) useScheduleStore.setState({ pendingSetup: true, pendingReport: true });
+      },
+      { noSettlementOn: [2] },
+    );
+    __setGameApi(api);
+    const r = await fastForward(3);
+    expect(r.reason).toBe('maxDays');
+    expect(r.days).toBe(3); // 정산 없는 날도 하루로 센다
+    expect(settleCalls()).toBe(2); // 1·3일만 settle, 2일(월시작)은 settle 안 함
+    // 월간 모달은 자동으로 닫혀야 한다(현행 일정 유지).
+    expect(useScheduleStore.getState().pendingSetup).toBe(false);
+    expect(useScheduleStore.getState().pendingReport).toBe(false);
+  });
+
+  it('한 틱에 결정 여러 건 동시 발생 → 그 틱에 멈추고 전부 집계(건너뛰지 않음)', async () => {
+    const { api } = makeStubApi((day) => {
+      if (day === 2) {
+        addDecisionLetter('multi-a');
+        addDecisionLetter('multi-b');
+      }
+    });
+    __setGameApi(api);
+    const r = await fastForward(100);
+    expect(r.reason).toBe('decision');
+    expect(r.days).toBe(2);
+    expect(useInboxStore.getState().decisionPendingCount()).toBe(2);
+  });
+
+  it('onTick 콜백이 진행 일수로 호출된다(UI 진행 표시)', async () => {
+    const ticks: number[] = [];
+    const { api } = makeStubApi((day) => {
+      if (day === 4) addDecisionLetter('stop-4');
+    });
+    __setGameApi(api);
+    const r = await fastForward(100, (d) => ticks.push(d));
+    expect(r.reason).toBe('decision');
+    expect(ticks.length).toBeGreaterThan(0);
+    expect(ticks[ticks.length - 1]).toBe(4); // 멈춘 시점 일수로 마지막 콜백
   });
 });
 
