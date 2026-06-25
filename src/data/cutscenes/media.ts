@@ -32,6 +32,13 @@ export const CUTSCENE_MEDIA: Record<string, Record<string, CutsceneMediaEntry>> 
       fit: 'cover',
     },
   },
+  fatal_rescue_elixir: {
+    // 세로 9:16 — 구사일생 영약(生). 익명의 손이 옥병을 입술에 대 영약을 먹이고 혈색이 돌아온다. 2026-06-25.
+    'jang-cheol': {
+      source: require('../../../assets/images/cutscenes/fatal_rescue_elixir/jang-cheol.webp'),
+      fit: 'cover',
+    },
+  },
 };
 
 // 보조판(가로 등 다른 비율) — 두 버전 다 보존(✅ 사용자 결정 2026-06-12).
