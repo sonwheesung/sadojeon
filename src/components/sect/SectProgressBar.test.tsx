@@ -90,3 +90,52 @@ describe('SectProgressBar — 진행 차단(결정 서신 있음)', () => {
     expect(getByText('처리할 서신 2건')).toBeTruthy();
   });
 });
+
+describe('SectProgressBar — 빠른 진행(자동 넘김, docs/46)', () => {
+  it('onFastForward 미전달 → 빠른 진행 버튼 미표시(상시노출 아님)', async () => {
+    badgeCount.mockReturnValue(0);
+    const { queryByText } = await render(<SectProgressBar onProgress={jest.fn()} />);
+    expect(queryByText('빠른 진행 ▶▶')).toBeNull();
+  });
+
+  it('배지 0 → 빠른 진행 누르면 onFastForward 1회 호출, onProgress 미호출', async () => {
+    badgeCount.mockReturnValue(0);
+    const onProgress = jest.fn();
+    const onFastForward = jest.fn();
+    const user = userEvent.setup();
+    const { getByText } = await render(
+      <SectProgressBar onProgress={onProgress} onFastForward={onFastForward} />,
+    );
+    await user.press(getByText('빠른 진행 ▶▶'));
+    expect(onFastForward).toHaveBeenCalledTimes(1);
+    expect(onProgress).not.toHaveBeenCalled();
+  });
+
+  it('배지>0 → 빠른 진행도 차단(onFastForward 미호출) + 확인창', async () => {
+    badgeCount.mockReturnValue(2);
+    mockConfirm.mockResolvedValue(false);
+    const onFastForward = jest.fn();
+    const user = userEvent.setup();
+    const { getByLabelText } = await render(
+      <SectProgressBar onProgress={jest.fn()} onFastForward={onFastForward} />,
+    );
+    await user.press(getByLabelText('빠른 진행'));
+    await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+    expect(onFastForward).not.toHaveBeenCalled();
+  });
+
+  it('busy 중 → 두 버튼 모두 비활성(onProgress·onFastForward 미호출), "진행 중…" 표시', async () => {
+    badgeCount.mockReturnValue(0);
+    const onProgress = jest.fn();
+    const onFastForward = jest.fn();
+    const user = userEvent.setup();
+    const { getByText } = await render(
+      <SectProgressBar onProgress={onProgress} onFastForward={onFastForward} busy />,
+    );
+    expect(getByText('진행 중…')).toBeTruthy();
+    await user.press(getByText('진행'));
+    await user.press(getByText('진행 중…'));
+    expect(onProgress).not.toHaveBeenCalled();
+    expect(onFastForward).not.toHaveBeenCalled();
+  });
+});

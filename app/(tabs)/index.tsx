@@ -21,6 +21,7 @@ import { useBackConfirm } from '@/hooks/useBackConfirm';
 import { useGameStore, useMasterStore, usePendingStore, useInboxStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
 import { triggerTutorial } from '@/systems/tutorialSystem';
+import { fastForward } from '@/systems/fastForward';
 import { saveCurrentRunSilently } from '@/systems/runSync';
 import { getGameApi } from '@/engine/gameApi';
 import { colors, spacing } from '@/theme';
@@ -40,6 +41,29 @@ export default function SectScreen() {
   const [choiceOpen, setChoiceOpen] = useState(false);
   // 진행 중복 방지 — 원격(서버) 왕복 중 재확정 시 두 번 진행되는 것 차단. 로컬은 동기라 즉시 해제.
   const advancingRef = useRef(false);
+
+  // 빠른 진행(자동 넘김) — 의미 있는 정지 지점까지 자동으로 하루를 넘긴다. docs/46.
+  const [fastForwarding, setFastForwarding] = useState(false);
+  const ffRef = useRef(false);
+  const onFastForward = () => {
+    if (ffRef.current) return;
+    // 정산 미해소·종결·결정 대기 중엔 시작하지 않음(정규 게이트 — fastForward 도 내부에서 재확인).
+    if (usePendingStore.getState().settlement || useGameStore.getState().phase === 'ended') return;
+    if (useInboxStore.getState().decisionPendingCount() > 0) return;
+    ffRef.current = true;
+    setFastForwarding(true);
+    fastForward()
+      .then((result) => {
+        // 결정 필요한 서신이 생겨 멈췄으면 서신함으로 유도(정산 모달 닫힘과 같은 결).
+        // 'ended' 는 위 phase effect 가 run-end 로, 'fieldEvent' 는 FieldEventOverlay 가 자동 처리.
+        if (result.reason === 'decision') router.push('/inbox');
+      })
+      .catch((e) => console.warn('[fastForward] 빠른 진행 실패', e))
+      .finally(() => {
+        ffRef.current = false;
+        setFastForwarding(false);
+      });
+  };
 
   // 사부 사망 → phase='ended' 전환 시 회차 종결 화면으로 자동 진입.
   const phase = useGameStore((s) => s.phase);
@@ -73,7 +97,11 @@ export default function SectScreen() {
           <DiscipleRoster />
           <DiscipleMoodPanel />
         </ScrollView>
-        <SectProgressBar onProgress={() => setChoiceOpen(true)} />
+        <SectProgressBar
+          onProgress={() => setChoiceOpen(true)}
+          onFastForward={onFastForward}
+          busy={fastForwarding}
+        />
       </PaperCard>
       <DailyChoiceModal
         visible={choiceOpen}
