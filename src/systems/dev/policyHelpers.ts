@@ -92,11 +92,21 @@ export function goalArtFor(d: Disciple): MartialArt | null {
       chainOwned(a),
   );
   if (candidates.length === 0) return null;
-  // 등급 우선, 같으면 제자 갈래 효율(특화>상성>보통>미숙>상극) 우선.
+  // 등급 우선 → **이미 투자한 계보 우선**(같은 등급이면) → 갈래 효율(특화>상성>보통>미숙>상극).
+  // 계보 우선이 핵심(2026-06-25 버그 수정): 같은 등급 무공이 여러 계보에 있을 때, 제자가 이미 키운
+  // 계보를 두고 다른 계보로 목표를 바꾸면 그 계보 하품 뿌리(예: 보법 chosangbi)부터 재등반하느라
+  // 주력 등급천장이 후퇴(절정→일류)해 일류에 헛묶인다(factorysweep 화경 0% 회귀 원인). 현 주력 계보를
+  // 유지하면 같은 계보 상위 무공으로 곧장 이어 올라간다.
   const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
+  const mainLineage = mainArtOf(d)?.lineage;
   candidates.sort((a, b) => {
     const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
     if (g !== 0) return g;
+    if (mainLineage) {
+      const al = a.lineage === mainLineage ? 1 : 0;
+      const bl = b.lineage === mainLineage ? 1 : 0;
+      if (al !== bl) return bl - al; // 현 주력과 같은 계보 우선
+    }
     return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
   });
   return candidates[0];
@@ -158,9 +168,10 @@ function configureCarryTraining(id: string): boolean {
     if (
       nextR &&
       plannedArt &&
-      realmIndex(effectiveRealmCeiling(plannedArt.grade)) < realmIndex(nextR) &&
-      useTimeStore.getState().totalDay % 2 === 1
+      realmIndex(effectiveRealmCeiling(plannedArt.grade)) < realmIndex(nextR)
     ) {
+      // 매일 구제(종전 격일 제한 제거, 2026-06-25): 계획 무공의 천장이 다음 경지에 못 미치면 그 즉시
+      // "지금 키울 수 있는 최고 천장 무공"을 주력으로 — 하품 뿌리에 며칠씩 묶여 시간 낭비하지 않게.
       const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
       const ceilingArt = MARTIAL_ARTS.filter(
         (a) =>
