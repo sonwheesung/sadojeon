@@ -53,6 +53,8 @@ export default function SectScreen() {
   const ffRef = useRef(false);
   const onFastForward = () => {
     if (ffRef.current) return;
+    // 빠른 진행을 처음 누르면 먼저 안내 카드만 띄우고 이번 누름은 진행하지 않는다(읽고 다시 누르면 진행). docs/44·46.
+    if (triggerTutorial('fastforward')) return;
     // 정산 미해소·종결·결정 대기 중엔 시작하지 않음(정규 게이트 — fastForward 도 내부에서 재확인).
     if (usePendingStore.getState().settlement || useGameStore.getState().phase === 'ended') return;
     if (useInboxStore.getState().decisionPendingCount() > 0) return;

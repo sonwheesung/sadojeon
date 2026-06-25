@@ -7,11 +7,14 @@ import { useTutorialUiStore } from '@/stores/tutorialUiStore';
 // dismissTutorial(): 안내 종료 — 본 것으로 계정에 기록(DB·로컬) + 화면에서 내린다.
 
 // 기능을 처음 마주쳤을 때 호출. (예: 연단실 첫 건설 직후 triggerTutorial('alchemy'))
-export function triggerTutorial(key: string): void {
-  if (!findTutorial(key)) return; // 등록되지 않은 주제 — 무시(오타·미작성 안전)
-  if (useTutorialStore.getState().hasSeen(key)) return; // 이미 본 주제
-  if (useTutorialUiStore.getState().active) return; // 다른 안내 표시 중 — 겹침 방지(MVP: 큐 없음)
+// 반환: 이번 호출로 안내를 띄웠으면 true(첫 만남), 무시했으면 false(이미 봤거나 다른 안내 표시 중·미등록).
+// 호출부가 "첫 안내면 그 동작은 멈추고 읽게" 분기할 수 있다(예: 빠른 진행 첫 누름 — 카드만 띄우고 진행 보류).
+export function triggerTutorial(key: string): boolean {
+  if (!findTutorial(key)) return false; // 등록되지 않은 주제 — 무시(오타·미작성 안전)
+  if (useTutorialStore.getState().hasSeen(key)) return false; // 이미 본 주제
+  if (useTutorialUiStore.getState().active) return false; // 다른 안내 표시 중 — 겹침 방지(MVP: 큐 없음)
   useTutorialUiStore.getState().request(key);
+  return true;
 }
 
 // 안내를 끝까지 봤거나 건너뛴 시점. 본 것으로 기록하고 내린다.

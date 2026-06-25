@@ -92,6 +92,23 @@ export const TUTORIALS: Record<string, TutorialTopic> = {
     ],
   },
 
+  // 빠른 진행 버튼을 처음 눌렀을 때 — 지루한 날을 건너뛰는 자동 진행. docs/46.
+  fastforward: {
+    key: 'fastforward',
+    cards: [
+      {
+        seal: '疾',
+        title: '빠른 진행',
+        body: '한 수 한 수 누르지 않아도, 빠른 진행을 누르면 시간이 저절로 흐릅니다. 별일 없는 날들은 순식간에 지나갑니다.',
+      },
+      {
+        seal: '停',
+        title: '중요한 순간엔 멈춥니다',
+        body: '결정이 필요한 서신이 오거나, 길에서 사건이 터지거나, 제자가 하산할 때 — 그때는 저절로 멈춰 당신의 손을 기다립니다. 마음 놓고 흘려보내십시오.',
+      },
+    ],
+  },
+
   // 연단실을 처음 지었을 때 — 영약 제조의 흐름.
   alchemy: {
     key: 'alchemy',

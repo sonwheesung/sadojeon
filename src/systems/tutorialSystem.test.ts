@@ -26,10 +26,33 @@ describe('튜토리얼 데이터 정합', () => {
     }
   });
 
-  it('현재 배선된 주제(intro·schedule·quest·inbox·activity·alchemy)가 모두 등록돼 있다', () => {
-    for (const key of ['intro', 'schedule', 'quest', 'inbox', 'activity', 'alchemy']) {
+  it('현재 배선된 주제(intro·schedule·quest·inbox·activity·alchemy·fastforward)가 모두 등록돼 있다', () => {
+    for (const key of ['intro', 'schedule', 'quest', 'inbox', 'activity', 'alchemy', 'fastforward']) {
       expect(TUTORIALS[key]).toBeTruthy();
     }
+  });
+});
+
+describe('triggerTutorial — 반환값(첫 안내 여부)', () => {
+  it('처음 마주친 주제 → true(이번에 띄움) + 활성화', () => {
+    expect(triggerTutorial('fastforward')).toBe(true);
+    expect(useTutorialUiStore.getState().active).toBe('fastforward');
+  });
+
+  it('이미 본 주제 → false(안 띄움)', () => {
+    useTutorialStore.setState({ seen: ['fastforward'] });
+    expect(triggerTutorial('fastforward')).toBe(false);
+    expect(useTutorialUiStore.getState().active).toBeNull();
+  });
+
+  it('다른 안내가 떠 있으면 → false(겹침 방지)', () => {
+    triggerTutorial('intro');
+    expect(triggerTutorial('fastforward')).toBe(false);
+    expect(useTutorialUiStore.getState().active).toBe('intro');
+  });
+
+  it('미등록 주제 → false', () => {
+    expect(triggerTutorial('does-not-exist')).toBe(false);
   });
 });
 
