@@ -22,6 +22,7 @@ jest.mock('@/systems/llm/executorchClient', () => ({
 
 import { fastForward, type FastForwardResult } from './fastForward';
 import { seedNewRun, startTutorialRun } from './newRun';
+import { INTRO_RUN_KEY, introRunPending, beginIntroRun } from './introRun';
 import { __setGameApi } from '@/engine/gameApi';
 import { useTimeStore } from '@/stores/timeStore';
 import { useGameStore } from '@/stores/gameStore';
@@ -29,6 +30,8 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useFieldEventStore } from '@/stores/fieldEventStore';
 import { useRunMetaStore } from '@/stores/runMetaStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
+import { useMasterStore } from '@/stores/masterStore';
+import { useTutorialStore } from '@/stores/tutorialStore';
 
 beforeEach(() => {
   __setGameApi(null); // 실제 LocalGameApi 사용(서버 URL 미설정 → 로컬 어댑터)
@@ -110,6 +113,33 @@ describe('빠른 진행 — 실제 회차 통합', () => {
     const r = await fastForward(120);
     assertStopInvariant(r);
     // 빠른 진행이 회차 메타를 건드리지 않는다(도입 회차임이 흐름 내내 유지).
+    expect(useRunMetaStore.getState().isTutorialRun).toBe(true);
+  });
+
+  it('처음 시작(첫 계정) → 도입 회차 권유 → 시작 → 장철 회차 → 빠른 진행까지 순서대로 (e2e)', async () => {
+    // 첫 계정 상태: 사부 없음 + 'intro-run' 미경험.
+    useTutorialStore.setState({ seen: [] });
+    useMasterStore.getState().reset();
+
+    // ① 진입 시 도입 회차를 권한다.
+    expect(introRunPending()).toBe(true);
+
+    // ② [안내와 함께 시작] → 마킹 + 장철 1명 회차 시작.
+    beginIntroRun();
+    expect(useTutorialStore.getState().hasSeen(INTRO_RUN_KEY)).toBe(true);
+    expect(useRunMetaStore.getState().isTutorialRun).toBe(true);
+    expect(useDiscipleStore.getState().order).toEqual(['jang-cheol']);
+    // 시작했으니 더는 권하지 않는다(재강제 X).
+    expect(introRunPending()).toBe(false);
+
+    // ③ 빠른 진행으로 시간이 실제로 흐른다(정규 시스템 위).
+    useGameStore.setState({ phase: 'playing' });
+    const startDay = useTimeStore.getState().totalDay;
+    const r = await fastForward(120);
+    expect(useTimeStore.getState().totalDay).toBe(startDay + r.days);
+    expect(r.days).toBeGreaterThan(0);
+    assertStopInvariant(r);
+    // 도입 회차임이 흐름 내내 유지.
     expect(useRunMetaStore.getState().isTutorialRun).toBe(true);
   });
 });

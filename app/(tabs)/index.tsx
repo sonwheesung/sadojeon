@@ -9,6 +9,7 @@ import { SafetyZone } from '@/components/common/SafetyZone';
 import { DailyChoiceModal } from '@/components/dialogue/DailyChoiceModal';
 import { DailySettlementModal } from '@/components/dialogue/DailySettlementModal';
 import { FieldEventOverlay } from '@/components/dialogue/FieldEventOverlay';
+import { IntroRunGate } from '@/components/dialogue/IntroRunGate';
 import { MilestoneModal } from '@/components/dialogue/MilestoneModal';
 import { MonthlyReportModal } from '@/components/dialogue/MonthlyReportModal';
 import { MonthlyScheduleModal } from '@/components/dialogue/MonthlyScheduleModal';
@@ -18,9 +19,10 @@ import { DiscipleMoodPanel } from '@/components/sect/DiscipleMoodPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
-import { useGameStore, useMasterStore, usePendingStore, useInboxStore } from '@/stores';
+import { useGameStore, useMasterStore, usePendingStore, useInboxStore, useTutorialStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
 import { triggerTutorial } from '@/systems/tutorialSystem';
+import { INTRO_RUN_KEY, beginIntroRun, skipIntroRun } from '@/systems/introRun';
 import { fastForward } from '@/systems/fastForward';
 import { saveCurrentRunSilently } from '@/systems/runSync';
 import { getGameApi } from '@/engine/gameApi';
@@ -36,6 +38,10 @@ export default function SectScreen() {
   // master 가 비어 있으면 회차 첫 진입 → 시작 선택 모달.
   // 사용자가 풀에서 2~4명 선택 + 시작 → seedNewRun 호출 → master 채워짐 → 자동 숨김.
   const isFresh = useMasterStore((s) => s.master == null);
+
+  // 도입 튜토리얼 회차 진입 — 첫 계정(미경험)은 시작 선택 대신 도입 회차 게이트를 먼저 본다. docs/46.
+  const introSeen = useTutorialStore((s) => s.seen.includes(INTRO_RUN_KEY));
+  const introPending = isFresh && !introSeen;
 
   // 진행 → 일일 세부 선택 모달 → 확정 시 하루 진행(GameApi).
   const [choiceOpen, setChoiceOpen] = useState(false);
@@ -122,8 +128,20 @@ export default function SectScreen() {
             });
         }}
       />
+      {/* 도입 튜토리얼 회차 게이트 — 첫 계정(미경험)에만. 시작/건너뛰기 즉시 마킹(재강제 X). docs/46 */}
+      <IntroRunGate
+        visible={introPending}
+        onStart={() => {
+          beginIntroRun(); // 마킹 + 장철 1명 고정 시드
+          saveCurrentRunSilently();
+          triggerTutorial('intro'); // 핵심 루프 안내(계정 1회). docs/44
+        }}
+        onSkip={() => {
+          skipIntroRun(); // 마킹만 → 아래 StartSelectModal 로 일반 시작
+        }}
+      />
       <StartSelectModal
-        visible={isFresh}
+        visible={isFresh && !introPending}
         onComplete={() => {
           saveCurrentRunSilently();
           triggerTutorial('intro'); // 첫 사문 개창 직후 — 핵심 루프 안내(계정 1회). docs/44
