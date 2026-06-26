@@ -8,6 +8,7 @@ import { JOB_TIER_LABEL } from '@/data/jobs';
 import { GRADUATION, TUTORIAL } from '@/data/constants';
 import { evaluateJobs, type JobChance } from './jobSystem';
 import { graduateWithJob } from './graduationChoice';
+import { earliestOwedYear } from './arcEventSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -115,7 +116,13 @@ export function mainArtSummary(disciple: Disciple): string {
 const GRADUATION_BUSY: DiscipleStatus[] = ['questing', 'crafting', 'meditating', 'graduated', 'departed'];
 export function isGraduationEligible(d: Disciple, currentYear: number): boolean {
   if (GRADUATION_BUSY.includes(d.status)) return false;
-  return currentYear - d.entryYear >= GRADUATION.RAISING_YEARS;
+  if (currentYear - d.entryYear < GRADUATION.RAISING_YEARS) return false;
+  // 15년차 하산 이벤트(및 의뢰로 못 받아 빚진 연차)가 남았으면 졸업 보류 — 회고 capstone 을 거치게 한다.
+  // arc 이벤트는 triggerArcEvents 가 활성 복귀 시 지급 → 해소되면 owed null → 다음 체크에서 졸업. docs/47 §10 E8.
+  // (콘텐츠 없는 연차는 owed 로 안 침 → 콘텐츠 미작성 캐릭터·graybox 는 영향 0.)
+  const season = useTimeStore.getState().current.season;
+  if (earliestOwedYear(d, currentYear, season) != null) return false;
+  return true;
 }
 
 // 도입 튜토리얼 회차 조기 졸업 — isTutorialRun 일 때만, 목표 경지(일류) 도달 시 15년 게이트와 무관하게 하산.

@@ -7,11 +7,13 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
 import type {
+  ArcChoiceRecord,
   InboxItem,
   MoralChoice,
   MoralChoiceTone,
   PendingMoralEvent,
 } from '@/types';
+import type { ArcEventChoice } from '@/data/scenarios/arcEvents';
 import { SECLUSION_PETITION_DAYS } from '@/data/realm';
 import { resolveGraduationPick, resolveGraduationConflict } from './graduationChoice';
 import { applyMeetingChoice } from './meetingSystem';
@@ -49,6 +51,7 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'oneLiner' ||
     d === 'wish' ||
     d === 'moral' ||
+    d === 'arc' ||
     d === 'seclusion_petition' ||
     d === 'quest_event' ||
     d === 'expedition_event' ||
@@ -85,6 +88,10 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   if (p.domain === 'moral') {
     const choices = (p.choices ?? []) as MoralChoice[];
     return choices.map((c) => ({ key: c.tone, label: c.label }));
+  }
+  if (p.domain === 'arc') {
+    const choices = (p.choices ?? []) as ArcEventChoice[];
+    return choices.map((c) => ({ key: c.key, label: c.label }));
   }
   if (p.domain === 'seclusion_petition') {
     return [
@@ -131,7 +138,7 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   };
   const d0 = String(p.domain ?? '');
   let skipLeft = false;
-  if (['oneLiner', 'wish', 'moral', 'meeting', 'seclusion_petition'].includes(d0)) skipLeft = hasLeft(discipleId);
+  if (['oneLiner', 'wish', 'moral', 'arc', 'meeting', 'seclusion_petition'].includes(d0)) skipLeft = hasLeft(discipleId);
   else if (d0 === 'mediation' || d0 === 'ambition_conflict') skipLeft = hasLeft(String(p.aId ?? '')) || hasLeft(String(p.bId ?? ''));
   else if (d0 === 'counsel') skipLeft = hasLeft(String(p.subjectId ?? '')) || hasLeft(String(p.otherId ?? ''));
   if (skipLeft) {
@@ -208,6 +215,27 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
     const options = (p.options ?? []) as MeetingOption[];
     const opt = options.find((o) => o.key === key);
     if (opt) applyMeetingChoice(discipleId, opt.effects);
+  } else if (p.domain === 'arc') {
+    // 필수 이벤트 아크 — 면담과 같은 효과 적용(단 delta 큼) + 그 해 선택을 영속 기록(졸업 회고). docs/47.
+    const choices = (p.choices ?? []) as ArcEventChoice[];
+    const opt = choices.find((c) => c.key === key);
+    if (opt) {
+      applyMeetingChoice(discipleId, opt.effects);
+      const d = useDiscipleStore.getState().disciples[discipleId];
+      if (d) {
+        const rec: ArcChoiceRecord = {
+          year: Number(p.year ?? 0),
+          eventId: String(p.eventId ?? ''),
+          title: String(p.title ?? ''),
+          choiceKey: key,
+          choiceLabel: opt.label,
+          day: createdAtDay,
+        };
+        useDiscipleStore.getState().update(discipleId, {
+          arcChoices: [...(d.arcChoices ?? []), rec],
+        });
+      }
+    }
   }
 
   useInboxStore.getState().remove(item.id);

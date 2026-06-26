@@ -28,6 +28,7 @@ import { triggerDailySpar } from './sparringSystem';
 import { triggerDailyRaid } from './raidSystem';
 import { triggerDailyMediation } from './mediationSystem';
 import { triggerAmbitionConflict } from './ambitionConflictSystem';
+import { triggerArcEvents } from './arcEventSystem';
 import { tickDarkness } from './darknessSystem';
 import { tickSimma } from './simmaSystem';
 import { tickCraft, tickElixirAbsorb } from './alchemySystem';
@@ -154,6 +155,7 @@ export function triggerPostSettlement(): void {
   triggerDailyRaid(); // 산적 습격 — 강호 사건, 전투 엔진 실전(저확률·사망 없음). docs/35 §7
   triggerDailyMediation(); // 중재 면담·상담 기회 — 응어리 쌍이 있을 때. docs/33 §3
   triggerAmbitionConflict(); // 동문 야망 충돌 — 친밀+야망 쌍이 출도전기에 닿으면 사부 4선택. docs/19·33 §4
+  triggerArcEvents(); // 캐릭터 필수 이벤트 아크 — 빚진 연차 슬롯을 활성 제자에 지급(계절 슬롯·이월). docs/47
   tickDarkness(); // 흑화 자율 진행(risk 매일·level 주1회). docs/13
   tickSimma(); // 심마 누적·진정 + 주화입마 발작 굴림. docs/13·26
   checkAchievements(); // 업적 스캔 — 신규 "첫 X" 달성 기록 + 무공서 해금 + 알림. docs/32

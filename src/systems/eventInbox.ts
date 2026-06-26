@@ -5,6 +5,7 @@ import { josa } from '@/utils/korean';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, Milestone, PendingMoralEvent, Realm } from '@/types';
+import type { ArcEvent } from '@/data/scenarios/arcEvents';
 import { REALM_LABEL } from '@/types/realm';
 
 // 도덕 갈등 이벤트(4선택) → 서신함 'event'(결정 필요).
@@ -29,6 +30,32 @@ export function moralToInbox(mp: PendingMoralEvent): void {
       siblingId: mp.siblingId ?? null,
       siblingName: mp.siblingName ?? null,
       choices: mp.choices,
+    },
+  });
+}
+
+// 캐릭터 필수 이벤트 아크 → 서신함 'event'(결정 필요, 무시 불가). docs/47·48.
+// id 결정적(arc-<제자>-y<연차>) — add 멱등이라 미해소 동안 매 tick 재시도해도 1개만.
+export function arcToInbox(d: Disciple, ev: ArcEvent, day: number): void {
+  const id = `arc-${ev.discipleId}-y${ev.year}`;
+  useInboxStore.getState().add({
+    id,
+    kind: 'event',
+    eventId: id,
+    title: `${d.name} — ${ev.title}`,
+    preview: ev.body, // event kind 는 body 필드가 없어 preview 로 본문 전달(도덕 이벤트와 동일)
+    priority: 'high',
+    createdAtDay: day,
+    read: false,
+    resolved: false,
+    payload: {
+      domain: 'arc',
+      discipleId: ev.discipleId,
+      eventId: id,
+      year: ev.year,
+      title: ev.title,
+      hint: ev.hint ?? null,
+      choices: ev.choices,
     },
   });
 }

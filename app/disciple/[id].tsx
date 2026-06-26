@@ -5,6 +5,7 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import {
+  ArcChroniclePanel,
   DiscipleHeader,
   DiscipleStatusPanel,
   DiscipleTodayLog,
@@ -83,6 +84,9 @@ export default function DiscipleDetailScreen() {
           {id && <DiscipleTodayLog discipleId={id} />}
           {fromStore && <StatGrowthPanel disciple={fromStore} />}
           <MoodPanel lines={moods} />
+
+          {/* 걸어온 길 — 필수 이벤트 아크 회고(두루마리 연대기). 선택 기록 있을 때만. docs/47 */}
+          {fromStore && <ArcChroniclePanel disciple={fromStore} />}
 
           {/* 무공 수련 — 보유 무공 + 무공서 선택(전수→주력) */}
           {fromStore && <MartialTrainingPanel disciple={fromStore} />}

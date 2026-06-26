@@ -1,3 +1,4 @@
+import type { Season } from './game';
 import type { MartialArtInstance, MartialArtSchool } from './martialArt';
 import type { Realm, RealmProgress } from './realm';
 import type { StatId, StatTrack } from './training';
@@ -77,6 +78,16 @@ export interface DailyActivity {
   afternoon: ActivityType;
 }
 
+// 필수 이벤트 아크 — 사부가 그 해 내린 선택의 영속 기록(회차 스코프). 졸업 회고의 원천. docs/47·48.
+export interface ArcChoiceRecord {
+  year: number; // 양육 연차 1~15
+  eventId: string; // arc-<discipleId>-y<NN>
+  title: string; // 이벤트 제목(회고 표시용)
+  choiceKey: string;
+  choiceLabel: string; // 사부가 고른 응답(회고에 그대로)
+  day: number; // 선택한 totalDay
+}
+
 export interface Disciple {
   id: string;
   name: string;
@@ -143,6 +154,11 @@ export interface Disciple {
   boneReborn?: boolean;
 
   personality: PersonalityTraits;
+
+  // 필수 이벤트 아크 — 발화 계절(회차 시작 시 로스터 인덱스로 배정, 한 계절 1명). docs/47 §10 E3.
+  arcSeason?: Season;
+  // 그 해 필수 이벤트에 내린 선택들(연차당 1개, 졸업 회고의 원천). docs/47 §4.
+  arcChoices?: ArcChoiceRecord[];
 
   // 옵셔널. 비어 있으면 personality 에서 자동 산출 (deriveTonePreferences).
   // 시드 시점에 미리 채워두면 그 값이 우선.

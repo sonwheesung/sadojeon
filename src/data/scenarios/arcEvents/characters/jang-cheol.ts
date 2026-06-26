@@ -1,0 +1,186 @@
+import type { ArcEvent } from '../types';
+
+// 캐릭터 필수 이벤트 아크 — 장철(jang-cheol). docs/47·48.
+// 경지 중립·동문 부재 안전·숨은변수 직설 금지. 효과 delta 크게(핵심축 ±8~12).
+export const JANG_CHEOL_ARC: ArcEvent[] = [
+  {
+    discipleId: 'jang-cheol',
+    year: 1,
+    title: '향수(鄕愁)',
+    body: '밤마다 이불 속에서 훌쩍이던 철이가 끝내 사부를 찾아온다. "사부님… 자려고 눈만 감으면 어머니가 쪄주시던 떡 냄새가 나요. 집에… 집에 가고 싶어요."',
+    choices: [
+      { key: 'a', label: '울어도 된다. 그리운 건 부끄러운 게 아니야. 이리 와 앉거라.', effects: { trust: 8, persona: { warmth: 10, mercy: 4 } } },
+      { key: 'b', label: '집 생각은 잠시 접어두자. 무인은 마음부터 단단히 세우는 법이다.', effects: { trust: 2, persona: { integrity: 6, prudence: 4 } } },
+      { key: 'c', label: '어머니께 편지를 쓰거라. 그리울 땐 그리움을 글로 보내면 된다.', effects: { trust: 6, persona: { freedom: 8, warmth: 6 } } },
+      { key: 'd', label: '그만한 일로 밤마다 울어서야 쓰겠느냐. 가서 자거라.', effects: { trust: -4, persona: { integrity: 6, warmth: -6 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 2,
+    title: '형의 편지(兄書)',
+    body: '철이가 구겨진 편지 한 장을 들고 온다. "형님이 올해 농사가 잘됐다고… 와서 같이 거두자고 적었어요. 사부님, 저… 잠깐만이라도 다녀오면 안 될까요?"',
+    choices: [
+      { key: 'a', label: '다녀오너라. 손이 그리운 집이라면 한 철쯤 거들어주는 게 마땅하다.', effects: { trust: 6, persona: { freedom: 12, warmth: 6 } } },
+      { key: 'b', label: '지금은 사문이 먼저다. 형님께는 다음을 기약하자.', effects: { trust: -4, persona: { integrity: 8, prudence: 4 } } },
+      { key: 'c', label: '몸은 못 가도 마음은 보낼 수 있다. 정성껏 답장을 쓰거라.', effects: { trust: 4, persona: { warmth: 6, prudence: 6 } } },
+      { key: 'd', label: '나도 함께 가마. 사부가 곁에 있으면 형님도 안심하실 게다.', effects: { trust: 8, persona: { warmth: 10, mercy: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 3,
+    title: '감싸다(庇)',
+    body: '한 동문이 실수로 호되게 꾸중을 듣는 자리. 철이가 불쑥 앞을 막아선다. "제가… 제가 같이 봐주기로 했던 일이에요. 쟤 혼자 잘못한 게 아니에요."',
+    choices: [
+      { key: 'a', label: '벗을 등지지 않는 그 마음이 무인의 첫 그릇이다. 잘했다.', effects: { trust: 6, persona: { integrity: 10, mercy: 6 } } },
+      { key: 'b', label: '마음은 알겠다만 끼어들 자리는 가려야 한다. 물러서 있거라.', effects: { trust: 2, persona: { prudence: 8, warmth: -4 } } },
+      { key: 'c', label: '같이 했다면 같이 책임지거라. 둘이 마당을 쓸어라.', effects: { trust: 4, persona: { integrity: 8, prudence: 4 } } },
+      { key: 'd', label: '남의 일에 함부로 나서지 마라. 네 수련이나 챙겨라.', effects: { trust: -4, persona: { warmth: -6, integrity: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 4,
+    title: '느린 걸음(鈍)',
+    body: '땀에 전 철이가 흙바닥에 주저앉아 있다. "동문들은 쑥쑥 나아가는데… 저는 팔다리만 굵어질 뿐이에요. 저는 왜 이렇게 더딘 걸까요, 사부님."',
+    choices: [
+      { key: 'a', label: '걸음이 느린 게 아니라 길이 다른 거다. 네 길은 네 보폭으로 가면 된다.', effects: { trust: 8, persona: { integrity: 8, warmth: 6 } } },
+      { key: 'b', label: '더디면 남보다 곱절을 흘리면 된다. 핑계보다 땀이 정직하다.', effects: { trust: 2, persona: { integrity: 8, prudence: 4 } } },
+      { key: 'c', label: '그 굵은 팔다리가 언젠가 너를 살리고 남을 지킨다. 그게 네 무기다.', effects: { trust: 6, persona: { integrity: 6, warmth: 6 } } },
+      { key: 'd', label: '(말없이 그의 어깨를 한 번 짚고 지나간다.)', effects: { trust: -2, persona: { prudence: 6 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 5,
+    title: '추수(秋收)',
+    body: '마을이 추수철에 들었다. 철이가 멀리 들판을 내다보며 말한다. "사부님, 지금쯤 마을은 일손이 모자랄 텐데… 며칠만 내려가 거들고 오면 안 될까요. 손은 제가 제일 빠른데요."',
+    choices: [
+      { key: 'a', label: '내려가 거들어라. 땅을 거두는 손도 사람을 지키는 손이다.', effects: { trust: 6, persona: { freedom: 12, warmth: 6 } } },
+      { key: 'b', label: '추수는 매년 오지만 수련의 때는 한 번이다. 올해는 참거라.', effects: { trust: -4, persona: { integrity: 8, freedom: -4 } } },
+      { key: 'c', label: '딱 사흘이다. 날을 정하고 다녀오너라.', effects: { trust: 4, persona: { freedom: 6, prudence: 6 } } },
+      { key: 'd', label: '함께 갈 동문을 데려가거라. 여럿이면 더 빨리 끝날 게다.', effects: { trust: 6, persona: { warmth: 8, mercy: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 6,
+    title: '첫 망설임(怯)',
+    body: '첫 호위 의뢰를 앞둔 철이의 손이 떨린다. "사부님… 제가 잘못 막아서 누가 다치면 어쩌죠. 사람을 지키려다 못 지킬까 봐… 무서워요."',
+    choices: [
+      { key: 'a', label: '무섭다는 건 네가 그 무게를 안다는 거다. 그 마음 그대로 가거라.', effects: { trust: 6, persona: { integrity: 8, mercy: 4 } } },
+      { key: 'b', label: '처음부터 큰 짐을 질 것 없다. 가벼운 일부터 손에 익히자.', effects: { trust: 4, persona: { prudence: 10, warmth: 4 } } },
+      { key: 'c', label: '곁에 사람을 붙여주마. 혼자 다 짊어지지 않아도 된다.', effects: { trust: 6, persona: { warmth: 8, prudence: 4 } } },
+      { key: 'd', label: '겁이 나면 아직 이르다. 이번 일은 다른 이에게 넘기자.', effects: { trust: -2, persona: { prudence: 6, integrity: -4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 7,
+    title: '손속(手)',
+    body: '첫 실전을 치르고 돌아온 철이의 낯빛이 하얗다. "도적 하나를… 하마터면 죽일 뻔했어요. 손이 멈추질 않았어요. 사부님, 이게… 이게 맞는 건가요?"',
+    choices: [
+      { key: 'a', label: '베지 않고 지킬 수 있다면 그게 으뜸이다. 네 망설임이 너를 사람으로 둔다.', effects: { trust: 6, persona: { mercy: 10, integrity: 4 }, righteousness: 1 } },
+      { key: 'b', label: '지킬 사람이 있다면 손에 사정을 둬선 안 된다. 벨 땐 베는 거다.', effects: { trust: 2, persona: { integrity: 6, mercy: -6 }, righteousness: -1 } },
+      { key: 'c', label: '죽이지 않고 제압하는 법을 가르쳐주마. 묶을 줄 아는 손이 더 강하다.', effects: { trust: 6, persona: { prudence: 8, mercy: 6 }, righteousness: 1 } },
+      { key: 'd', label: '(대답 대신 그의 떨리는 손을 가만히 쥐어준다.)', effects: { trust: 4, persona: { warmth: 6 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 8,
+    title: '고향의 그림자(影)',
+    body: '풍문을 전해 들은 철이가 처음으로 주먹을 떤다. "제 고향 어귀에 도적떼가 들었대요. 사부님, 가만히 있을 수가 없어요. 거기엔… 제 식구가 있어요."',
+    choices: [
+      { key: 'a', label: '가거라. 지키고 싶은 곳이 있다는 건 네가 강해질 까닭이다.', effects: { trust: 6, persona: { warmth: 10, freedom: 6 } } },
+      { key: 'b', label: '혼자 가지 마라. 믿을 동문과 함께 가면 식구도 너도 지킬 수 있다.', effects: { trust: 6, persona: { warmth: 8, mercy: 6 } } },
+      { key: 'c', label: '분을 앞세우지 말고 사문의 의뢰로 정식으로 풀자. 그래야 끝까지 지킨다.', effects: { trust: 4, persona: { prudence: 10, integrity: 6 } } },
+      { key: 'd', label: '풍문에 일일이 휘둘릴 것 없다. 네 수련이 먼저다.', effects: { trust: -6, persona: { warmth: -8, integrity: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 9,
+    title: '약속(約)',
+    body: '한 동문과 어깨를 걸고 돌아온 철이의 눈이 빛난다. "사부님, 저희 약속했어요. 졸업하면 함께 고향으로 가서 마을을 지키기로요. 이런 약속, 해도 되는 거죠?"',
+    choices: [
+      { key: 'a', label: '지킬 사람과 한 약속이라면 무엇보다 무겁게 여기거라.', effects: { trust: 6, persona: { warmth: 10, mercy: 6 } } },
+      { key: 'b', label: '마음은 알겠다만, 그 동문에겐 그 동문의 길이 있다. 묶지는 마라.', effects: { trust: 2, persona: { freedom: 8, prudence: 6 } } },
+      { key: 'c', label: '졸업까진 아직 멀다. 그때 가서도 같은 마음인지 곱씹어보거라.', effects: { trust: 4, persona: { prudence: 8 } } },
+      { key: 'd', label: '강호는 약속대로 흘러가지 않는다. 너무 마음 주지 마라.', effects: { trust: -4, persona: { warmth: -6, prudence: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 10,
+    title: '가족 위기(家)',
+    body: '서신을 받아 든 철이의 손이 굳었다. "어머니가 자리에 누우셨대요. 아버지도 일하다 다치시고… 사부님, 염치없지만 잠시 집에 다녀오게 해주세요. 부탁입니다."',
+    choices: [
+      { key: 'a', label: '망설일 게 무어냐. 어서 가거라. 식구 곁이 지금 네 자리다.', effects: { trust: 8, persona: { warmth: 12, freedom: 6 } } },
+      { key: 'b', label: '마음 아프다만 지금이 고비다. 효심은 더 크게 자라 갚으면 된다.', effects: { trust: -6, persona: { integrity: 8, warmth: -6 } } },
+      { key: 'c', label: '내가 약과 의원을 보내마. 너는 마음 놓고 다녀오너라.', effects: { trust: 8, persona: { warmth: 10, mercy: 6 } } },
+      { key: 'd', label: '길이 험하다. 동문 하나를 호위로 붙일 테니 함께 가거라.', effects: { trust: 6, persona: { warmth: 6, prudence: 6 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 11,
+    title: '표국의 눈(鏢)',
+    body: '의뢰를 마치고 온 철이가 머뭇거린다. "표국 표두 한 분이 저를 눈여겨보셨대요. 호위 일에 맞는 손이라고… 졸업하면 자리를 주겠다세요. 저… 어떻게 해야 할까요?"',
+    choices: [
+      { key: 'a', label: '사람을 지켜 밥을 버는 길이다. 네 손에 꼭 맞는 자리니 마음에 담아두거라.', effects: { trust: 6, persona: { ambition: 6, prudence: 6 } } },
+      { key: 'b', label: '좋은 제안이다만 아직 배울 게 남았다. 사문에서 더 여물고 정하자.', effects: { trust: 4, persona: { integrity: 8, prudence: 4 } } },
+      { key: 'c', label: '한 곳에 매이는 게 네 결에 맞을지 보거라. 급할 것 없다.', effects: { trust: 2, persona: { freedom: 8, prudence: 4 } } },
+      { key: 'd', label: '네 길은 네가 정하는 거다. 나는 어느 쪽이든 등을 밀어주마.', effects: { trust: 6, persona: { freedom: 10 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 12,
+    title: '그릇(器)',
+    body: '수련이 더딘 자신을 한참 들여다보던 철이가 도리어 옅게 웃는다. "사부님, 저는 크게 이름 떨칠 무인은 못 될 것 같아요. 그래도… 제 손이 닿는 사람들은 지킬 수 있잖아요. 그거면 된 것 같기도 하고요."',
+    choices: [
+      { key: 'a', label: '지키는 손은 작지 않다. 그 길도 충분히 큰 길이다.', effects: { trust: 6, persona: { integrity: 8, warmth: 6 } } },
+      { key: 'b', label: '거기서 멈추지 마라. 더 높이 닿으면 더 많이 지킬 수 있다.', effects: { trust: 2, persona: { ambition: 10, integrity: 4 } } },
+      { key: 'c', label: '(고개를 끄덕이고는 더 말을 보태지 않는다. 그 깨달음 자체를 인정한다.)', effects: { trust: 4, persona: { integrity: 6, prudence: 6 } } },
+      { key: 'd', label: '제 그릇을 아는 것도 큰 공부다. 자신을 너무 깎지는 말거라.', effects: { trust: 6, persona: { warmth: 8, mercy: 4 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 13,
+    title: '형의 혼례(婚)',
+    body: '오랜만에 환히 웃는 철이가 청첩을 내민다. "사부님, 형님이 장가를 가요! 저… 그 자리만큼은 꼭 가서 절하고 싶은데, 가도 될까요?"',
+    choices: [
+      { key: 'a', label: '형님 혼례에 아우가 빠져서야 쓰겠느냐. 다녀오너라.', effects: { trust: 6, persona: { warmth: 10, freedom: 6 } } },
+      { key: 'b', label: '한 달 말미를 주마. 가서 형님 곁을 든든히 지켜드리거라.', effects: { trust: 6, persona: { freedom: 8, warmth: 6 } } },
+      { key: 'c', label: '나도 함께 가 축하를 전하마. 사부가 절하면 형님 체면도 서지 않겠느냐.', effects: { trust: 8, persona: { warmth: 12, mercy: 4 } } },
+      { key: 'd', label: '하필 수련이 한고비다. 마음만 보내고 이번은 참자꾸나.', effects: { trust: -6, persona: { integrity: 8, warmth: -6 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 14,
+    title: '분노의 밤(怒)',
+    body: '한밤중 피투성이 소식을 받은 철이가 짐승처럼 울부짖는다. "어머니가… 흑사파 놈들이 마을을 짓밟고… 어머니가 돌아가셨어요. 사부님, 저는… 저는 그놈들을 다 찢어놓고 싶어요."',
+    choices: [
+      { key: 'a', label: '울어라. 실컷 울어라. 오늘 밤은 내가 네 곁을 떠나지 않으마.', effects: { trust: 8, persona: { warmth: 12, mercy: 6 } } },
+      { key: 'b', label: '그래, 가서 갚아라. 놈들이 흘린 만큼 흘리게 해주는 게 정의다.', effects: { trust: 2, darkness: 1, righteousness: -2, persona: { mercy: -8, ambition: 6 } } },
+      { key: 'c', label: '그 분을 칼이 아니라 숨에 실어 다스리자. 흐트러진 마음으론 누구도 못 지킨다.', effects: { trust: 6, persona: { prudence: 10, integrity: 6 } } },
+      { key: 'd', label: '죽은 사람은 죽은 사람이다. 산 사람은 제 길을 가야지.', effects: { trust: -8, persona: { warmth: -8 } } },
+    ],
+  },
+  {
+    discipleId: 'jang-cheol',
+    year: 15,
+    title: '하산(下山)',
+    body: '15년을 함께한 철이가 짐을 꾸려 사부 앞에 선다. 어느새 산처럼 든든해진 어깨다. "사부님, 이제 어디로 가야 할까요. 고향으로 돌아갈지, 표국에 들지, 정파의 한 갈래를 세울지… 마지막으로 사부님 뜻을 듣고 싶어요."',
+    choices: [
+      { key: 'a', label: '네 뿌리가 있는 곳으로 돌아가거라. 고향을 지키는 손이 네겐 가장 어울린다.', effects: { trust: 8, persona: { warmth: 10, freedom: 6 } } },
+      { key: 'b', label: '표국에 들어 사람을 호위하거라. 네 우직한 손이 수많은 길손을 지킬 게다.', effects: { trust: 6, persona: { integrity: 8, prudence: 6 } } },
+      { key: 'c', label: '정파의 한 갈래를 세워 더 넓게 지켜보거라. 네 곧은 마음이면 능히 받쳐낸다.', effects: { trust: 6, persona: { integrity: 10 }, righteousness: 1 } },
+      { key: 'd', label: '어느 길이든 좋다. 네가 고른 길이 곧 옳은 길이니, 망설임 없이 가거라.', effects: { trust: 8, persona: { freedom: 10 } } },
+    ],
+  },
+];

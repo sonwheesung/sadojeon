@@ -31,6 +31,7 @@ import {
   useTimeStore,
 } from '@/stores';
 import { captureSnapshot } from './reportSystem';
+import { assignArcSeasons } from './arcEventSystem';
 import { resetAlchemy } from './alchemySystem';
 import { seedUnlockedArts } from './achievementSystem';
 import { generateBoard } from './questSystem';
@@ -203,6 +204,7 @@ export function seedNewRun(selectedPoolIds: string[], opts: SeedRunOptions = {})
     .map(discipleFromSeed)
     .filter((d): d is Disciple => d != null);
   seedStartingRelations(list); // docs/15 시작 적대·친밀
+  assignArcSeasons(list); // 필수 이벤트 발화 계절 배정(로스터 인덱스, 한 계절 1명). docs/47 §10 E3.
   useDiscipleStore.getState().setAll(list);
   // 비급 연구 회차 리셋 — 비급 원본은 영속이나 **연구 진행도는 회차마다 0**(새 사부가 다시 푼다, docs/16).
   // seedNewRun 자체에 둔다 — 서버/헤드리스 경로는 endRun 을 안 거쳐 이전 회차 완료연구가 그대로 새던 누수 차단.
