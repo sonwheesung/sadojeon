@@ -45,6 +45,15 @@ useDiscipleStore.getState().update(dsId, { realm: 'ilryu' as Realm });
 const goal0 = goalArtFor(useDiscipleStore.getState().disciples[dsId]!);
 check('비급 전권 보유 시 goal=검 grandmaster', goal0?.grade === 'grandmaster' && goal0.school === 'sword', `goal=${goal0?.id}(${goal0?.grade}·${goal0?.school})`);
 
+// G4 사각(2026-06-27): god-mode 전권엔 legendary 업적 무공(dokgo-gugeom)도 든다. 등급 최우선이라
+// 그 도달 불가 정점(planArtToward=null)을 목표로 잡으면 carry 가 한 발도 못 떼고 chosangbi 고착(화경 0%).
+// 전권(legendary 포함) 부여 시에도 goal 은 **도달 가능한** 무공이어야 한다.
+for (const a of MARTIAL_ARTS) grant(a.id);
+const goalAll = goalArtFor(useDiscipleStore.getState().disciples[dsId]!);
+check('전권(legendary 포함) 시 goal=도달 가능 무공(legendary dokgo-gugeom 고착 X)',
+  goalAll?.id !== 'dokgo-gugeom' && goalAll?.school === 'sword' && goalAll?.grade === 'grandmaster',
+  `goal=${goalAll?.id}(${goalAll?.grade}·${goalAll?.school})`);
+
 // training 고정 + 주력 성 점진 → 검 사슬 끝까지 타는가.
 useDiscipleStore.getState().update(dsId, { realm: 'iryu' as Realm });
 let prevMain = '';

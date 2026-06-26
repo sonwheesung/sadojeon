@@ -114,7 +114,13 @@ export function goalArtFor(d: Disciple): MartialArt | null {
     }
     return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
   });
-  return candidates[0];
+  // 우선순위 순회하며 **첫 도달 가능 후보**를 목표로 — 도달 불가 정점(업적 legendary 등, planArtToward=null)을
+  // 건너뛴다. god-mode 전권엔 dokgo-gugeom(독고구검·legendary)처럼 사슬 진입 불가 무공이 들어와, 등급
+  // 최우선이라 그걸 목표로 잡으면 carry 가 한 발도 못 떼고 주력 chosangbi 에 영영 고착(factorysweep 화경 0%). docs/37 G4.
+  for (const c of candidates) {
+    if (canLearnArt(d, c) || owns(d, c.id) || planArtToward(d, c) != null) return c;
+  }
+  return candidates[0]; // 전부 도달 불가 — 최상위 반환(현 주력 유지 폴백)
 }
 
 // 목표를 향해 "오늘 주력으로 삼아 키울 무공" — 선행조건을 합법적으로 한 단계씩 밟는다.
@@ -181,6 +187,9 @@ function configureCarryTraining(id: string): boolean {
       const ceilingArt = MARTIAL_ARTS.filter(
         (a) =>
           a.minDarkness == null &&
+          // 빌드 갈래 유지 — goal 과 같은 school 만. 안 그러면 등급 최우선이라 학습 가능한 최고 등급
+          // (예: legendary 의술 legend-ilyang-ji)을 집어 검 빌드 카리가 엉뚱한 갈래를 주력 삼는다(화경 0%). docs/37 G4.
+          (goal == null || a.school === goal.school) &&
           realmIndex(effectiveRealmCeiling(a.grade)) >= realmIndex(nextR) &&
           (owns(d, a.id) || (chainOwned(a) && canLearnArt(d, a))),
       ).sort((a, b) => {
