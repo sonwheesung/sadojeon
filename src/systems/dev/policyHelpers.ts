@@ -156,6 +156,17 @@ const OPTIMAL_PATTERN: TrainingCategory[] = [
 ];
 
 // 한 제자의 전투 캐리 훈련(무공서 트리 climbing + 내공·성·외공 균형). 반환: 초절정↑(화경 임박).
+// 목표 무공의 사슬 집합 — 목표 + 전이적 선행 전부. 천장 블록이 "목표 사다리 위의 무공"을 우선 고르게.
+function chainSetToward(goal: MartialArt, depth = 0, acc = new Set<string>()): Set<string> {
+  if (depth > 8 || acc.has(goal.id)) return acc;
+  acc.add(goal.id);
+  for (const p of goal.prerequisites ?? []) {
+    const pre = findMartialArt(p.artId);
+    if (pre) chainSetToward(pre, depth + 1, acc);
+  }
+  return acc;
+}
+
 function configureCarryTraining(id: string): boolean {
   const sched = useScheduleStore.getState();
   const ds = useDiscipleStore.getState();
@@ -184,15 +195,19 @@ function configureCarryTraining(id: string): boolean {
       // 매일 구제(종전 격일 제한 제거, 2026-06-25): 계획 무공의 천장이 다음 경지에 못 미치면 그 즉시
       // "지금 키울 수 있는 최고 천장 무공"을 주력으로 — 하품 뿌리에 며칠씩 묶여 시간 낭비하지 않게.
       const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
+      // 목표 사다리(goal 의 사슬) — 천장 블록이 사슬 밖 막다른 고천장 검(예: samjae-sword)으로 새지 않고
+      // 목표로 이어지는 무공을 우선 잡게. 사슬 위가 없을 때만 off-chain 다리로 폴백. docs/37 G4.
+      const chainSet = goal ? chainSetToward(goal) : new Set<string>();
       const ceilingArt = MARTIAL_ARTS.filter(
         (a) =>
           a.minDarkness == null &&
-          // 빌드 갈래 유지 — goal 과 같은 school 만. 안 그러면 등급 최우선이라 학습 가능한 최고 등급
-          // (예: legendary 의술 legend-ilyang-ji)을 집어 검 빌드 카리가 엉뚱한 갈래를 주력 삼는다(화경 0%). docs/37 G4.
-          (goal == null || a.school === goal.school) &&
+          (goal == null || a.school === goal.school) && // 빌드 갈래 유지
           realmIndex(effectiveRealmCeiling(a.grade)) >= realmIndex(nextR) &&
           (owns(d, a.id) || (chainOwned(a) && canLearnArt(d, a))),
       ).sort((a, b) => {
+        const ca = chainSet.has(a.id) ? 1 : 0; // 목표 사다리 위의 무공 우선
+        const cb = chainSet.has(b.id) ? 1 : 0;
+        if (ca !== cb) return cb - ca;
         const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
         if (g !== 0) return g;
         return (effRank[d.efficiency?.[b.school] ?? '보통'] ?? 2) - (effRank[d.efficiency?.[a.school] ?? '보통'] ?? 2);
