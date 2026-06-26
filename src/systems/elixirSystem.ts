@@ -7,7 +7,7 @@ import { useItemStore } from '@/stores/itemStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
-import { DIVINE_ELIXIR_ID, divineElixirItem, findElixirRecipe } from '@/data/elixirs';
+import { DIVINE_ELIXIR_ID, DIVINE_ELIXIR_FOR_HWAGYEONG, divineElixirItem, findElixirRecipe } from '@/data/elixirs';
 
 // 신품 영약 제련 — 영약제조(alchemy) 이 경지에 닿은 제자가 신품 영약을 빚는다. docs/28 §5-1.
 // 무과금 화경 경로: 의뢰 드랍(운) 외에, 영약제조 특화 제자를 키우면 제련으로 확보.
@@ -18,12 +18,29 @@ export function hasDivineElixir(): boolean {
   return useItemStore.getState().items.some((i) => i.id === DIVINE_ELIXIR_ID && i.count > 0);
 }
 
-// 신품 영약 1개 소모(있으면 true). 화경 돌파 시 호출.
+// 신품 영약 1개 소모(있으면 true). (단발 소모용 — 화경 게이트는 아래 N개 버전 사용.)
 export function consumeDivineElixir(): boolean {
   const store = useItemStore.getState();
   const it = store.items.find((i) => i.id === DIVINE_ELIXIR_ID && i.count > 0);
   if (!it) return false;
   store.adjustCount(DIVINE_ELIXIR_ID, -1);
+  return true;
+}
+
+// 사문 보유 신품 영약 개수.
+export function divineElixirCount(): number {
+  return useItemStore.getState().items.find((i) => i.id === DIVINE_ELIXIR_ID)?.count ?? 0;
+}
+
+// 화경 환골탈태에 필요한 N과(DIVINE_ELIXIR_FOR_HWAGYEONG) 보유했나 — 분리 레버 게이트(docs/23 §화경).
+export function hasDivineForHwagyeong(): boolean {
+  return divineElixirCount() >= DIVINE_ELIXIR_FOR_HWAGYEONG;
+}
+
+// 화경 돌파 성공 시 N과 소모(N과 있으면 true). 부족하면 소모 X·false(영약 보존).
+export function consumeDivineForHwagyeong(): boolean {
+  if (!hasDivineForHwagyeong()) return false;
+  useItemStore.getState().adjustCount(DIVINE_ELIXIR_ID, -DIVINE_ELIXIR_FOR_HWAGYEONG);
   return true;
 }
 

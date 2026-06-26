@@ -83,6 +83,13 @@ export function findElixirRecipe(id: string): ElixirRecipe | undefined {
 // 화경의 열쇠 — 신품(5품) 영약. 보유 시에만 화경 깨달음 벽을 넘는다.
 export const DIVINE_ELIXIR_ID = 'guzeon-daehwandan';
 
+// 화경 환골탈태에 필요한 구전대환단 개수 — **무과금/핵과금 분리 레버**(docs/23 §화경 · docs/40 §3-B).
+// 무과금(faithful)은 신급 재료 캡(영물정수1·신품영초2/회차) + 영약 회차리셋이라 회차당 ~1과가 천장 →
+// N>1이면 못 채워 화경 ≤20%. 핵과금(factorysweep all)은 재료 무한·양산이라 무영향(≥70% 유지).
+// 🔧 그레이박스 — carrysweep real faithful ↔ factorysweep all 반복 측정으로 N 확정(2026-06-26).
+// env `DIVINE_N` 으로 sim 에서 재컴파일 없이 N 스윕(앱은 미설정 → 기본 2). `DIVINE_DROP` 패턴과 동일.
+export const DIVINE_ELIXIR_FOR_HWAGYEONG = Number(process.env.DIVINE_N) || 2;
+
 export function divineElixirItem(): StoredItem {
   return {
     id: DIVINE_ELIXIR_ID,
@@ -94,7 +101,9 @@ export function divineElixirItem(): StoredItem {
   };
 }
 
-// 신품 영약 의뢰 드랍 확률 — 극험(extreme) 의뢰 완수 시. <10%(운). 과금 시 가중(후속). docs/28 §5-1.
-// ⚠️ 무과금 화경의 **주 공급원**(검·의뢰 빌드) — 재료 게이트(연단)와 별개 경로. 무과금 최적 화경 ≤20% 목표의
-// 핵심 레버. balance-sim 에서 `DIVINE_DROP=N` env 로 sweep(앱은 env 없어 기본 0.08). docs/40 §3-B. 🔧 그레이박스.
-export const DIVINE_ELIXIR_DROP_RATE = Number(process.env.DIVINE_DROP) || 0.08;
+// 신품 영약 의뢰 드랍 확률 — 극험(extreme) 의뢰 완수 시(극험 ~4번당 1번). 과금 시 가중(후속). docs/28 §5-1.
+// ⚠️ 무과금 화경 **2번째 영약**의 유일 경로(1번째=연단 자작). 화경 게이트=구전대환단 N=2과(분리 레버,
+// `DIVINE_ELIXIR_FOR_HWAGYEONG`)라, 연단 1과 + 이 드랍 1과가 겹쳐야 화경.
+// **8%→25% 상향(2026-06-26 확정)**: 8%면 2번째 영약 못 모아 화경 ~0%(절벽), 25%면 carrysweep n=20 무과금 화경
+// **15%**(3/20, "드물지만 가능"). 핵과금은 영약 양산이라 드랍률 무영향(≥70% 유지). docs/23 §화경·40 §3-B. 🔧
+export const DIVINE_ELIXIR_DROP_RATE = Number(process.env.DIVINE_DROP) || 0.25;

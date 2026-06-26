@@ -22,7 +22,8 @@ import {
   realmIndex,
 } from '@/data/realm';
 import { TRAINING_OPTIONS } from '@/data/training';
-import { grantDivineElixir, hasDivineElixir } from '@/systems/elixirSystem';
+import { grantDivineElixir, hasDivineElixir, divineElixirCount } from '@/systems/elixirSystem';
+import { DIVINE_ELIXIR_FOR_HWAGYEONG } from '@/data/elixirs';
 import { canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { currentAge } from '@/systems/discipleCtx';
 import { QUEST_GRADE_ORDER } from '@/data/quests';
@@ -215,7 +216,9 @@ function configureCarryTraining(id: string): boolean {
 }
 
 function maybeGrantElixir(near: boolean): void {
-  if (near && !hasDivineElixir() && elixirGranted < elixirBudget) {
+  // 화경 임박 시 N과(DIVINE_ELIXIR_FOR_HWAGYEONG)까지 채워준다 — 분리 레버 도입 후 1과만 주면 화경 못 넘음.
+  // elixirBudget = 회차당 확보 가능한 신품 영약 총수(화경 1회 = N과 소모). budget 0(천장 sim)이면 no-op.
+  if (near && divineElixirCount() < DIVINE_ELIXIR_FOR_HWAGYEONG && elixirGranted < elixirBudget) {
     grantDivineElixir();
     elixirGranted += 1;
   }

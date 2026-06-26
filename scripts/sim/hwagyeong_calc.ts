@@ -4,6 +4,10 @@
 // 화경을 얼마나 움직이는지 바로 보인다. 대오 확률은 엔진 함수(greatEnlightenmentChance)를 직접 import =
 // 단일 소스(재구현 X). ⚠️ 근사: 시도 횟수·영약 공급은 sim 진단서 뽑은 *평균값* 가정(정밀은 large-N 검산).
 // 실행: npx tsx scripts/sim/hwagyeong_calc.ts
+// ⚠️ **1영약 모델**: pElixir=min(1,supply) 는 "영약 1과면 화경"(옛 게이트) 가정. 2026-06-26 분리 레버로
+//   화경=구전대환단 **N=2과**(DIVINE_ELIXIR_FOR_HWAGYEONG)가 됐으므로 N≥2 무과금 화경%는 이 계산기로 단정 금지
+//   — P(supply≥N) 로 확장하기 전엔 **carrysweep real faithful 이 정본**(docs/23 §화경·36). 본 계산기는 대오/공급
+//   민감도 탐색용으로만.
 import { greatEnlightenmentChance } from '../../src/data/realm';
 
 // ── 파라미터 (그레이박스 — sim 진단/코드 상수서 추정. env 로 조정: INSIGHT·EXTREME·SECLUDE·DROP·BEAST·HERB) ──
@@ -11,7 +15,7 @@ const P = {
   insight: Number(process.env.INSIGHT ?? 4), // 카리 오성(대오 확률 ↑)
   extremeQuests: Number(process.env.EXTREME ?? 40), // 15년간 위험+극험 의뢰 수 = 실전 대오 굴림 횟수
   secludeDays: Number(process.env.SECLUDE ?? 300), // 화경 벽 도달 후 폐관 일수 = 폐관 대오 굴림 횟수
-  dropRate: Number(process.env.DROP ?? 0.08), // 극험 의뢰 구전대환단 드랍률
+  dropRate: Number(process.env.DROP ?? 0.25), // 극험 의뢰 구전대환단 드랍률(2026-06-26 8%→25%)
   beastPerRun: Number(process.env.BEAST ?? 0.5), // 영물 정수 회차 획득(영물전 승률 ~50%·캡1)
   herbPerRun: Number(process.env.HERB ?? 1), // 신품 영초 회차 획득(채집·캡2 중 평균)
   recipeBeast: 1, // 구전대환단 영물정수 요구

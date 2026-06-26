@@ -17,6 +17,7 @@ import { GrowthPolicy } from '@/systems/dev/growthPolicy';
 import { enableDaeohTelemetry, resetDaeoh, daeoh } from '@/systems/dev/daeohTelemetry';
 import { dispatchGather, canGather } from '@/systems/activitySystem';
 import { findGatherRegion } from '@/data/activities';
+import { healWound } from '@/systems/woundSystem';
 import { configureOptimal, configurePartyDay, partyDispatch, setElixirBudget, optimalDispatch, incomeDispatch, healWithSalve, goalArtFor as goalArtForDiag } from '@/systems/dev/policyHelpers';
 import { setGeumchangBudget, canDispatch, dispatchQuest } from '@/systems/questSystem';
 import { evaluateJobs } from '@/systems/jobSystem';
@@ -2209,6 +2210,8 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
 }> {
   const RECIPE_IDS = ELIXIR_RECIPES.map((r) => r.id);
   const byReqDesc = [...ELIXIR_RECIPES].sort((a, b) => b.alchemyReq - a.alchemyReq);
+  // 치료약(category heal)을 등급 오름차순(1=치명까지·강함)으로 — 부상 시 만들 수 있는 가장 강한 것 우선.
+  const healByGradeAsc = ELIXIR_RECIPES.filter((r) => r.category === 'heal').sort((a, b) => (a.grade ?? 9) - (b.grade ?? 9));
   seedNewRun(['yun-soso', 'jin-sohwa', 'jang-cheol', 'baek-yeon']);
   useGameStore.getState().setPhase('playing');
   // 'real' = 충실 무과금: god-mode(자금 10만·신급 재료 무한) 제거 → 실경제 + 신급 재료 회차당 룰(신품영초2·
@@ -2248,6 +2251,7 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
   const supportIds = useDiscipleStore.getState().order.filter((id) => id !== carryId && id !== sparPartnerId);
   const roleMap: Record<string, string> = { [carryId]: 'carry', [sparPartnerId]: 'carry' };
   for (const sid of supportIds) roleMap[sid] = 'alchemy';
+  const allIds = [carryId, sparPartnerId, ...supportIds];
 
   const reach: Record<string, number> = { jeoljeong: -1, chojeoljeong: -1, hwagyeong: -1 };
   const markReach = (d: number) => {
@@ -2270,8 +2274,10 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
     // 충실 모드 — 영산절지 극험 원정으로 신급 재료를 번다. 약지식≥35 서폿 + 전투(대련상대) 파티.
     // canGather 가 가용·약지식·전투 게이트(미충족·점유 중이면 자동 skip). 캡(영물정수1·신품영초2/회차)은
     // settleGather 가 enforce → 매일 시도해도 무해(여분 원정은 진귀초·경험만). 카리는 빼 둠(의뢰=대오 우선).
-    // 캡 도달(영물정수1·신품영초2) 시 원정 중단 — 안 그러면 봇이 무한 원정해 대련상대·서폿을 영구히
-    // 빼가 카리 대련·의뢰 파티를 굶긴다(불구 회귀). 캡까지 ~3-4회만 다녀온다. 구전대환단 1과면 충분.
+    // ⚠️ **캡은 1과치 고정**(연단 1과). 분리 레버(화경=구전대환단 N과)에서 2번째 영약은 **극험 의뢰 드랍**
+    // (천운, <10%)으로만 — 캡을 N과치로 올리면 원정이 N배라 대련상대·서폿을 영구히 빼가 카리 대련을 굶겨
+    // 빌드 전체가 무너진다(N=2·2배캡 측정 2026-06-26: 카리 6성/외공42 일류 정체). 무과금↓는 캡이 아니라
+    // "N과 채우기=연단1+드랍1 천운"의 희소성으로 만든다. docs/23 §화경.
     const divine = useActivityStore.getState().divineDrops;
     const capsHit = (divine['beast-essence'] ?? 0) >= 1 && (divine['herb-divine'] ?? 0) >= 2;
     if (faithful && !capsHit) {
@@ -2288,11 +2294,15 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
         }
       }
     }
+    // faithful: 부상자 있으면 연단사가 치료약을 직접 만든다(craft-day 소모) — 시간이 [구전대환단·내공단·
+    // 회복약]으로 쪼개진다(사용자 2026-06-21). 만들 수 있는 가장 강한 치료약(등급↓=깊은상처) 중 재고<2를 우선.
+    const woundedNow = faithful && allIds.some((aid) => (dsNow.disciples[aid]?.wounds?.length ?? 0) > 0);
     for (const sid of supportIds) {
       const sd = dsNow.disciples[sid];
       if (sd && sd.status === 'training') {
         const lv = sd.stats?.alchemy?.level ?? 0;
-        const best = byReqDesc.find((r) => r.alchemyReq <= lv);
+        const healPick = woundedNow ? healByGradeAsc.find((r) => r.alchemyReq <= lv && elixirItemCount(r.id) < 2) : undefined;
+        const best = healPick ?? byReqDesc.find((r) => r.alchemyReq <= lv);
         if (best) startCraft(sid, best.id);
       }
     }
@@ -2324,13 +2334,26 @@ async function runFactoryOnce(carriedIds: ReadonlySet<string>, days: number): Pr
       }
     }
     useInboxStore.getState().reset();
-    healWithSalve(false);
+    if (faithful) {
+      // 비용형 치료 — 공짜치료 대신 연단사가 만든 치료약을 소모해 치료(healWound = 매칭 시 1개 소모).
+      // 못 고치는 깊은 상처(고등급 약 못 만들 때)는 자연치유(tickWoundRecovery) 다운타임으로 남는다.
+      for (const aid of allIds) {
+        const wd = useDiscipleStore.getState().disciples[aid];
+        if (!wd?.wounds?.length) continue;
+        for (const r of healByGradeAsc) {
+          if (elixirItemCount(r.id) > 0) healWound(aid, r.id);
+        }
+      }
+    } else {
+      healWithSalve(false);
+    }
     if (real) {
       // 실플레이어처럼 잉여 영약을 팔아 사문 운영비를 번다(연단공장 주수입원 — docs/09 "영단 판매 켜져야 흑자").
       // 카리 화경 열쇠 구전대환단 1과 + 흡수용 내공단 1개는 남기고 나머지 전량 판매(파산=측정 오염 차단).
       for (const r of ELIXIR_RECIPES) {
         const have = elixirItemCount(r.id);
-        const keep = r.id === DIVINE_ELIXIR_ID ? 1 : r.category === 'internal' ? 1 : 0;
+        // 충실 모드는 치료약을 비축(부상 치료용) — 안 그러면 만들자마자 팔려 치료 불가. 그 외 잉여만 판매.
+        const keep = r.id === DIVINE_ELIXIR_ID ? 1 : r.category === 'internal' ? 1 : (faithful && r.category === 'heal') ? 2 : 0;
         if (have > keep) sellElixir(r.id, have - keep);
       }
     }
@@ -2443,6 +2466,53 @@ async function runCarrySweep(): Promise<void> {
   }
 }
 
+// 충실 무과금 화경% **정밀** 측정 — 비급을 buildRuns 회차로 한 번만 쌓아(성숙 후반 상태) 그 비급집합에서
+// 무과금 15년을 reps 번 독립 반복. carrysweep(체인마다 buildRuns 회차 재등반)의 1/buildRuns 비용으로 large-N.
+// 이진(화경 됨/안됨) 노이즈를 n=30~40 + Wilson 95% CI 로 정밀화. DIVINE_N env 로 N(구전대환단) 게이트 스윕.
+// 실행: node .../run-headless.cjs faithfulrep [reps=40] [buildRuns=12] [years=15] real faithful  (DIVINE_N=2)
+async function runFaithfulRep(): Promise<void> {
+  setAutoSaveEnabled(false);
+  const reps = Number(process.argv[3] ?? 40);
+  const buildRuns = Number(process.argv[4] ?? 12);
+  const years = Number(process.argv[5] ?? 15);
+  const days = years * 336;
+  const N = Number(process.env.DIVINE_N) || 2;
+  // 1) 비급 한 번 쌓기 — buildRuns 회차 순차 이월(성숙 후반 비급집합).
+  let carried = new Set<string>();
+  for (let r = 0; r < buildRuns; r += 1) {
+    const res = await runFactoryOnce(carried, days);
+    carried = new Set([...carried, ...res.scrollIds]);
+    process.stderr.write(`  빌드 ${r + 1}/${buildRuns} (이월 비급 ${carried.size}권)\n`);
+  }
+  // 2) 그 비급집합에서 무과금 15년 reps 번 반복 — 화경/초절정 tally.
+  const tally: Record<string, number> = {};
+  let hwa = 0; let cho = 0; let seongSum = 0; let extSum = 0; let intSum = 0;
+  for (let i = 0; i < reps; i += 1) {
+    const res = await runFactoryOnce(carried, days);
+    tally[res.realm] = (tally[res.realm] ?? 0) + 1;
+    const idx = realmIndex(res.realm);
+    if (idx >= realmIndex('hwagyeong')) hwa += 1;
+    if (idx >= realmIndex('chojeoljeong')) cho += 1;
+    seongSum += res.seong; extSum += res.ext; intSum += res.internal;
+    process.stderr.write(`  rep ${i + 1}/${reps} (${REALM_LABEL[res.realm] ?? res.realm}) 화경누적 ${hwa}\n`);
+  }
+  // Wilson 95% CI — 이진 비율의 표본오차(±%p).
+  const wilson = (k: number, n: number): [number, number] => {
+    if (n === 0) return [0, 0];
+    const z = 1.96; const p = k / n; const z2 = z * z;
+    const c = (p + z2 / (2 * n)) / (1 + z2 / n);
+    const h = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / (1 + z2 / n);
+    return [Math.max(0, c - h), Math.min(1, c + h)];
+  };
+  const [hLo, hHi] = wilson(hwa, reps);
+  const [cLo, cHi] = wilson(cho, reps);
+  console.log(`\n═══ 충실 무과금 화경 정밀 측정 — N(구전대환단)=${N} · 성숙 비급 ${carried.size}권 · ${years}년 · reps=${reps} ═══`);
+  console.log(`화경 ${hwa}/${reps} = ${((hwa / reps) * 100).toFixed(1)}% (95%CI ${(hLo * 100).toFixed(1)}~${(hHi * 100).toFixed(1)}%)${hwa / reps <= 0.2 ? '  ✅≤20%' : '  ⚠️>20%'}`);
+  console.log(`초절정+ ${cho}/${reps} = ${((cho / reps) * 100).toFixed(1)}% (95%CI ${(cLo * 100).toFixed(1)}~${(cHi * 100).toFixed(1)}%)`);
+  console.log(`경지 분포: ${REALM_ORDER.filter((r) => tally[r]).map((r) => `${REALM_LABEL[r]} ${tally[r]}`).join(' / ')}`);
+  console.log(`평균 카리: 주력 ${(seongSum / reps).toFixed(1)}성 / 외공 ${(extSum / reps).toFixed(0)} / 내공 ${(intSum / reps).toFixed(0)}`);
+}
+
 async function main() {
   // 시뮬은 실시간 연구 타이머와 양립 불가 — 연구 즉시 완료 모드(드랍·시드 모두 complete).
   setResearchInstant(true);
@@ -2472,6 +2542,10 @@ async function main() {
   }
   if (process.argv[2] === 'carrysweep') {
     await runCarrySweep();
+    return;
+  }
+  if (process.argv[2] === 'faithfulrep') {
+    await runFaithfulRep();
     return;
   }
   if (process.argv[2] === 'moderatesweep') {

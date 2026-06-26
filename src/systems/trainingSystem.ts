@@ -67,7 +67,7 @@ import {
 } from '@/data/realm';
 import { realmUpToInbox, seclusionPetitionToInbox } from './eventInbox';
 import { activeOverrideOf, cancelOverride } from './overrideSystem';
-import { consumeDivineElixir, hasDivineElixir } from './elixirSystem';
+import { hasDivineForHwagyeong, consumeDivineForHwagyeong } from './elixirSystem';
 import { attemptBoneRebirth } from './boneRebirthSystem';
 import { recordDaeoh, recordWall } from './dev/daeohTelemetry';
 import { parseDaeryeonChoice, resolveDaeryeon } from './daeryeonSystem';
@@ -426,8 +426,8 @@ function applyRealmTick(
       } else if (wallTarget === 'hwagyeong') {
         // 화경 벽 — 신품 영약으로 환골탈태(boneRebirthSystem). 심마 굴림 성공 시에만 영약 소모 + 돌파.
         // 실패(주화입마)면 영약 보존 — 심마 다스린 뒤 재도전. docs/23 §5 · docs/28 §5-1.
-        if (!hasDivineElixir()) {
-          // 영약 없는 폐관(헛폐관) — 청원 자격 회복. 영약이 생기면 다시 청원하게 한다.
+        if (!hasDivineForHwagyeong()) {
+          // 영약 N과(DIVINE_ELIXIR_FOR_HWAGYEONG) 미만 폐관(헛폐관) — 청원 자격 회복. 영약 채우면 다시 청원.
           // (없으면 "벽당 1회 청원" 룰 때문에 영약을 늦게 구한 회차가 영영 화경 기회를 잃는다.)
           petitioned = false;
         } else if (random() >= greatEnlightenmentChance(d.insight, 'seclude')) {
@@ -437,7 +437,7 @@ function applyRealmTick(
         } else if (attemptBoneRebirth(discipleId)) {
           // 여기 도달 = 폐관 안에서 화경 대오가 터진 희귀 순간 — 업적 "면벽돈오"(docs/32) 발화 지점.
           recordDaeoh('seclude', true);
-          consumeDivineElixir();
+          consumeDivineForHwagyeong(); // 구전대환단 N과 소모(분리 레버, docs/23 §화경)
           internal = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약(화경 내공)
           realm = wallTarget;
           pity = 0;
@@ -465,9 +465,9 @@ function applyRealmTick(
           forcedFail = true; // 무리한 강행 실패 → 진기 흩어짐(심마·주화입마 위험)
         }
       }
-    } else if (!petitioned && (wallTarget !== 'hwagyeong' || hasDivineElixir())) {
+    } else if (!petitioned && (wallTarget !== 'hwagyeong' || hasDivineForHwagyeong())) {
       // 벽인데 폐관 안 함 → 제자가 폐관 청원 (once per 벽).
-      // 화경 벽만 예외: 신품 영약이 사문에 있어야 청원 — 영약 없는 폐관(헛폐관) 낭비 방지.
+      // 화경 벽만 예외: 신품 영약 N과가 사문에 있어야 청원 — N과 미만 폐관(헛폐관) 낭비 방지(분리 레버).
       // 벽 도달 자체는 제자 상세의 "벽에 닿음"으로 노출(docs/23 §10), 영약이 생기는 순간 청원이 온다.
       seclusionPetitionToInbox(d, wallTarget);
       petitioned = true;
@@ -545,7 +545,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
 
   const pity = d.realmProgress?.pity ?? 0;
   if (wallTarget === 'hwagyeong') {
-    if (!hasDivineElixir()) return null; // 화경은 신품 영약 필수
+    if (!hasDivineForHwagyeong()) return null; // 화경은 신품 영약 N과 필수(분리 레버, docs/23 §화경)
     // 대오(大悟) — 실전에서 크게 깨닫는다(폐관보다 잘 옴). 보장 없음 — 운×실력. docs/23 §6.
     // chanceBonus(+0.3, 절정·초절정용 실전 보정)는 적용 X — 대오에 더하면 사실상 보장이 된다.
     // "실전이 더 잘 됨"은 greatEnlightenmentChance 의 quest 모드 자체에 이미 들어 있다.
@@ -553,7 +553,7 @@ export function attemptQuestEnlightenment(discipleId: string, chanceBonus: numbe
     recordDaeoh('quest', daeohCame);
     if (!daeohCame) return null;
     if (!attemptBoneRebirth(discipleId)) return null; // 주화입마 — 영약 보존, 회복 후 재도전
-    consumeDivineElixir();
+    consumeDivineForHwagyeong(); // 구전대환단 N과 소모(분리 레버, docs/23 §화경)
     const boosted = Math.max(internal, REALM_INTERNAL_REQ.hwagyeong); // 환골탈태 — 임독양맥 타통, 내공 도약
     store.update(discipleId, { realm: wallTarget, realmProgress: { internal: boosted, pity: 0, petitioned: false } });
     realmUpToInbox(d, wallTarget);
