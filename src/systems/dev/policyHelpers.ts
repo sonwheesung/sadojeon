@@ -99,7 +99,11 @@ export function goalArtFor(d: Disciple): MartialArt | null {
   // 주력 등급천장이 후퇴(절정→일류)해 일류에 헛묶인다(factorysweep 화경 0% 회귀 원인). 현 주력 계보를
   // 유지하면 같은 계보 상위 무공으로 곧장 이어 올라간다.
   const effRank: Record<string, number> = { 특화: 4, 상성: 3, 보통: 2, 미숙: 1, 상극: 0 };
-  const mainLineage = mainArtOf(d)?.lineage;
+  // 'common'(공용 스타터 풀: chosangbi 등)은 '투자한 계보'가 아니다 — 공용 계보를 우선하면 유일한
+  // 공용 grandmaster(common-mumyeong-simbeop·qigong)가 빌드 갈래(효율 특화)를 가로채 카리가 검 대신
+  // 공용 심법 사슬을 타 일류 정체(factorysweep 화경 0%). 실 계보만 투자로 보고, 공용은 효율이 결정. docs/37 G3.
+  const rawLineage = mainArtOf(d)?.lineage;
+  const mainLineage = rawLineage && rawLineage !== 'common' ? rawLineage : undefined;
   candidates.sort((a, b) => {
     const g = GOAL_GRADE_RANK[b.grade] - GOAL_GRADE_RANK[a.grade];
     if (g !== 0) return g;
