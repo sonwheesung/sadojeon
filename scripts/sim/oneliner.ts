@@ -28,6 +28,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     trust: 60,
     darknessRisk: 'low',
     hasEnemy: false,
+    mourning: false,
     age: 16,
     mainSeong: 4,
     rivalName: null,
@@ -117,6 +118,24 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('흑화 중 → calm 대사 배제(모순 방지)', !dark.some((t) => t.mood === 'calm'));
   const lowRisk = candidateOneLiners(ctx({ discipleId: 'baek-yeon', darknessRisk: 'low', age: 16, stress: 20, trust: 60 }));
   check('평온 상태 → calm 대사 등장 가능', lowRisk.some((t) => t.mood === 'calm'));
+}
+
+// 7b) 적의 갭(OL4) — 미워하는 동문이 있으면(hasEnemy) calm 대사 배제. 적의→평온 이중인격 차단.
+{
+  const enemy = candidateOneLiners(ctx({ discipleId: 'none', hasEnemy: true, trust: 70, stress: 20, age: 16 }));
+  check('적의 보유 → calm 대사 배제(OL4)', !enemy.some((t) => t.mood === 'calm'));
+  const noEnemy = candidateOneLiners(ctx({ discipleId: 'none', hasEnemy: false, trust: 70, stress: 20, age: 16 }));
+  check('적의 없음 → calm 대사 등장 가능(대조군)', noEnemy.some((t) => t.mood === 'calm'));
+}
+
+// 7c) 동문 상실 애도(mourning) — calm·pride 배제 + grief 후보 등장. 사망 다음 날 평온 대사 차단.
+{
+  const mourn = candidateOneLiners(ctx({ discipleId: 'none', mourning: true, trust: 70, stress: 20, mainSeong: 8, age: 16 }));
+  check('애도 중 → calm 대사 배제', !mourn.some((t) => t.mood === 'calm'));
+  check('애도 중 → pride 대사 배제', !mourn.some((t) => t.mood === 'pride'));
+  check('애도 중 → grief 대사 등장', mourn.some((t) => t.mood === 'grief'), `${mourn.filter((t) => t.mood === 'grief').length}종`);
+  const settled = candidateOneLiners(ctx({ discipleId: 'none', mourning: false, trust: 70, stress: 20, age: 16 }));
+  check('애도 풀림 → grief 배제·calm 가능(대조군)', !settled.some((t) => t.mood === 'grief') && settled.some((t) => t.mood === 'calm'));
 }
 
 // 8) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)

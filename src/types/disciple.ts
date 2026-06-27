@@ -121,6 +121,9 @@ export interface Disciple {
   stats: Partial<Record<StatId, StatTrack>>;
   // 익일 효율 패널티 (0~1). 빡센 종목(암벽 등) 다음날 진척에 (1-penalty) 곱. 매 tick 후 0 으로 소멸.
   fatiguePenalty?: number;
+  // 동문 상실 애도 — 이 날(totalDay) 지나기 전까진 애도 중(평온·자만 대사 차단·grief 대사·위로 면담). docs/12.
+  // 의뢰 재난 사망 시 mournLostSibling 이 친밀 차등으로 현재일+기간 설정(중복 상실 시 max 연장). 회차 스코프.
+  mourningUntilDay?: number;
   relationships: Record<string, RelationLevel>;
   // 동문 야망 충돌(docs/19) — 출도전기에 한 번 발화한 "같은 자리 욕망" 결정의 기록(회차당 제자 1회).
   // 설정되면 해당 제자는 그 회차에 다시 충돌 후보가 되지 않는다(중복 발화 차단). withId=상대, outcome=사부 결정.

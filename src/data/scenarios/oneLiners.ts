@@ -19,6 +19,7 @@ export interface OneLinerCondition {
   darknessRiskMin?: 'medium' | 'high'; // 흑화 위험 ≥
   darknessRiskMax?: 'low' | 'medium'; // 흑화 위험 ≤ (모순 방지 — 흑화 중엔 천진한 대사 차단)
   hasEnemy?: boolean; // 적대 관계 보유 시에만
+  mourning?: boolean; // 동문 상실 애도 중에만(grief·위로 면담) / false=애도 아닐 때만. docs/12
   ageMin?: number;
   ageMax?: number;
   seongMin?: number; // 주력 무공 성 ≥ (정체·자만)
@@ -39,7 +40,8 @@ export type OneLinerMood =
   | 'calm' // 평온·좋은 날
   | 'homesick' // 향수·가족
   | 'rival' // 비교·서열
-  | 'enmity'; // 적의·응어리
+  | 'enmity' // 적의·응어리
+  | 'grief'; // 상실·애도 (동문 사망 후 mourning)
 
 export interface OneLinerTemplate {
   id: string;
@@ -130,6 +132,12 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   // 적의·응어리
   { id: 'en1', category: 'relation', mood: 'enmity', body: '... 한 사람과는, 아무리 해도 같은 자리에 못 있겠습니다.', when: { hasEnemy: true } },
   { id: 'en2', category: 'worry', mood: 'enmity', body: '사부님, 미워하는 마음을 다스리는 것도... 무공입니까.', when: { hasEnemy: true, stressMin: 40 } },
+
+  // 상실·애도 — 동문 사망 후(mourning). 관찰 가능한 슬픔으로만(숨은변수 직설 X). 반복 허용(once-only 아님).
+  { id: 'gr1', category: 'daily', mood: 'grief', body: '... 빈자리가 자꾸 눈에 밟힙니다. 거기 늘 그 동문이 있었는데요.', when: { mourning: true } },
+  { id: 'gr2', category: 'worry', mood: 'grief', body: '사부님... 더 강해지면, 다음엔 지킬 수 있을까요. 또 누굴 잃지 않게요.', when: { mourning: true } },
+  { id: 'gr3', category: 'daily', mood: 'grief', body: '오늘은 손에 검이 잡히질 않습니다. ... 잠깐, 멍하니 앉아만 있었어요.', when: { mourning: true } },
+  { id: 'gr4', category: 'training', mood: 'grief', body: '같이 수련하던 자리가 비어 있으니... 자꾸 그쪽을 보게 됩니다.', when: { mourning: true } },
 
   // ════ 공용 일상 잡담 — 결 없음(반복 허용). 단조 방지용 대량 풀(이력분석 2026-06-23, 같은 줄 250+회 반복 해소) ════
   // 사문 생활의 결: 마당·계절·끼니·소제·산·연무장. 숨은 변수 직설 X, 나이대 무난한 말투.
@@ -568,6 +576,7 @@ export interface OneLinerCtx {
   trust: number;
   darknessRisk: 'low' | 'medium' | 'high';
   hasEnemy: boolean;
+  mourning: boolean; // 동문 상실 애도 중(mourningUntilDay > 현재일) — calm/pride 차단·grief 후보
   age: number;
   mainSeong: number;
   rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
@@ -604,9 +613,11 @@ export function isDistinctiveOneLiner(t: OneLinerTemplate): boolean {
 // 모순 방지 — 결이 현재 상태와 톤이 어긋나면 배제. 핵심: 흑화 기미 중엔 '평온'한 한 마디 금지
 // ("누군가를 꺾고 싶다" 직후 "차 한 잔이 제일 좋습니다" 류 톤 충돌 차단). when 게이트로 못 막는 결 모순 보강.
 function moodConsistent(t: OneLinerTemplate, c: OneLinerCtx): boolean {
-  // 평온은 흑화 기미 없고(흑화↔평온 차단) + 사부 신뢰가 최소선은 될 때만 — 불신(저신뢰)과 평온이
-  // 며칠 새 오가는 톤 급변 차단(이력분석 2026-06-23: 백연 calm↔distrust 다발). distrust 게이트는 trustMax≤38.
-  if (t.mood === 'calm' && (c.darknessRisk !== 'low' || c.trust < 40)) return false;
+  // 평온 — 흑화·저신뢰·적의·애도 중엔 톤 급변(이중인격)이라 차단. 게이트 차단집합 ⊇ 모순 밴드(37 B11).
+  //  흑화↔평온·불신↔평온(2026-06-23) + 적의↔평온(OL4)·상실↔평온(애도, 2026-06-27) 차단.
+  if (t.mood === 'calm' && (c.darknessRisk !== 'low' || c.trust < 40 || c.hasEnemy || c.mourning)) return false;
+  // 자만 — 동문 상실 애도 중엔 "내가 제일 앞선다" 류 차단(상실↔자만 톤 급변).
+  if (t.mood === 'pride' && c.mourning) return false;
   return true;
 }
 
@@ -637,6 +648,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   if (w.darknessRiskMin != null && RISK_RANK[c.darknessRisk] < RISK_RANK[w.darknessRiskMin]) return false;
   if (w.darknessRiskMax != null && RISK_RANK[c.darknessRisk] > RISK_RANK[w.darknessRiskMax]) return false;
   if (w.hasEnemy != null && c.hasEnemy !== w.hasEnemy) return false;
+  if (w.mourning != null && c.mourning !== w.mourning) return false;
   if (w.ageMin != null || w.ageMax != null) {
     const a = toContentAge(c.age); // 실제 나이 → 옛 5년 호 스케일로 압축해 비교
     if (w.ageMin != null && a < w.ageMin) return false;

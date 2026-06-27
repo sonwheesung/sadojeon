@@ -46,6 +46,7 @@ import { bodyAgeMultiplier, attemptQuestEnlightenment } from './trainingSystem';
 import { consumeElixirItem } from './alchemySystem';
 import { inflictWound } from './woundSystem';
 import { absorbDrainedQi } from './simmaSystem';
+import { mournLostSibling } from './mournSystem';
 import { currentAge } from './discipleCtx';
 import type { WoundType } from '@/types/disciple';
 import type { MartialArtGrade, MartialArtSchool } from '@/types/martialArt';
@@ -1090,6 +1091,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
       ? Math.floor(random() * present.length)
       : -1;
   let lostName = '';
+  let lostId = ''; // 사망한 제자 id — 생존 동문 애도 파급(mournLostSibling)용. docs/12
   let gravelyHurtName = ''; // 재난에서 죽지 않고 중상으로 살아남은 자(있으면)
   let rescueRoute: RescueRoute | null = null; // 치명상을 살린 경로(영약/의원/마을)
 
@@ -1151,6 +1153,7 @@ function resolveQuest(active: ActiveQuest): Milestone {
         } else {
           patch.status = 'departed'; // 마을까지 업혀 갔으나 끝내 쓰러진다
           lostName = d.name;
+          lostId = d.id;
         }
       } else {
         inflicted = { severity: 2, days: 28 }; // 중상
@@ -1183,6 +1186,9 @@ function resolveQuest(active: ActiveQuest): Milestone {
   // 친밀도 — 함께 살아 돌아온 동문은 가까워진다.
   const survivors = present.filter((id) => ds.disciples[id]?.status !== 'departed');
   if (outcome !== 'disaster' && survivors.length >= 2) bumpRelations(survivors);
+
+  // 동문 상실 애도 — 죽은 동문이 있으면 활성 생존 제자 전원에 친밀 차등 정서 파급. docs/12.
+  if (lostId) mournLostSibling(lostId);
 
   const names = present.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const leadId = present[0] ?? active.discipleIds[0];

@@ -33,6 +33,7 @@ function ctx(over: Partial<OneLinerCtx> = {}): OneLinerCtx {
     trust: 60,
     darknessRisk: 'low',
     hasEnemy: false,
+    mourning: false,
     age: 16,
     mainSeong: 4,
     rivalName: null,

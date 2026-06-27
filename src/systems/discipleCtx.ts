@@ -20,6 +20,7 @@ function mainSeongOf(d: Disciple): number {
 export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLinerCtx {
   const maxSt = d.maxStamina || 1;
   const mainSeong = mainSeongOf(d);
+  const today = useTimeStore.getState().totalDay;
   let rivalName: string | null = null;
   let top = mainSeong;
   for (const o of activeOthers) {
@@ -37,6 +38,7 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
     trust: d.trustToMaster ?? 0,
     darknessRisk: d.darknessRisk,
     hasEnemy: Object.values(d.relationships).some((v) => v === 'enemy'),
+    mourning: (d.mourningUntilDay ?? 0) > today, // 동문 상실 애도 중 — calm/pride 차단·grief 후보
     age: currentAge(d),
     mainSeong,
     rivalName,

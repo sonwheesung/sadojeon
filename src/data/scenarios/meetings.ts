@@ -47,6 +47,19 @@ export interface MeetingTemplate {
 
 // ─── 예시 풀(워크플로 대량 생성의 스타일 가이드) ─────────────────────────────
 export const MEETINGS: MeetingTemplate[] = [
+  // 동문 상실 애도 — 동문이 의뢰에서 죽은 뒤(mourning). picker 는 when 만 보므로 band 무관. docs/12.
+  {
+    id: 'm-grief-loss',
+    band: 'turmoil',
+    when: { mourning: true },
+    body: '사부님... 그 동문이 떠난 뒤로, 자꾸 그 빈자리가 눈에 밟힙니다. 제가 더 강했다면, 막을 수 있었을까요.',
+    options: [
+      { key: 'mourn', label: '슬퍼해도 된다. 떠난 이를 함께 보내주는 것도 산 자의 몫이다.', effects: { persona: { warmth: 4, mercy: 3 }, trust: 5 } },
+      { key: 'resolve', label: '그 마음을 잊지 말고, 다음엔 지켜낼 힘으로 벼리거라.', effects: { persona: { integrity: 4, ambition: 2 }, trust: 3 } },
+      { key: 'notyourfault', label: '네 탓이 아니다. 강호의 길엔 늘 그런 밤이 있는 법이다.', effects: { persona: { mercy: 3, prudence: 2 }, trust: 4 } },
+      { key: 'steel', label: '무인이라면 죽음에도 무뎌져야 한다. 어서 마음을 다잡거라.', effects: { persona: { integrity: 3, warmth: -3 }, trust: -2 } },
+    ],
+  },
   // ── 동심기 (7~10) ──
   {
     id: 'm-child-homesick',
