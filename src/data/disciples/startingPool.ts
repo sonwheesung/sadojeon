@@ -75,7 +75,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
   {
     id: 'i-cheongha',
     name: '이청하',
-    hanjaName: '李淸霞',
+    hanjaName: '李清荷',
     gender: 'female',
     originNote: '살수 조직에서 빠져나옴. 기억이 흐림.',
     group: 'lone',
@@ -86,7 +86,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
   {
     id: 'dokgo-yeon',
     name: '독고연',
-    hanjaName: '獨孤燕',
+    hanjaName: '獨孤衍',
     gender: 'male',
     originNote: '멸문된 독고세가의 유일한 생존자.',
     group: 'noble',
@@ -106,7 +106,7 @@ export const STARTING_DISCIPLE_POOL: readonly StartingDisciple[] = [
   {
     id: 'jin-baekho',
     name: '진백호',
-    hanjaName: '陳白虎',
+    hanjaName: '秦白虎',
     gender: 'male',
     originNote: '부모 없이 떠돌던 천재. 어떤 무공도 한 번에 흉내.',
     group: 'wanderer',

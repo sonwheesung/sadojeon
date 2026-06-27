@@ -166,7 +166,9 @@ export const JANG_CHEOL_ARC: ArcEvent[] = [
     body: '한밤중 피투성이 소식을 받은 철이가 짐승처럼 울부짖는다. "어머니가… 흑사파 놈들이 마을을 짓밟고… 어머니가 돌아가셨어요. 사부님, 저는… 저는 그놈들을 다 찢어놓고 싶어요."',
     choices: [
       { key: 'a', label: '울어라. 실컷 울어라. 오늘 밤은 내가 네 곁을 떠나지 않으마.', effects: { trust: 8, persona: { warmth: 12, mercy: 6 } } },
-      { key: 'b', label: '그래, 가서 갚아라. 놈들이 흘린 만큼 흘리게 해주는 게 정의다.', effects: { trust: 2, darkness: 1, righteousness: -2, persona: { mercy: -8, ambition: 6 } } },
+      // 장철 흑화 = 가능하나 극히 어려움(docs/15 흑화 매트릭스·docs/48·docs/01): 직접 darkness 부여 X.
+      // 자비↓·야망↑로 흑화 *점수*만 밀고, 선천 안정(자비·강직 高·야망 低)이 막아 한 번으론 흑화 안 됨.
+      { key: 'b', label: '그래, 가서 갚아라. 놈들이 흘린 만큼 흘리게 해주는 게 정의다.', effects: { trust: 2, righteousness: -2, persona: { mercy: -8, ambition: 6 } } },
       { key: 'c', label: '그 분을 칼이 아니라 숨에 실어 다스리자. 흐트러진 마음으론 누구도 못 지킨다.', effects: { trust: 6, persona: { prudence: 10, integrity: 6 } } },
       { key: 'd', label: '죽은 사람은 죽은 사람이다. 산 사람은 제 길을 가야지.', effects: { trust: -8, persona: { warmth: -8 } } },
     ],
