@@ -40,7 +40,11 @@ function riskOf(score: number): Disciple['darknessRisk'] {
 // 누구든 흑화(면역 없음), 저항 높을수록 덜·늦게 박힘 = 난이도 차등. delta<0(완화)은 게이트 없이 직접. docs/13.
 export function raiseDarkness(d: Pick<Disciple, 'darknessLevel' | 'darknessResist'>, delta: number): DarknessLevel {
   let lv = d.darknessLevel;
-  if (delta < 0) return Math.max(0, Math.min(4, lv + delta)) as DarknessLevel;
+  if (delta < 0) {
+    // 능동 완화(forbid 면담 등)는 즉시 적용하되 단계 3~4는 불가역(깊이 물든 뒤엔 한마디로 못 돌이킴, R38).
+    if (lv >= 3) return lv as DarknessLevel;
+    return Math.max(0, Math.min(4, lv + delta)) as DarknessLevel;
+  }
   const resist = d.darknessResist ?? 0;
   for (let i = 0; i < delta && lv < 4; i += 1) {
     if (random() >= resist) lv += 1;

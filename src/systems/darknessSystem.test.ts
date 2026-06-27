@@ -58,10 +58,14 @@ describe('raiseDarkness — 저항 게이트', () => {
     rnd.mockReturnValue(0.7);
     expect(raiseDarkness({ darknessLevel: 0, darknessResist: 0.5 }, 1)).toBe(1); // 0.7≥0.5 통과
   });
-  it('delta<0(완화) → 게이트 없이 직접, 0 클램프', () => {
+  it('delta<0(능동 완화) → 단계1~2 즉시 −1(게이트 없이), 0 클램프', () => {
     rnd.mockReturnValue(0.99);
     expect(raiseDarkness({ darknessLevel: 2, darknessResist: 0.9 }, -1)).toBe(1);
     expect(raiseDarkness({ darknessLevel: 1, darknessResist: 0.9 }, -5)).toBe(0);
+  });
+  it('delta<0 이라도 단계 3~4는 불가역 — 못 내림(R38)', () => {
+    expect(raiseDarkness({ darknessLevel: 3, darknessResist: 0 }, -1)).toBe(3);
+    expect(raiseDarkness({ darknessLevel: 4, darknessResist: 0 }, -5)).toBe(4);
   });
   it('저항 미지정 → 0(즉시) 폴백', () => {
     expect(raiseDarkness({ darknessLevel: 0 } as never, 1)).toBe(1);
