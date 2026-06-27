@@ -99,6 +99,7 @@ export interface DiscipleSeed {
   efficiency?: EfficiencyMap;
   insight?: number; // 오성 1~5 — 깨달음 확률
   personality: PersonalityTraits;
+  darknessResist?: number; // 흑화 저항 0~1 (난이도 차등, docs/13). 미지정 = 0(즉시 흑화).
 }
 
 function startingArtInstance(artId: string): MartialArtInstance {
@@ -138,6 +139,7 @@ export function discipleFromSeed(seed: DiscipleSeed): Disciple | null {
     status: 'training',
     darknessLevel: 0,
     darknessRisk: 'low',
+    darknessResist: seed.darknessResist ?? 0, // 흑화 난이도 차등(docs/13)
     personality: seed.personality,
     notes: [pool.originNote],
     // tonePreferences 는 미지정 — runtime 에서 personality 로 자동 산출.

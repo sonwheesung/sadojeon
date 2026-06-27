@@ -8,9 +8,10 @@ import { useInboxStore } from '@/stores/inboxStore';
 import { useMasterStore } from '@/stores/masterStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, DarknessLevel } from '@/types';
+import type { Disciple } from '@/types';
 import { buildDiscipleCtx } from './discipleCtx';
 import { shiftPersona } from './personaShift';
+import { raiseDarkness } from './darknessSystem';
 import { applyAlignmentReputation } from './reputationSystem';
 
 // 면담은 한 마디보다 무겁다 — 낮은 확률. (상황 매칭까지 통과해야 실제 발동)
@@ -65,8 +66,8 @@ export function applyMeetingChoice(discipleId: string, eff: MeetingEffect): void
   }
   if (eff.trust) ds.adjustTrust(discipleId, eff.trust);
   if (eff.darkness) {
-    const next = Math.max(0, Math.min(4, d.darknessLevel + eff.darkness)) as DarknessLevel;
-    ds.update(discipleId, { darknessLevel: next });
+    const next = raiseDarkness(d, eff.darkness); // 저항 게이트(docs/13) — 직접 흑화창도 캐릭터 저항만큼 덜 박힘
+    if (next !== d.darknessLevel) ds.update(discipleId, { darknessLevel: next });
   }
   if (eff.righteousness) {
     useSectAtmosphereStore.getState().adjust({ righteousness: eff.righteousness });

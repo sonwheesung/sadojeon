@@ -156,6 +156,9 @@ export interface Disciple {
 
   darknessLevel: DarknessLevel;
   darknessRisk: 'low' | 'medium' | 'high';
+  // 흑화 저항 0~1 — 모든 흑화 증가(raiseDarkness)를 확률 게이트(random≥저항 시에만 +1). 캐릭터 본성으로
+  // 난이도 차등(이청하 0.00 즉시 ~ 장철 0.90 최난). 전원 <1.0 = 면역 없음. 숨은 스탯(UI 비노출). docs/13.
+  darknessResist?: number;
 
   // 심마(心魔) — 숨은 정신압 게이지 0~100. 무리한 돌파 실패·상극 내공 흡수·마공 깊이·지속 고스트레스로
   // 누적, 임계 넘으면 주화입마 발작(내상·내공 흩어짐). 안신단으로 가라앉힘. UI 비노출(흑화·스트레스처럼). docs/13·26.

@@ -35,6 +35,19 @@ function riskOf(score: number): Disciple['darknessRisk'] {
   return score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
 }
 
+// 흑화 단일 seam(SOLID) — 모든 흑화 증가(직접 흑화창·도덕 범프·점수경로)는 여기를 거친다. 한 단계 올릴
+// 때마다 캐릭터 저항을 확률 게이트: `random() ≥ darknessResist` 일 때만 실제 +1. 저항<1 이라 충분히 거듭하면
+// 누구든 흑화(면역 없음), 저항 높을수록 덜·늦게 박힘 = 난이도 차등. delta<0(완화)은 게이트 없이 직접. docs/13.
+export function raiseDarkness(d: Pick<Disciple, 'darknessLevel' | 'darknessResist'>, delta: number): DarknessLevel {
+  let lv = d.darknessLevel;
+  if (delta < 0) return Math.max(0, Math.min(4, lv + delta)) as DarknessLevel;
+  const resist = d.darknessResist ?? 0;
+  for (let i = 0; i < delta && lv < 4; i += 1) {
+    if (random() >= resist) lv += 1;
+  }
+  return Math.max(0, Math.min(4, lv)) as DarknessLevel;
+}
+
 const OMEN: Record<number, (name: string) => string> = {
   1: (n) => `${n}의 눈빛이 요즘 부쩍 차갑다는 말이 동문들 사이에 돈다.`,
   2: (n) => `${n}이 홀로 있는 시간이 부쩍 늘었다. 좀처럼 곁을 주지 않는다 한다.`,
@@ -73,7 +86,8 @@ export function tickDarkness(): void {
     const risk = riskOf(score);
     if (risk !== d.darknessRisk) patch.darknessRisk = risk;
     if (rollLevel && score >= 78 && d.darknessLevel < 4 && random() < 0.18) {
-      patch.darknessLevel = (d.darknessLevel + 1) as DarknessLevel;
+      const nl = raiseDarkness(d, 1); // 저항 게이트 통과 시에만 실제 +1
+      if (nl > d.darknessLevel) patch.darknessLevel = nl;
     }
     if (Object.keys(patch).length) {
       ds.update(id, patch);

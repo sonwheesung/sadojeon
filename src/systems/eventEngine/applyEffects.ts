@@ -15,6 +15,7 @@ import type {
 } from '@/types';
 import { applyAlignmentReputation } from '../reputationSystem';
 import { shiftPersona } from '../personaShift';
+import { raiseDarkness } from '../darknessSystem';
 
 const DARKNESS_RISK_ORDER: readonly Disciple['darknessRisk'][] = [
   'low',
@@ -89,12 +90,10 @@ function applyPerpetratorEffect(
 
   const patch: Partial<Disciple> = {};
   if (eff.darknessLevelBump) {
-    patch.darknessLevel = Math.max(
-      0,
-      Math.min(4, d.darknessLevel + eff.darknessLevelBump),
-    ) as Disciple['darknessLevel'];
-    // 흑화 진행 → 정파 문파 평판↓·사파↑(그 제자 인연도). docs/30.
-    if (eff.darknessLevelBump > 0) {
+    const next = raiseDarkness(d, eff.darknessLevelBump); // 저항 게이트(docs/13)
+    if (next !== d.darknessLevel) patch.darknessLevel = next;
+    // 흑화 진행 → 정파 문파 평판↓·사파↑(그 제자 인연도). docs/30. 실제 +되었을 때만.
+    if (eff.darknessLevelBump > 0 && next > d.darknessLevel) {
       applyAlignmentReputation(-(eff.darknessLevelBump * 3), 1, [perpId]);
     }
   }

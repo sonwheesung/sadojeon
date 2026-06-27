@@ -29,6 +29,8 @@ export interface RecruitCandidate {
   efficiency: EfficiencyMap;
   insight: number; // 오성 1~5 — 깨달음 확률
   personality: PersonalityTraits;
+  // 흑화 저항 0~1 — 난이도 차등(전원<1=면역 없음·UI 비노출). 본성 근거. docs/13 흑화 저항 표.
+  darknessResist: number;
   // 시작 선택 화면 인물 카드의 한 줄 — 첫인상 풍경.
   storyLine: string;
   // 시작 선택 화면 펼침 — 유년 신상.
@@ -43,6 +45,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { strength: '특화', guarding: '특화', saber: '상성', fist: '상성', medicine: '미숙', hidden: '미숙', scouting: '상극', alchemy: '상극', medical: '상극', darkArts: '상극' },
     insight: 1, // 오성 ★ — docs/disciples/01_장철.md (깨달음 낮음, 고경지 벽에서 더딤)
     personality: { integrity: 60, freedom: 30, warmth: 55, prudence: 60, mercy: 60, ambition: 20 },
+    darknessResist: 0.9, // 가장 어려움 — 우직·순박의 화신(흑화 안전판이나 면역 아님). docs/13
     storyLine: '농촌에서 자란 우직한 아이. 평범하나 손이 묵직하다.',
     childhood: {
       house: '무명산 아래 작은 농촌 마을, 농가의 둘째 아들',
@@ -61,6 +64,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { medicine: '특화', alchemy: '특화', medical: '특화', knowledge: '상성', fist: '미숙', scouting: '미숙', sword: '상극', saber: '상극', strength: '상극', hidden: '상극', guarding: '상극', darkArts: '상극' },
     insight: 3,
     personality: { integrity: 50, freedom: 40, warmth: 70, prudence: 70, mercy: 80, ambition: 20 },
+    darknessResist: 0.75, // 어려움 — 천성 고움(자비80 최고). docs/13
     storyLine: '마을 약방 집안의 다정한 아이. 약초를 능숙히 다룬다.',
     childhood: {
       house: '무명산 아래 농촌, 마을 약방 집안의 셋째 딸',
@@ -80,6 +84,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { scouting: '특화', lightness: '특화', hidden: '특화', sword: '상성', saber: '상성', knowledge: '미숙', formation: '미숙', medicine: '미숙', alchemy: '상극', medical: '상극' },
     insight: 3,
     personality: { integrity: 50, freedom: 80, warmth: 60, prudence: 40, mercy: 50, ambition: 40 },
+    darknessResist: 0.1, // 매우 쉬움 — 사파 유혹에 약함, 떠돌이. docs/13
     storyLine: '산문 앞에 떠돌이 아이가 주저앉아 있었다. 갈 곳을 잊은 눈빛이었다.',
     childhood: {
       house: '출신 불명. 부모와 살던 마을은 기억이 흐릿한 떠돌이',
@@ -98,6 +103,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { sword: '특화', knowledge: '특화', formation: '특화', lightness: '상성', guarding: '상성', qigong: '상성', etiquette: '상성', scouting: '미숙', medicine: '미숙', hidden: '상극', alchemy: '상극', darkArts: '상극' },
     insight: 4,
     personality: { integrity: 80, freedom: 30, warmth: 50, prudence: 60, mercy: 60, ambition: 60 },
+    darknessResist: 0.2, // 쉬움 — 트라우마 폭발(복수심). docs/13
     storyLine:
       '한 양반가 노인이 손녀를 데려와 머리를 숙였다. "예법은 가르쳤으나, 칼은 가르치지 못했습니다."',
     childhood: {
@@ -118,6 +124,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { sword: '특화', scouting: '특화', lightness: '특화', hidden: '특화', saber: '상성', qigong: '상성', guarding: '미숙', knowledge: '미숙', formation: '미숙', medicine: '상극', alchemy: '상극', medical: '상극' },
     insight: 4,
     personality: { integrity: 30, freedom: 60, warmth: 25, prudence: 70, mercy: 15, ambition: 45 },
+    darknessResist: 0.0, // 즉시 — 살수 본성(자비15·온정25), 어둠이 곧 본태. docs/13
     storyLine:
       '산기슭에서 한 소녀가 쓰러져 있었다. 깨어났을 때, 자신의 이름조차 흐릿하다 했다.',
     childhood: {
@@ -137,6 +144,7 @@ export const RECRUIT_POOL: readonly RecruitCandidate[] = [
     efficiency: { qigong: '특화', knowledge: '특화', formation: '특화', medical: '상성', saber: '미숙', fist: '미숙', strength: '미숙', hidden: '상극', scouting: '상극', guarding: '상극', darkArts: '상극' },
     insight: 4, // 오성 ★★★★ — docs/disciples/08_백연.md (깨달음 좋아 경지 잠재력 최상위권)
     personality: { integrity: 45, freedom: 55, warmth: 55, prudence: 80, mercy: 70, ambition: 10 },
+    darknessResist: 0.82, // 매우 어려움 — 도가 평정·야망10 최저("평정 상실"형). docs/13
     storyLine:
       '한 도인이 어린 딸을 산문 앞에 두고 떠났다. "저는 도를 가르쳤으나, 인간을 가르치지 못했습니다."',
     childhood: {
@@ -162,6 +170,7 @@ export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
     efficiency: { saber: '특화', fist: '상성', guarding: '상성' },
     insight: 3, // 오성 ★★★ — docs/disciples/05_강무열.md (학문 익힘, 평범)
     personality: { integrity: 60, freedom: 30, warmth: 45, prudence: 55, mercy: 45, ambition: 55 },
+    darknessResist: 0.45, // 보통-어려움 — 정체성 위기(가문 진실) 소지. docs/13
     storyLine:
       '지방 무관에서 한 청년을 보냈다. 이력서에 적히지 않은 사연이 묻어 있었다.',
     childhood: {
@@ -180,6 +189,7 @@ export const POST_LAUNCH_RECRUITS: readonly RecruitCandidate[] = [
     efficiency: { sword: '특화', qigong: '상성', knowledge: '상성' },
     insight: 5, // 오성 ★★★★★ — docs/disciples/07_독고연.md (천재형 통찰)
     personality: { integrity: 55, freedom: 40, warmth: 30, prudence: 55, mercy: 30, ambition: 75 },
+    darknessResist: 0.15, // 쉬움 — 복수심·야망75. docs/13
     storyLine:
       '한 청년이 산문 앞에 서서 한참을 머뭇거렸다. 뒤를 자주 돌아보았다.',
     childhood: {
