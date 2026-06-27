@@ -4,6 +4,7 @@
 import { josa } from '@/utils/korean';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 import type { Disciple, Milestone, PendingMoralEvent, Realm } from '@/types';
 import type { ArcEvent } from '@/data/scenarios/arcEvents';
 import { REALM_LABEL } from '@/types/realm';
@@ -92,6 +93,8 @@ export function realmUpToInbox(d: Disciple, realm: Realm): void {
     resolved: false,
     payload: { domain: 'realm_up', discipleId: d.id, realm },
   });
+  // 동문 경사 반응 — 뒤처진 라이벌은 질투, 가까운 동문은 축하(전이형). docs/12.
+  reactToSiblingMilestone(d.id, 'realm_up');
 }
 
 // 변곡점(승급/탈진/졸업) → 서신함 'report'(읽기만, 알림).

@@ -8,6 +8,7 @@
 
 import { ELIXIR_RECIPES, findElixirRecipe, type ElixirRecipe } from '@/data/elixirs';
 import { woundResistOf, resistsWound } from '@/data/martialArts';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 import { useActivityStore } from '@/stores/activityStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import type { Disciple, DiscipleStatus, Wound, WoundType } from '@/types/disciple';
@@ -111,6 +112,8 @@ export function inflictWound(discipleId: string, type: WoundType, severity: numb
     wounds.push({ type, severity, daysRemaining: days });
   }
   applyWoundSet(discipleId, wounds);
+  // 동문 이변 반응 — 중상(severity ≤ 2: 중상·치명상)만 동문 걱정 유발(경상·대련 사고 severity 4 제외). docs/12.
+  if (severity <= 2) reactToSiblingMilestone(discipleId, 'injured');
 }
 
 // 특정 속성 상처만 제거(안신단의 내상 진정 등 — 다른 속성 상처는 그대로 둔다). 제거됐으면 true.

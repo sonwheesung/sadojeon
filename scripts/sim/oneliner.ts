@@ -29,6 +29,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     darknessRisk: 'low',
     hasEnemy: false,
     mourning: false,
+    siblingEvent: null,
     age: 16,
     mainSeong: 4,
     rivalName: null,
@@ -136,6 +137,18 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('애도 중 → grief 대사 등장', mourn.some((t) => t.mood === 'grief'), `${mourn.filter((t) => t.mood === 'grief').length}종`);
   const settled = candidateOneLiners(ctx({ discipleId: 'none', mourning: false, trust: 70, stress: 20, age: 16 }));
   check('애도 풀림 → grief 배제·calm 가능(대조군)', !settled.some((t) => t.mood === 'grief') && settled.some((t) => t.mood === 'calm'));
+}
+
+// 7d) 동문 경사·이변 반응 — siblingEvent 신호별로 해당 대사가 후보에 뜬다(질투/축하/걱정).
+{
+  const envy = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'envy', age: 16 }));
+  check('동문 경지↑ 질투 → se-envy 대사 등장', envy.some((t) => t.id.startsWith('se-envy')), `${envy.filter((t) => t.id.startsWith('se-envy')).length}종`);
+  const admire = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'admire', age: 16 }));
+  check('동문 경지↑ 축하 → se-admire 대사 등장', admire.some((t) => t.id.startsWith('se-admire')));
+  const worry = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'worry', age: 16 }));
+  check('동문 중상 걱정 → se-worry 대사 등장', worry.some((t) => t.id.startsWith('se-worry')));
+  const none = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: null, age: 16 }));
+  check('반응 없음 → se-* 대사 배제(대조군)', !none.some((t) => t.id.startsWith('se-')));
 }
 
 // 8) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)

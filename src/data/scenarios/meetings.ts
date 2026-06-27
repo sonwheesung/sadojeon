@@ -60,6 +60,31 @@ export const MEETINGS: MeetingTemplate[] = [
       { key: 'steel', label: '무인이라면 죽음에도 무뎌져야 한다. 어서 마음을 다잡거라.', effects: { persona: { integrity: 3, warmth: -3 }, trust: -2 } },
     ],
   },
+  // 동문 경사 — 질투(동문이 경지를 올림, 뒤처진 라이벌). picker 는 when 만 봄. docs/12.
+  {
+    id: 'm-sibling-rise',
+    band: 'growth',
+    when: { siblingEvent: 'envy' },
+    body: '동문은 벌써 저 위로 올라섰는데... 사부님, 저는 왜 이렇게 더딘 걸까요. 제가 재능이 없는 건 아닐까요.',
+    options: [
+      { key: 'ownpace', label: '걸음이 느린 게 아니라 길이 다른 거다. 네 보폭으로 가면 된다.', effects: { persona: { integrity: 3, warmth: 2 }, trust: 4 } },
+      { key: 'push', label: '조급함을 땀으로 바꾸거라. 뒤처졌다 느낄 때가 가장 크는 때다.', effects: { persona: { integrity: 3, ambition: 2 }, trust: 2 } },
+      { key: 'envywatch', label: '남과 견주는 마음이 검을 흐린다. 네 안을 보거라.', effects: { persona: { prudence: 3 }, trust: 1 } },
+      { key: 'dismiss', label: '강호엔 늘 빠른 자가 있다. 일일이 부러워해선 못 큰다.', effects: { persona: { integrity: 2, warmth: -2 }, trust: -2 } },
+    ],
+  },
+  // 동문 이변 — 걱정(동문이 크게 다침). docs/12.
+  {
+    id: 'm-sibling-hurt',
+    band: 'turmoil',
+    when: { siblingEvent: 'worry' },
+    body: '동문이 크게 다쳐 돌아왔어요. ... 곁에서 돌봐주고 싶은데, 제가 그래도 될까요. 자꾸 마음이 쓰입니다.',
+    options: [
+      { key: 'allow', label: '곁을 지켜주거라. 동문을 보살피는 것도 무인의 도리다.', effects: { persona: { warmth: 4, mercy: 3 }, trust: 4 } },
+      { key: 'balance', label: '마음은 곱다만, 네 수련도 놓지 마라. 둘 다 챙기거라.', effects: { persona: { prudence: 3, integrity: 2 }, trust: 2 } },
+      { key: 'cold', label: '강호에선 다치는 게 예사다. 네 갈 길에 마음 쓰거라.', effects: { persona: { integrity: 2, warmth: -3 }, trust: -2 } },
+    ],
+  },
   // ── 동심기 (7~10) ──
   {
     id: 'm-child-homesick',

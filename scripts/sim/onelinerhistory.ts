@@ -112,11 +112,18 @@ async function main(): Promise<void> {
   const ACTIVE = new Set(['jang-cheol', 'jin-sohwa', 'han-baram', 'yun-soso', 'i-cheongha', 'baek-yeon']);
   const fired = new Set(records.map((r) => r.templateId));
   const deadAll = ONE_LINERS.filter((t) => !fired.has(t.id));
+  const isActive = (t: (typeof ONE_LINERS)[number]): boolean => !t.onlyFor || ACTIVE.has(t.onlyFor);
+  // 이벤트 게이트 대사(사망 mourning·동문 경사/이변 siblingEvent) — RandomPolicy autoplay 가 그 이벤트(사망·돌파-반응)를
+  // 드물게 밟아 미발화 = IAP 비활성 전용과 동류로 "정상". 발화 로직은 oneliner 프로브·siblingReactionSystem 단위가 보장. docs/12.
+  const isEventGated = (t: (typeof ONE_LINERS)[number]): boolean =>
+    t.when?.mourning != null || t.when?.siblingEvent != null;
   const deadInactive = deadAll.filter((t) => t.onlyFor && !ACTIVE.has(t.onlyFor)); // IAP·출시후 — 정상
-  const dead = deadAll.filter((t) => !t.onlyFor || ACTIVE.has(t.onlyFor)); // 활성 기준 진짜 죽은 대사
-  out(`## ① 커버리지 — 발화 ${fired.size}/${ONE_LINERS.length}종 · 활성 죽은 대사 ${dead.length}종 (비활성 캐릭터 전용 ${deadInactive.length}종은 정상)`);
+  const deadEventGated = deadAll.filter((t) => isActive(t) && isEventGated(t)); // 이벤트 의존 미발화 — 정상
+  const dead = deadAll.filter((t) => isActive(t) && !isEventGated(t)); // 활성·비이벤트 진짜 죽은 대사(cap 대상)
+  out(`## ① 커버리지 — 발화 ${fired.size}/${ONE_LINERS.length}종 · 활성 죽은 대사 ${dead.length}종 (비활성 전용 ${deadInactive.length}·이벤트게이트 ${deadEventGated.length}종은 정상)`);
   for (const t of dead) out(`- DEAD \`${t.id}\` [${t.mood ?? 'normal'}]${t.onlyFor ? ` (전용:${t.onlyFor})` : ''} when=${JSON.stringify(t.when ?? {})} "${t.body}"`);
   out(`- (정상·비활성: ${deadInactive.map((t) => t.id).join(', ') || '없음'})`);
+  out(`- (정상·이벤트게이트: ${deadEventGated.map((t) => t.id).join(', ') || '없음'})`);
   out('');
 
   // ② 결 분포
@@ -229,7 +236,7 @@ async function main(): Promise<void> {
   }
 
   const REP_CAP = 28; // 현재 ~13~16. 폭증(once-only 회귀로 공용 풀 떨어짐) 감지 — 250+ 였던 과거 회귀 가드.
-  const DEAD_CAP = 28; // 현재 ~12~18(seong 게이트 t6·pr* + RNG 미발화). 카테고리 통째 사망(200+) 감지.
+  const DEAD_CAP = 28; // 현재 ~23(seong 게이트 t6·pr* + RNG 미발화). 이벤트게이트(grief·sibling)는 별도 정상 분류 제외. 카테고리 통째 사망(200+) 감지.
   console.log('\n--- 회귀 밴드 ---');
   let pass = 0;
   let fail = 0;

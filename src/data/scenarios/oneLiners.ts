@@ -20,6 +20,7 @@ export interface OneLinerCondition {
   darknessRiskMax?: 'low' | 'medium'; // 흑화 위험 ≤ (모순 방지 — 흑화 중엔 천진한 대사 차단)
   hasEnemy?: boolean; // 적대 관계 보유 시에만
   mourning?: boolean; // 동문 상실 애도 중에만(grief·위로 면담) / false=애도 아닐 때만. docs/12
+  siblingEvent?: 'envy' | 'admire' | 'worry'; // 동문 경사·이변 반응 중 — 질투/축하/걱정. docs/12
   ageMin?: number;
   ageMax?: number;
   seongMin?: number; // 주력 무공 성 ≥ (정체·자만)
@@ -138,6 +139,13 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'gr2', category: 'worry', mood: 'grief', body: '사부님... 더 강해지면, 다음엔 지킬 수 있을까요. 또 누굴 잃지 않게요.', when: { mourning: true } },
   { id: 'gr3', category: 'daily', mood: 'grief', body: '오늘은 손에 검이 잡히질 않습니다. ... 잠깐, 멍하니 앉아만 있었어요.', when: { mourning: true } },
   { id: 'gr4', category: 'training', mood: 'grief', body: '같이 수련하던 자리가 비어 있으니... 자꾸 그쪽을 보게 됩니다.', when: { mourning: true } },
+
+  // 동문 경사·이변 반응(전이형) — 동문이 경지 올림/크게 다침. 관계 차등(질투/축하/걱정). docs/12.
+  { id: 'se-envy1', category: 'relation', mood: 'rival', body: '동문 하나가 또 한 걸음 위로 올라섰다더군요. ... 저는 아직 제자린데요.', when: { siblingEvent: 'envy' } },
+  { id: 'se-envy2', category: 'worry', mood: 'rival', body: '다들 저만치 앞서가는데 저만 멈춰 있는 것 같아요. ... 조급해집니다.', when: { siblingEvent: 'envy' } },
+  { id: 'se-admire1', category: 'relation', mood: 'normal', body: '동문이 큰 벽을 넘었답니다! ... 제 일처럼 기쁘네요. 저도 곧 따라가야죠.', when: { siblingEvent: 'admire' } },
+  { id: 'se-worry1', category: 'relation', mood: 'normal', body: '동문이 크게 다쳐 누웠어요. ... 자꾸 그쪽에 마음이 쓰입니다.', when: { siblingEvent: 'worry' } },
+  { id: 'se-worry2', category: 'daily', mood: 'normal', body: '얼른 나아야 할 텐데... 오늘은 어쩐지 수련도 손에 안 잡히네요.', when: { siblingEvent: 'worry' } },
 
   // ════ 공용 일상 잡담 — 결 없음(반복 허용). 단조 방지용 대량 풀(이력분석 2026-06-23, 같은 줄 250+회 반복 해소) ════
   // 사문 생활의 결: 마당·계절·끼니·소제·산·연무장. 숨은 변수 직설 X, 나이대 무난한 말투.
@@ -577,6 +585,7 @@ export interface OneLinerCtx {
   darknessRisk: 'low' | 'medium' | 'high';
   hasEnemy: boolean;
   mourning: boolean; // 동문 상실 애도 중(mourningUntilDay > 현재일) — calm/pride 차단·grief 후보
+  siblingEvent: 'envy' | 'admire' | 'worry' | null; // 동문 경사·이변 반응(전이형) — 질투/축하/걱정
   age: number;
   mainSeong: number;
   rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
@@ -649,6 +658,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   if (w.darknessRiskMax != null && RISK_RANK[c.darknessRisk] > RISK_RANK[w.darknessRiskMax]) return false;
   if (w.hasEnemy != null && c.hasEnemy !== w.hasEnemy) return false;
   if (w.mourning != null && c.mourning !== w.mourning) return false;
+  if (w.siblingEvent != null && c.siblingEvent !== w.siblingEvent) return false;
   if (w.ageMin != null || w.ageMax != null) {
     const a = toContentAge(c.age); // 실제 나이 → 옛 5년 호 스케일로 압축해 비교
     if (w.ageMin != null && a < w.ageMin) return false;

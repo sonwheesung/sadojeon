@@ -39,6 +39,7 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
     darknessRisk: d.darknessRisk,
     hasEnemy: Object.values(d.relationships).some((v) => v === 'enemy'),
     mourning: (d.mourningUntilDay ?? 0) > today, // 동문 상실 애도 중 — calm/pride 차단·grief 후보
+    siblingEvent: (d.siblingEventUntilDay ?? 0) > today ? (d.siblingEventMood ?? null) : null, // 동문 경사·이변 반응
     age: currentAge(d),
     mainSeong,
     rivalName,

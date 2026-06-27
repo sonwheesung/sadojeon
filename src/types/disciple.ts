@@ -124,6 +124,10 @@ export interface Disciple {
   // 동문 상실 애도 — 이 날(totalDay) 지나기 전까진 애도 중(평온·자만 대사 차단·grief 대사·위로 면담). docs/12.
   // 의뢰 재난 사망 시 mournLostSibling 이 친밀 차등으로 현재일+기간 설정(중복 상실 시 max 연장). 회차 스코프.
   mourningUntilDay?: number;
+  // 동문 경사·이변 반응(전이형) — 동문이 경지 상승/중상 시 reactToSiblingMilestone 가 관계 차등으로 설정. docs/12.
+  // 질투(envy)/축하(admire)/걱정(worry). siblingEventUntilDay 지나면 소멸(짧은 창). 회차 스코프.
+  siblingEventMood?: 'envy' | 'admire' | 'worry';
+  siblingEventUntilDay?: number;
   relationships: Record<string, RelationLevel>;
   // 동문 야망 충돌(docs/19) — 출도전기에 한 번 발화한 "같은 자리 욕망" 결정의 기록(회차당 제자 1회).
   // 설정되면 해당 제자는 그 회차에 다시 충돌 후보가 되지 않는다(중복 발화 차단). withId=상대, outcome=사부 결정.
