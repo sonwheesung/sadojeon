@@ -48,6 +48,16 @@ export function raiseDarkness(d: Pick<Disciple, 'darknessLevel' | 'darknessResis
   return Math.max(0, Math.min(4, lv)) as DarknessLevel;
 }
 
+// 갱생 seam — 청정한 양육이 흑화를 되돌린다(raiseDarkness 의 거울). 단계 1~2만 회복, 3~4는 불가역.
+// 저항 높을수록 잘 회복: `random() < 0.20 + 0.80×저항`. 즉 darknessResist = "도덕 안정성"(잘 안 물들고 잘 돌아옴).
+// 호출측(tickDarkness)이 "지금 양육이 청정한가"(score ≤ 30)를 게이트한다. docs/13 갱생.
+export function redeemDarkness(d: Pick<Disciple, 'darknessLevel' | 'darknessResist'>): DarknessLevel {
+  if (d.darknessLevel < 1 || d.darknessLevel > 2) return d.darknessLevel; // 0=청정 · 3~4=불가역
+  const resist = d.darknessResist ?? 0;
+  if (random() < 0.2 + 0.8 * resist) return (d.darknessLevel - 1) as DarknessLevel;
+  return d.darknessLevel;
+}
+
 const OMEN: Record<number, (name: string) => string> = {
   1: (n) => `${n}의 눈빛이 요즘 부쩍 차갑다는 말이 동문들 사이에 돈다.`,
   2: (n) => `${n}이 홀로 있는 시간이 부쩍 늘었다. 좀처럼 곁을 주지 않는다 한다.`,
@@ -88,16 +98,22 @@ export function tickDarkness(): void {
     if (rollLevel && score >= 78 && d.darknessLevel < 4 && random() < 0.18) {
       const nl = raiseDarkness(d, 1); // 저항 게이트 통과 시에만 실제 +1
       if (nl > d.darknessLevel) patch.darknessLevel = nl;
+    } else if (rollLevel && score <= 30 && d.darknessLevel >= 1 && d.darknessLevel <= 2) {
+      // 갱생 — 양육이 청정(점수 낮음)하고 아직 1~2단계면 회복. 3~4는 불가역. docs/13.
+      const nl = redeemDarkness(d);
+      if (nl < d.darknessLevel) patch.darknessLevel = nl;
     }
     if (Object.keys(patch).length) {
+      const raised = patch.darknessLevel != null && patch.darknessLevel > d.darknessLevel;
       ds.update(id, patch);
-      if (patch.darknessLevel != null) {
-        pushOmen(d.name, patch.darknessLevel, day);
+      if (raised) {
+        pushOmen(d.name, patch.darknessLevel as number, day);
         reactToSiblingMilestone(id, 'darkening'); // 동문 불안·경계(원수 제외). docs/12
         // 자율 흑화도 사문 평판·분위기에 파급(이벤트 흑화와 동근 — 정파↓·사문 도의↓). docs/12·gap-hunt 2차
         applyAlignmentReputation(-3, 1, [id]);
         useSectAtmosphereStore.getState().adjust({ righteousness: -1 });
       }
+      // 회복(level 감소)은 조용히 — v1 부가 연출 없음(과한 회복 알림 회피). 통찰로 간접 감지.
     }
   }
 }

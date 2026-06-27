@@ -14,7 +14,7 @@
 
 import { seedNewRun } from '../../src/systems/newRun';
 import { setAutoSaveEnabled } from '../../src/systems/runSync';
-import { raiseDarkness } from '../../src/systems/darknessSystem';
+import { raiseDarkness, redeemDarkness } from '../../src/systems/darknessSystem';
 import { seedAmbient } from '../../src/systems/rng';
 import { useGameStore } from '../../src/stores/gameStore';
 import { useDiscipleStore } from '../../src/stores/discipleStore';
@@ -65,6 +65,13 @@ function levelAfter(resist: number, acts: number): number {
   for (let i = 0; i < acts; i++) d.darknessLevel = raiseDarkness(d as never, 1);
   return d.darknessLevel;
 }
+// 갱생: 시작 단계 from 에서 청정 양육(주간 redeemDarkness)으로 0까지 걸린 주(week). 회복 안 되면 -1.
+function weeksToRedeem(resist: number, from: number, cap = 100000): number {
+  const d = { darknessLevel: from as number, darknessResist: resist };
+  let w = 0;
+  while (d.darknessLevel > 0 && w < cap) { d.darknessLevel = redeemDarkness(d as never); w += 1; }
+  return d.darknessLevel === 0 ? w : -1;
+}
 
 async function main(): Promise<void> {
   setAutoSaveEnabled(false);
@@ -98,6 +105,25 @@ async function main(): Promise<void> {
   let mono = true;
   for (let i = 1; i < RESIST.length; i++) if (a2[RESIST[i].id] < a2[RESIST[i - 1].id] - 0.5) mono = false;
   check('저항 오름차순 ⇒ 흑화 도달 횟수 단조 증가(이청하 최易 ~ 장철 最難)', mono);
+
+  // ── 갱생(회복) 측정 — 단계2 청정양육 시 0 회복까지 평균 주(week) + 단계3 불가역 ──
+  console.log(`\n── 갱생: 단계2(청정 양육)→0 회복 평균 주 · 단계3 불가역 ──`);
+  console.log(`${'캐릭터'.padEnd(8)} ${'저항'.padStart(5)} ${'Lv2→0 회복주'.padStart(12)} ${'(이론)'.padStart(7)} ${'Lv3 회복?'.padStart(9)}`);
+  const recW: Record<string, number> = {};
+  for (const { id, resist } of RESIST) {
+    let sum = 0;
+    for (let t = 0; t < trials; t++) sum += weeksToRedeem(resist, 2);
+    const mean = sum / trials; recW[id] = mean;
+    const theo = 2 / (0.2 + 0.8 * resist); // 단계당 1/p, 2단계
+    const lv3 = weeksToRedeem(resist, 3, 5000); // 불가역이면 cap 도달 → -1
+    console.log(`  ${NAME[id].padEnd(8)} ${resist.toFixed(2).padStart(5)} ${mean.toFixed(1).padStart(10)}주 ${theo.toFixed(1).padStart(7)} ${(lv3 < 0 ? '불가역 ✓' : `회복${lv3}!`).padStart(9)}`);
+    check(`${NAME[id]} 단계2 갱생 ${mean.toFixed(1)}주 ≈ 이론 ${theo.toFixed(1)}주(±10%)`, Math.abs(mean - theo) <= theo * 0.1 + 0.3);
+    check(`${NAME[id]} 단계3 불가역(회복 안 됨)`, lv3 < 0);
+  }
+  // 갱생 속도 저항 단조 감소(고저항=빨리 회복) — 흑화 난이도의 거울.
+  let monoR = true;
+  for (let i = 1; i < RESIST.length; i++) if (recW[RESIST[i].id] > recW[RESIST[i - 1].id] + 0.5) monoR = false;
+  check('저항 오름차순 ⇒ 갱생 주 단조 감소(장철 最速 회복 ~ 이청하 最遲)', monoR);
 
   // ── 배선 확인: seedNewRun 이 darknessResist 를 recruitPool 값대로 시드 ──
   for (const { id, resist, seedable } of RESIST) {
