@@ -31,6 +31,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     mourning: false,
     siblingEvent: null,
     questEcho: null,
+    jianghuTense: false,
     age: 16,
     mainSeong: 4,
     rivalName: null,
@@ -164,6 +165,14 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('의뢰 실패 → qe-humbled 대사 등장', humbled.some((t) => t.id.startsWith('qe-humbled')));
   const none = candidateOneLiners(ctx({ discipleId: 'none', questEcho: null, age: 16 }));
   check('여운 없음 → qe-* 배제(대조군)', !none.some((t) => t.id.startsWith('qe-')));
+}
+
+// 7f) 강호 흉흉 — jianghuTense 시 jt 대사 등장(양육 중 제자도 정세에 술렁).
+{
+  const tense = candidateOneLiners(ctx({ discipleId: 'none', jianghuTense: true, age: 16 }));
+  check('강호 흉흉 → jt 대사 등장', tense.some((t) => t.id.startsWith('jt')), `${tense.filter((t) => t.id.startsWith('jt')).length}종`);
+  const calm = candidateOneLiners(ctx({ discipleId: 'none', jianghuTense: false, age: 16 }));
+  check('강호 평온 → jt 배제(대조군)', !calm.some((t) => t.id.startsWith('jt')));
 }
 
 // 8) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)

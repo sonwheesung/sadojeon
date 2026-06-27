@@ -2,6 +2,7 @@
 // 죽은 제자만 'departed' 처리하고 끝나던 사각(생존자 무애도 → 사망 다음 날 평온 대사 = 이중인격)을 닫는다.
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { attemptQuestEnlightenment } from './trainingSystem';
 import type { RelationLevel } from '@/types';
 
@@ -23,6 +24,8 @@ const LOSS_ENLIGHTENMENT_BONUS = 0.15;
 export function mournLostSibling(deceasedId: string): void {
   const ds = useDiscipleStore.getState();
   const today = useTimeStore.getState().totalDay;
+  // 동문 상실은 사문 결속을 흔든다(소폭). 개인 애도(아래)와 별개의 사문 차원 파급. docs/12·gap-hunt 2차.
+  useSectAtmosphereStore.getState().adjust({ unity: -2 });
   for (const id of ds.order) {
     if (id === deceasedId) continue;
     const d = ds.disciples[id];

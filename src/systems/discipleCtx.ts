@@ -2,8 +2,13 @@
 // 나이는 정적 필드가 아니라 입문나이 + 경과연차로 계산(제자는 timeSystem 에서 나이 안 먹음).
 
 import { useTimeStore } from '@/stores/timeStore';
+import { useJianghuStore } from '@/stores/jianghuStore';
+import { worldThreat } from './worldSystem';
 import type { Disciple } from '@/types';
 import type { OneLinerCtx } from '@/data/scenarios/oneLiners';
+
+// 강호가 흉흉한가(전쟁·봉기·준동 등 위기도 높음) — 양육 중 제자도 풍문으로 불안. docs/12.
+const JIANGHU_TENSE_THRESHOLD = 0.4;
 
 // 현재 나이 = 입문 당시 나이 + (현재 연차 − 입문 연차).
 export function currentAge(d: Disciple): number {
@@ -41,6 +46,7 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
     mourning: (d.mourningUntilDay ?? 0) > today, // 동문 상실 애도 중 — calm/pride 차단·grief 후보
     siblingEvent: (d.siblingEventUntilDay ?? 0) > today ? (d.siblingEventMood ?? null) : null, // 동문 경사·이변 반응
     questEcho: (d.questEchoUntilDay ?? 0) > today ? (d.questEchoMood ?? null) : null, // 의뢰 다녀온 여운(본인)
+    jianghuTense: worldThreat(useJianghuStore.getState().world) >= JIANGHU_TENSE_THRESHOLD, // 강호 흉흉(전쟁·준동)
     age: currentAge(d),
     mainSeong,
     rivalName,

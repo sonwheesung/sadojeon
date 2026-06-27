@@ -36,6 +36,7 @@ function ctx(over: Partial<OneLinerCtx> = {}): OneLinerCtx {
     mourning: false,
     siblingEvent: null,
     questEcho: null,
+    jianghuTense: false,
     age: 16,
     mainSeong: 4,
     rivalName: null,

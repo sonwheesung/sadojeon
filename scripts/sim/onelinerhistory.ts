@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   // 이벤트 게이트 대사(사망 mourning·동문 경사/이변 siblingEvent) — RandomPolicy autoplay 가 그 이벤트(사망·돌파-반응)를
   // 드물게 밟아 미발화 = IAP 비활성 전용과 동류로 "정상". 발화 로직은 oneliner 프로브·siblingReactionSystem 단위가 보장. docs/12.
   const isEventGated = (t: (typeof ONE_LINERS)[number]): boolean =>
-    t.when?.mourning != null || t.when?.siblingEvent != null || t.when?.questEcho != null;
+    t.when?.mourning != null || t.when?.siblingEvent != null || t.when?.questEcho != null || t.when?.jianghuTense != null;
   const deadInactive = deadAll.filter((t) => t.onlyFor && !ACTIVE.has(t.onlyFor)); // IAP·출시후 — 정상
   const deadEventGated = deadAll.filter((t) => isActive(t) && isEventGated(t)); // 이벤트 의존 미발화 — 정상
   const dead = deadAll.filter((t) => isActive(t) && !isEventGated(t)); // 활성·비이벤트 진짜 죽은 대사(cap 대상)

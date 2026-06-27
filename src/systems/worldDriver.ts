@@ -6,6 +6,7 @@ import { random } from '@/systems/rng';
 import { BLOC_FACTIONS } from '@/data/worldPowers';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
+import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { seedWorldState, tickWorldState, type WorldTickReport } from '@/systems/worldSystem';
 import { adjustSectRep } from './reputationSystem';
@@ -48,6 +49,8 @@ function applyReport(report: WorldTickReport): void {
   const seeds = report.questSeeds.filter((q) => q.kind !== 'war' || q.blocs.includes('orthodox'));
   if (seeds.length > 0) {
     seedWorldQuests(seeds.map((q) => ({ kind: q.kind, headline: q.headline })));
+    // 사문에 닿는 큰 정세 사건(봉기·토벌·정파 전쟁) → 사문도 긴장(결속 소폭↓). docs/12·gap-hunt 2차.
+    useSectAtmosphereStore.getState().adjust({ unity: -1 });
   }
 }
 

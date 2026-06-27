@@ -6,6 +6,7 @@ jest.mock('./runSync', () => ({ saveCurrentRunSilently: jest.fn() }));
 import { mournLostSibling } from './mournSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import type { Disciple, RelationLevel } from '@/types';
 
 const DAY = 1000;
@@ -94,5 +95,13 @@ describe('mournLostSibling — 친밀 차등 애도 파급', () => {
     );
     mournLostSibling('dead');
     expect(useDiscipleStore.getState().disciples['s'].mourningUntilDay).toBe(DAY + 100); // 기존 유지(max)
+  });
+
+  it('동문 상실은 사문 결속(unity)을 흔든다(소폭↓) — gap-hunt 2차', () => {
+    useSectAtmosphereStore.getState().reset();
+    seed(mk('dead', undefined, { status: 'departed' }), mk('s', 'friend'));
+    const before = useSectAtmosphereStore.getState().atmosphere.unity;
+    mournLostSibling('dead');
+    expect(useSectAtmosphereStore.getState().atmosphere.unity).toBe(before - 2);
   });
 });

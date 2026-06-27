@@ -6,6 +6,7 @@
 import { random } from '@/systems/rng';
 import { findMartialArt } from '@/data/martialArts';
 import { reactToSiblingMilestone } from './siblingReactionSystem';
+import { applyAlignmentReputation } from './reputationSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
@@ -79,6 +80,9 @@ export function tickDarkness(): void {
       if (patch.darknessLevel != null) {
         pushOmen(d.name, patch.darknessLevel, day);
         reactToSiblingMilestone(id, 'darkening'); // 동문 불안·경계(원수 제외). docs/12
+        // 자율 흑화도 사문 평판·분위기에 파급(이벤트 흑화와 동근 — 정파↓·사문 도의↓). docs/12·gap-hunt 2차
+        applyAlignmentReputation(-3, 1, [id]);
+        useSectAtmosphereStore.getState().adjust({ righteousness: -1 });
       }
     }
   }
