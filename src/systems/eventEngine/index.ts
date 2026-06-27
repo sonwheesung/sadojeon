@@ -15,6 +15,7 @@ import { ALL_MORAL_EVENTS, TIER_WEIGHT } from '@/data/scenarios/moralEvents';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
 import { useMasterStore } from '@/stores/masterStore';
+import { masterStatStar } from '@/types/master';
 import { useMoralEventStore } from '@/stores/moralEventStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -105,11 +106,7 @@ function interpolate(text: string, perp: string, sib?: string): string {
 }
 
 function insightTier(insight: number): InsightTier {
-  if (insight >= 80) return 5;
-  if (insight >= 60) return 4;
-  if (insight >= 40) return 3;
-  if (insight >= 20) return 2;
-  return 1;
+  return masterStatStar(insight); // 단일 진실(MS1 봉합) — 0~100 → ★1~5. docs/37
 }
 
 function pickHint(

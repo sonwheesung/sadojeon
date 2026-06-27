@@ -14,6 +14,7 @@
 
 import { dailyTick, resolveChoice } from '@/systems/eventEngine';
 import type { InsightTier, MoralChoiceTone } from '@/types';
+import { masterStatStar } from '@/types/master';
 
 // 매일 호출 시 발화 확률. 실제 적용은 engine 내부 상수.
 export const MORAL_DAILY_CHANCE = 0.018;
@@ -28,9 +29,5 @@ export function resolveMoralChoice(tone: MoralChoiceTone): Promise<void> {
 
 // 사부 insight 0~100 → ★ 1~5 단계. UI 가 통찰 hint 표시할 때 사용.
 export function insightTier(insight: number): InsightTier {
-  if (insight >= 80) return 5;
-  if (insight >= 60) return 4;
-  if (insight >= 40) return 3;
-  if (insight >= 20) return 2;
-  return 1;
+  return masterStatStar(insight); // 단일 진실(MS1 봉합). docs/37
 }

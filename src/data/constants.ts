@@ -49,9 +49,10 @@ export const MASTER_SLOT = {
 
 // 사부 스탯 범위 — docs/02_사부_시스템.md
 export const MASTER_STAT = {
-  MIN: 1,
-  MAX: 5,
-  DEFAULT: 3,
+  // 저장 0~100 단일 스케일(★1~5는 masterStatStar 환산). 옛 {1,5,3}는 스케일 버그(docs/37 MS1).
+  MIN: 0,
+  MAX: 100,
+  DEFAULT: 40, // ★3(중간) 시작값
 } as const;
 
 // 사부 수명 — 양육 20~30년을 품도록 (시작 52세 + 20~30년 = 별세 ~72~82세). docs/23·docs/02.

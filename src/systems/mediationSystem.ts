@@ -13,6 +13,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useEventHistoryStore } from '@/stores/eventHistoryStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useMasterStore } from '@/stores/masterStore';
+import { masterStatStar } from '@/types/master';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple } from '@/types';
 import { REL_DOWN, TOWARD_NEUTRAL } from '@/data/relationTransitions';
@@ -58,8 +59,7 @@ function hasUnresolved(domain: string): boolean {
 
 // 사부 통찰 ★(1~5) — 0~100 스케일에서 환산.
 function masterInsightTier(): number {
-  const insight = useMasterStore.getState().master?.stats.insight ?? 0;
-  return Math.max(1, Math.min(5, Math.floor(insight / 20) + 1));
+  return masterStatStar(useMasterStore.getState().master?.stats.insight ?? 0); // 단일 진실(MS1). docs/37
 }
 
 // 시드 적대(사연 있는 쌍) 여부 — 통찰 ★4↑ 사부는 사연을 알고 중재한다(효과↑). docs/33 §3.

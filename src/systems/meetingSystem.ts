@@ -5,6 +5,7 @@ import { random } from '@/systems/rng';
 import { MEETINGS, fillMeetingBody, pickContextualMeeting, type MeetingEffect } from '@/data/scenarios/meetings';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
+import { useMasterStore } from '@/stores/masterStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
 import type { Disciple, DarknessLevel } from '@/types';
@@ -14,6 +15,9 @@ import { applyAlignmentReputation } from './reputationSystem';
 
 // 면담은 한 마디보다 무겁다 — 낮은 확률. (상황 매칭까지 통과해야 실제 발동)
 export const MEETING_DAILY_CHANCE = 0.22;
+
+// 면담 해소 1회당 사부 통찰 성장(소델타+감쇠 ×(1-v/100)) — 회차 누적으로 ★3→★4~5. 🔧 그레이박스 튜닝값. docs/02 Option C.
+const INSIGHT_PER_MEETING = 0.5;
 
 function isActive(d: Disciple): boolean {
   return d.status === 'training' || d.status === 'resting' || d.status === 'meditating';
@@ -67,6 +71,14 @@ export function applyMeetingChoice(discipleId: string, eff: MeetingEffect): void
   if (eff.righteousness) {
     useSectAtmosphereStore.getState().adjust({ righteousness: eff.righteousness });
     applyAlignmentReputation(eff.righteousness, 0.5, [discipleId]);
+  }
+  // 사부 통찰 성장 — 제자를 면담하며 이해가 쌓인다(감쇠라 후반 완만). docs/02 Option C·docs/12 §통찰 상승.
+  const ms = useMasterStore.getState();
+  const mst = ms.master;
+  if (mst) {
+    const cur = mst.stats.insight;
+    const next = Math.min(100, cur + INSIGHT_PER_MEETING * (1 - cur / 100));
+    ms.update({ stats: { ...mst.stats, insight: next } });
   }
 }
 

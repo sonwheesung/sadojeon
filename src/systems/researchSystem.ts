@@ -11,7 +11,7 @@ import { findMartialArt } from '@/data/martialArts';
 import { useCodexStore } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useMasterStore } from '@/stores/masterStore';
-import { INSIGHT_RESEARCH_MULTIPLIER } from '@/types/master';
+import { INSIGHT_RESEARCH_MULTIPLIER, masterStatStar } from '@/types/master';
 import type { MartialArtGrade } from '@/types/martialArt';
 
 const MIN = 60_000;
@@ -54,9 +54,9 @@ export const RESEARCH_INSIGHT_ENABLED = false; // 🔧 적용 여부 미정 — 
 
 function insightSpeedMult(): number {
   if (!RESEARCH_INSIGHT_ENABLED) return 1;
-  const raw = useMasterStore.getState().master?.stats.insight ?? 3;
-  const star = Math.max(1, Math.min(5, Math.round(raw))) as 1 | 2 | 3 | 4 | 5;
-  return INSIGHT_RESEARCH_MULTIPLIER[star];
+  const raw = useMasterStore.getState().master?.stats.insight ?? 40;
+  return INSIGHT_RESEARCH_MULTIPLIER[masterStatStar(raw)]; // 0~100→★ 단일 진실(MS1 봉합). docs/37
+
 }
 
 export function researchDurationFor(artId: string): number {

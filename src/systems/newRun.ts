@@ -56,10 +56,11 @@ function defaultMaster(): Master {
     age: 52,
     style: 'mystic',
     stats: {
-      insight: MASTER_STAT.DEFAULT,
-      experience: MASTER_STAT.DEFAULT,
-      authority: MASTER_STAT.DEFAULT,
-      prestige: MASTER_STAT.DEFAULT,
+      // 0~100 스케일(★ via masterStatStar). 새 사부: 통찰 중간·위엄/연륜 낮음·인망은 평판 거울. docs/02 Option C.
+      insight: MASTER_STAT.DEFAULT, // 40 = ★3 — 면담 누적으로 성장
+      experience: 0, // deriveExperience(yearsAsMaster=0) — 경력 거울
+      authority: 20, // ★1 — 처분 누적으로 성장
+      prestige: 30, // derivePrestige(reputation) = max(30,20,10,0) = ★2
     },
     specialties: ['insight', 'mind'],
     signatureArtIds: [],

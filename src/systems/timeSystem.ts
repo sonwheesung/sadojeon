@@ -1,6 +1,7 @@
 import { MASTER } from '@/data/constants';
 import { useGameStore } from '@/stores/gameStore';
 import { useMasterStore } from '@/stores/masterStore';
+import { deriveExperience, derivePrestige } from '@/types/master';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { useMoralEventStore } from '@/stores/moralEventStore';
@@ -66,9 +67,12 @@ export function advanceTurn() {
   if (time.year > before.year) {
     const m = useMasterStore.getState().master;
     if (m) {
+      const years = m.yearsAsMaster + 1;
       useMasterStore.getState().update({
-        yearsAsMaster: m.yearsAsMaster + 1,
+        yearsAsMaster: years,
         age: m.age + 1,
+        // 연륜·인망은 경력·평판의 거울(비게이트 표시값) — 매년 동기화. docs/02 Option C.
+        stats: { ...m.stats, experience: deriveExperience(years), prestige: derivePrestige(m.reputation) },
       });
     }
     // 제자 나이는 여기서 안 올린다 — currentAge(d) = d.age(입문나이) + 경과연차로 동적 계산.
