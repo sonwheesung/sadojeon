@@ -20,7 +20,8 @@ export interface OneLinerCondition {
   darknessRiskMax?: 'low' | 'medium'; // 흑화 위험 ≤ (모순 방지 — 흑화 중엔 천진한 대사 차단)
   hasEnemy?: boolean; // 적대 관계 보유 시에만
   mourning?: boolean; // 동문 상실 애도 중에만(grief·위로 면담) / false=애도 아닐 때만. docs/12
-  siblingEvent?: 'envy' | 'admire' | 'worry'; // 동문 경사·이변 반응 중 — 질투/축하/걱정. docs/12
+  siblingEvent?: 'envy' | 'admire' | 'worry' | 'unease' | 'grief_far'; // 동문 반응 — 질투/축하/걱정/불안(흑화)/먼애도(강호사망). docs/12
+  questEcho?: 'proud' | 'humbled'; // 의뢰 다녀온 여운 — 완수/실패. docs/12
   ageMin?: number;
   ageMax?: number;
   seongMin?: number; // 주력 무공 성 ≥ (정체·자만)
@@ -143,9 +144,20 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   // 동문 경사·이변 반응(전이형) — 동문이 경지 올림/크게 다침. 관계 차등(질투/축하/걱정). docs/12.
   { id: 'se-envy1', category: 'relation', mood: 'rival', body: '동문 하나가 또 한 걸음 위로 올라섰다더군요. ... 저는 아직 제자린데요.', when: { siblingEvent: 'envy' } },
   { id: 'se-envy2', category: 'worry', mood: 'rival', body: '다들 저만치 앞서가는데 저만 멈춰 있는 것 같아요. ... 조급해집니다.', when: { siblingEvent: 'envy' } },
-  { id: 'se-admire1', category: 'relation', mood: 'normal', body: '동문이 큰 벽을 넘었답니다! ... 제 일처럼 기쁘네요. 저도 곧 따라가야죠.', when: { siblingEvent: 'admire' } },
+  // 축하/동경 — 경지상승·첫성취·강호 명성 공용(일반 표현). siblingEvent='admire'.
+  { id: 'se-admire1', category: 'relation', mood: 'normal', body: '동문이 큰 걸 해냈답니다! ... 제 일처럼 기쁘네요. 저도 곧 따라가야죠.', when: { siblingEvent: 'admire' } },
+  { id: 'se-admire2', category: 'daily', mood: 'normal', body: '동문이 해낸 걸 보니 저도 마음이 다잡힙니다. 부럽기보단... 든든하네요.', when: { siblingEvent: 'admire' } },
   { id: 'se-worry1', category: 'relation', mood: 'normal', body: '동문이 크게 다쳐 누웠어요. ... 자꾸 그쪽에 마음이 쓰입니다.', when: { siblingEvent: 'worry' } },
   { id: 'se-worry2', category: 'daily', mood: 'normal', body: '얼른 나아야 할 텐데... 오늘은 어쩐지 수련도 손에 안 잡히네요.', when: { siblingEvent: 'worry' } },
+  // 불안·경계 — 동문이 어두워짐(흑화). siblingEvent='unease'. 숨은변수 직설 X — 관찰 가능한 변화로만.
+  { id: 'se-unease1', category: 'relation', mood: 'normal', body: '요즘 동문 하나가... 눈빛이 달라졌어요. 뭐라 말은 못 하겠는데, 가까이 가기가 조심스럽습니다.', when: { siblingEvent: 'unease' } },
+  { id: 'se-unease2', category: 'worry', mood: 'normal', body: '사부님, 그 동문 괜찮은 걸까요. 어쩐지 마음이 자꾸 쓰이는데... 제가 뭘 해줄 수 있을까요.', when: { siblingEvent: 'unease' } },
+  // 먼 애도 — 먼저 떠난 동문이 강호에서 죽음. siblingEvent='grief_far'.
+  { id: 'se-grieffar1', category: 'relation', mood: 'grief', body: '먼저 떠난 동문이... 강호에서 끝내 돌아오지 못했대요. 같이 수련하던 게 엊그제 같은데.', when: { siblingEvent: 'grief_far' } },
+  { id: 'se-grieffar2', category: 'worry', mood: 'grief', body: '강호가 그렇게 험한 곳인 줄... 저도 나가면, 무사할 수 있을까요.', when: { siblingEvent: 'grief_far' } },
+  // 의뢰 다녀온 여운(본인). questEcho. proud(완수)/humbled(실패·위기).
+  { id: 'qe-proud1', category: 'daily', mood: 'normal', body: '의뢰를 무사히 마치고 돌아왔습니다. ... 강호에 제 손이 닿았다는 게, 묘하게 뿌듯하네요.', when: { questEcho: 'proud' } },
+  { id: 'qe-humbled1', category: 'worry', mood: 'weary', body: '이번 의뢰는... 제 힘이 모자랐습니다. 면목 없어요. 더 닦아야겠습니다.', when: { questEcho: 'humbled' } },
 
   // ════ 공용 일상 잡담 — 결 없음(반복 허용). 단조 방지용 대량 풀(이력분석 2026-06-23, 같은 줄 250+회 반복 해소) ════
   // 사문 생활의 결: 마당·계절·끼니·소제·산·연무장. 숨은 변수 직설 X, 나이대 무난한 말투.
@@ -585,7 +597,8 @@ export interface OneLinerCtx {
   darknessRisk: 'low' | 'medium' | 'high';
   hasEnemy: boolean;
   mourning: boolean; // 동문 상실 애도 중(mourningUntilDay > 현재일) — calm/pride 차단·grief 후보
-  siblingEvent: 'envy' | 'admire' | 'worry' | null; // 동문 경사·이변 반응(전이형) — 질투/축하/걱정
+  siblingEvent: 'envy' | 'admire' | 'worry' | 'unease' | 'grief_far' | null; // 동문 반응(전이형)
+  questEcho: 'proud' | 'humbled' | null; // 의뢰 다녀온 여운(본인)
   age: number;
   mainSeong: number;
   rivalName: string | null; // 자신보다 앞선 최강 동문 이름(없으면 null)
@@ -659,6 +672,7 @@ export function matchesCondition(w: OneLinerCondition | undefined, c: OneLinerCt
   if (w.hasEnemy != null && c.hasEnemy !== w.hasEnemy) return false;
   if (w.mourning != null && c.mourning !== w.mourning) return false;
   if (w.siblingEvent != null && c.siblingEvent !== w.siblingEvent) return false;
+  if (w.questEcho != null && c.questEcho !== w.questEcho) return false;
   if (w.ageMin != null || w.ageMax != null) {
     const a = toContentAge(c.age); // 실제 나이 → 옛 5년 호 스케일로 압축해 비교
     if (w.ageMin != null && a < w.ageMin) return false;

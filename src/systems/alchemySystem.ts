@@ -7,6 +7,7 @@
 
 import { findElixirRecipe, MATERIAL_LABEL, type ElixirRecipe } from '@/data/elixirs';
 import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 import { useAlchemyStore } from '@/stores/alchemyStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
@@ -200,6 +201,7 @@ export function tickCraft(): void {
     if (!a.firstCrafted.includes(key)) {
       a.markFirst(key);
       xp += recipe.alchemyReq * FIRST_CRAFT_XP_K * apt; // 처음 제조 보너스(등급↑·적성↑일수록 큼)
+      reactToSiblingMilestone(crafterId, 'achievement'); // 첫 제조 — 가까운 동문 축하. docs/12
     }
     ds.addStatExp(crafterId, 'alchemy', Math.max(1, Math.round(xp)));
   }

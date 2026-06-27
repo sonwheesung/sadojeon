@@ -14,6 +14,7 @@ import { useGraduateStore, type GraduateRecord } from '@/stores/graduateStore';
 import { useSectStore } from '@/stores/sectStore';
 import type { RelationLevel } from '@/types';
 import { pushJianghuNews } from './jianghuNews';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const randInt = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
@@ -69,6 +70,7 @@ const clash: GradEvent = {
     const fatal = LETHAL_ROUTES.has(loser.route) ? random() < 0.45 : random() < 0.2;
     gs().update(winner.id, { fame: clamp(winner.fame + 6) });
     gs().update(loser.id, fatal ? { status: 'dead', slainBy: winner.id } : { status: 'injured', fame: clamp(loser.fame - 4) });
+    if (fatal) reactToSiblingMilestone(loser.id, 'jianghu_death'); // 남은 제자 먼 애도. docs/12
     pushJianghuNews(
       `${winner.name} ↔ ${loser.name} — 은원`,
       fatal
@@ -90,6 +92,7 @@ const blocConflict: GradEvent = {
     const fatal = LETHAL_ROUTES.has(loser.route) ? random() < 0.3 : random() < 0.12;
     gs().update(winner.id, { fame: clamp(winner.fame + 5) });
     gs().update(loser.id, fatal ? { status: 'dead', slainBy: winner.id } : { status: 'injured', fame: clamp(loser.fame - 3) });
+    if (fatal) reactToSiblingMilestone(loser.id, 'jianghu_death'); // 남은 제자 먼 애도. docs/12
     setRel(a.id, b.id, fatal ? 'enemy' : relDown(rel)); // 부딪칠수록 척진다
     pushJianghuNews(
       `${a.name} ↔ ${b.name} — 정사(正邪)의 충돌`,
@@ -109,6 +112,8 @@ const jointDeed: GradEvent = {
   resolve: (a, b, rel) => {
     gs().update(a.id, { fame: clamp(a.fame + 7) });
     gs().update(b.id, { fame: clamp(b.fame + 7) });
+    reactToSiblingMilestone(a.id, 'jianghu_glory'); // 남은 제자 동경(가까운 동문). docs/12
+    reactToSiblingMilestone(b.id, 'jianghu_glory');
     useSectStore.getState().adjustReputation(3); // 제자들이 의를 떨치니 사문 이름도 오른다
     setRel(a.id, b.id, relUp(rel)); // 함께 의를 행하며 정이 깊어진다(friend→sworn)
     pushJianghuNews(

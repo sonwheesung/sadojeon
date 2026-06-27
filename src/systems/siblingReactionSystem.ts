@@ -5,21 +5,36 @@ import { useTimeStore } from '@/stores/timeStore';
 import { realmIndex } from '@/data/realm';
 import type { Disciple, RelationLevel } from '@/types';
 
-type Milestone = 'realm_up' | 'injured';
-type ReactionMood = 'envy' | 'admire' | 'worry';
+type Milestone = 'realm_up' | 'injured' | 'darkening' | 'achievement' | 'jianghu_death' | 'jianghu_glory';
+type ReactionMood = 'envy' | 'admire' | 'worry' | 'unease' | 'grief_far';
 
-// 반응 지속 창(일) — 짧게(전이형). 경지 상승은 지나가는 순간, 부상은 회복 동안 걱정. docs/12.
-const WINDOW: Record<Milestone, number> = { realm_up: 14, injured: 21 };
+// 반응 지속 창(일) — 짧게(전이형). docs/12.
+const WINDOW: Record<Milestone, number> = {
+  realm_up: 14,
+  injured: 21,
+  darkening: 21, // 어두워진 동문에 대한 경계가 한동안
+  achievement: 10, // 첫 성취 축하는 짧게
+  jianghu_death: 30, // 먼저 떠난 동문의 부고는 오래 남는다
+  jianghu_glory: 14,
+};
 
 // 관측 동문의 (당사자 사건, 관계)별 반응 — null 이면 반응 없음. docs/12 §2.
 function valence(kind: Milestone, rel: RelationLevel, behind: boolean, ambition: number): ReactionMood | null {
-  if (kind === 'realm_up') {
-    if (rel === 'friend' || rel === 'sworn') return 'admire'; // 가까운 동문 → 축하
-    if (behind && (rel === 'enemy' || rel === 'distant' || ambition >= 60)) return 'envy'; // 뒤처진 라이벌 → 질투
-    return null; // 무관·이미 앞섬 → 반응 없음
+  switch (kind) {
+    case 'realm_up':
+      if (rel === 'friend' || rel === 'sworn') return 'admire'; // 가까운 동문 → 축하
+      if (behind && (rel === 'enemy' || rel === 'distant' || ambition >= 60)) return 'envy'; // 뒤처진 라이벌 → 질투
+      return null; // 무관·이미 앞섬 → 반응 없음
+    case 'achievement': // 첫 영약·업적 — 가까운 동문만 축하(경지보다 가벼움, 질투 없음)
+    case 'jianghu_glory': // 졸업 동문이 강호에 이름 떨침 — 가까운 동문 동경
+      return rel === 'friend' || rel === 'sworn' ? 'admire' : null;
+    case 'darkening': // 동문이 어두워짐 — 원수 빼고 불안·경계(가까울수록 안타까움, 멀수록 거리)
+      return rel === 'enemy' ? null : 'unease';
+    case 'injured': // 중상 — 원수 빼고 걱정
+      return rel === 'enemy' ? null : 'worry';
+    case 'jianghu_death': // 먼저 떠난 동문이 강호에서 죽음 — 원수 빼고 먼 애도
+      return rel === 'enemy' ? null : 'grief_far';
   }
-  // injured(중상) — 원수의 부상엔 걱정 안 함, 그 외 전원 걱정.
-  return rel === 'enemy' ? null : 'worry';
 }
 
 // 동문 사건(경지 상승·중상) 발생 시 호출 — 활성 동문 각자에 관계 차등 반응 마커를 남긴다.

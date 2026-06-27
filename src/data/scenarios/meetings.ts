@@ -73,6 +73,18 @@ export const MEETINGS: MeetingTemplate[] = [
       { key: 'dismiss', label: '강호엔 늘 빠른 자가 있다. 일일이 부러워해선 못 큰다.', effects: { persona: { integrity: 2, warmth: -2 }, trust: -2 } },
     ],
   },
+  // 동문 이변 — 불안(동문이 어두워짐). 걱정하는 동문이 사부에게 꺼낸다. docs/12.
+  {
+    id: 'm-sibling-dark',
+    band: 'turmoil',
+    when: { siblingEvent: 'unease' },
+    body: '사부님... 그 동문이 요즘 무서워요. 눈빛도, 말도 예전 같지 않고요. 모른 척해야 할지, 다가가야 할지 모르겠습니다.',
+    options: [
+      { key: 'reach', label: '두려워 말고 먼저 손을 내밀어 보거라. 곁을 지켜주는 게 약이 될 때가 있다.', effects: { persona: { warmth: 4, mercy: 3 }, trust: 4 } },
+      { key: 'master', label: '네가 짊어질 일이 아니다. 그 아이는 사부가 살피마. 너는 네 길을 가거라.', effects: { persona: { prudence: 3 }, trust: 3 } },
+      { key: 'distance', label: '아직은 거리를 두는 게 낫겠다. 함부로 끌려들지 마라.', effects: { persona: { prudence: 3, warmth: -2 }, trust: 2 } },
+    ],
+  },
   // 동문 이변 — 걱정(동문이 크게 다침). docs/12.
   {
     id: 'm-sibling-hurt',

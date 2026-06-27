@@ -115,6 +115,54 @@ describe('reactToSiblingMilestone — 중상 반응(걱정)', () => {
   });
 });
 
+describe('reactToSiblingMilestone — 흑화/첫성취/강호 반응', () => {
+  it('흑화 진행 → 원수 외 전원 불안(unease)', () => {
+    seed(
+      mk('rising', undefined),
+      mk('friend1', 'friend'),
+      mk('neutral1', undefined),
+      mk('enemy1', 'enemy'),
+    );
+    reactToSiblingMilestone('rising', 'darkening');
+    const d = useDiscipleStore.getState().disciples;
+    expect(d['friend1'].siblingEventMood).toBe('unease');
+    expect(d['neutral1'].siblingEventMood).toBe('unease');
+    expect(d['enemy1'].siblingEventMood).toBeUndefined(); // 원수는 불안 안 함
+  });
+
+  it('첫 성취(achievement) → 가까운 동문만 축하(admire), 라이벌 질투 없음', () => {
+    seed(
+      mk('rising', undefined),
+      mk('friend1', 'friend'),
+      mk('distant1', 'distant'),
+    );
+    reactToSiblingMilestone('rising', 'achievement');
+    const d = useDiscipleStore.getState().disciples;
+    expect(d['friend1'].siblingEventMood).toBe('admire');
+    expect(d['distant1'].siblingEventMood).toBeUndefined(); // 첫성취엔 질투 없음(경지와 다름)
+  });
+
+  it('강호 동문 사망(jianghu_death) → 원수 외 전원 먼 애도(grief_far)', () => {
+    seed(
+      mk('rising', undefined, { status: 'graduated' }), // 졸업 동문(별도 store지만 활성 store에도 잔존)
+      mk('friend1', 'friend'),
+      mk('enemy1', 'enemy'),
+    );
+    reactToSiblingMilestone('rising', 'jianghu_death');
+    const d = useDiscipleStore.getState().disciples;
+    expect(d['friend1'].siblingEventMood).toBe('grief_far');
+    expect(d['enemy1'].siblingEventMood).toBeUndefined();
+  });
+
+  it('강호 동문 명성(jianghu_glory) → 가까운 동문 동경(admire)', () => {
+    seed(mk('rising', undefined, { status: 'graduated' }), mk('sworn1', 'sworn'), mk('neutral1', undefined));
+    reactToSiblingMilestone('rising', 'jianghu_glory');
+    const d = useDiscipleStore.getState().disciples;
+    expect(d['sworn1'].siblingEventMood).toBe('admire');
+    expect(d['neutral1'].siblingEventMood).toBeUndefined();
+  });
+});
+
 describe('reactToSiblingMilestone — 공통(제외·당사자·창)', () => {
   it('당사자 자신·졸업·하산자는 제외', () => {
     seed(

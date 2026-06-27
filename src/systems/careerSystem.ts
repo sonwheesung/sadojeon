@@ -14,6 +14,7 @@ import {
   type RouteId,
 } from '@/data/careers';
 import { useJianghuStore } from '@/stores/jianghuStore';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 import { blocPressure } from './worldSystem';
 import { BLOC_LABEL } from '@/data/worldPowers';
 import { findFaction } from '@/data/factions';
@@ -135,6 +136,7 @@ export function tickCareers(): void {
         ? `${josa(g.name, '이', '가')} ${BLOC_LABEL[bloc]}의 전란에 몸을 던졌다가 끝내 돌아오지 못했다. ${ROUTE_LABEL[g.route]}의 길이었다.`
         : deathLine({ ...g, power, fame }, status);
       pushNews(`${g.name} — 비보`, line);
+      reactToSiblingMilestone(g.id, 'jianghu_death'); // 남은 양육 제자 먼 애도. docs/12
       continue;
     }
 

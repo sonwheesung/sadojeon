@@ -5,6 +5,7 @@
 
 import { random } from '@/systems/rng';
 import { findMartialArt } from '@/data/martialArts';
+import { reactToSiblingMilestone } from './siblingReactionSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
@@ -75,7 +76,10 @@ export function tickDarkness(): void {
     }
     if (Object.keys(patch).length) {
       ds.update(id, patch);
-      if (patch.darknessLevel != null) pushOmen(d.name, patch.darknessLevel, day);
+      if (patch.darknessLevel != null) {
+        pushOmen(d.name, patch.darknessLevel, day);
+        reactToSiblingMilestone(id, 'darkening'); // 동문 불안·경계(원수 제외). docs/12
+      }
     }
   }
 }

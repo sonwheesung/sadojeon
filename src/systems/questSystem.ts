@@ -1190,6 +1190,14 @@ function resolveQuest(active: ActiveQuest): Milestone {
   // 동문 상실 애도 — 죽은 동문이 있으면 활성 생존 제자 전원에 친밀 차등 정서 파급. docs/12.
   if (lostId) mournLostSibling(lostId);
 
+  // 의뢰 다녀온 여운 — 결과별 본인 자가 대사(전이형, 7일). 완수=뿌듯·실패/위기=면목없음. 재난은 사망/부상이 담당. docs/12.
+  const echo: 'proud' | 'humbled' | null =
+    outcome === 'full' || outcome === 'partial' ? 'proud' : outcome === 'crisis' || outcome === 'fail' ? 'humbled' : null;
+  if (echo) {
+    const echoDay = useTimeStore.getState().totalDay;
+    for (const id of survivors) ds.update(id, { questEchoMood: echo, questEchoUntilDay: echoDay + 7 });
+  }
+
   const names = present.map((id) => ds.disciples[id]?.name ?? '?').join('·');
   const leadId = present[0] ?? active.discipleIds[0];
   const leadName = ds.disciples[present[0]]?.name ?? '제자';

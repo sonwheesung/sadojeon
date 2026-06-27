@@ -30,6 +30,7 @@ function ctx(over: Partial<OneLinerCtx>): OneLinerCtx {
     hasEnemy: false,
     mourning: false,
     siblingEvent: null,
+    questEcho: null,
     age: 16,
     mainSeong: 4,
     rivalName: null,
@@ -147,8 +148,22 @@ console.log('═══ 한 마디 풀·선택 프로브 ═══\n');
   check('동문 경지↑ 축하 → se-admire 대사 등장', admire.some((t) => t.id.startsWith('se-admire')));
   const worry = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'worry', age: 16 }));
   check('동문 중상 걱정 → se-worry 대사 등장', worry.some((t) => t.id.startsWith('se-worry')));
+  const unease = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'unease', age: 16 }));
+  check('동문 흑화 불안 → se-unease 대사 등장', unease.some((t) => t.id.startsWith('se-unease')));
+  const grief = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: 'grief_far', age: 16 }));
+  check('강호 동문 사망 → se-grieffar 대사 등장', grief.some((t) => t.id.startsWith('se-grieffar')));
   const none = candidateOneLiners(ctx({ discipleId: 'none', siblingEvent: null, age: 16 }));
   check('반응 없음 → se-* 대사 배제(대조군)', !none.some((t) => t.id.startsWith('se-')));
+}
+
+// 7e) 의뢰 다녀온 여운 — questEcho 별로 본인 자가 대사.
+{
+  const proud = candidateOneLiners(ctx({ discipleId: 'none', questEcho: 'proud', age: 16 }));
+  check('의뢰 완수 → qe-proud 대사 등장', proud.some((t) => t.id.startsWith('qe-proud')));
+  const humbled = candidateOneLiners(ctx({ discipleId: 'none', questEcho: 'humbled', stress: 50, age: 16 }));
+  check('의뢰 실패 → qe-humbled 대사 등장', humbled.some((t) => t.id.startsWith('qe-humbled')));
+  const none = candidateOneLiners(ctx({ discipleId: 'none', questEcho: null, age: 16 }));
+  check('여운 없음 → qe-* 배제(대조군)', !none.some((t) => t.id.startsWith('qe-')));
 }
 
 // 8) onlyFor 가 가리키는 poolId 는 실제 제자 풀에 존재(오타 방지)
