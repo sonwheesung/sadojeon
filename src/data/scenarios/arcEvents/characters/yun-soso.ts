@@ -27,7 +27,7 @@ export const YUN_SOSO_ARC: ArcEvent[] = [
     choices: [
       { key: 'rebuke', label: '까닭 없이 동문을 따돌리는 일을 공개로 꾸짖는다', effects: { trust: -3, persona: { integrity: 8, mercy: 5 } } },
       { key: 'seclude', label: '보름간 홀로 마음을 가다듬게 한다', effects: { trust: -2, persona: { prudence: 8 } } },
-      { key: 'listen', label: '따로 불러 비단주머니에 담긴 그날 이야기를 들어준다', effects: { trust: 7, persona: { warmth: 8, mercy: 6 } } },
+      { key: 'listen', label: '따로 불러 그 아이의 속마음을 가만히 들어준다', effects: { trust: 7, persona: { warmth: 8, mercy: 6 } } },
       { key: 'ignore', label: '아이들 일이라 여겨 못 들은 척 흘려보낸다', effects: { trust: -2, darkness: 1, righteousness: -1, persona: { mercy: -6 } } },
     ],
   },
@@ -49,7 +49,7 @@ export const YUN_SOSO_ARC: ArcEvent[] = [
     discipleId: 'yun-soso',
     year: 4,
     title: '야출(夜出)',
-    body: '깊은 밤, 윤소소가 산문을 몰래 빠져나갔다가 동이 터서야 돌아온다. 추궁하자 처음으로 속내를 비친다. "어떤 살수 무리의 단서를 쫓고 있었어요. 4년 전… 제가 본 그 그림자를요. 잘못한 건가요?"',
+    body: '깊은 밤, 윤소소가 산문을 몰래 빠져나갔다가 동이 터서야 돌아온다. 추궁하자 처음으로 속내를 비친다. "어떤 살수 무리의 단서를 쫓고 있었어요. 네 살 적에… 제가 본 그 그림자를요. 잘못한 건가요?"',
     choices: [
       { key: 'forbid', label: '산문 출입을 금하고 무공도 멈추게 한다', effects: { trust: -4, persona: { integrity: 8, freedom: -6 } } },
       { key: 'seclude', label: '홀로 가두어 들끓는 마음을 가라앉히게 한다', effects: { trust: -2, persona: { prudence: 8 } } },
@@ -111,7 +111,7 @@ export const YUN_SOSO_ARC: ArcEvent[] = [
     discipleId: 'yun-soso',
     year: 9,
     title: '호동(護同)',
-    body: '의뢰 길에서 한 동문이 크게 다쳐 쓰러진다. 그를 부축하려면 4년을 쫓던 단서를 놓아야 한다. 윤소소의 손끝이 검집 위에서 머뭇거린다. "지금 돌아서면… 다시는 그 단서를 못 잡을지도 몰라요. 그런데…"',
+    body: '의뢰 길에서 한 동문이 크게 다쳐 쓰러진다. 그를 부축하려면 오래도록 쫓던 단서를 놓아야 한다. 윤소소의 손끝이 검집 위에서 머뭇거린다. "지금 돌아서면… 다시는 그 단서를 못 잡을지도 몰라요. 그런데…"',
     choices: [
       { key: 'save', label: '망설임 없이 동문을 구하라 한다', effects: { trust: 6, righteousness: 1, persona: { mercy: 10, warmth: 8 } } },
       { key: 'watch', label: '스스로 택하도록 지켜본다', effects: { trust: 3, persona: { prudence: 6 } } },
@@ -130,14 +130,14 @@ export const YUN_SOSO_ARC: ArcEvent[] = [
       { key: 'allow', label: '정의로운 의뢰이니 떳떳이 다녀오라 한다', effects: { trust: 6, righteousness: 2, persona: { ambition: 6 } } },
       { key: 'deny', label: '아직 검이 흔들린다, 보낼 수 없다 한다', effects: { trust: -4, persona: { prudence: 8 } } },
       { key: 'withFriend', label: '한 동문과 한 조로 묶어 보낸다', effects: { trust: 4, persona: { warmth: 5, prudence: 5 } } },
-      { key: 'guardian', label: '듬직한 동문을 곁에 딸려 보낸다', effects: { trust: 5, persona: { warmth: 4, prudence: 4 } } },
+      { key: 'guardian', label: '복수가 아니라 토벌임을 다짐받고 보낸다', effects: { trust: 5, righteousness: 1, persona: { integrity: 6, prudence: 4 } } },
     ],
   },
   {
     discipleId: 'yun-soso',
     year: 11,
     title: '동행(同行)',
-    body: '윤소소가 한 동문과 한 조가 되어 먼 의뢰 길에 올랐다. 객점에 묵은 밤, 4년을 쫓던 진실이 손에 닿을 듯 가까워진다. 소소의 눈빛이 서늘하게 가라앉는다. "사부님… 이제 곧, 알게 될 것 같아요."',
+    body: '윤소소가 한 동문과 한 조가 되어 먼 의뢰 길에 올랐다. 객점에 묵은 밤, 오래도록 쫓던 진실이 손에 닿을 듯 가까워진다. 소소의 눈빛이 서늘하게 가라앉는다. "사부님… 이제 곧, 알게 될 것 같아요."',
     choices: [
       { key: 'together', label: '그 길을 끝까지 동문과 함께 가게 한다', effects: { trust: 7, righteousness: 1, persona: { warmth: 6 } } },
       { key: 'split', label: '두 사람을 즉시 떼어 놓는다', effects: { trust: -4, persona: { prudence: 6 } } },

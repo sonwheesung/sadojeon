@@ -6,6 +6,7 @@ jest.mock('@/lib/supabase', () => ({ supabase: {}, isSupabaseConfigured: false }
 jest.mock('./runSync', () => ({ saveCurrentRunSilently: jest.fn() }));
 
 import { assignArcSeasons, earliestOwedYear, triggerArcEvents } from './arcEventSystem';
+import { ARC_EVENTS } from '@/data/scenarios/arcEvents';
 import { isGraduationEligible } from './graduationSystem';
 import { resolveInboxItem } from './inboxResolve';
 import { shiftPersona } from './personaShift';
@@ -298,5 +299,60 @@ describe('해소(arc) — 효과 적용 + arcChoices 기록 + 항목 제거', ()
     triggerArcEvents();
     const arc = useInboxStore.getState().items.filter((it) => (it.payload as { domain?: string })?.domain === 'arc');
     expect(arc).toHaveLength(0);
+  });
+});
+
+// 콘텐츠 불변식 — 플레이어 노출 텍스트(title·body·choice.label)에 경지/숙련단계/숨은변수 단어 금지 +
+// 구조(15연차·하산·persona 6축·흑화 미사용 캐릭터 darkness 0) 보장.
+// docs/47 §8·§12, docs/48, docs/37 Part D(콘텐츠 불변식 미기계화 사각 — '소성'·'심마' 제목 누출이 1회성 수동점검을 빠져나감).
+describe('콘텐츠 불변식 — 금지어·구조 (테스트 사각 닫기)', () => {
+  // 경지명(§12 경지 중립)·숙련 단계어·숨은변수는 플레이어 텍스트 금지.
+  // 세력 서사명(흑사파·정파·마교·도가)·'깨달음'·'내공/외공'은 허용(무협 일상어 — '흑화'는 매칭하나 '흑사파'는 안 됨).
+  const FORBIDDEN = /삼류|이류|일류|절정|초절정|화경|소성|대성|극성|심마|주화입마|흑화|상극|적성|노선|오성/;
+  // docs/48 교차 메모: 흑화 대신 "말없는 이별"(진소화)·"평정 상실"(백연)로 어둠 분기 대체 → darkness 미사용.
+  const NO_DARKNESS = new Set(['jin-sohwa', 'baek-yeon']);
+  const VALID_PERSONA = new Set(['integrity', 'freedom', 'warmth', 'prudence', 'mercy', 'ambition']);
+
+  it('플레이어 노출 텍스트에 금지어(경지·숙련단계·숨은변수) 0', () => {
+    const hits: string[] = [];
+    for (const e of ARC_EVENTS) {
+      const texts: [string, string][] = [
+        ['title', e.title],
+        ['body', e.body],
+        ...e.choices.map((c) => [`choice:${c.key}`, c.label] as [string, string]),
+      ];
+      for (const [where, t] of texts) {
+        const m = FORBIDDEN.exec(t);
+        if (m) hits.push(`${e.discipleId} y${e.year} ${where}: "${m[0]}"`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it('캐릭터마다 15연차(1~15 유일)·15년차=하산', () => {
+    const byChar = new Map<string, number[]>();
+    for (const e of ARC_EVENTS) {
+      if (!byChar.has(e.discipleId)) byChar.set(e.discipleId, []);
+      byChar.get(e.discipleId)!.push(e.year);
+    }
+    expect(byChar.size).toBe(10);
+    for (const [id, years] of byChar) {
+      expect([...years].sort((a, b) => a - b)).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+      const y15 = ARC_EVENTS.find((e) => e.discipleId === id && e.year === 15)!;
+      expect(y15.title).toContain('하산');
+    }
+  });
+
+  it('persona 효과는 6축만 · 흑화 미사용 캐릭터(진소화·백연)는 darkness 0', () => {
+    for (const e of ARC_EVENTS) {
+      for (const c of e.choices) {
+        for (const k of Object.keys(c.effects.persona ?? {})) {
+          expect(VALID_PERSONA.has(k)).toBe(true);
+        }
+        if (NO_DARKNESS.has(e.discipleId)) {
+          expect(c.effects.darkness ?? 0).toBe(0);
+        }
+      }
+    }
   });
 });

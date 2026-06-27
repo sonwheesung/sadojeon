@@ -4,7 +4,7 @@ import type { ArcEvent } from '../types';
 // 멸문 명문(독고세가)의 마지막 검. 흑화 창=복수. 입문 8세 → 22세, 닫힌 문에서 점차 어른의 결단으로.
 // 노선 분기: 복수의 검 ↔ 정의의 검(righteousness ±1~2). darkness(+1)은 복수에 기우는 선택에만.
 // 동문 부재 안전: 멸문 협력자는 "한 무관"·"어떤 자"로 일반화, 진실은 흑사파 서신/풍문으로 단독 성립(11·13·14).
-// 경지 중립(docs/47 §12): 7번 '소성의 깨달음'도 경지 단어 없이 가치 질문으로.
+// 경지 중립(docs/47 §12): 7번 '검의 물음'도 경지·숙련단계 단어 없이 가치 질문으로(숨은변수 노출 금지 — 심마·소성 등).
 export const DOKGO_YEON_ARC: ArcEvent[] = [
   // ─── 입문기(1~3) — 닫힌 문·거리감 ───
   {
@@ -23,7 +23,7 @@ export const DOKGO_YEON_ARC: ArcEvent[] = [
     discipleId: 'dokgo-yeon',
     year: 2,
     title: '반옥(半玉)',
-    body: '독고연이 검 한 자락을 시연해 보인다. 사문 검법에 없는, 물 흐르듯 부드러운 초식. "어머니가… 가르쳐주신 거예요." 그러다 마당 한구석, 낯선 무관의 인장패를 보고는 손이 멎고 얼굴이 굳는다.',
+    body: '독고연이 검 한 자락을 시연해 보인다. 사문 검법에 없는, 물 흐르듯 부드러운 초식. 목에는 깨진 옥패 반쪽이 걸려 있다. "어머니가… 가르쳐주신 거예요." 그러다 마당 한구석, 낯선 무관의 인장패를 보고는 손이 멎고 얼굴이 굳는다.',
     choices: [
       { key: 'blend', label: '가전 검과 사문 검을 함께 잇게 한다', effects: { trust: 6, persona: { integrity: 8, ambition: 4 } } },
       { key: 'focus', label: '우선 사문 정통 검법에 집중시킨다', effects: { trust: 4, persona: { integrity: 6, freedom: -4 }, righteousness: 1 } },
@@ -86,7 +86,7 @@ export const DOKGO_YEON_ARC: ArcEvent[] = [
   {
     discipleId: 'dokgo-yeon',
     year: 7,
-    title: '소성의 깨달음(小成之悟)',
+    title: '검의 물음(問劍)',
     body: '오래 검과 씨름하던 어느 날, 독고연이 검을 거두며 묻는다. "사부님, 검은 누구를 위한 것일까요. 제 검이 무엇을 베어야 하는지… 한 마디만 정해 주세요." 그 한 마디가 검의 빛깔을 정할 듯하다.',
     choices: [
       { key: 'people', label: '사람을 지키기 위한 것이라 답한다', effects: { trust: 6, persona: { warmth: 8, mercy: 8 }, righteousness: 2 } },
@@ -148,7 +148,7 @@ export const DOKGO_YEON_ARC: ArcEvent[] = [
   {
     discipleId: 'dokgo-yeon',
     year: 12,
-    title: '심마의 칼날(心魔之刃)',
+    title: '살기의 칼날(殺氣之刃)',
     body: '폐관에 든 독고연의 검에서 섬뜩한 살기가 흐른다. 새벽, 옆 침소의 동문이 벽에 길게 그어진 검흔을 보고 놀라 깬다. 독고연은 제 검을 멍하니 내려다본다. "…제가 그은 줄도 몰랐어요."',
     choices: [
       { key: 'calm', label: '폐관을 멈추고 마음부터 다독인다', effects: { trust: 8, persona: { warmth: 6, mercy: 8 }, righteousness: 1 } },

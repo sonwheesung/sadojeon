@@ -110,7 +110,7 @@ export const BAEK_YEON_ARC: ArcEvent[] = [
     discipleId: 'baek-yeon',
     year: 9,
     title: '쌍수성단(雙手成丹)',
-    body: '위중한 동문을 두고 백연이 가까운 동문과 밤을 새운다. 두 사람의 손끝에서 처음으로 영약 한 알이 함께 빚어졌다. "사부님, 둘이 손을 모으니… 혼자선 못 살릴 목숨도 붙잡을 수 있었어요."',
+    body: '위중한 동문을 두고 백연이 가까운 동문과 밤을 새운다. 두 사람의 손끝에서 처음으로 영약 한 알이 함께 빚어졌다. "사부님, 둘이 손을 모으니… 혼자선 못 살릴 목숨도 붙잡을 수 있었어요. 저희 둘이, 앞으로도 이 길을 함께 가도 될까요?"',
     choices: [
       { key: 'pillar', label: '두 사람을 사문 의술의 기둥으로 세운다', effects: { trust: 7, persona: { mercy: 10, warmth: 8 } } },
       { key: 'apex', label: '백연을 그 정점에 둔다', effects: { trust: 5, persona: { mercy: 6, ambition: 5 } } },

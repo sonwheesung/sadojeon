@@ -166,7 +166,7 @@ export const GANG_MUYEOL_ARC: ArcEvent[] = [
       { key: 'cut', label: '가문과 끊고 네 길을 가라 한다', effects: { righteousness: 1, persona: { integrity: 10, freedom: 6 } } },
       { key: 'wash', label: '네 손으로 그 어둠을 씻으라 한다', effects: { righteousness: 1, persona: { integrity: 8, mercy: 6 } } },
       { key: 'apologize', label: '피해 입은 이들에게 직접 사죄하게 한다', effects: { trust: 5, righteousness: 1, persona: { mercy: 10 } } },
-      { key: 'abandon', label: '혼자 삼키도록 외면해 둔다', effects: { trust: -6, darkness: 1, persona: { warmth: -6 } } },
+      { key: 'abandon', label: '혼자 삼키도록 외면해 둔다', effects: { trust: -6, persona: { warmth: -8, integrity: -4 } } },
     ],
   },
   {

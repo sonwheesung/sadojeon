@@ -102,7 +102,7 @@ export const HAN_BARAM_ARC: ArcEvent[] = [
     choices: [
       { key: 'protect', label: '지켜야 할 것이 있어 칼을 든다 일러준다', effects: { trust: 6, righteousness: 1, persona: { warmth: 8, mercy: 8 } } },
       { key: 'weight', label: '분노는 인정하되 칼의 무게를 새긴다', effects: { trust: 6, persona: { prudence: 8, mercy: 6 } } },
-      { key: 'cycle', label: '복수는 또 다른 복수를 부른다 말한다', effects: { righteousness: 1, persona: { prudence: 8, mercy: 6 } } },
+      { key: 'cycle', label: '복수는 끝내 너 자신까지 집어삼킨다 일러준다', effects: { righteousness: 1, persona: { prudence: 8, integrity: 6 } } },
       { key: 'cold', label: '적에게는 냉정해야 산다 가르친다', effects: { darkness: 1, righteousness: -1, persona: { mercy: -10 } } },
     ],
   },
