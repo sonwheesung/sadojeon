@@ -80,6 +80,18 @@ export function findElixirRecipe(id: string): ElixirRecipe | undefined {
   return ELIXIR_RECIPES.find((r) => r.id === id);
 }
 
+// 영약 레시피 → 인벤토리 아이템(크래프트 완성·상점 구매 공용). category 'elixir'(인벤토리 표시·alchemy 필터와 일치).
+export function elixirRecipeToItem(recipe: ElixirRecipe, count = 1): StoredItem {
+  return {
+    id: recipe.id,
+    category: 'elixir',
+    name: recipe.name,
+    grade: recipe.grade ?? 0,
+    count,
+    effects: recipe.effect,
+  };
+}
+
 // 화경의 열쇠 — 신품(5품) 영약. 보유 시에만 화경 깨달음 벽을 넘는다.
 export const DIVINE_ELIXIR_ID = 'guzeon-daehwandan';
 

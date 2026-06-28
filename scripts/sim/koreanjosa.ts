@@ -19,8 +19,10 @@ function walk(dir: string, out: string[]): void {
 }
 
 console.log('═══ 조사 표기 가드 (날것 조사 템플릿 금지) ═══\n');
+// src + app 둘 다 스캔 — 플레이어 노출 문자열은 화면(app/)에도 있다(사각: 종전 src 만 스캔, 상점 confirm 누락 발견 2026-06-28).
 const files: string[] = [];
 walk(join(root, 'src'), files);
+walk(join(root, 'app'), files);
 
 const violations: string[] = [];
 for (const f of files) {
@@ -39,7 +41,7 @@ function ck(label: string, cond: boolean, detail = ''): void {
   if (!cond) fail += 1;
 }
 
-ck(`날것 조사 템플릿 0 (src ${files.length}파일 스캔)`, violations.length === 0, violations.length ? `위반 ${violations.length}건` : '');
+ck(`날것 조사 템플릿 0 (src+app ${files.length}파일 스캔)`, violations.length === 0, violations.length ? `위반 ${violations.length}건` : '');
 if (violations.length) {
   console.log('\n위반 목록(josa(word,"으로","로") 또는 fillName 으로 고칠 것):');
   for (const v of violations) console.log('  ✗ ' + v);

@@ -98,6 +98,15 @@ export default function SectScreen() {
               <Text style={styles.settingLabel}>연단실 — 영약 제조</Text>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+              onPress={() => router.push('/shop' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="상점"
+            >
+              <Text style={styles.settingLabel}>상점 — 영약·재료·비급·신품</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
           </View>
 
           <View style={styles.section}>

@@ -5,7 +5,7 @@
 // Phase 1: 코어 프레임워크(레시피·재료·제조기간·XP·내공단 흡수). 상태는 회차 스코프 모듈 상태.
 // Phase 2: 재료 의뢰 연계 + 속성 상처 매칭 + store/DB 영속.
 
-import { findElixirRecipe, MATERIAL_LABEL, type ElixirRecipe } from '@/data/elixirs';
+import { findElixirRecipe, elixirRecipeToItem, MATERIAL_LABEL, type ElixirRecipe } from '@/data/elixirs';
 import { EFFICIENCY_MULTIPLIER } from '@/data/efficiency';
 import { reactToSiblingMilestone } from './siblingReactionSystem';
 import { useAlchemyStore } from '@/stores/alchemyStore';
@@ -102,7 +102,8 @@ export function consumeElixirItem(id: string, n = 1): boolean {
   return true;
 }
 
-// 마을 구매 — 약초를 게임머니(사문 자금)로 산다. 진귀할수록 비쌈. 자금 부족이면 false.
+// 마을·상점 구매 — 재료를 게임머니(사문 자금)로 산다. 진귀할수록 비쌈. 자금 부족이면 false.
+// 🔧 그레이박스 가격. beast-essence(영물 정수)는 신품 자작(구전대환단)의 핵심 게이트 → 신급 최고가(docs/50 §6).
 const HERB_PRICE: Record<string, number> = {
   'herb-common': 3,
   'herb-fire': 9,
@@ -110,7 +111,12 @@ const HERB_PRICE: Record<string, number> = {
   'herb-cold': 9,
   'herb-rare': 28,
   'herb-divine': 130,
+  'beast-essence': 800,
 };
+// 재료 단가(상점 표시용) — 미등록 재료는 Infinity(구매 불가).
+export function materialPrice(id: string): number {
+  return HERB_PRICE[id] ?? Infinity;
+}
 export function buyMaterial(id: string, qty: number): boolean {
   if (!Number.isFinite(qty) || qty <= 0) return false; // 음수·0 차단(음수면 자금 증가+음수 재료 악용)
   const cost = (HERB_PRICE[id] ?? Infinity) * qty;
@@ -185,14 +191,7 @@ export function tickCraft(): void {
     const crafter = ds.disciples[crafterId];
     if (crafter && crafter.status === 'crafting') ds.update(crafterId, { status: 'training' }); // 점유 해제
     if (!recipe) continue;
-    useItemStore.getState().add({
-      id: recipe.id,
-      category: 'elixir',
-      name: recipe.name,
-      grade: recipe.grade ?? 0,
-      count: 1,
-      effects: recipe.effect,
-    });
+    useItemStore.getState().add(elixirRecipeToItem(recipe, 1));
     // 제조 경험 — 적성 반영(특화 1.0 ~ 상극 0.04). **처음 만든 영단은 큰 보너스**(깨우침).
     const apt =
       EFFICIENCY_MULTIPLIER[(crafter?.efficiency as Record<string, never> | undefined)?.alchemy ?? '보통'] ?? 0.35;
