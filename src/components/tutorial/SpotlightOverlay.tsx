@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSpotlightStore } from '@/stores/spotlightStore';
 import { measureSpotlightTarget, type Rect } from '@/systems/spotlightTargets';
@@ -15,6 +16,7 @@ export function SpotlightOverlay() {
   const active = useSpotlightStore((s) => s.active);
   const steps = useSpotlightStore((s) => s.steps);
   const index = useSpotlightStore((s) => s.index);
+  const insets = useSafeAreaInsets();
   const [rect, setRect] = useState<Rect | null>(null);
 
   const step = active ? steps[index] : undefined;
@@ -45,10 +47,14 @@ export function SpotlightOverlay() {
   };
 
   const { width: SW, height: SH } = Dimensions.get('window');
+  // statusBarTranslucent Modal 은 화면 최상단(상태바 포함)을 원점으로 그리지만,
+  // measureInWindow 는 앱 윈도우(상태바 아래)를 원점으로 좌표를 돌려준다 → 안드로이드에선
+  // 그 차이(상단 인셋)만큼 구멍이 위로 어긋난다. 측정 y 에 인셋을 더해 화면 좌표로 맞춘다. docs/37 R43.
+  const topInset = Platform.OS === 'android' ? insets.top : 0;
   const hole = rect
     ? {
         x: Math.max(0, rect.x - HOLE_PAD),
-        y: Math.max(0, rect.y - HOLE_PAD),
+        y: Math.max(0, rect.y - HOLE_PAD + topInset),
         w: rect.width + HOLE_PAD * 2,
         h: rect.height + HOLE_PAD * 2,
       }

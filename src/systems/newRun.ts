@@ -250,7 +250,10 @@ export function seedNewRun(selectedPoolIds: string[], opts: SeedRunOptions = {})
   // 문파 평판 — 회차 스코프 초기화(전원 평범). docs/30.
   useReputationStore.getState().reset();
   useScheduleStore.getState().setSnapshot(captureSnapshot());
-  useScheduleStore.getState().openMonthlySetup();
+  // 월간 일정 설정 모달 — 정식 회차는 첫 달에 패턴을 직접 정하게 연다.
+  // 단, 도입 튜토리얼 회차는 강제 스포트라이트가 일과 화면을 먼저 짚어야 하므로 열지 않는다
+  // (기본 일정으로 시작 + step3 이 [일정 변경] 버튼을 안내). 안 그러면 일정 모달이 코치마크를 가린다. docs/37 R44·44·46.
+  if (!opts.tutorial) useScheduleStore.getState().openMonthlySetup();
 }
 
 // store가 비어 있는지 체크. 진입 시 자동 시드 트리거 조건.
