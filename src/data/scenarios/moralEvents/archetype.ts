@@ -288,7 +288,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
     },
     scenario:
       '훈련장에서 {sibling}이 발을 헛디뎌 갈빗대를 다쳤다.\n' +
-      '같은 자리에 있던 {name}이 그를 보고도 의방에 알리지 않았다.\n' +
+      '같은 자리에 있던 {name}이 {sibling}을 보고도 의방에 알리지 않았다.\n' +
       '{sibling}은 밤이 깊어서야 다른 동문이 발견했다.',
     insightHints: {
       3: '{name}이 다른 사람의 결을 결로 보지 않는다.',
@@ -307,7 +307,7 @@ export const ARCHETYPE_MORAL_EVENTS: MoralEventTemplate[] = [
       },
       {
         tone: 'admonish',
-        label: '"{sibling} 앞에서 사과해라. 그리고 며칠 그를 돌봐라."',
+        label: '"{sibling} 앞에서 사과해라. 그리고 며칠 그 동문을 돌봐라."',
         perpetrator: {
           trustDelta: 2,
           personalityShift: { mercy: 8 },

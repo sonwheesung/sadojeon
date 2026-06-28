@@ -34,7 +34,7 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
       },
       {
         "key": "toughen",
-        "label": "사내가 부엉이 소리에 떨어서야. 무서워도 눈은 감지 마라.",
+        "label": "그만한 일에 떨어서야 쓰겠느냐. 무서워도 눈은 감지 마라.",
         "effects": {
           "persona": {
             "integrity": 2,
@@ -299,11 +299,11 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
     "when": {
       "ageMax": 10
     },
-    "body": "사부님, 부모님은 왜 저를 여기 두고 가셨어요? 제가 미워서 그런 거예요?",
+    "body": "사부님... 가끔 부모님이 사무치게 그립습니다. 절 잊지 않으셨을까요?",
     "options": [
       {
         "key": "reassure",
-        "label": "널 미워해서가 아니다. 더 잘 살라고 가장 아픈 손을 놓으신 게다.",
+        "label": "널 잊을 리 있겠느냐. 멀리 있어도 마음은 늘 네 곁에 머물 게다.",
         "effects": {
           "persona": {
             "warmth": 3,
@@ -556,7 +556,7 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
     "when": {
       "ageMax": 10
     },
-    "body": "사부님, 동문 애가 저더러 '버려진 애'래요. 그래서 제가 한 대 때렸어요. 잘못한 거예요?",
+    "body": "사부님, 동문 애가 저더러 '겁쟁이'래요. 그래서 제가 한 대 때렸어요. 잘못한 거예요?",
     "options": [
       {
         "key": "understand",
@@ -1055,7 +1055,7 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
       },
       {
         "key": "push",
-        "label": "사내가 곁에만 머물 셈이냐. 더 큰 그림을 품을 줄도 알아야 한다.",
+        "label": "언제까지 곁에만 머물 셈이냐. 더 큰 그림을 품을 줄도 알아야 한다.",
         "effects": {
           "persona": {
             "warmth": -1,
@@ -1208,7 +1208,7 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
       "ageMin": 10,
       "ageMax": 12
     },
-    "body": "사부님, 책에서 봤는데 부모를 해친 원수는 끝까지 쫓아가 갚는 게 협이래요. 저... 저는 부모님 얼굴도 잘 기억 안 나는데, 저도 누군가에게 갚을 빚이 있는 걸까요?",
+    "body": "사부님, 책에서 봤는데 부모를 해친 원수는 끝까지 쫓아가 갚는 게 협이래요. 저는... 아직 갚을 원한 같은 게 없는데, 그래도 협객이 될 수 있을까요?",
     "options": [
       {
         "key": "release",
@@ -1539,7 +1539,7 @@ export const GENERATED_MEETINGS: MeetingTemplate[] = [
       },
       {
         "key": "crush",
-        "label": "사내라면 한 번 본때를 보여 다시는 못 덤비게 만들어라.",
+        "label": "한 번 본때를 보여 다시는 못 덤비게 만들어라.",
         "effects": {
           "persona": {
             "mercy": -2,

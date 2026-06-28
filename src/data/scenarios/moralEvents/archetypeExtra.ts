@@ -402,7 +402,7 @@ export const ARCHETYPE_MORAL_EVENTS_EXTRA: MoralEventTemplate[] = [
     },
     scenario:
       '대련에서 {sibling}이 목검을 떨구고 손을 들었다. 항복이었다.\n' +
-      '그런데 {name}은 멈추지 않고 한 발 더 들어가 그의 어깨를 후려쳤다.\n' +
+      '그런데 {name}은 멈추지 않고 한 발 더 들어가 {sibling}의 어깨를 후려쳤다.\n' +
       '{sibling}이 비명을 지르며 주저앉았으나, {name}의 눈엔 멈출 이유가 없었다.',
     insightHints: {
       3: '{name}이 상대가 쓰러져도 멈출 줄을 모른다.',
@@ -778,7 +778,7 @@ export const ARCHETYPE_MORAL_EVENTS_EXTRA: MoralEventTemplate[] = [
     },
     scenario:
       '{sibling}의 노모가 세상을 떠났다는 기별이 사문에 닿았다.\n' +
-      '동문들이 {sibling}의 곁에 모여 그의 어깨를 다독였으나,\n' +
+      '동문들이 {sibling}의 곁에 모여 어깨를 다독였으나,\n' +
       '{name}은 한쪽에서 묵묵히 수련만 이어갔다. 한마디 위로도 없었다.',
     insightHints: {
       3: '{name}이 남의 슬픔 앞에서 무슨 말을 해야 할지 모른다.',

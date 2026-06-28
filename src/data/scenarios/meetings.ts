@@ -104,7 +104,7 @@ export const MEETINGS: MeetingTemplate[] = [
     id: 'm-child-homesick',
     band: 'child',
     when: { ageMax: 10 },
-    body: '사부님... 밤에 자려고 하면 자꾸 어머니 생각이 나요. 집에 가고 싶어요.',
+    body: '사부님... 밤에 자려고 하면 자꾸 어머니 생각이 나요. 어머니가 보고 싶어요.',
     options: [
       { key: 'comfort', label: '울어도 괜찮다. 그리움은 부끄러운 것이 아니란다.', effects: { persona: { warmth: 3 }, trust: 4 } },
       { key: 'settle', label: '이제 여기가 네 집이다. 차차 정이 들 게다.', effects: { persona: { freedom: -2 }, trust: 1 } },
@@ -189,7 +189,7 @@ export const MEETINGS: MeetingTemplate[] = [
     when: { ageMin: 15 },
     body: '사부님은 끝내 화경에 닿지 못하셨지요. 저는... 그 너머로 가고 싶습니다.',
     options: [
-      { key: 'bless', label: '그래. 나를 밟고 가거라. 그것이 사제(師弟)다.', effects: { persona: { ambition: 2 }, trust: 4 } },
+      { key: 'bless', label: '그래. 나를 밟고 가거라. 그것이 스승과 제자의 도리다.', effects: { persona: { ambition: 2 }, trust: 4 } },
       { key: 'rebuke', label: '오만하다. 화경이 그리 쉬운 줄 아느냐.', effects: { persona: { integrity: 1 }, trust: -2 } },
       { key: 'content', label: '내가 못 간 길을 네가 간다면, 나는 그것으로 족하다.', effects: { persona: { warmth: 2, mercy: 1 }, trust: 3 } },
     ],

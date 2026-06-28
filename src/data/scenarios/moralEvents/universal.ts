@@ -146,7 +146,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
     id: 'u-lie-gossip',
     tier: 'universal',
     category: 'lie',
-    trigger: { weight: 12 },
+    trigger: { weight: 12, minYearInSect: 2 },
     scenario:
       '동문 무리 중 한 명이 사부에게 조용히 알려왔다.\n' +
       '"{name}이 요즘 동문들 사이에서 {sibling}에 대해 듣기 어려운 이야기를 한다 합니다."\n' +
@@ -208,7 +208,7 @@ export const UNIVERSAL_MORAL_EVENTS: MoralEventTemplate[] = [
     id: 'u-lie-skip',
     tier: 'universal',
     category: 'lie',
-    trigger: { weight: 10 },
+    trigger: { weight: 10, minYearInSect: 2 },
     scenario:
       '"오전 내내 수련했습니다." {name}이 그렇게 답했지만,\n' +
       '서고 옆 그늘에서 잠든 자국이 남아 있었다고 동문이 전했다.\n' +

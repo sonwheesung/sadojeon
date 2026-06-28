@@ -61,12 +61,12 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 't2', category: 'training', body: '어제보다 한 걸음 나아간 것 같습니다.', when: { stressMax: 55 } },
   { id: 't3', category: 'training', body: '몸이 무겁습니다. 결이 안 잡히는 날입니다.', when: { stressMin: 50 } },
   { id: 't4', category: 'training', body: '진행도가 좀처럼 오르지 않아 답답합니다.', when: { stressMin: 45 } },
-  { id: 't5', category: 'training', body: '검이 손에서 겉돕니다. 너무 지쳤나 봅니다.', when: { staminaPctMax: 35 } },
+  { id: 't5', category: 'training', body: '손이 자꾸 겉돕니다. 너무 지쳤나 봅니다.', when: { staminaPctMax: 35 } },
   { id: 't6', category: 'training', body: '이 무공, 이제 어느 정도 알 듯합니다.', when: { seongMin: 4, stressMax: 60 } },
 
   // 일상 — 대체로 무관
   { id: 'd1', category: 'daily', body: '아침 안개가 산문을 덮었습니다. 좋은 날입니다.', when: { stressMax: 60 } },
-  { id: 'd2', category: 'daily', body: '간밤 꿈자리가 사나웠습니다. 오늘은 검을 내려놓고 좀 쉬고 싶습니다.', when: { stressMin: 35 } },
+  { id: 'd2', category: 'daily', body: '간밤 꿈자리가 사나웠습니다. 오늘은 수련을 내려놓고 좀 쉬고 싶습니다.', when: { stressMin: 35 } },
   { id: 'd3', category: 'daily', body: '사부님, 차 한 잔 드시지요. 갓 끓인 것입니다.' },
 
   // 관계
@@ -84,7 +84,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'w4', category: 'worry', body: '사부님은 제 재능을 어떻게 보십니까.' },
   // 흑화 기미 — '어둠'을 라벨하지 않고 관찰 가능한 말·태도로만(feedback_hidden_game_state)
   { id: 'w5', category: 'worry', mood: 'darkening', body: '사부님... 강한 자가 약한 자를 누르는 것이, 정녕 그른 일입니까.', when: { darknessRiskMin: 'medium' } },
-  { id: 'w6', category: 'worry', mood: 'darkening', body: '요즘은 검을 쥐면, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
+  { id: 'w6', category: 'worry', mood: 'darkening', body: '요즘은 손에 힘을 줄수록, 외려 마음이 차게 가라앉습니다.', when: { darknessRiskMin: 'medium' } },
   { id: 'w7', category: 'worry', mood: 'enmity', body: '... 그날 그자의 눈을, 아직도 잊지 못합니다.', when: { darknessRiskMin: 'high', hasEnemy: true } },
 
   // ── 캐릭터 시그니처 ── (onlyFor=poolId, 나이대 분산. disciples/*.md 기반. 작성원칙: want·나이대 말투·숨은변수 직설 X)
@@ -119,7 +119,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'ds4', category: 'worry', mood: 'distrust', body: '제 말을 들어주실 줄은... 솔직히 기대하지 않았습니다.', when: { trustMax: 38, stressMin: 40 } },
   // 지침 — 스트레스·체력
   { id: 'wr1', category: 'daily', mood: 'weary', body: '사부님... 오늘 하루만 쉬어가도 되겠습니까. 몸이 천근만근입니다.', when: { stressMin: 60 } },
-  { id: 'wr2', category: 'training', mood: 'weary', body: '머릿속이 멍합니다. 검을 휘둘러도 형이 그려지질 않아요.', when: { staminaPctMax: 30 } },
+  { id: 'wr2', category: 'training', mood: 'weary', body: '머릿속이 멍합니다. 손을 놀려도 초식이 그려지질 않아요.', when: { staminaPctMax: 30 } },
   { id: 'wr3', category: 'worry', mood: 'weary', body: '요즘은... 무엇을 위해 이리 버티는지 모르겠습니다.', when: { stressMin: 70 } },
   // 자만 — 앞서가는 자
   { id: 'pr1', category: 'training', mood: 'pride', body: '이 정도면 산 아래 웬만한 무사들은 상대도 안 되겠지요?', when: { seongMin: 5, stressMax: 55 } },
@@ -139,7 +139,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   // 상실·애도 — 동문 사망 후(mourning). 관찰 가능한 슬픔으로만(숨은변수 직설 X). 반복 허용(once-only 아님).
   { id: 'gr1', category: 'daily', mood: 'grief', body: '... 빈자리가 자꾸 눈에 밟힙니다. 거기 늘 그 동문이 있었는데요.', when: { mourning: true } },
   { id: 'gr2', category: 'worry', mood: 'grief', body: '사부님... 더 강해지면, 다음엔 지킬 수 있을까요. 또 누굴 잃지 않게요.', when: { mourning: true } },
-  { id: 'gr3', category: 'daily', mood: 'grief', body: '오늘은 손에 검이 잡히질 않습니다. ... 잠깐, 멍하니 앉아만 있었어요.', when: { mourning: true } },
+  { id: 'gr3', category: 'daily', mood: 'grief', body: '오늘은 손에 아무것도 잡히질 않습니다. ... 잠깐, 멍하니 앉아만 있었어요.', when: { mourning: true } },
   { id: 'gr4', category: 'training', mood: 'grief', body: '같이 수련하던 자리가 비어 있으니... 자꾸 그쪽을 보게 됩니다.', when: { mourning: true } },
 
   // 동문 경사·이변 반응(전이형) — 동문이 경지 올림/크게 다침. 관계 차등(질투/축하/걱정). docs/12.
@@ -173,7 +173,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'amb6', category: 'daily', body: '연무장 바닥을 다시 골라 두었습니다. 발이 한결 편합니다.', when: { stressMax: 60 } },
   { id: 'amb7', category: 'daily', body: '간밤에 비가 와 계곡물이 불었습니다. 물소리가 우렁찹니다.' },
   { id: 'amb8', category: 'daily', body: '마당 약초밭에 싹이 올라왔습니다. 사부님, 보셨어요?', when: { stressMax: 60 } },
-  { id: 'amb9', category: 'daily', body: '검을 손질해 두었습니다. 날이 다시 곱게 섭니다.', when: { stressMax: 60 } },
+  { id: 'amb9', category: 'daily', body: '병장기를 손질해 두었습니다. 날이 다시 곱게 섭니다.', when: { stressMax: 60 } },
   { id: 'amb10', category: 'daily', body: '오늘은 바람이 좋아, 산마루까지 단숨에 뛰어 올랐습니다.', when: { stressMax: 55 } },
   { id: 'amb11', category: 'daily', body: '서고를 정리하다 오래된 권보를 하나 찾았습니다. 손때가 묻었더군요.', when: { stressMax: 60 } },
   { id: 'amb12', category: 'daily', body: '달이 밝아 잠이 오질 않습니다. 마당이나 한 바퀴 돌고 오겠습니다.', when: { stressMax: 60 } },
@@ -192,7 +192,7 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'amb25', category: 'daily', body: '밤새 눈이 소복이 쌓였어요. 발자국 하나 없는 마당이 곱습니다.' },
   { id: 'amb26', category: 'relation', body: '동문이 먼저 인사를 건네왔습니다. 기분 좋은 아침입니다.', when: { stressMax: 60 } },
   { id: 'amb27', category: 'daily', body: '우물가에 살얼음이 끼었습니다. 손이 시려도 정신은 맑습니다.' },
-  { id: 'amb28', category: 'training', body: '오늘은 목검 소리가 제법 매섭게 울렸습니다.', when: { stressMax: 60 } },
+  { id: 'amb28', category: 'training', body: '오늘은 연무장에 기합 소리가 제법 매섭게 울렸습니다.', when: { stressMax: 60 } },
   { id: 'amb29', category: 'daily', body: '마루에 앉아 처마에 듣는 빗소리를 한참 들었습니다.', when: { stressMax: 60 } },
   { id: 'amb30', category: 'daily', body: '부엌에서 구수한 냄새가 납니다. 오늘 끼니가 기대됩니다.' },
   { id: 'amb31', category: 'daily', body: '마당 감나무에 까치가 앉았습니다. 좋은 소식이 오려나요.', when: { stressMax: 60 } },
@@ -202,26 +202,26 @@ export const ONE_LINERS: OneLinerTemplate[] = [
   { id: 'amb35', category: 'relation', body: '동문들 웃음소리가 마당을 넘어옵니다. 사문이 살아 있는 듯해요.', when: { stressMax: 65 } },
   { id: 'amb36', category: 'daily', body: '바람결에 풍경 소리가 맑게 울립니다. 마음이 따라 가라앉네요.', when: { stressMax: 55 } },
   { id: 'amb37', category: 'daily', body: '오늘은 별이 유난히 총총합니다. 잠시 마당에 서 있었어요.', when: { stressMax: 60 } },
-  { id: 'amb38', category: 'training', body: '검집을 새 끈으로 동여맸습니다. 손에 착 감깁니다.', when: { stressMax: 60 } },
+  { id: 'amb38', category: 'training', body: '병장기를 새 끈으로 동여맸습니다. 손에 착 감깁니다.', when: { stressMax: 60 } },
   { id: 'amb39', category: 'daily', body: '계곡에 물 길러 다녀왔습니다. 물맛이 차고 답니다.' },
   { id: 'amb40', category: 'daily', body: '문풍지를 새로 발랐어요. 외풍이 한결 덜합니다.' },
 
   // 수련 결 — 느는 감각/막히는 감각(가벼움, 반복 허용)
   { id: 'tx1', category: 'training', body: '오늘은 자세가 어제보다 낮게 잡힙니다. 조금씩은 느는 모양입니다.', when: { stressMax: 60 } },
   { id: 'tx2', category: 'training', body: '같은 초식을 백 번 그었습니다. 손이 먼저 길을 압니다.', when: { stressMax: 55 } },
-  { id: 'tx3', category: 'training', body: '호흡이 길어졌습니다. 내쉴 때 검끝이 덜 떨립니다.', when: { stressMax: 55 } },
+  { id: 'tx3', category: 'training', body: '호흡이 길어졌습니다. 내쉴 때 손끝이 덜 떨립니다.', when: { stressMax: 55 } },
   { id: 'tx4', category: 'training', body: '어제 짚어주신 곳을 고치니 한결 매끄럽습니다.', when: { stressMax: 60, trustMin: 45 } },
   { id: 'tx5', category: 'training', body: '발 디딤이 자꾸 엉킵니다. 보법은 아직 멀었나 봅니다.', when: { stressMin: 40 } },
 
   // 지침 변주 — weary 과다(이력분석 21%) 단조 해소
-  { id: 'wr4', category: 'training', mood: 'weary', body: '오늘은 목검이 쇳덩이 같습니다.', when: { stressMin: 55 } },
+  { id: 'wr4', category: 'training', mood: 'weary', body: '오늘은 손에 든 것이 쇳덩이 같습니다.', when: { stressMin: 55 } },
   { id: 'wr5', category: 'daily', mood: 'weary', body: '눈꺼풀이 자꾸 내려앉습니다. ... 죄송합니다, 사부님.', when: { staminaPctMax: 35 } },
   { id: 'wr6', category: 'training', mood: 'weary', body: '손에 물집이 또 잡혔습니다. ... 괜찮습니다, 곧 굳겠지요.', when: { stressMin: 50 } },
   { id: 'wr7', category: 'daily', mood: 'weary', body: '잠깐 앉아도 되겠습니까. ... 숨 좀 고르고 다시 하겠습니다.', when: { staminaPctMax: 30 } },
 
   // 평온 변주 — calm 은 신뢰 받쳐줄 때만(모순 방지 moodConsistent 와 합치). 반복 허용.
   { id: 'ca3', category: 'daily', mood: 'calm', body: '사부님 곁에 있으면 마음이 놓입니다. ... 별 이유는 없어요.', when: { trustMin: 55, stressMax: 40 } },
-  { id: 'ca4', category: 'training', mood: 'calm', body: '오늘은 검을 쥐어도 마음이 고요합니다. 이런 날이 좋습니다.', when: { stressMax: 30, trustMin: 45 } },
+  { id: 'ca4', category: 'training', mood: 'calm', body: '오늘은 무얼 쥐어도 마음이 고요합니다. 이런 날이 좋습니다.', when: { stressMax: 30, trustMin: 45 } },
 
   // ════ 캐릭터 시그니처 — 한바람·윤소소·이청하·백연·진백호·사천화 (disciples/*.md 기반) ════
   // 한바람 — 거리에서 자란 자유·떠돌이, 흑화 위험, 부모 상실.
