@@ -211,7 +211,7 @@ export const JINBAEKHO_MORAL_EVENTS: MoralEventTemplate[] = [
           darknessRiskBump: 6,
           darknessLevelBump: 1,
           personalityShift: { ambition: 5, mercy: -4 },
-          noteAppend: '"사부도 막지 않았다." 사파 초식의 사나운 결이 손끝에 스며들기 시작했다.',
+          noteAppend: '"무공에 정과 사가 어딨어요. 강하면 그만이지." 거칠 것 없는 자유가 한 결 더 거칠어진다.',
         },
         atmosphere: { righteousnessDelta: -3, unityDelta: -2 },
       },

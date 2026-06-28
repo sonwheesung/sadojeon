@@ -921,7 +921,7 @@ export const ARCHETYPE_MORAL_EVENTS_EXTRA: MoralEventTemplate[] = [
       },
       {
         tone: 'overlook',
-        label: '(사내라면 그쯤이야, 하고 넘긴다. {sibling}이 팔을 싸맨 채 말이 없다.)',
+        label: '(젊어 그렇지, 그쯤이야 하고 넘긴다. {sibling}이 팔을 싸맨 채 말이 없다.)',
         perpetrator: { trustDelta: 1, personalityShift: { prudence: -5 }, darknessRiskBump: 3 },
         atmosphere: { unityDelta: -2, righteousnessDelta: -1 },
       },

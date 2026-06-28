@@ -246,7 +246,7 @@ export const UNIVERSAL_MORAL_EVENTS_EXTRA: MoralEventTemplate[] = [
     trigger: { weight: 8, minYearInSect: 3 },
     scenario:
       '대련 짝으로 가장 여린 {sibling}을 고른 {name}이,\n' +
-      '이미 손을 든 상대를 향해 한 번 더, 또 한 번 더 결을 내리쳤다.\n' +
+      '이미 손을 든 상대를 향해 한 번 더, 또 한 번 더 목검을 내리쳤다.\n' +
       '{sibling}이 바닥에 엎드려 더는 못 한다 빌어도 {name}의 손은 멈추지 않았다.',
     insightHints: {
       3: '{name}은 이기는 맛을 가장 약한 상대에게서 확인하려 했다.',
