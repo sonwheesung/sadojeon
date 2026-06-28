@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { SectionLabel } from '@/components/common/SectionLabel';
+import { useSpotlightTarget } from '@/hooks/useSpotlightTarget';
 import { findMartialArt, seongToStage } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { usePendingStore } from '@/stores/pendingStore';
@@ -45,12 +46,15 @@ export function DiscipleRoster() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const overrides = useScheduleStore((s) => s.overrides);
   const dailyBadges = usePendingStore((s) => s.dailyBadges);
+  const rosterRef = useSpotlightTarget('roster'); // 스포트라이트 대상(docs/44)
+  const scheduleRef = useSpotlightTarget('schedule');
 
   return (
-    <View style={styles.section}>
+    <View ref={rosterRef} style={styles.section}>
       <View style={styles.header}>
         <SectionLabel>제자 현황</SectionLabel>
         <Pressable
+          ref={scheduleRef}
           style={styles.editButton}
           onPress={() => router.push('/schedule')}
           accessibilityRole="button"

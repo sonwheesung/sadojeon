@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useConfirm } from '@/components/common/ConfirmDialog';
 import { useInboxBadgeCount } from '@/hooks/useInboxBadgeCount';
+import { useSpotlightTarget } from '@/hooks/useSpotlightTarget';
 import { colors, spacing, typography } from '@/theme';
 
 export const PROGRESS_BAR_HEIGHT = 100;
@@ -23,6 +24,8 @@ export function SectProgressBar({
 }) {
   const pendingDecisions = useInboxBadgeCount();
   const confirm = useConfirm();
+  const progressRef = useSpotlightTarget('progress'); // 스포트라이트 대상(docs/44)
+  const ffRef = useSpotlightTarget('fastforward');
 
   const blocked = pendingDecisions > 0;
   const disabled = blocked || busy;
@@ -58,6 +61,7 @@ export function SectProgressBar({
     <View style={styles.row}>
       <View style={styles.buttons}>
         <Pressable
+          ref={progressRef}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={blocked ? `진행 불가 — 처리할 서신 ${pendingDecisions}건` : '진행'}
@@ -69,6 +73,7 @@ export function SectProgressBar({
         </Pressable>
         {onFastForward && (
           <Pressable
+            ref={ffRef}
             onPress={onPressFastForward}
             accessibilityRole="button"
             accessibilityLabel={busy ? '빠른 진행 중' : '빠른 진행'}

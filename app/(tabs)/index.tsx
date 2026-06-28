@@ -19,9 +19,10 @@ import { DiscipleMoodPanel } from '@/components/sect/DiscipleMoodPanel';
 import { DiscipleRoster } from '@/components/sect/DiscipleRoster';
 import { SectProgressBar } from '@/components/sect/SectProgressBar';
 import { useBackConfirm } from '@/hooks/useBackConfirm';
-import { useGameStore, useMasterStore, usePendingStore, useInboxStore, useTutorialStore } from '@/stores';
+import { useGameStore, useMasterStore, usePendingStore, useInboxStore, useRunMetaStore, useTutorialStore } from '@/stores';
 import { resetIfFirstRun } from '@/systems/devReset';
 import { triggerTutorial } from '@/systems/tutorialSystem';
+import { startIntroSpotlight } from '@/systems/spotlightSystem';
 import { INTRO_RUN_KEY, beginIntroRun, skipIntroRun } from '@/systems/introRun';
 import { fastForward } from '@/systems/fastForward';
 import { saveCurrentRunSilently } from '@/systems/runSync';
@@ -42,6 +43,13 @@ export default function SectScreen() {
   // 도입 튜토리얼 회차 진입 — 첫 계정(미경험)은 시작 선택 대신 도입 회차 게이트를 먼저 본다. docs/46.
   const introSeen = useTutorialStore((s) => s.seen.includes(INTRO_RUN_KEY));
   const introPending = isFresh && !introSeen;
+
+  // 도입 회차가 시작되면(장철 시드 후) 강제 스포트라이트 코치마크 1회. docs/44 스포트라이트.
+  // 멱등(이미 봤거나 진행 중이면 무시) — 앱 재시작으로 회차 중간 재진입해도 안전.
+  const isTutorialRun = useRunMetaStore((s) => s.isTutorialRun);
+  useEffect(() => {
+    if (isTutorialRun) startIntroSpotlight();
+  }, [isTutorialRun]);
 
   // 진행 → 일일 세부 선택 모달 → 확정 시 하루 진행(GameApi).
   const [choiceOpen, setChoiceOpen] = useState(false);
@@ -134,9 +142,9 @@ export default function SectScreen() {
       <IntroRunGate
         visible={introPending}
         onStart={() => {
-          beginIntroRun(); // 마킹 + 장철 1명 고정 시드
+          beginIntroRun(); // 마킹 + 장철 1명 고정 시드 → isTutorialRun → 위 useEffect 가 스포트라이트 시작
           saveCurrentRunSilently();
-          triggerTutorial('intro'); // 핵심 루프 안내(계정 1회). docs/44
+          // 'intro' 카드는 스포트라이트 첫 단계('사부가 되었습니다')가 대체 — 중복 안내 방지(docs/44).
         }}
         onSkip={() => {
           skipIntroRun(); // 마킹만 → 아래 StartSelectModal 로 일반 시작

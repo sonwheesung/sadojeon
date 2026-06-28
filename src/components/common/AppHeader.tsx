@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useGameDateLabel } from '@/hooks/useGameDateLabel';
 import { useInboxUnreadCount } from '@/hooks/useInboxBadgeCount';
+import { useSpotlightTarget } from '@/hooks/useSpotlightTarget';
 import { useSectStore } from '@/stores/sectStore';
 import { colors, spacing, typography } from '@/theme';
 
@@ -29,6 +30,7 @@ export function AppHeader() {
   const resources = useSectStore((s) => s.sect?.resources ?? 0);
   const unread = useInboxUnreadCount();
   const coin = splitCoin(resources);
+  const inboxRef = useSpotlightTarget('inbox'); // 스포트라이트 대상(docs/44)
 
   return (
     <View style={styles.row}>
@@ -43,6 +45,7 @@ export function AppHeader() {
       </Text>
 
       <Pressable
+        ref={inboxRef}
         accessibilityRole="button"
         accessibilityLabel={unread > 0 ? `서신함 — 새 서신 ${unread}건` : '서신함'}
         hitSlop={8}

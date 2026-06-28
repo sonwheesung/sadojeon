@@ -18,6 +18,7 @@ import {
   useScheduleStore,
   useSectStore,
   useTimeStore,
+  useTutorialStore,
 } from '@/stores';
 import { useMoralEventStore } from '@/stores/moralEventStore';
 import { usePendingStore } from '@/stores/pendingStore';
@@ -56,6 +57,16 @@ export async function resetEverything(): Promise<void> {
   if (slotKeys.length > 0) {
     await AsyncStorage.multiRemove(slotKeys);
   }
+}
+
+// dev 전용 — 회차 데이터 + 튜토리얼 본 기록을 비워 **도입 튜토리얼부터** 다시 시작시킨다. docs/46.
+// 재가입 없이 스포트라이트·도입 회차를 재시연하려는 테스트용. 호출 후 일과 화면이 IntroRunGate 를 띄운다.
+export async function devResetToTutorial(): Promise<void> {
+  await resetEverything(); // 회차 비움 → 사부 없음(isFresh)
+  useTutorialStore.getState().reset(); // seen 비움 → intro-run·intro-spotlight 재노출
+  // 비운 seen 을 계정에도 영속(다음 loadAccount 가 옛 seen 으로 덮지 않게).
+  const { saveAccountSilently } = require('@/systems/accountSync') as typeof import('@/systems/accountSync');
+  saveAccountSilently();
 }
 
 // 일회성 자동 reset. sentinel 키 변경 시 다음 빌드에서 다시 1회 실행.

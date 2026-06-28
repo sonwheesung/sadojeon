@@ -10,6 +10,8 @@ import { LlmToggleCard } from '@/components/sect/LlmToggleCard';
 import { useAuthStore } from '@/stores/authStore';
 import { useMasterStore } from '@/stores/masterStore';
 import { useSectStore } from '@/stores/sectStore';
+import { useDevAccess } from '@/systems/dev/devAccess';
+import { devResetToTutorial } from '@/systems/devReset';
 import { colors, radius, spacing, typography } from '@/theme';
 
 // 사문 탭 — 사문·스승에 대한 정보. (구 서신함 탭 자리)
@@ -31,6 +33,7 @@ export default function SectScreen() {
   const master = useMasterStore((s) => s.master);
   const confirm = useConfirm();
   const signOut = useAuthStore((s) => s.signOut);
+  const devAccess = useDevAccess(); // 개발/테스트 빌드에서만 초기화 버튼 노출
 
   const rank = sectRankLabel(sect?.reputation ?? 0);
 
@@ -42,6 +45,19 @@ export default function SectScreen() {
       tone: 'danger',
     });
     if (ok) signOut();
+  };
+
+  // dev 전용 — 재가입 없이 도입 튜토리얼부터 다시. 회차 데이터·본 기록 초기화. docs/46.
+  const onResetToTutorial = async () => {
+    const ok = await confirm({
+      title: '튜토리얼부터 초기화',
+      message: '현재 사문·제자·비급을 모두 지우고 도입 튜토리얼(스포트라이트)부터 다시 시작합니다. (개발 전용)',
+      confirmLabel: '초기화',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    await devResetToTutorial();
+    router.replace('/(tabs)' as Href); // 일과 화면으로 — IntroRunGate 노출
   };
 
   return (
@@ -125,6 +141,17 @@ export default function SectScreen() {
               <Text style={styles.settingLabel}>로그아웃</Text>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
+            {devAccess && (
+              <Pressable
+                style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+                onPress={onResetToTutorial}
+                accessibilityRole="button"
+                accessibilityLabel="튜토리얼부터 초기화"
+              >
+                <Text style={styles.settingLabel}>초기화 — 튜토리얼부터 (개발용)</Text>
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </PaperCard>
