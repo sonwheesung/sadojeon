@@ -8,6 +8,7 @@
 // 희망 활동 결 — 'rest' 만 1일 healing override 로 처리, 나머지는 표식용.
 // (옛 ScheduleActivity 의존 제거 — 훈련 v2 카테고리 모델과 별개)
 import { random } from '@/systems/rng';
+import { WISHES_EXTRA } from './wishesExtra';
 
 export type WishActivity = 'rest' | 'meditation' | 'training' | 'autonomy';
 
@@ -96,6 +97,8 @@ export const WISHES: WishTemplate[] = [
     acceptTrustDelta: 1,
     rejectTrustDelta: -1,
   },
+  // 확장분 27개 (2026-06-28, docs/12) — 6종 kind × 나이대·상황 변주.
+  ...WISHES_EXTRA,
 ];
 
 export function pickRandomWish(): WishTemplate {

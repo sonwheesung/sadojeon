@@ -8,17 +8,38 @@
 
 import type { MoralEventTemplate, MoralEventTier } from '@/types';
 import { UNIVERSAL_MORAL_EVENTS } from './universal';
+import { UNIVERSAL_MORAL_EVENTS_EXTRA } from './universalExtra';
 import { ARCHETYPE_MORAL_EVENTS } from './archetype';
+import { ARCHETYPE_MORAL_EVENTS_EXTRA } from './archetypeExtra';
 import { EARLY_MORAL_EVENTS } from './early';
 import { DOKGOYEON_MORAL_EVENTS } from './personal/07_dokgoyeon';
 import { YUNSOSO_MORAL_EVENTS } from './personal/04_yunsoso';
+// 개인 풀 확장 8인 (2026-06-28, docs/07 풀 현황·확장)
+import { JANGCHEOL_MORAL_EVENTS } from './personal/01_jangcheol';
+import { JINSOHWA_MORAL_EVENTS } from './personal/02_jinsohwa';
+import { HANBARAM_MORAL_EVENTS } from './personal/03_hanbaram';
+import { GANGMUYEOL_MORAL_EVENTS } from './personal/05_gangmuyeol';
+import { ICHEONGHA_MORAL_EVENTS } from './personal/06_icheongha';
+import { BAEKYEON_MORAL_EVENTS } from './personal/08_baekyeon';
+import { JINBAEKHO_MORAL_EVENTS } from './personal/09_jinbaekho';
+import { SACHEONHWA_MORAL_EVENTS } from './personal/10_sacheonhwa';
 
 export const ALL_MORAL_EVENTS: readonly MoralEventTemplate[] = [
   ...UNIVERSAL_MORAL_EVENTS,
+  ...UNIVERSAL_MORAL_EVENTS_EXTRA,
   ...ARCHETYPE_MORAL_EVENTS,
+  ...ARCHETYPE_MORAL_EVENTS_EXTRA,
   ...EARLY_MORAL_EVENTS,
   ...DOKGOYEON_MORAL_EVENTS,
   ...YUNSOSO_MORAL_EVENTS,
+  ...JANGCHEOL_MORAL_EVENTS,
+  ...JINSOHWA_MORAL_EVENTS,
+  ...HANBARAM_MORAL_EVENTS,
+  ...GANGMUYEOL_MORAL_EVENTS,
+  ...ICHEONGHA_MORAL_EVENTS,
+  ...BAEKYEON_MORAL_EVENTS,
+  ...JINBAEKHO_MORAL_EVENTS,
+  ...SACHEONHWA_MORAL_EVENTS,
 ];
 
 // tier 별 가중치 — 한 회차에서 어떤 tier 가 얼마나 자주 발화하나.

@@ -13,6 +13,8 @@ import {
   type OneLinerCtx,
 } from './oneLiners';
 import { GENERATED_MEETINGS } from './meetingsGenerated';
+import { JIN_BAEKHO_MEETINGS } from './meetingsJinBaekho';
+import { SA_CHEONHWA_MEETINGS } from './meetingsSaCheonhwa';
 
 export type MeetingBand = 'child' | 'growth' | 'turmoil' | 'departure';
 
@@ -194,6 +196,9 @@ export const MEETINGS: MeetingTemplate[] = [
   },
   // ── 워크플로 대량 생성분(범용 63 + 제자 전용 80, 검수 통과) ──
   ...GENERATED_MEETINGS,
+  // ── 결제 2인 전용(진백호·사천화) ×10 = 20 (2026-06-28, docs/12) ──
+  ...JIN_BAEKHO_MEETINGS,
+  ...SA_CHEONHWA_MEETINGS,
 ];
 
 // 현재 상태에 맞는 면담 중 무작위 1개. 없으면 null.
