@@ -9,6 +9,8 @@ import { useSectStore } from '@/stores/sectStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useCodexStore } from '@/stores/codexStore';
 import { useShopStore } from '@/stores/shopStore';
+import { useDiscipleStore } from '@/stores/discipleStore';
+import type { Disciple } from '@/types';
 
 function seed(diamonds: number, gold: number): void {
   useGameStore.setState({ diamonds } as never);
@@ -16,6 +18,12 @@ function seed(diamonds: number, gold: number): void {
   useItemStore.setState({ items: [] } as never);
   useCodexStore.setState({ scrolls: [] } as never);
   useShopStore.setState({ boughtLimited: [] } as never);
+  useDiscipleStore.setState({ disciples: {}, order: [] } as never);
+}
+
+function seedDisciple(id: string): void {
+  const d = { id, name: '테스트', martialArts: [], wounds: [], status: 'training' } as unknown as Disciple;
+  useDiscipleStore.setState({ disciples: { [id]: d }, order: [id] } as never);
 }
 
 const itemCount = (id: string): number => useItemStore.getState().items.find((i) => i.id === id)?.count ?? 0;
@@ -73,9 +81,20 @@ describe('shopSystem — 구매 seam', () => {
     expect(dia()).toBe(0);
   });
 
-  test('미구현(특성): coming-soon — 차감·지급 없음', () => {
-    seed(0, 100000);
-    expect(purchase('trait-poison')).toBe('coming-soon');
-    expect(gold()).toBe(100000);
+  test('특성 부여: 제자 미지정이면 needs-target(다이아 차감 없음)', () => {
+    seed(100, 0);
+    expect(purchase('trait-poison')).toBe('needs-target');
+    expect(dia()).toBe(100);
+  });
+
+  test('특성 부여: 다이아 결제 → 제자에 체질 부여, 재구매는 already-owned', () => {
+    seed(100, 0);
+    seedDisciple('x');
+    expect(purchase('trait-poison', { discipleId: 'x' })).toBe('ok');
+    expect(dia()).toBe(40); // 60 차감(다이아)
+    expect(useDiscipleStore.getState().disciples.x.grantedConstitution?.poison).toBe(2);
+    // 같은 체질 재구매 차단 + 추가 차감 없음
+    expect(purchase('trait-poison', { discipleId: 'x' })).toBe('already-owned');
+    expect(dia()).toBe(40);
   });
 });

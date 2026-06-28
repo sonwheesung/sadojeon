@@ -116,7 +116,12 @@ const FULL_RESIST_ARTS: { artId: string; type: WoundType }[] = [
 ];
 
 // 제자가 익힌 무공으로부터 속성별 저항 단계(0/1/2). 만전·일반 NPC는 빈 맵(저항 0).
-export function woundResistOf(insts: { artId: string; seong: number }[]): Partial<Record<WoundType, number>> {
+// granted = 상점 부여 체질(grantedConstitution) — 무공 파생분과 **최댓값 merge**(단일 seam, docs/50 §5).
+// 상처 저항을 읽는 전곳(전투 시트·상처 게이트·UI·sim)이 이 함수만 거치므로 부여분이 자동 반영된다.
+export function woundResistOf(
+  insts: { artId: string; seong: number }[],
+  granted?: Partial<Record<WoundType, number>>,
+): Partial<Record<WoundType, number>> {
   const has = (id: string) => insts.some((i) => i.artId === id);
   const r: Partial<Record<WoundType, number>> = {};
   for (const { artId, type } of FULL_RESIST_ARTS) {
@@ -129,6 +134,12 @@ export function woundResistOf(insts: { artId: string; seong: number }[]): Partia
       if (art && artTraits(art).includes('poison')) bestPoisonSeong = Math.max(bestPoisonSeong, inst.seong);
     }
     if (has('dangga-baekdok-bulchim-gong') || bestPoisonSeong >= 4) r.poison = 1;
+  }
+  if (granted) {
+    for (const [type, lv] of Object.entries(granted)) {
+      const wt = type as WoundType;
+      if ((lv ?? 0) > (r[wt] ?? 0)) r[wt] = lv;
+    }
   }
   return r;
 }
@@ -148,8 +159,11 @@ const CONSTITUTION_TITLE: Record<string, { full: string; partial?: string }> = {
   burn: { full: '화염불침' },
 };
 
-export function constitutionTitles(insts: { artId: string; seong: number }[]): string[] {
-  const r = woundResistOf(insts);
+export function constitutionTitles(
+  insts: { artId: string; seong: number }[],
+  granted?: Partial<Record<WoundType, number>>,
+): string[] {
+  const r = woundResistOf(insts, granted);
   const out: string[] = [];
   for (const [type, lv] of Object.entries(r)) {
     const t = CONSTITUTION_TITLE[type];

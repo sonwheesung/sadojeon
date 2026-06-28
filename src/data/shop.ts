@@ -56,6 +56,11 @@ export const SHOP_PRODUCTS: readonly ShopProduct[] = [
     desc: '시작 풀을 넓히는 추가 제자(직구매·가챠 없음). 출시 후 추가됩니다.',
     grant: { kind: 'character', poolId: '' },
   },
+  // 특성 부여 — 다이아 결제(프리미엄). 제자 선택 후 면역 체질 부여(무공 없이). docs/50 §5.
+  { id: 'trait-poison', shop: 'diamond', currency: 'diamond', price: 60, title: '특성 부여 — 만독불침', desc: '제자 한 명에게 독 면역 체질을 부여합니다(치명 중독까지).', grant: { kind: 'constitution', woundType: 'poison' } },
+  { id: 'trait-burn', shop: 'diamond', currency: 'diamond', price: 60, title: '특성 부여 — 화염불침', desc: '제자 한 명에게 화상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'burn' } },
+  { id: 'trait-frost', shop: 'diamond', currency: 'diamond', price: 60, title: '특성 부여 — 한서불침', desc: '제자 한 명에게 동상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'frost' } },
+  { id: 'trait-wound', shop: 'diamond', currency: 'diamond', price: 80, title: '특성 부여 — 금강불괴', desc: '제자 한 명에게 외상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'wound' } },
 
   // ─── 사문 상점(골드, 사문 단위) ───
   {
@@ -87,11 +92,6 @@ export const SHOP_PRODUCTS: readonly ShopProduct[] = [
     desc: '다이아 10으로 사문 자금을 보충합니다.',
     grant: { kind: 'exchange', gold: 5000 },
   },
-  // 특성 부여 — 🔧 미구현(무공 없이 체질 부여하는 경로 신설 필요, docs/50 §5).
-  { id: 'trait-poison', shop: 'sect', currency: 'gold', price: 6000, comingSoon: true, title: '특성 부여 — 천독불침 (준비 중)', desc: '특정 제자에게 독 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'poison' } },
-  { id: 'trait-burn', shop: 'sect', currency: 'gold', price: 6000, comingSoon: true, title: '특성 부여 — 화염불침 (준비 중)', desc: '특정 제자에게 화상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'burn' } },
-  { id: 'trait-frost', shop: 'sect', currency: 'gold', price: 6000, comingSoon: true, title: '특성 부여 — 한서불침 (준비 중)', desc: '특정 제자에게 동상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'frost' } },
-  { id: 'trait-wound', shop: 'sect', currency: 'gold', price: 8000, comingSoon: true, title: '특성 부여 — 금강불괴 (준비 중)', desc: '특정 제자에게 외상 면역 체질을 부여합니다.', grant: { kind: 'constitution', woundType: 'wound' } },
 ];
 
 export function findProduct(id: string): ShopProduct | undefined {

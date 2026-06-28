@@ -1425,7 +1425,7 @@ async function runGradSweep(): Promise<void> {
       a.medicine += d.stats?.medicine?.level ?? 0;
       a.knowledge += d.stats?.knowledge?.level ?? 0;
       a.alchemy += d.stats?.alchemy?.level ?? 0;
-      for (const t of constitutionTitles(d.martialArts)) a.constitution[t] = (a.constitution[t] ?? 0) + 1;
+      for (const t of constitutionTitles(d.martialArts, d.grantedConstitution)) a.constitution[t] = (a.constitution[t] ?? 0) + 1;
       const jobs = evaluateJobs(d);
       if (jobs.length === 0) a.none += 1;
       else a.job[jobs[0].job.name] = (a.job[jobs[0].job.name] ?? 0) + 1;

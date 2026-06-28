@@ -44,6 +44,6 @@ export function combatantFromDisciple(d: Disciple): Combatant {
     simma: d.simma ?? 0,
     woundSeverity: worstWound(d)?.severity,
     woundType: worstWound(d)?.type,
-    woundResist: woundResistOf(d.martialArts),
+    woundResist: woundResistOf(d.martialArts, d.grantedConstitution),
   };
 }

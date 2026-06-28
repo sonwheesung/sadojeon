@@ -4,6 +4,7 @@
 import { findProduct, type ShopProduct } from '@/data/shop';
 import { findElixirRecipe, elixirRecipeToItem, divineElixirItem } from '@/data/elixirs';
 import { buyMaterial, materialPrice } from '@/systems/alchemySystem';
+import { grantConstitution, hasConstitution } from '@/systems/constitutionSystem';
 import { useCodexStore } from '@/stores/codexStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useItemStore } from '@/stores/itemStore';
@@ -11,7 +12,14 @@ import { useSectStore } from '@/stores/sectStore';
 import { useShopStore } from '@/stores/shopStore';
 import { useTimeStore } from '@/stores/timeStore';
 
-export type PurchaseResult = 'ok' | 'insufficient' | 'sold-out' | 'coming-soon' | 'unavailable';
+export type PurchaseResult =
+  | 'ok'
+  | 'insufficient'
+  | 'sold-out'
+  | 'coming-soon'
+  | 'needs-target' // 특성 부여 — 제자 미지정
+  | 'already-owned' // 특성 — 이미 그 체질 보유
+  | 'unavailable';
 
 // 표시 단가 — material 은 단가표(materialPrice)×수량, 그 외는 product.price.
 export function priceOf(p: ShopProduct): number {
@@ -69,7 +77,7 @@ function grant(p: ShopProduct): void {
   }
 }
 
-export function purchase(productId: string): PurchaseResult {
+export function purchase(productId: string, opts?: { discipleId?: string }): PurchaseResult {
   const p = findProduct(productId);
   if (!p) return 'unavailable';
   if (p.comingSoon) return 'coming-soon';
@@ -80,17 +88,39 @@ export function purchase(productId: string): PurchaseResult {
     return buyMaterial(p.grant.materialId, p.grant.qty) ? 'ok' : 'insufficient';
   }
 
-  // 결제(통화 차감)
-  const price = priceOf(p);
-  if (p.currency === 'diamond') {
-    if (!useGameStore.getState().spendDiamonds(price)) return 'insufficient';
-  } else {
-    const sect = useSectStore.getState();
-    if (!sect.sect || sect.sect.resources < price) return 'insufficient';
-    sect.adjustResources(-price);
+  // 특성 부여 — 제자 지정 필수 + 중복 차단. 통화(다이아/골드) 결제 후 부여(실패 시 롤백).
+  if (p.grant.kind === 'constitution') {
+    const discipleId = opts?.discipleId;
+    if (!discipleId) return 'needs-target';
+    if (hasConstitution(discipleId, p.grant.woundType, 2)) return 'already-owned';
+    if (!charge(p)) return 'insufficient';
+    const res = grantConstitution(discipleId, p.grant.woundType, 2);
+    if (res !== 'ok') {
+      refund(p); // 롤백
+      return res === 'already' ? 'already-owned' : 'unavailable';
+    }
+    return 'ok';
   }
 
+  // 결제(통화 차감)
+  if (!charge(p)) return 'insufficient';
   grant(p);
   if (p.limited) useShopStore.getState().markLimited(p.id);
   return 'ok';
+}
+
+// 통화 차감 — 부족하면 false(차감 없음). 롤백은 refund.
+function charge(p: ShopProduct): boolean {
+  const price = priceOf(p);
+  if (p.currency === 'diamond') return useGameStore.getState().spendDiamonds(price);
+  const sect = useSectStore.getState();
+  if (!sect.sect || sect.sect.resources < price) return false;
+  sect.adjustResources(-price);
+  return true;
+}
+
+function refund(p: ShopProduct): void {
+  const price = priceOf(p);
+  if (p.currency === 'diamond') useGameStore.getState().addDiamonds(price);
+  else useSectStore.getState().adjustResources(price);
 }

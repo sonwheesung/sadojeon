@@ -151,6 +151,10 @@ export interface Disciple {
   // 약발 내성 — 내공단 누적 복용 수(회차 내). 복용할수록 효과 체감(도배 방지). alchemySystem.
   danTolerance?: number;
 
+  // 부여 체질(불침) — 무공 없이 상점에서 산 면역(속성→단계 1/2). woundResistOf 가 무공 파생분과 max merge.
+  // 상점 특성 부여(constitutionSystem.grantConstitution). docs/50 §5.
+  grantedConstitution?: Partial<Record<WoundType, number>>;
+
   // 하산 시 사부가 권한 강호 행로(직업 id, jobSystem). 졸업 후 평생 직책 궤적의 출발점. docs/28 §3·§4.
   graduatedJob?: string;
 

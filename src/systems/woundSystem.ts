@@ -97,7 +97,7 @@ export function inflictWound(discipleId: string, type: WoundType, severity: numb
   if (!d) return;
   // 체질(불침) — 금강불괴(외상)·한서불침(동상)·화염불침(화상)·만독불침(중독)은 그 속성에 안 당한다.
   // 전투·의뢰·환경 상처가 전부 이 관문을 거쳐, 면역이면 상처 자체가 안 남는다(독지·설산에서도 멀쩡). docs/35 §6-1c.
-  if (resistsWound(woundResistOf(d.martialArts)[type], severity)) return;
+  if (resistsWound(woundResistOf(d.martialArts, d.grantedConstitution)[type], severity)) return;
   const wounds = [...(d.wounds ?? [])];
   const idx = wounds.findIndex((w) => w.type === type);
   if (idx >= 0) {
