@@ -66,7 +66,7 @@ export function graduateToCareer(d: Disciple, jobId: string): void {
     status: 'active',
     graduatedYear: year,
   });
-  pushNews(`${d.name} — 강호로`, `${josa(d.name, '이', '가')} ${ROUTE_LABEL[route]} ${title}(으)로 강호에 첫발을 디뎠다.`);
+  pushNews(`${d.name} — 강호로`, `${josa(d.name, '이', '가')} ${ROUTE_LABEL[route]} ${josa(title, '으로', '로')} 강호에 첫발을 디뎠다.`);
 
   // 노선 → 연관 문파 평판↑. 제자가 그 길에 드니 사문·본인과 그 문파의 인연이 깊어진다. docs/30.
   const factionId = ROUTE_FACTION[route];

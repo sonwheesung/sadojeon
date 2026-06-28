@@ -177,7 +177,7 @@ function categoryEntry(report: DiscipleTickReport, name: string): DailyLogEntry 
         discipleId: id,
         discipleName: name,
         text: what
-          ? `${josa(name, '이', '가')} ${what}(으)로 숨을 돌렸다.`
+          ? `${josa(name, '이', '가')} ${josa(what, '으로', '로')} 숨을 돌렸다.`
           : `${josa(name, '이', '가')} 푹 쉬며 기력을 회복했다.`,
       };
     case 'physical':
@@ -187,7 +187,7 @@ function categoryEntry(report: DiscipleTickReport, name: string): DailyLogEntry 
         discipleId: id,
         discipleName: name,
         text: what
-          ? `${josa(name, '이', '가')} ${what}(으)로 몸을 단련했다.`
+          ? `${josa(name, '이', '가')} ${josa(what, '으로', '로')} 몸을 단련했다.`
           : `${josa(name, '이', '가')} 몸을 단련했다.`,
       };
     case 'study':
