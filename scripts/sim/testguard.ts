@@ -7,6 +7,7 @@
 //   ④ 무공 특성(MartialTrait) 전부 분류됐나
 //   ⑤ post(전투 후 적용) 특성의 결과 필드가 mustApply 로 배선됐나
 //   ⑥ 전 sim 이 실패 종료(process.exit)+단언을 갖나(빈·항상통과 테스트 차단)
+//   ⑦ 게이트 sim 이 비시드 Math.random 을 직접 쓰지 않나(R39: 비결정 가드 false-FAIL 차단)
 // 실행: npx tsx scripts/sim/testguard.ts
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -121,6 +122,10 @@ for (const f of guardSims) {
 }
 ck('회귀 가드 sim 실패 종료(process.exit) 보유', noFail.length === 0, noFail.length ? `누락=${noFail.join(',')}` : `${guardSims.length}개`);
 ck('회귀 가드 sim 단언(check/ck/band/checks) 보유', noAssert.length === 0, noAssert.length ? `누락=${noAssert.join(',')}` : `${guardSims.length}개`);
+// ⑦ 게이트 sim 은 결정적이어야 한다 — 비시드 Math.random 직접 사용 금지(R39: 비결정 가드가 false-FAIL,
+//    회귀 신뢰를 떨굼). 난수가 필요하면 고정 시드 PRNG(mulberry32) 또는 seedAmbient/configureRandom 경유.
+const randomViolators = guardSims.filter((f) => /Math\.random\s*\(/.test(read(`scripts/sim/${f}`)));
+ck('게이트 sim 비시드 Math.random 0(결정적 가드, R39)', randomViolators.length === 0, randomViolators.length ? `위반=${randomViolators.join(',')}` : `${guardSims.length}개 결정적`);
 // 진단용 sim 은 침묵 무시가 아니라 명시 — "회귀 가드 아님(출력 전용)"을 출력.
 const presentDiag = DIAGNOSTIC_SIMS.filter((d) => simFiles.includes(`${d}.ts`));
 console.log(`\n[진단용 sim(회귀 가드 아님·출력 전용)]: ${presentDiag.join(' · ')} — PASS/FAIL 없이 표·추적 출력. 가드로 쓰려면 밴드 assert 추가 필요.`);

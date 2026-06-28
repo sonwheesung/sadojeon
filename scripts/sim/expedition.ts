@@ -6,11 +6,20 @@
 import { EXPEDITION_DESTS } from '../../src/data/expeditions';
 import { EXPEDITION_EVENT_BASE, EXPEDITION_EVENT_MAX } from '../../src/data/expeditionEvents';
 
+// 결정적 PRNG(mulberry32·고정 시드) — 회귀 가드는 재현 가능해야 한다(비시드 Math.random 금지, R39).
+let _rngState = 0x9e3779b9;
+function rnd(): number {
+  _rngState = (_rngState + 0x6d2b79f5) | 0;
+  let t = Math.imul(_rngState ^ (_rngState >>> 15), 1 | _rngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
 // ── 계약 스펙(= expeditionSystem.planEventDays 와 동일해야 함) ──────────────
 function drawEventCount(danger: number, days: number, threat: number): number {
   const expected = danger * (days / 4) * (1 + threat) * EXPEDITION_EVENT_BASE;
   let count = Math.floor(expected);
-  if (Math.random() < expected - count) count += 1;
+  if (rnd() < expected - count) count += 1;
   return Math.max(0, Math.min(EXPEDITION_EVENT_MAX, count));
 }
 

@@ -26,12 +26,21 @@ function questThreatWeight(grade: QuestGrade, domain: QuestDomain, threat: numbe
   return Math.max(0.0001, gradeW[grade] * domainW[domain]);
 }
 
+// 결정적 PRNG(mulberry32·고정 시드) — 회귀 가드는 재현 가능해야 한다(비시드 Math.random 금지, R39).
+let _rngState = 0x9e3779b9;
+function rnd(): number {
+  _rngState = (_rngState + 0x6d2b79f5) | 0;
+  let t = Math.imul(_rngState ^ (_rngState >>> 15), 1 | _rngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
 function weightedSample<T>(items: readonly T[], weightFn: (x: T) => number, count: number): T[] {
   const pool = items.map((x) => ({ x, w: Math.max(0.0001, weightFn(x)) }));
   const picked: T[] = [];
   for (let i = 0; i < count && pool.length > 0; i += 1) {
     const total = pool.reduce((s, p) => s + p.w, 0);
-    let r = Math.random() * total;
+    let r = rnd() * total;
     let idx = 0;
     for (; idx < pool.length - 1; idx += 1) {
       r -= pool[idx].w;
@@ -51,6 +60,7 @@ const N = 10000; // 표본(통계 3룰 ① 1만+)
 interface Row {
   threat: number;
   peacefulPct: number;
+  peacefulFrac: number; // 원분수(반올림 전) — 비율 단언은 정수%가 아닌 이걸 쓴다(R39 경계취약 제거)
   crisisPct: number;
   combatDomainPct: number; // duel/grand/scout/guard
 }
@@ -73,6 +83,7 @@ function measure(threat: number): Row {
   return {
     threat,
     peacefulPct: Math.round((peaceful / total) * 100),
+    peacefulFrac: peaceful / total,
     crisisPct: Math.round((crisis / total) * 100),
     combatDomainPct: Math.round((combatDomain / total) * 100),
   };
@@ -97,7 +108,7 @@ const crisisMonotone = rows.every((r, i) => i === 0 || r.crisisPct >= rows[i - 1
 // 계약의 핵심은 절대치가 아니라 "평시엔 존재, 전시엔 급감"의 상대 변화.
 const checks = [
   { name: '평온(0) 평화잡일 존재', pass: calm.peacefulPct >= 12, got: `${calm.peacefulPct}%`, want: '≥12%' },
-  { name: '평온 대비 전시 잡일 급감', pass: calm.peacefulPct >= war.peacefulPct * 3, got: `${calm.peacefulPct}%→${war.peacefulPct}%`, want: '평시 ≥ 3×전시' },
+  { name: '평온 대비 전시 잡일 급감', pass: calm.peacefulFrac >= war.peacefulFrac * 3, got: `${calm.peacefulPct}%→${war.peacefulPct}%`, want: '평시 ≥ 3×전시' },
   { name: '고위기(1) 평화잡일 급감', pass: war.peacefulPct <= 8, got: `${war.peacefulPct}%`, want: '≤8%' },
   { name: '평화잡일 위기에 단조 감소', pass: peacefulMonotone, got: rows.map((r) => r.peacefulPct).join('→'), want: '단조↓' },
   { name: '무력·위기 의뢰 단조 증가', pass: crisisMonotone, got: rows.map((r) => r.crisisPct).join('→'), want: '단조↑' },
