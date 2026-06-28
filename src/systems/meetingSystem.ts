@@ -50,7 +50,8 @@ export function triggerDailyMeeting(): void {
     createdAtDay: day,
     read: false,
     resolved: false,
-    payload: { domain: 'meeting', meetingId: tmpl.id, discipleId: disciple.id, options: tmpl.options },
+    // 옵션 라벨도 본문과 동일하게 {rival} 치환(R40) — raw 면 화면 버튼에 "{rival}가 아니라…"가 그대로 보임.
+    payload: { domain: 'meeting', meetingId: tmpl.id, discipleId: disciple.id, options: tmpl.options.map((o) => ({ ...o, label: fillMeetingBody(o.label, ctx) })) },
   });
 }
 

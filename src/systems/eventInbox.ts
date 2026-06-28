@@ -9,6 +9,12 @@ import type { Disciple, Milestone, PendingMoralEvent, Realm } from '@/types';
 import type { ArcEvent } from '@/data/scenarios/arcEvents';
 import { REALM_LABEL } from '@/types/realm';
 
+// 선택지 라벨의 placeholder 치환 — 본문(body)과 동일하게 {name}/{sibling}을 실명으로(R40).
+// 라벨이 raw 로 새면 화면 버튼에 "{sibling} 앞에서…"가 그대로 보인다.
+function fillMoralLabel(text: string, perp: string, sib?: string): string {
+  return text.replace(/\{name\}/g, perp).replace(/\{sibling\}/g, sib ?? '동문');
+}
+
 // 도덕 갈등 이벤트(4선택) → 서신함 'event'(결정 필요).
 export function moralToInbox(mp: PendingMoralEvent): void {
   useInboxStore.getState().add({
@@ -30,7 +36,8 @@ export function moralToInbox(mp: PendingMoralEvent): void {
       hint: mp.hint ?? null,
       siblingId: mp.siblingId ?? null,
       siblingName: mp.siblingName ?? null,
-      choices: mp.choices,
+      // 선택지 라벨도 본문처럼 placeholder 치환(R40) — resolve 는 tone(key)로 하므로 라벨 치환과 독립.
+      choices: mp.choices.map((c) => ({ ...c, label: fillMoralLabel(c.label, mp.discipleName, mp.siblingName ?? undefined) })),
     },
   });
 }
