@@ -32,7 +32,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useQuestStore } from '@/stores/questStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useTimeStore } from '@/stores/timeStore';
-import type { Disciple, InboxItem, MartialArt, TrainingCategory } from '@/types';
+import type { Disciple, InboxItem, MartialArt, MoralChoice, TrainingCategory } from '@/types';
 
 const rand = () => random();
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
@@ -155,6 +155,34 @@ const OPTIMAL_PATTERN: TrainingCategory[] = [
   'martial', 'physical', 'martial', 'rest', 'martial', 'physical', 'rest',
 ];
 
+// 휴식 보장(2026-06-29, docs/49 C6 ⓑ · docs/37 G2 형제) — 봇이 스트레스·심마를 관리하지 않아
+// 주화입마 죽음의 소용돌이(고스트레스→심마→발작→내공흩어짐+내상→무성장)에 빠지던 것 차단.
+// 심마는 stress<30 에서만 가라앉으므로(simmaSystem), 고수위면 안정될 때까지 휴식 주간으로 끌어내린다.
+const REST_WEEK: TrainingCategory[] = ['rest', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest'];
+const REST_STRESS_ON = 55; // 발작 신호(55) 도달 즈음 휴식 진입
+const REST_STRESS_OFF = 25; // stress<30 이라야 심마가 가라앉음 → 25까지 끌어내려 회복 보장
+const REST_SIMMA_ON = 48; // 발작 임계(60)·신호(55) 전에 예방 휴식
+const REST_SIMMA_OFF = 38;
+
+// 휴식 보장 공용 — 캐리·서포트 양쪽이 같은 "헛휴식" 버그(rest 종목 미설정 → 휴식일 stress 0 →
+// 심마 climb → 발작 소용돌이)에 빠지던 것 차단. ① 휴식일에 강한 해소 종목(마을 −20). ② 스트레스/심마
+// 고수위면 안정될 때까지 휴식 주간(히스테리시스). 반환 true = 오늘 휴식 → 상위 훈련 설정 생략.
+function ensureRest(id: string, d: Disciple): boolean {
+  const sched = useScheduleStore.getState();
+  sched.setDailyChoice(id, 'rest', 'rest_village');
+  const stress = d.stress ?? 0;
+  const simma = d.simma ?? 0;
+  const pat = sched.individualPatterns[id];
+  const resting = pat != null && pat.length > 0 && pat.every((c) => c === 'rest');
+  const needRest = stress >= REST_STRESS_ON || simma >= REST_SIMMA_ON;
+  const calmEnough = stress <= REST_STRESS_OFF && simma <= REST_SIMMA_OFF;
+  if (needRest || (resting && !calmEnough)) {
+    sched.setIndividualPattern(id, [...REST_WEEK]);
+    return true;
+  }
+  return false;
+}
+
 // 한 제자의 전투 캐리 훈련(무공서 트리 climbing + 내공·성·외공 균형). 반환: 초절정↑(화경 임박).
 // 목표 무공의 사슬 집합 — 목표 + 전이적 선행 전부. 천장 블록이 "목표 사다리 위의 무공"을 우선 고르게.
 function chainSetToward(goal: MartialArt, depth = 0, acc = new Set<string>()): Set<string> {
@@ -172,6 +200,10 @@ function configureCarryTraining(id: string): boolean {
   const ds = useDiscipleStore.getState();
   const d = ds.disciples[id];
   if (!d || d.status !== 'training') return false;
+
+  // 0) 휴식 보장 — 심마·스트레스 관리(공용 ensureRest). 고수위면 안정될 때까지 휴식, 아니면 사문 패턴 복귀.
+  if (ensureRest(id, d)) return realmIndex(d.realm) >= realmIndex('chojeoljeong');
+  sched.clearIndividualPattern(id);
 
   // 1) 무공서 — 계보 트리를 합법적으로 타고 올라간다(선행조건 충족 후 상위 무공 학습/육성).
   const goal = goalArtFor(d);
@@ -275,6 +307,10 @@ function configureSupportTraining(id: string, role: string): void {
     return;
   }
   const sched = useScheduleStore.getState();
+  const d = useDiscipleStore.getState().disciples[id];
+  if (!d) return;
+  // 휴식 보장 — 서포트도 같은 헛휴식 버그 대상(공부 종목 stress 7~12). 고수위면 휴식 우선.
+  if (ensureRest(id, d)) return;
   sched.setIndividualPattern(id, [...SUPPORT_PATTERN]);
   const opt = SUPPORT_OPTION[role];
   if (opt) sched.setDailyChoice(id, 'study', opt);
@@ -382,18 +418,79 @@ export function healWithSalve(includeDeath: boolean): { healed: number; saved: n
   return { healed, saved };
 }
 
-// 최적 4지선다 — 폐관 청원은 **항상 허락**(깨달음 벽 돌파 기회를 놓치지 않음). 그 외는 랜덤
-// (이벤트 효과가 정량 노출 안 돼 일반적 정답을 못 고름). 경지 성장의 핵심 레버는 폐관 허락.
+// 최적 4지선다 — ① 폐관 청원은 **항상 허락**(깨달음 벽 돌파 기회). ② 도덕 사건은 **선한 양육**:
+// 흑화 증가폭이 가장 작은(또는 낮추는) 선택을 고른다. 종전 무작위 양육이 저저항 제자(이청하)를 흑화시켜
+// 심마 소용돌이를 만들던 것 차단(docs/49 C6 · 2026-06-29). ③ 그 외는 랜덤(효과 정량 미노출).
+// random 봇(RandomPolicy)은 이 함수를 안 쓰므로 흑화 발화 QA는 그대로 유지된다.
 export function pickOptimalInboxKey(
   item: InboxItem,
   options: { key: string; label: string }[],
 ): string {
-  const domain = (item.payload as { domain?: string } | undefined)?.domain;
+  const p = item.payload as
+    | { domain?: string; choices?: MoralChoice[]; options?: { key: string; effects?: MeetingEffectLike }[] }
+    | undefined;
+  const domain = p?.domain;
   if (domain === 'seclusion_petition') {
     const allow = options.find((o) => o.key === 'allow');
     if (allow) return allow.key;
   }
+  if (domain === 'moral' && Array.isArray(p?.choices)) {
+    // 도덕 사건: 흑화 압력 최소(선한 양육). 직접 흑화창은 절대 회피 + 자비·강직·신뢰를 높이는(=장래
+    // darknessScore 를 낮추는) 선택을 고른다. 종전 "위험도 최소"는 harsh(punish)를 골라 자비를 깎아
+    // 오히려 점수 경로로 흑화시켰다(이청하 mercy16→3). docs/49 C6.
+    const choices = p.choices;
+    let best: string | undefined;
+    let bestP = Infinity;
+    for (const o of options) {
+      const e = choices.find((c) => c.tone === o.key)?.perpetrator;
+      const pr = darknessPressure(e?.darknessLevelBump, e?.trustDelta, e?.personalityShift);
+      if (pr < bestP) {
+        best = o.key;
+        bestP = pr;
+      }
+    }
+    if (best) return best;
+  }
+  if (domain === 'meeting' && Array.isArray(p?.options)) {
+    // 면담도 같은 축 — 인격(자비·강직·온정)을 깎는 냉정한 답이 장래 흑화를 키운다. 따뜻·신뢰 답을 고른다.
+    const mopts = p.options;
+    let best: string | undefined;
+    let bestP = Infinity;
+    for (const o of options) {
+      const e = mopts.find((m) => m.key === o.key)?.effects;
+      const pr = darknessPressure(e?.darkness, e?.trust, e?.persona);
+      if (pr < bestP) {
+        best = o.key;
+        bestP = pr;
+      }
+    }
+    if (best) return best;
+  }
   return options[Math.floor(rand() * options.length)].key;
+}
+
+// 면담 효과의 흑화 관련 부분(구조적 읽기 — meetingSystem MeetingEffect 미러).
+type MeetingEffectLike = {
+  darkness?: number;
+  trust?: number;
+  persona?: Partial<Record<string, number>>;
+};
+
+// 한 선택의 "흑화 압력" — 낮을수록 선한 양육. darknessScore 구동축(자비·강직↑=선, 야망↑=악, 직접
+// 흑화창은 절대 회피). 도덕(perpetrator)·면담(meeting effects) 공용. docs/13 darknessScore 미러.
+function darknessPressure(
+  levelBump: number | undefined,
+  trust: number | undefined,
+  persona: Partial<Record<string, number>> | undefined,
+): number {
+  return (
+    (levelBump ?? 0) * 1000 - // 직접 흑화 단계 +N 은 무조건 회피
+    (persona?.mercy ?? 0) * 0.6 -
+    (persona?.integrity ?? 0) * 0.4 -
+    (persona?.warmth ?? 0) * 0.2 +
+    (persona?.ambition ?? 0) * 0.3 -
+    (trust ?? 0) * 0.1
+  );
 }
 
 // ── 올랜덤 플레이: 매일 호출 ──────────────────────────────────────────────
