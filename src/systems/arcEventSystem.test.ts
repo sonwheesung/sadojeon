@@ -270,8 +270,8 @@ describe('졸업 게이트 — 빚진 하산 이벤트 남으면 졸업 보류 (
   });
 });
 
-describe('해소(arc) — 효과 적용 + arcChoices 기록 + 항목 제거', () => {
-  it('선택 → 인격 변동 + 기록 + 서신함 제거', async () => {
+describe('해소(arc) — 효과 적용 + arcChoices 기록 + 보관(resolved, docs/37 R45)', () => {
+  it('선택 → 인격 변동 + 기록 + 서신함 보관(삭제 아님)', async () => {
     seed(mk({ status: 'training', personality: { ...NEUTRAL } }));
     triggerArcEvents();
     const item = useInboxStore.getState().items.find((it) => it.id === 'arc-han-baram-y1')!;
@@ -287,18 +287,22 @@ describe('해소(arc) — 효과 적용 + arcChoices 기록 + 항목 제거', ()
     // 기록 1건(연차1).
     expect(d.arcChoices).toHaveLength(1);
     expect(d.arcChoices![0]).toMatchObject({ year: 1, eventId: 'arc-han-baram-y1', choiceKey: 'free' });
-    // 서신함에서 제거.
-    expect(useInboxStore.getState().items.find((it) => it.id === 'arc-han-baram-y1')).toBeUndefined();
+    // 보관 모델: 삭제가 아니라 resolved 표시로 남는다('지난 서신').
+    const stored = useInboxStore.getState().items.find((it) => it.id === 'arc-han-baram-y1');
+    expect(stored?.resolved).toBe(true);
   });
 
-  it('해소 후 같은 해 재지급 안 됨(기록 기반)', async () => {
+  it('해소 후 같은 해 재지급 안 됨(기록 기반) — 새 미해소 arc 0', async () => {
     seed(mk({ status: 'training' }));
     triggerArcEvents();
     const item = useInboxStore.getState().items.find((it) => it.id === 'arc-han-baram-y1')!;
     await resolveInboxItem(item, 'bring');
     triggerArcEvents();
-    const arc = useInboxStore.getState().items.filter((it) => (it.payload as { domain?: string })?.domain === 'arc');
-    expect(arc).toHaveLength(0);
+    // 보관건(resolved)은 남지만, 새 미해소 arc 는 재지급되지 않는다.
+    const unresolvedArc = useInboxStore
+      .getState()
+      .items.filter((it) => (it.payload as { domain?: string })?.domain === 'arc' && !it.resolved);
+    expect(unresolvedArc).toHaveLength(0);
   });
 });
 

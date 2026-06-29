@@ -238,7 +238,9 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
     }
   }
 
-  useInboxStore.getState().remove(item.id);
-  // 해소 결과(효과·서신함 제거)를 즉시 DB에 반영.
+  // 처리 = 보관(삭제 아님). resolved 표시로 '지난 서신'에 남겨 과거 대화·결정을 다시 읽게 한다.
+  // 보관건은 상세 재진입 시 읽기 전용([id].tsx respondable 가드) — 효과 중복 적용 차단. docs/12·37 R45.
+  useInboxStore.getState().markResolved(item.id);
+  // 해소 결과(효과·서신함 보관)를 즉시 DB에 반영.
   saveCurrentRunSilently();
 }

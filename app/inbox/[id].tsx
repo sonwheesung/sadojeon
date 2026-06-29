@@ -105,7 +105,7 @@ const PRIORITY_LABEL: Record<InboxItem['priority'], string> = {
 export default function InboxDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useInboxStore((s) => s.items.find((it) => it.id === id));
-  const remove = useInboxStore((s) => s.remove);
+  const markResolved = useInboxStore((s) => s.markResolved);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -123,14 +123,15 @@ export default function InboxDetailScreen() {
     );
   }
 
-  const respondable = isRespondable(item);
+  // 보관건(resolved)은 읽기 전용 — 재응답 차단(효과 중복 적용 방지, docs/12·37 R45).
+  const respondable = isRespondable(item) && !item.resolved;
   const options = respondable ? responseOptionsFor(item) : [];
 
   const onRespond = async () => {
     if (busy) return;
     if (!respondable) {
-      // 읽기 전용 항목 — 확인 = 처리 = 삭제(삭제 버튼 없음, 적체 방지).
-      remove(item.id);
+      // 읽기 전용/보관건 — 확인 = 처리 = 보관(현재→지난, 삭제 아님). 이미 보관됐으면 그냥 닫기.
+      if (!item.resolved) markResolved(item.id);
       router.back();
       return;
     }
@@ -181,7 +182,8 @@ export default function InboxDetailScreen() {
 // ─── Header ────────────────────────────────────────────────────────────────
 
 function Header({ item }: { item: InboxItem }) {
-  const action = KIND_ACTION[item.kind];
+  // 보관건(resolved)은 행동 배지 숨김 — 이미 처리됨(목록과 일관, docs/37 R45).
+  const action = item.resolved ? undefined : KIND_ACTION[item.kind];
   return (
     <View style={styles.header}>
       <Pressable

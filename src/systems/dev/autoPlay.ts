@@ -100,6 +100,7 @@ async function resolveAll(emit: (e: AutoPlayEvent) => void, policy: PlayPolicy):
   // 항목 스냅샷(해소가 목록을 바꾼다).
   const items = [...useInboxStore.getState().items];
   for (const item of items) {
+    if (item.resolved) continue; // 보관건은 재해소 금지(효과 중복 — 보관 모델, docs/37 R45)
     if (!isRespondable(item)) continue;
     const opts = responseOptionsFor(item).filter((o) => !o.disabled);
     if (opts.length === 0) continue;

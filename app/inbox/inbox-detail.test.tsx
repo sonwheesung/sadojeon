@@ -32,6 +32,7 @@ jest.mock('@/systems/inboxResolve', () => ({
 
 const back = router.back as jest.Mock;
 const remove = jest.fn();
+const markResolved = jest.fn();
 let items: InboxItem[] = [];
 
 function setItem(item: InboxItem | null) {
@@ -77,7 +78,7 @@ function rumorItem(): InboxItem {
 }
 
 beforeEach(() => {
-  [back, remove].forEach((m) => m.mockReset());
+  [back, remove, markResolved].forEach((m) => m.mockReset());
   (resolveInboxItem as jest.Mock).mockReset().mockResolvedValue(undefined);
   // 빌더는 실모듈(스토어 import 깊음)을 끌어오지 않게 화면이 쓰는 분기만 재현.
   (isRespondable as jest.Mock).mockImplementation(
@@ -88,8 +89,8 @@ beforeEach(() => {
     return Object.entries(responses).map(([key, label]) => ({ key, label }));
   });
   (useInboxStore as unknown as jest.Mock).mockImplementation(
-    (sel: (s: { items: InboxItem[]; remove: jest.Mock }) => unknown) =>
-      sel({ items, remove }),
+    (sel: (s: { items: InboxItem[]; remove: jest.Mock; markResolved: jest.Mock }) => unknown) =>
+      sel({ items, remove, markResolved }),
   );
   setItem(oneLinerItem());
 });
@@ -138,13 +139,15 @@ describe('InboxDetailScreen — 응답형(한마디) 해소', () => {
     );
   });
 
-  it('응답형은 읽기 전용 remove 경로를 타지 않는다(resolve 실패 시 remove 미호출)', async () => {
+  it('응답형은 읽기 전용 보관 경로를 타지 않는다(resolve 실패 시 markResolved 미호출)', async () => {
     (resolveInboxItem as jest.Mock).mockRejectedValueOnce(new Error('fail'));
     const user = userEvent.setup();
     const { getByText } = await render(<InboxDetailScreen />);
     await user.press(getByText('잘 견뎠다'));
     await user.press(getByText('응답하기 ▶'));
     await waitFor(() => expect(resolveInboxItem).toHaveBeenCalledTimes(1));
+    // 보관(markResolved)은 성공한 resolveInboxItem 내부에서만 — 화면이 직접 호출하지 않음.
+    expect(markResolved).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
     // 실패 → 자동 back 안 함(미해소 back 방지).
     expect(back).not.toHaveBeenCalled();
@@ -176,13 +179,39 @@ describe('InboxDetailScreen — 읽기 전용(풍문) 확인', () => {
     expect(queryByText('응답 선택')).toBeNull();
   });
 
-  it('확인 → resolveInboxItem 없이 remove(id) + back', async () => {
+  it('확인 → resolveInboxItem 없이 markResolved(id) 보관 + back (삭제 아님)', async () => {
     const user = userEvent.setup();
     const { getByText } = await render(<InboxDetailScreen />);
     await user.press(getByText('확인 ▶'));
-    expect(remove).toHaveBeenCalledTimes(1);
-    expect(remove).toHaveBeenCalledWith('itm1');
+    expect(markResolved).toHaveBeenCalledTimes(1);
+    expect(markResolved).toHaveBeenCalledWith('itm1');
+    expect(remove).not.toHaveBeenCalled(); // 처리=보관, 삭제 아님(docs/37 R45)
     expect(resolveInboxItem).not.toHaveBeenCalled();
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 보관건(resolved) 재진입 — 응답형이라도 읽기 전용이어야 한다(효과 중복 적용 차단, docs/37 R45).
+describe('InboxDetailScreen — 보관건(resolved) 읽기 전용', () => {
+  beforeEach(() => {
+    const it = oneLinerItem();
+    it.resolved = true; // 이미 처리·보관된 한 마디
+    setItem(it);
+  });
+
+  it('보관건은 응답 선택지 없이 "확인"만 — 응답형이어도 재응답 불가', async () => {
+    const { getByText, queryByText } = await render(<InboxDetailScreen />);
+    expect(getByText('확인 ▶')).toBeTruthy();
+    expect(queryByText('응답 선택')).toBeNull();
+    expect(queryByText('잘 견뎠다')).toBeNull(); // 한 마디 선택지 미렌더
+  });
+
+  it('보관건 확인 → resolveInboxItem·markResolved 둘 다 미호출(중복 적용/재보관 없음) + back', async () => {
+    const user = userEvent.setup();
+    const { getByText } = await render(<InboxDetailScreen />);
+    await user.press(getByText('확인 ▶'));
+    expect(resolveInboxItem).not.toHaveBeenCalled();
+    expect(markResolved).not.toHaveBeenCalled(); // 이미 resolved — 재보관 안 함
     expect(back).toHaveBeenCalledTimes(1);
   });
 });

@@ -8,16 +8,16 @@ import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { colors, spacing, typography } from '@/theme';
-import { isDecisionKind, type InboxItem, type InboxKind } from '@/types';
+import { type InboxItem, type InboxKind } from '@/types';
 
 // 서신함 — 헤더 봉투 아이콘으로 진입하는 스택(모달) 라우트.
 // docs/12_인박스_면담.md "응답 필요 여부" 매핑.
 // (필터 탭·모두 읽음은 제거 — 전체 목록 단일 뷰, 2026-06-10.)
 // 현재/지난 탭 2분할(2026-06-29, docs/12·49 C6) — 처리한 서신이 새 서신을 묻던 적체 차단.
-// 현재(활성) = 아직 안 처리(미해소 결정형 또는 안 읽음). 지난 = 처리 완료(resolved 또는 읽은 정보성).
-// 삭제가 아니라 보관 — '지난' 탭에서 과거 대화 다시 열람(캐릭터 기록 보존).
+// 보관 모델(docs/37 R45): 처리(응답/확인)하면 삭제가 아니라 resolved 로 보관 → '지난'으로 이동.
+// 현재 = 아직 안 처리(!resolved). 지난 = 처리 완료(resolved)만. read(읽음)≠처리 — 판정에 안 씀.
 function isActiveItem(it: InboxItem): boolean {
-  return !it.read || (isDecisionKind(it.kind) && !it.resolved);
+  return !it.resolved;
 }
 
 type InboxTab = 'active' | 'past';

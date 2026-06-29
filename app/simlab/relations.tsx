@@ -119,6 +119,7 @@ export default function RelationsSimScreen() {
         if (usePendingStore.getState().settlement) usePendingStore.getState().clearSettlement();
         const inbox = useInboxStore.getState();
         for (const item of [...inbox.items]) {
+          if (item.resolved) continue; // 보관건 재해소 금지(보관 모델, docs/37 R45)
           const dom = (item.payload as { domain?: string } | undefined)?.domain ?? item.kind;
           events[dom] = (events[dom] ?? 0) + 1;
           if (isRespondable(item)) {
