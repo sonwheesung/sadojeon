@@ -18,8 +18,9 @@ jest.mock('@/systems/inboxResolve', () => ({
 import InboxDetailScreen from './[id]';
 import { moralToInbox } from '@/systems/eventInbox';
 import { resolveInboxItem } from '@/systems/inboxResolve';
+import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
-import type { PendingMoralEvent } from '@/types';
+import type { Disciple, PendingMoralEvent } from '@/types';
 
 // {name}/{sibling} 라벨을 가진 도덕 사건을 실제 적재 경로(moralToInbox)로 서신함에 넣는다.
 function seedMoral(): string {
@@ -67,5 +68,21 @@ describe('서신함 상세 — 도덕 사건 선택지 라벨(실 렌더, R40)',
       expect.objectContaining({ id: mockParams.current.id }),
       'admonish',
     );
+  });
+});
+
+// 발신자 칸 사각(docs/37 ⑪ 화면표시텍스트, docs/12·49 C6): 제목엔 제자명이 있는데
+// 발화/관련 제자 칸이 '—'로 비던 버그. getSenderName 이 discipleId(payload·필드)로
+// 실명을 조회하지 않아 letter/visit/diplomacy 외 전부 '—'였다. 이 테스트가 사각을 닫는다.
+describe('서신함 상세 — 발신자 칸 제자 실명 조회(C6)', () => {
+  it('discipleId 를 가진 사건은 관련/발화 제자 칸에 실명이 렌더된다(— 아님)', async () => {
+    // 사건의 payload.discipleId = 'i-cheongha' 에 해당하는 제자를 store 에 시드.
+    useDiscipleStore.setState({
+      disciples: { 'i-cheongha': { id: 'i-cheongha', name: '이청하' } as Disciple },
+    });
+    const { getAllByText } = await render(<InboxDetailScreen />);
+    // SenderPanel MetaRow value + RelatedDisciplePanel relatedName 두 곳에 정확히 '이청하' 노드.
+    // (제목 '이청하 — 사건'·본문은 부분문자열이라 exact getByText 에 안 걸림 → 칸 값만 집계)
+    expect(getAllByText('이청하').length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
+import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import {
   isRespondable,
@@ -58,6 +59,15 @@ const SENDER_LABEL_BY_KIND: Record<InboxKind, string> = {
   system: '시스템',
 };
 
+// 제자 발신/대상 종류는 식별표(typed discipleId 또는 payload.discipleId)를 들고 있다.
+// one_liner·event는 payload, meeting_request·complaint는 전용 필드.
+function discipleIdOf(item: InboxItem): string | undefined {
+  if (item.kind === 'meeting_request') return item.discipleId;
+  if (item.kind === 'complaint') return item.discipleId;
+  const pid = item.payload?.discipleId;
+  return typeof pid === 'string' ? pid : undefined;
+}
+
 function getSenderName(item: InboxItem): string {
   switch (item.kind) {
     case 'letter':
@@ -66,8 +76,15 @@ function getSenderName(item: InboxItem): string {
       return item.visitorName;
     case 'diplomacy':
       return item.fromFaction;
-    default:
+    default: {
+      // 제자 발신/대상이면 실명 조회(제목엔 이름이 있는데 칸이 비던 표시 사각 — docs/12·49 C6).
+      const id = discipleIdOf(item);
+      if (id) {
+        const d = useDiscipleStore.getState().disciples[id];
+        if (d) return d.name;
+      }
       return '—';
+    }
   }
 }
 
