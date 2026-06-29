@@ -13,12 +13,14 @@ import { isDecisionKind, type InboxItem, type InboxKind } from '@/types';
 // 서신함 — 헤더 봉투 아이콘으로 진입하는 스택(모달) 라우트.
 // docs/12_인박스_면담.md "응답 필요 여부" 매핑.
 // (필터 탭·모두 읽음은 제거 — 전체 목록 단일 뷰, 2026-06-10.)
-// 활성/지난 2분할(2026-06-29, docs/12·49 C6) — 처리한 서신이 새 서신을 묻던 적체 차단.
-// 활성 = 아직 안 처리(미해소 결정형 또는 안 읽음). 지난 = 처리 완료(resolved 또는 읽은 정보성).
-// 삭제가 아니라 보관 — '지난 서신' 접이식에서 과거 대화 다시 열람(캐릭터 기록 보존).
+// 현재/지난 탭 2분할(2026-06-29, docs/12·49 C6) — 처리한 서신이 새 서신을 묻던 적체 차단.
+// 현재(활성) = 아직 안 처리(미해소 결정형 또는 안 읽음). 지난 = 처리 완료(resolved 또는 읽은 정보성).
+// 삭제가 아니라 보관 — '지난' 탭에서 과거 대화 다시 열람(캐릭터 기록 보존).
 function isActiveItem(it: InboxItem): boolean {
   return !it.read || (isDecisionKind(it.kind) && !it.resolved);
 }
+
+type InboxTab = 'active' | 'past';
 const KIND_LABEL: Record<InboxKind, string> = {
   event: '이벤트',
   one_liner: '한마디',
@@ -59,21 +61,25 @@ export default function InboxScreen() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
   const markRead = useInboxStore((s) => s.markRead);
-  const [showPast, setShowPast] = useState(false);
+  const [tab, setTab] = useState<InboxTab>('active');
 
   const onPressItem = (it: InboxItem) => {
     if (!it.read) markRead(it.id);
     router.push(`/inbox/${encodeURIComponent(it.id)}` as Href);
   };
 
-  // 원래 순서(최신순) 보존하며 활성/지난 분리.
+  // 원래 순서(최신순) 보존하며 현재/지난 분리.
   const active = items.filter(isActiveItem);
   const past = items.filter((it) => !isActiveItem(it));
+  const shown = tab === 'active' ? active : past;
 
   return (
     <SafetyZone variant="modal" background={colors.background}>
       <PaperCard>
         <Header />
+        {items.length > 0 && (
+          <TabBar tab={tab} activeCount={active.length} pastCount={past.length} onSelect={setTab} />
+        )}
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
@@ -81,38 +87,50 @@ export default function InboxScreen() {
         >
           {items.length === 0 ? (
             <EmptyState />
+          ) : shown.length === 0 ? (
+            <TabEmpty tab={tab} />
           ) : (
-            <>
-              {active.length === 0 ? (
-                <ActiveEmpty />
-              ) : (
-                active.map((it) => (
-                  <InboxRow key={it.id} item={it} today={totalDay} onPress={() => onPressItem(it)} />
-                ))
-              )}
-              {past.length > 0 && (
-                <>
-                  <Pressable
-                    onPress={() => setShowPast((v) => !v)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`지난 서신 ${past.length}건 ${showPast ? '접기' : '펼치기'}`}
-                    style={styles.pastToggle}
-                  >
-                    <Text style={styles.pastToggleLabel}>
-                      {showPast ? '▾' : '▸'} 지난 서신 ({past.length})
-                    </Text>
-                  </Pressable>
-                  {showPast &&
-                    past.map((it) => (
-                      <InboxRow key={it.id} item={it} today={totalDay} onPress={() => onPressItem(it)} />
-                    ))}
-                </>
-              )}
-            </>
+            shown.map((it) => (
+              <InboxRow key={it.id} item={it} today={totalDay} onPress={() => onPressItem(it)} />
+            ))
           )}
         </ScrollView>
       </PaperCard>
     </SafetyZone>
+  );
+}
+
+// 현재/지난 세그먼트 탭 — 같은 모달 라우트 안에서 목록만 전환(처리한 서신이 새 서신에 안 섞임).
+function TabBar({
+  tab,
+  activeCount,
+  pastCount,
+  onSelect,
+}: {
+  tab: InboxTab;
+  activeCount: number;
+  pastCount: number;
+  onSelect: (t: InboxTab) => void;
+}) {
+  return (
+    <View style={styles.tabBar}>
+      <TabButton label={`현재 (${activeCount})`} selected={tab === 'active'} onPress={() => onSelect('active')} />
+      <TabButton label={`지난 (${pastCount})`} selected={tab === 'past'} onPress={() => onSelect('past')} />
+    </View>
+  );
+}
+
+function TabButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      style={[styles.tabButton, selected && styles.tabButtonSelected]}
+    >
+      <Text style={[styles.tabLabel, selected && styles.tabLabelSelected]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -215,11 +233,13 @@ function EmptyState() {
   );
 }
 
-// 활성은 비었지만 지난 서신은 있을 때 — 다 처리했음을 알린다.
-function ActiveEmpty() {
+// 선택된 탭이 비었을 때 — 탭별 안내(현재=다 처리함 / 지난=아직 보관된 게 없음).
+function TabEmpty({ tab }: { tab: InboxTab }) {
   return (
     <View style={styles.activeEmpty}>
-      <Text style={styles.emptyLabel}>처리할 서신이 없습니다.</Text>
+      <Text style={styles.emptyLabel}>
+        {tab === 'active' ? '처리할 서신이 없습니다.' : '지난 서신이 없습니다.'}
+      </Text>
     </View>
   );
 }
@@ -373,19 +393,35 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
 
-  // 지난 서신 접이식 토글
-  pastToggle: {
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.inkSoft,
-    borderStyle: 'dashed',
+  // 현재/지난 세그먼트 탭
+  tabBar: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.xs,
   },
-  pastToggleLabel: {
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.inkSoft,
+    borderRadius: 4,
+  },
+  tabButtonSelected: {
+    borderStyle: 'solid',
+    borderColor: colors.ink,
+    backgroundColor: colors.paperBright,
+  },
+  tabLabel: {
     fontFamily: typography.serifMedium,
     fontSize: typography.sizes.sm,
     color: colors.inkSoft,
     letterSpacing: typography.letterSpacing.wide,
+  },
+  tabLabelSelected: {
+    fontFamily: typography.serifBold,
+    color: colors.ink,
   },
 });
