@@ -1,4 +1,5 @@
 import { router, type Href } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components/common/PaperCard';
@@ -7,11 +8,17 @@ import { useTutorialOnFocus } from '@/hooks/useTutorialOnFocus';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { colors, spacing, typography } from '@/theme';
-import type { InboxItem, InboxKind } from '@/types';
+import { isDecisionKind, type InboxItem, type InboxKind } from '@/types';
 
 // 서신함 — 헤더 봉투 아이콘으로 진입하는 스택(모달) 라우트.
 // docs/12_인박스_면담.md "응답 필요 여부" 매핑.
 // (필터 탭·모두 읽음은 제거 — 전체 목록 단일 뷰, 2026-06-10.)
+// 활성/지난 2분할(2026-06-29, docs/12·49 C6) — 처리한 서신이 새 서신을 묻던 적체 차단.
+// 활성 = 아직 안 처리(미해소 결정형 또는 안 읽음). 지난 = 처리 완료(resolved 또는 읽은 정보성).
+// 삭제가 아니라 보관 — '지난 서신' 접이식에서 과거 대화 다시 열람(캐릭터 기록 보존).
+function isActiveItem(it: InboxItem): boolean {
+  return !it.read || (isDecisionKind(it.kind) && !it.resolved);
+}
 const KIND_LABEL: Record<InboxKind, string> = {
   event: '이벤트',
   one_liner: '한마디',
@@ -52,11 +59,16 @@ export default function InboxScreen() {
   const totalDay = useTimeStore((s) => s.totalDay);
   const items = useInboxStore((s) => s.items);
   const markRead = useInboxStore((s) => s.markRead);
+  const [showPast, setShowPast] = useState(false);
 
   const onPressItem = (it: InboxItem) => {
     if (!it.read) markRead(it.id);
     router.push(`/inbox/${encodeURIComponent(it.id)}` as Href);
   };
+
+  // 원래 순서(최신순) 보존하며 활성/지난 분리.
+  const active = items.filter(isActiveItem);
+  const past = items.filter((it) => !isActiveItem(it));
 
   return (
     <SafetyZone variant="modal" background={colors.background}>
@@ -70,14 +82,33 @@ export default function InboxScreen() {
           {items.length === 0 ? (
             <EmptyState />
           ) : (
-            items.map((it) => (
-              <InboxRow
-                key={it.id}
-                item={it}
-                today={totalDay}
-                onPress={() => onPressItem(it)}
-              />
-            ))
+            <>
+              {active.length === 0 ? (
+                <ActiveEmpty />
+              ) : (
+                active.map((it) => (
+                  <InboxRow key={it.id} item={it} today={totalDay} onPress={() => onPressItem(it)} />
+                ))
+              )}
+              {past.length > 0 && (
+                <>
+                  <Pressable
+                    onPress={() => setShowPast((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`지난 서신 ${past.length}건 ${showPast ? '접기' : '펼치기'}`}
+                    style={styles.pastToggle}
+                  >
+                    <Text style={styles.pastToggleLabel}>
+                      {showPast ? '▾' : '▸'} 지난 서신 ({past.length})
+                    </Text>
+                  </Pressable>
+                  {showPast &&
+                    past.map((it) => (
+                      <InboxRow key={it.id} item={it} today={totalDay} onPress={() => onPressItem(it)} />
+                    ))}
+                </>
+              )}
+            </>
           )}
         </ScrollView>
       </PaperCard>
@@ -123,7 +154,8 @@ function InboxRow({
   today: number;
   onPress: () => void;
 }) {
-  const action = KIND_ACTION[item.kind];
+  // 해소된 건 '응답 필요' 등 행동 배지를 숨긴다(이미 처리 — 지난 서신에서 오해 방지).
+  const action = item.resolved ? undefined : KIND_ACTION[item.kind];
   const dateLabel = relativeDayLabel(today - item.createdAtDay);
   return (
     <Pressable
@@ -179,6 +211,15 @@ function EmptyState() {
   return (
     <View style={styles.empty}>
       <Text style={styles.emptyLabel}>서신함이 비어 있습니다.</Text>
+    </View>
+  );
+}
+
+// 활성은 비었지만 지난 서신은 있을 때 — 다 처리했음을 알린다.
+function ActiveEmpty() {
+  return (
+    <View style={styles.activeEmpty}>
+      <Text style={styles.emptyLabel}>처리할 서신이 없습니다.</Text>
     </View>
   );
 }
@@ -322,9 +363,29 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     alignItems: 'center',
   },
+  activeEmpty: {
+    paddingVertical: spacing.base,
+    alignItems: 'center',
+  },
   emptyLabel: {
     fontFamily: typography.serif,
     fontSize: typography.sizes.sm,
     color: colors.inkSoft,
+  },
+
+  // 지난 서신 접이식 토글
+  pastToggle: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.inkSoft,
+    borderStyle: 'dashed',
+  },
+  pastToggleLabel: {
+    fontFamily: typography.serifMedium,
+    fontSize: typography.sizes.sm,
+    color: colors.inkSoft,
+    letterSpacing: typography.letterSpacing.wide,
   },
 });
