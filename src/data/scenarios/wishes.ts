@@ -104,3 +104,27 @@ export const WISHES: WishTemplate[] = [
 export function pickRandomWish(): WishTemplate {
   return WISHES[Math.floor(random() * WISHES.length)];
 }
+
+// 허락 시 그날 1일 일탈 효과 — kind 기준 분기. acceptActivity 는 autonomy 가 외출·자율수련을
+// 겹쳐 부정확하므로 kind(6종)로 가른다. docs/12 §1.5「허락 효과 매핑」.
+// override = healing(회복)·seclusion(집중) 1일 / stress = 기분전환(외출). 신규 kind 추가 시
+// 아래 switch 가 미반환으로 컴파일 에러(누락 가드) + 불변식 테스트가 'none' 을 잡는다.
+// (순수 함수 — 스토어·LLM 무의존이라 데이터 모듈에 둬 단위 테스트가 가볍다.)
+export type WishGrant =
+  | { kind: 'override'; command: 'healing' | 'seclusion'; days: number }
+  | { kind: 'stress'; delta: number }
+  | { kind: 'none' };
+
+export function wishGrantFor(wishKind: WishKind): WishGrant {
+  switch (wishKind) {
+    case 'rest':
+      return { kind: 'override', command: 'healing', days: 1 }; // 회복
+    case 'meditation':
+    case 'study':
+    case 'pair_training':
+    case 'extra_training':
+      return { kind: 'override', command: 'seclusion', days: 1 }; // 집중(×1.5)
+    case 'town_visit':
+      return { kind: 'stress', delta: -12 }; // 외출 = 기분전환
+  }
+}

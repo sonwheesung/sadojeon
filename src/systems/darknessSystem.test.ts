@@ -156,7 +156,9 @@ function highScore(): Partial<Disciple> {
   return { stress: 100, personality: { integrity: 0, freedom: 50, warmth: 50, prudence: 50, mercy: 0, ambition: 100 } };
 }
 function omenBody(): string | undefined {
-  return useInboxStore.getState().items.find((i) => i.id.startsWith('darkomen-'))?.body;
+  // items 는 InboxItem 유니온(일부 멤버는 body 없음) — 'body' in 으로 좁힌다.
+  const it = useInboxStore.getState().items.find((i) => i.id.startsWith('darkomen-'));
+  return it && 'body' in it ? it.body : undefined;
 }
 describe('tickDarkness — 흉조 서신 조사(받침 없는 이름)', () => {
   it('레벨2 흉조 — "이청하가 홀로"(정상), "이청하이"(깨짐) 아님', () => {

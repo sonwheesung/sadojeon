@@ -6,7 +6,7 @@
 // 신뢰 ↑, 무관심에 상처받는 제자에 거절 → 신뢰 폭락 등. LLM 가 trustMul 보정.
 
 import { random } from '@/systems/rng';
-import { pickRandomWish, WISHES, type WishTemplate } from '@/data/scenarios/wishes';
+import { pickRandomWish, wishGrantFor, WISHES, type WishTemplate } from '@/data/scenarios/wishes';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
@@ -159,9 +159,14 @@ async function resolveWishInner(
     useDiscipleStore.getState().adjustTrust(pending.discipleId, trustDelta);
   }
 
-  // 허락 시 활동 매핑 (현재 rest 만 1일 issueOverride).
-  if (decision === 'accept' && tpl.acceptActivity === 'rest') {
-    issueOverride(pending.discipleId, 'healing', 1);
+  // 허락 시 청 종류별 그날 일탈 효과 — kind 기준(docs/12 §1.5 매핑). 신뢰 변동과 별개로 추가 적용.
+  if (decision === 'accept') {
+    const grant = wishGrantFor(tpl.kind);
+    if (grant.kind === 'override') {
+      issueOverride(pending.discipleId, grant.command, grant.days);
+    } else if (grant.kind === 'stress') {
+      useDiscipleStore.getState().adjustStress(pending.discipleId, grant.delta);
+    }
   }
 
   // 응답 결과 화면 X — 응답 직후 모달 닫힘. 디버그는 정산 모달 누적.
