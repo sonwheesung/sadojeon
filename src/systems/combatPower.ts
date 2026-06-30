@@ -3,6 +3,7 @@
 // 핵심: 깊이 > 넓이. 1성은 기여 ≈ 0, 익힌 무공 전체가 순위 감쇠로 합산(키트 빌딩, 수집 무효).
 
 import { findMartialArt } from '@/data/martialArts';
+import { josa } from '@/utils/korean';
 import type { Disciple, MartialArtGrade, MartialPath } from '@/types';
 import { type Realm, REALM_ORDER } from '@/types/realm';
 
@@ -127,5 +128,5 @@ export function combatRumor(d: Disciple): string {
   if (p >= expected * 1.6) return `${base} 중에서도 손꼽힌다`;
   if (p >= expected * 1.1) return `${base}의 윗자리에 든다`;
   if (p >= expected * 0.6) return `여느 ${base}만 하다`;
-  return `${base}이라 하나 아직 영글지 않았다`;
+  return `${josa(base, '이라', '라')} 하나 아직 영글지 않았다`;
 }

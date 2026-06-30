@@ -148,3 +148,31 @@ describe('tickDarkness — 상승/회복 분기와 부수효과 분리', () => {
     expect(useDiscipleStore.getState().disciples['clean'].darknessLevel).toBe(0); // 무영향
   });
 });
+
+// ── 흉조 서신 조사(사각 ⑪ — 화면 표시 텍스트 미검증) ────────────────────────
+// OMEN 레벨 2·4가 주격조사를 하드코딩 "이"로 박아, 받침 없는 이름(이청하·진소화)이면 "이청하이 홀로"로
+// 깨졌다(올바른 건 "이청하가"). 기존 테스트는 영문 id('d')·레벨1("의" 불변)만 거쳐 못 잡았다. docs/37 R51.
+function highScore(): Partial<Disciple> {
+  return { stress: 100, personality: { integrity: 0, freedom: 50, warmth: 50, prudence: 50, mercy: 0, ambition: 100 } };
+}
+function omenBody(): string | undefined {
+  return useInboxStore.getState().items.find((i) => i.id.startsWith('darkomen-'))?.body;
+}
+describe('tickDarkness — 흉조 서신 조사(받침 없는 이름)', () => {
+  it('레벨2 흉조 — "이청하가 홀로"(정상), "이청하이"(깨짐) 아님', () => {
+    seed(mk('이청하', { darknessLevel: 1, darknessResist: 0, ...highScore() }));
+    useSectAtmosphereStore.getState().set({ righteousness: 0, unity: 0 });
+    tickDarkness();
+    expect(useDiscipleStore.getState().disciples['이청하'].darknessLevel).toBe(2);
+    expect(omenBody()).toContain('이청하가 홀로');
+    expect(omenBody()).not.toContain('이청하이');
+  });
+  it('레벨4 흉조 — "이청하가 무언가"(정상), "이청하이" 아님', () => {
+    seed(mk('이청하', { darknessLevel: 3, darknessResist: 0, ...highScore() }));
+    useSectAtmosphereStore.getState().set({ righteousness: 0, unity: 0 });
+    tickDarkness();
+    expect(useDiscipleStore.getState().disciples['이청하'].darknessLevel).toBe(4);
+    expect(omenBody()).toContain('이청하가 무언가');
+    expect(omenBody()).not.toContain('이청하이');
+  });
+});

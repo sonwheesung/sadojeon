@@ -11,6 +11,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { josa } from '@/utils/korean';
 import type { DarknessLevel, Disciple } from '@/types';
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -64,9 +65,9 @@ export function redeemDarkness(d: Pick<Disciple, 'darknessLevel' | 'darknessResi
 
 const OMEN: Record<number, (name: string) => string> = {
   1: (n) => `${n}의 눈빛이 요즘 부쩍 차갑다는 말이 동문들 사이에 돈다.`,
-  2: (n) => `${n}이 홀로 있는 시간이 부쩍 늘었다. 좀처럼 곁을 주지 않는다 한다.`,
+  2: (n) => `${josa(n, '이', '가')} 홀로 있는 시간이 부쩍 늘었다. 좀처럼 곁을 주지 않는다 한다.`,
   3: (n) => `${n}의 검에 전에 없던 살기가 어린다는 수군거림이 있다.`,
-  4: (n) => `${n}이 무언가 돌이키기 어려운 자리까지 가 있는 듯하다.`,
+  4: (n) => `${josa(n, '이', '가')} 무언가 돌이키기 어려운 자리까지 가 있는 듯하다.`,
 };
 
 function pushOmen(name: string, level: number, day: number): void {
