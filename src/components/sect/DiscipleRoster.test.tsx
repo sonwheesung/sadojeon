@@ -129,6 +129,20 @@ describe('DiscipleRoster — 상태/파견 라벨', () => {
     expect(getByText('파견중')).toBeTruthy();
   });
 
+  // R47 형제: 채집·연단은 override 없이 status 만 세팅 → override 만 보던 비활성(흐림+오버레이) 처리가
+  // 빠지던 누수. status 기반으로 onLeave 판정해 접근성 라벨에 "— <짧은라벨> 중" 이 붙어야 한다("파견중 중" 중복 없이).
+  it.each([
+    ['questing', '파견'],
+    ['crafting', '연단'],
+  ] as const)('override 없이 status=%s → 비활성 처리(접근성 "— %s 중")', async (status, short) => {
+    discipleState.order = ['d1'];
+    discipleState.disciples = {
+      d1: baseDisciple({ id: 'd1', name: '서진', status: status as Disciple['status'] }),
+    };
+    const { getByLabelText } = await render(<DiscipleRoster />);
+    expect(getByLabelText(`서진 상세 — ${short} 중`)).toBeTruthy();
+  });
+
   it('override(폐관) 진행 중 → 명령 라벨 + 남은 일수, 카드 접근성 라벨에 "중" 표기', async () => {
     discipleState.order = ['d1'];
     discipleState.disciples = { d1: baseDisciple({ id: 'd1', name: '유운' }) };

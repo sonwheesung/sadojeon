@@ -85,9 +85,19 @@ export function DailyChoiceModal({ visible, onCancel, onConfirm }: Props) {
     for (const id of order) {
       const d = disciples[id];
       if (!d) continue;
-      if (d.status === 'graduated' || d.status === 'departed') continue;
+      // 그날 수련에 참여하지 않는 제자는 고를 게 없어 제외 — tickDailyTraining 의 제외 집합과 동일하게.
+      // 졸업·하산뿐 아니라 파견(의뢰/채집/출행=questing)·연단(crafting)·부상(injured)도 빠진다.
+      // 이들은 override 없이 status 만 직접 세팅돼(activity/expedition/quest 보드·alchemy·wound) override 검사로는 못 걸렀다(R47).
+      if (
+        d.status === 'graduated' ||
+        d.status === 'departed' ||
+        d.status === 'questing' ||
+        d.status === 'crafting' ||
+        d.status === 'injured'
+      )
+        continue;
       const ov = activeOverrideOf(id);
-      if (ov && ov.command !== 'default') continue; // 임시명령 = 카테고리 무시
+      if (ov && ov.command !== 'default') continue; // 폐관 등 임시명령 = 카테고리 자동, 선택 불필요
       const cat = categoryFor(sched, id, target);
       if (cat === 'rest') continue;
 

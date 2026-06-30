@@ -191,6 +191,27 @@ describe('DailyChoiceModal — 제외 규칙', () => {
     expect(getByText('진소화')).toBeTruthy();
     expect(queryByText('장철')).toBeNull();
   });
+
+  // R47: 파견(채집·출행=questing)·연단(crafting)·부상(injured)은 override 없이 status 만 직접 세팅된다.
+  // tickDailyTraining 이 이들을 수련에서 제외하므로 모달도 행으로 보이면 안 된다(고른 종목이 조용히 무시됨 = 사각 ⑪).
+  it.each(['questing', 'crafting', 'injured'] as const)(
+    'override 없이 status=%s 인 제자 제외 — 행으로 안 나온다(고를 게 없음)',
+    async (status) => {
+      setup({
+        order: ['d1', 'd2'],
+        disciples: {
+          d1: disciple('d1', '장철', { status }),
+          d2: disciple('d2', '진소화'),
+        },
+        patterns: { d1: patternWith('physical'), d2: patternWith('physical') },
+      });
+      const { getByText, queryByText } = await render(
+        <DailyChoiceModal visible onCancel={onCancel} onConfirm={onConfirm} />,
+      );
+      expect(getByText('진소화')).toBeTruthy();
+      expect(queryByText('장철')).toBeNull();
+    },
+  );
 });
 
 describe('DailyChoiceModal — 무공일 대련 상대 선택지', () => {

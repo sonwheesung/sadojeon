@@ -29,6 +29,15 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   departed: '하산',
 };
 
+// 자리를 비운 상태 → 카드 오버레이/접근성용 짧은 라벨("…중"이 따로 붙으므로 "중" 없이).
+// override 라벨(OVERRIDE_LABEL=의뢰/폐관/치료)과 같은 결. STATUS_LABEL 은 "…중"이 박혀 그대로 못 쓴다.
+const STATUS_LEAVE_LABEL: Partial<Record<DiscipleStatus, string>> = {
+  questing: '파견',
+  crafting: '연단',
+  injured: '치료',
+  meditating: '폐관',
+};
+
 function mainArtLabel(d: Disciple): string {
   const main = d.mainMartialArtId
     ? d.martialArts.find((a) => a.artId === d.mainMartialArtId)
@@ -76,8 +85,20 @@ export function DiscipleRoster() {
             ov && totalDay < ov.startedAtDay + ov.durationDays
               ? ov.startedAtDay + ov.durationDays - totalDay
               : 0;
-          const onLeave = !!ov && remaining > 0 && ov.command !== 'default';
-          const statusLine = onLeave
+          const overrideLeave = !!ov && remaining > 0 && ov.command !== 'default';
+          // 파견(채집·출행=questing)·연단(crafting)·치료(injured)·폐관(meditating)은 override 없이 status 만
+          // 세팅될 수 있다(activity/expedition/quest 보드·alchemy·wound). 그래도 자리를 비운 것이니 override 의뢰와
+          // 동일하게 비활성(흐림+오버레이) 처리한다 — override 만 보던 누수 닫음(R47 형제).
+          const statusLeave =
+            d.status === 'questing' ||
+            d.status === 'crafting' ||
+            d.status === 'injured' ||
+            d.status === 'meditating';
+          const onLeave = overrideLeave || statusLeave;
+          const leaveLabel = overrideLeave
+            ? OVERRIDE_LABEL[ov!.command]
+            : STATUS_LEAVE_LABEL[d.status] ?? '';
+          const statusLine = overrideLeave
             ? `${OVERRIDE_LABEL[ov!.command]} (${remaining}일)`
             : STATUS_LABEL[d.status];
           return (
@@ -86,7 +107,7 @@ export function DiscipleRoster() {
               d={d}
               statusLine={statusLine}
               onLeave={onLeave}
-              leaveLabel={onLeave ? OVERRIDE_LABEL[ov!.command] : ''}
+              leaveLabel={onLeave ? leaveLabel : ''}
               badges={dailyBadges[id] ?? []}
             />
           );
