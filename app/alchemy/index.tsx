@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useReducer } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useConfirm } from '@/components/common/ConfirmDialog';
@@ -14,14 +13,11 @@ import {
 } from '@/data/elixirs';
 import {
   ALCHEMY_LAB_BUILD_COST,
+  ALCHEMY_LAB_ID,
   buildAlchemyLab,
   canCraft,
   consumeInternalElixir,
-  hasAlchemyLab,
-  hasLearned,
-  isLabOperational,
   learnRecipe,
-  listActiveCrafts,
   listMaterials,
   sellElixir,
   startCraft,
@@ -29,6 +25,7 @@ import {
 import { healWound, listWounded, treatableElixirsFor, woundLabel, woundsOf } from '@/systems/woundSystem';
 import { consumeAnsinElixir, hasAnsinElixir, listUnstable } from '@/systems/simmaSystem';
 import { triggerTutorial } from '@/systems/tutorialSystem';
+import { useAlchemyStore } from '@/stores/alchemyStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -38,7 +35,8 @@ import { colors, radius, spacing, typography } from '@/theme';
 
 // 연단실 — 영약 제조 화면(그레이박스). 사문 탭 → 연단실 진입.
 // 연단실 건설 → 비급 학습 → 재료로 제조(제자 점유) → 보유 영단 복용/판매. docs/04·28.
-// 연단 상태는 모듈 상태라 행동 후 force() 로 새로고침(추후 store 영속).
+// 모든 연단 상태는 store 영속(sect.facilities·useAlchemyStore·itemStore). 화면은 그 store들을
+// 반응형 구독(useStore selector)하므로, 건설·학습·제조 등 변경 시 자동 리렌더된다(force() 불필요).
 
 const CATEGORY_LABEL: Record<ElixirRecipe['category'], string> = {
   heal: '치료',
@@ -56,17 +54,20 @@ function coin(copper: number): string {
 
 export default function AlchemyScreen() {
   const confirm = useConfirm();
-  const [, force] = useReducer((x: number) => x + 1, 0);
 
+  // 화면이 읽는 store를 전부 반응형 구독 → 건설·학습·제조 등 변경 시 자동 리렌더(force() 폐기).
   const resources = useSectStore((s) => s.sect?.resources ?? 0);
+  const facilities = useSectStore((s) => s.sect?.facilities);
   const items = useItemStore((s) => s.items);
   const order = useDiscipleStore((s) => s.order);
   const disciples = useDiscipleStore((s) => s.disciples);
   const today = useTimeStore((s) => s.totalDay);
+  const learnedRecipes = useAlchemyStore((s) => s.learnedRecipes);
+  const activeCrafts = useAlchemyStore((s) => s.activeCrafts);
+  const operational = useAlchemyStore((s) => s.labOperational);
 
-  const built = hasAlchemyLab();
-  const operational = isLabOperational();
-  const crafts = listActiveCrafts();
+  const built = (facilities ?? []).some((f) => f.id === ALCHEMY_LAB_ID);
+  const crafts = Object.entries(activeCrafts).map(([discipleId, j]) => ({ discipleId, recipeId: j.recipeId, until: j.until }));
   const mats = listMaterials();
   const roster: Disciple[] = order.map((id) => disciples[id]).filter((d): d is Disciple => Boolean(d));
   const idleAlchemists = roster
@@ -85,7 +86,6 @@ export default function AlchemyScreen() {
     });
     if (ok && buildAlchemyLab()) {
       triggerTutorial('alchemy'); // 연단실을 처음 지었을 때 — 연단 안내(계정 1회). docs/44
-      force();
     }
   };
 
@@ -97,7 +97,6 @@ export default function AlchemyScreen() {
     });
     if (ok) {
       learnRecipe(recipe.id);
-      force();
     }
   };
 
@@ -109,14 +108,13 @@ export default function AlchemyScreen() {
       message: `${crafter.name}이(가) ${recipe.name}을(를) ${recipe.craftDays}일간 연단합니다. 그동안 다른 일은 못 합니다.`,
       confirmLabel: '연단',
     });
-    if (ok && startCraft(crafter.id, recipe.id)) force();
+    if (ok) startCraft(crafter.id, recipe.id);
   };
 
   const onSell = (recipeId: string, name: string) => async () => {
     const ok = await confirm({ title: '영단 판매', message: `${name} 1과를 마을에 팝니다.`, confirmLabel: '판매' });
     if (ok) {
       sellElixir(recipeId, 1);
-      force();
     }
   };
 
@@ -126,7 +124,7 @@ export default function AlchemyScreen() {
       message: `${name}의 상처에 ${elixirName}을(를) 씁니다.`,
       confirmLabel: '치료',
     });
-    if (ok && healWound(discipleId, recipeId)) force();
+    if (ok) healWound(discipleId, recipeId);
   };
 
   const onCalm = (discipleId: string, name: string) => async () => {
@@ -135,7 +133,7 @@ export default function AlchemyScreen() {
       message: `${name}에게 안신단을 써 심마를 가라앉히고 내상을 다스립니다.`,
       confirmLabel: '복용',
     });
-    if (ok && consumeAnsinElixir(discipleId)) force();
+    if (ok) consumeAnsinElixir(discipleId);
   };
 
   const onConsume = (recipeId: string, name: string) => async () => {
@@ -149,7 +147,7 @@ export default function AlchemyScreen() {
       message: `${target.name}이(가) ${name}을(를) 복용해 흡수에 들어갑니다(흡수 중 다른 영단 복용 불가).`,
       confirmLabel: '복용',
     });
-    if (ok && consumeInternalElixir(target.id, recipeId)) force();
+    if (ok) consumeInternalElixir(target.id, recipeId);
   };
 
   return (
@@ -295,7 +293,7 @@ export default function AlchemyScreen() {
           {/* 연단 비급 */}
           <SectionLabel>연단 비급 (배운 것만 제조)</SectionLabel>
           {ELIXIR_RECIPES.map((r) => {
-            const learned = hasLearned(r.id);
+            const learned = learnedRecipes.includes(r.id);
             const craftable = built && idleAlchemists.some((d) => canCraft(d.id, r.id));
             const matsText = r.materials.map((m) => `${MATERIAL_LABEL[m.id] ?? m.id}×${m.qty}`).join(', ');
             return (

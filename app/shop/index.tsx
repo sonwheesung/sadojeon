@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useReducer, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useConfirm } from '@/components/common/ConfirmDialog';
@@ -7,10 +7,11 @@ import { PaperCard } from '@/components/common/PaperCard';
 import { SafetyZone } from '@/components/common/SafetyZone';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { productsOfShop, type ShopId, type ShopProduct } from '@/data/shop';
-import { canAfford, isSoldOut, priceOf, purchase, type PurchaseResult } from '@/systems/shopSystem';
+import { canAfford, priceOf, purchase, type PurchaseResult } from '@/systems/shopSystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useSectStore } from '@/stores/sectStore';
+import { useShopStore } from '@/stores/shopStore';
 import type { Disciple } from '@/types';
 import { coin } from '@/utils/money';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -29,15 +30,16 @@ const RESULT_MSG: Record<PurchaseResult, string> = {
 
 export default function ShopScreen() {
   const confirm = useConfirm();
-  const [, force] = useReducer((x: number) => x + 1, 0);
   const [tab, setTab] = useState<ShopId>('diamond');
   const [msg, setMsg] = useState<string>('');
   const [pickFor, setPickFor] = useState<ShopProduct | null>(null); // 특성 부여 대상 제자 선택 중인 상품
 
+  // 화면이 읽는 store를 전부 반응형 구독 → 구매(한정 매진·재화 차감) 시 자동 리렌더(force() 폐기).
   const diamonds = useGameStore((s) => s.diamonds);
   const resources = useSectStore((s) => s.sect?.resources ?? 0);
   const order = useDiscipleStore((s) => s.order);
   const disciples = useDiscipleStore((s) => s.disciples);
+  const boughtLimited = useShopStore((s) => s.boughtLimited);
   const roster: Disciple[] = order.map((id) => disciples[id]).filter((d): d is Disciple => Boolean(d));
 
   const products = productsOfShop(tab);
@@ -54,7 +56,6 @@ export default function ShopScreen() {
     const result = purchase(p.id, target ? { discipleId: target.id } : undefined);
     setMsg(`${p.title} — ${RESULT_MSG[result]}`);
     setPickFor(null);
-    force();
   };
 
   const onBuy = (p: ShopProduct) => () => {
@@ -114,7 +115,7 @@ export default function ShopScreen() {
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
           <SectionLabel>{tab === 'diamond' ? '프리미엄 (다이아)' : '사문 (자금)'}</SectionLabel>
           {products.map((p) => {
-            const soldOut = isSoldOut(p);
+            const soldOut = Boolean(p.limited) && boughtLimited.includes(p.id);
             const afford = canAfford(p);
             const disabled = p.comingSoon || soldOut || !afford;
             const priceText = p.currency === 'diamond' ? `다이아 ${priceOf(p)}` : coin(priceOf(p));

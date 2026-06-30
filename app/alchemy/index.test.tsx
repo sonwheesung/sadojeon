@@ -16,6 +16,7 @@ import { useSectStore } from '@/stores/sectStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { useAlchemyStore } from '@/stores/alchemyStore';
 
 // ── 무거운/네이티브 래퍼는 패스스루로 격리(화면 로직만 본다) ──
 jest.mock('@/components/common/SafetyZone', () => ({ SafetyZone: ({ children }: any) => children }));
@@ -29,14 +30,11 @@ jest.mock('expo-router', () => ({ router: { back: jest.fn() } }));
 // ── 화면이 직접 부르는 시스템 모듈(상수는 유지, 함수만 mock) ──
 jest.mock('@/systems/alchemySystem', () => ({
   ALCHEMY_LAB_BUILD_COST: 3000,
+  ALCHEMY_LAB_ID: 'alchemy-lab',
   buildAlchemyLab: jest.fn(),
   canCraft: jest.fn(),
   consumeInternalElixir: jest.fn(),
-  hasAlchemyLab: jest.fn(),
-  hasLearned: jest.fn(),
-  isLabOperational: jest.fn(),
   learnRecipe: jest.fn(),
-  listActiveCrafts: jest.fn(),
   listMaterials: jest.fn(),
   sellElixir: jest.fn(),
   startCraft: jest.fn(),
@@ -54,10 +52,13 @@ jest.mock('@/systems/simmaSystem', () => ({
   listUnstable: jest.fn(),
 }));
 // 스토어는 factory mock(실제 모듈 로드 차단 — persistStorage→AsyncStorage 네이티브 의존 회피).
+// ⚠️ R46: 화면은 이 store들을 **반응형 구독**해 표시값을 파생한다(명령형 getState read 아님).
+//        그래서 표시 상태(건설·학습·진행·가동)는 systems mock 이 아니라 **store 상태 주입**으로 몬다.
 jest.mock('@/stores/sectStore', () => ({ useSectStore: jest.fn() }));
 jest.mock('@/stores/itemStore', () => ({ useItemStore: jest.fn() }));
 jest.mock('@/stores/discipleStore', () => ({ useDiscipleStore: jest.fn() }));
 jest.mock('@/stores/timeStore', () => ({ useTimeStore: jest.fn() }));
+jest.mock('@/stores/alchemyStore', () => ({ useAlchemyStore: jest.fn() }));
 
 // 데이터는 실제(ELIXIR_RECIPES) 사용 — 레시피 이름/카테고리로 버튼을 찾는다.
 
@@ -66,15 +67,23 @@ const W = wounds as jest.Mocked<typeof wounds>;
 const S = simma as jest.Mocked<typeof simma>;
 
 // ── 스토어 셀렉터 상태 주입 ──
-interface SectState { sect: { resources: number } | null }
+interface SectState { sect: { resources: number; facilities: { id: string }[] } | null }
 interface ItemState { items: any[] }
 interface DiscState { order: string[]; disciples: Record<string, any> }
 interface TimeState { totalDay: number }
+interface AlchemyState {
+  learnedRecipes: string[];
+  activeCrafts: Record<string, { recipeId: string; until: number }>;
+  labOperational: boolean;
+}
+
+const LAB = { id: 'alchemy-lab' }; // 연단실 시설 — facilities 에 들어 있으면 built
 
 let sectState: SectState;
 let itemState: ItemState;
 let discState: DiscState;
 let timeState: TimeState;
+let alchemyState: AlchemyState;
 
 function makeDisciple(over: any = {}) {
   return {
@@ -91,11 +100,8 @@ beforeEach(() => {
   jest.clearAllMocks();
 
   // 기본: 연단실 없음·미가동·진행없음·재료없음·부상없음·불안정없음·미학습.
-  A.hasAlchemyLab.mockReturnValue(false);
-  A.isLabOperational.mockReturnValue(false);
-  A.listActiveCrafts.mockReturnValue([]);
+  // (건설·가동·진행·학습 표시는 store 상태에서 파생 — 아래 alchemyState/sectState.facilities 로 몬다.)
   A.listMaterials.mockReturnValue([]);
-  A.hasLearned.mockReturnValue(false);
   A.canCraft.mockReturnValue(false);
   A.buildAlchemyLab.mockReturnValue(true);
   A.startCraft.mockReturnValue(true);
@@ -109,15 +115,17 @@ beforeEach(() => {
   S.hasAnsinElixir.mockReturnValue(false);
   S.consumeAnsinElixir.mockReturnValue(true);
 
-  sectState = { sect: { resources: 5000 } };
+  sectState = { sect: { resources: 5000, facilities: [] } };
   itemState = { items: [] };
   discState = { order: [], disciples: {} };
   timeState = { totalDay: 100 };
+  alchemyState = { learnedRecipes: [], activeCrafts: {}, labOperational: false };
 
   (useSectStore as unknown as jest.Mock).mockImplementation((sel: any) => sel(sectState));
   (useItemStore as unknown as jest.Mock).mockImplementation((sel: any) => sel(itemState));
   (useDiscipleStore as unknown as jest.Mock).mockImplementation((sel: any) => sel(discState));
   (useTimeStore as unknown as jest.Mock).mockImplementation((sel: any) => sel(timeState));
+  (useAlchemyStore as unknown as jest.Mock).mockImplementation((sel: any) => sel(alchemyState));
 });
 
 function renderScreen() {
@@ -137,7 +145,7 @@ async function confirmDialog(user: ReturnType<typeof userEvent.setup>, getByText
 // ─────────────────────────────────────────────────────────────────────────────
 describe('연단실 건설 (onBuild → buildAlchemyLab)', () => {
   it('연단실 없음 + 자금 충분 → 건설 확정 시 buildAlchemyLab 1회 호출', async () => {
-    sectState = { sect: { resources: 5000 } }; // ≥ 3000
+    sectState = { sect: { resources: 5000, facilities: [] } }; // ≥ 3000, 연단실 없음
     const user = userEvent.setup();
     const { getByText } = await renderScreen();
     await user.press(getByText(/건설 \(/));
@@ -146,7 +154,7 @@ describe('연단실 건설 (onBuild → buildAlchemyLab)', () => {
   });
 
   it('자금 부족(<3000) → 건설 버튼 비활성·확인창 안 뜸·buildAlchemyLab 미호출', async () => {
-    sectState = { sect: { resources: 2999 } };
+    sectState = { sect: { resources: 2999, facilities: [] } };
     const user = userEvent.setup();
     const { getByText, queryByText } = await renderScreen();
     await user.press(getByText(/건설 \(/));
@@ -155,7 +163,7 @@ describe('연단실 건설 (onBuild → buildAlchemyLab)', () => {
   });
 
   it('건설 확인창에서 취소 → buildAlchemyLab 미호출', async () => {
-    sectState = { sect: { resources: 5000 } };
+    sectState = { sect: { resources: 5000, facilities: [] } };
     const user = userEvent.setup();
     const { getByText } = await renderScreen();
     await user.press(getByText(/건설 \(/));
@@ -164,9 +172,9 @@ describe('연단실 건설 (onBuild → buildAlchemyLab)', () => {
     expect(A.buildAlchemyLab).not.toHaveBeenCalled();
   });
 
-  it('이미 연단실 있음 → 건설 버튼 없음, 가동 상태 문구 표시', async () => {
-    A.hasAlchemyLab.mockReturnValue(true);
-    A.isLabOperational.mockReturnValue(true);
+  it('이미 연단실 있음(facilities 에 lab) → 건설 버튼 없음, 가동 상태 문구 표시', async () => {
+    sectState = { sect: { resources: 5000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: [], activeCrafts: {}, labOperational: true };
     const { queryByText, getByText } = await renderScreen();
     expect(queryByText(/건설 \(/)).toBeNull();
     expect(getByText(/연단실 가동/)).toBeTruthy();
@@ -175,7 +183,6 @@ describe('연단실 건설 (onBuild → buildAlchemyLab)', () => {
 
 describe('비급 학습 (onLearn → learnRecipe)', () => {
   it('미학습 레시피 → "학습" 버튼, 확정 시 learnRecipe(id) 1회 호출', async () => {
-    A.hasLearned.mockReturnValue(false);
     const user = userEvent.setup();
     const { getAllByText, getByText } = await renderScreen();
     // 미학습이면 모든 레시피에 학습 버튼이 뜬다 — 첫 번째(벽곡단 byeokgokdan).
@@ -186,7 +193,6 @@ describe('비급 학습 (onLearn → learnRecipe)', () => {
   });
 
   it('학습 취소 → learnRecipe 미호출', async () => {
-    A.hasLearned.mockReturnValue(false);
     const user = userEvent.setup();
     const { getAllByText, getByText } = await renderScreen();
     await user.press(getAllByText('학습')[0]);
@@ -198,9 +204,9 @@ describe('비급 학습 (onLearn → learnRecipe)', () => {
 
 describe('제조 (onCraft → startCraft)', () => {
   it('학습됨 + 제조 가능한 제자 있음 → "연단" 확정 시 startCraft(discipleId, recipeId)', async () => {
-    A.hasAlchemyLab.mockReturnValue(true); // craftable = built && canCraft
-    A.isLabOperational.mockReturnValue(true);
-    A.hasLearned.mockReturnValue(true);
+    // craftable = built && canCraft → built 은 facilities, learned 는 learnedRecipes 에서 파생
+    sectState = { sect: { resources: 5000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: ['byeokgokdan'], activeCrafts: {}, labOperational: true };
     A.canCraft.mockReturnValue(true); // 아무 레시피나 제조 가능으로
     discState = { order: ['d1'], disciples: { d1: makeDisciple() } };
     const user = userEvent.setup();
@@ -212,7 +218,8 @@ describe('제조 (onCraft → startCraft)', () => {
   });
 
   it('학습됐지만 제조 불가(canCraft=false) → 연단 버튼 비활성·startCraft 미호출', async () => {
-    A.hasLearned.mockReturnValue(true);
+    sectState = { sect: { resources: 5000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: ['byeokgokdan'], activeCrafts: {}, labOperational: true };
     A.canCraft.mockReturnValue(false); // 재료부족·미가동·점유 등
     discState = { order: ['d1'], disciples: { d1: makeDisciple() } };
     const user = userEvent.setup();
@@ -222,7 +229,8 @@ describe('제조 (onCraft → startCraft)', () => {
   });
 
   it('가용 제자 자체가 없음(idleAlchemists 빈) → 연단 눌러도 startCraft 미호출', async () => {
-    A.hasLearned.mockReturnValue(true);
+    sectState = { sect: { resources: 5000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: ['byeokgokdan'], activeCrafts: {}, labOperational: true };
     A.canCraft.mockReturnValue(false);
     discState = { order: [], disciples: {} };
     const user = userEvent.setup();
@@ -234,7 +242,7 @@ describe('제조 (onCraft → startCraft)', () => {
 
 describe('진행 중 연단 표시 (listActiveCrafts)', () => {
   it('진행 중 연단이 있으면 "연단 중" 섹션 + 제자·남은 일수 표시', async () => {
-    A.listActiveCrafts.mockReturnValue([{ discipleId: 'd1', recipeId: 'ansin', until: 108 }]);
+    alchemyState = { learnedRecipes: [], activeCrafts: { d1: { recipeId: 'ansin', until: 108 } }, labOperational: true };
     discState = { order: ['d1'], disciples: { d1: makeDisciple() } };
     timeState = { totalDay: 100 };
     const { getByText } = await renderScreen();
@@ -377,5 +385,35 @@ describe('숨은변수 비노출', () => {
     // feedback_hidden_game_state: 불안정은 "기색"으로만, 심마 수치/퍼센트 직접 표시 금지.
     expect(queryByText(/\d+\s*%/)).toBeNull();
     expect(queryByText(/심마\s*\d/)).toBeNull();
+  });
+});
+
+// R46 회귀 — 표시 상태가 **구독 store 값**에서 파생됨을 단언(명령형 getState read + 수동 force() 스테일 차단).
+// 원 버그: 학습·건설 후 store/DB 는 갱신됐는데 화면은 remount 전까지 옛 상태. see-and-tap(docs/49)이 노출.
+// 기존 단위 테스트는 시스템 fn·store 를 전부 mock 고정값으로 둬 "변경 후 표시가 따라오는지"를 못 봤다(사각 ⑪).
+// 이 케이스들은 store 상태만 주입하고 표시를 단언 — 표시가 store 와 분리(옛 명령형 read)면 FAIL.
+describe('표시-스토어 반응형 바인딩 (R46 회귀)', () => {
+  it('learnedRecipes 에 든 레시피만 "연단", 미학습은 "학습" — 표시가 store 에서 파생', async () => {
+    sectState = { sect: { resources: 5000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: ['byeokgokdan'], activeCrafts: {}, labOperational: true };
+    A.canCraft.mockReturnValue(false);
+    discState = { order: ['d1'], disciples: { d1: makeDisciple() } };
+    const { getByText, getAllByText } = await renderScreen();
+    expect(getByText('연단')).toBeTruthy(); // 벽곡단(학습됨) → 연단 버튼
+    expect(getAllByText('학습').length).toBeGreaterThan(0); // 나머지(미학습) → 학습 버튼
+  });
+
+  it('연단실 가동 표시(○)는 facilities + labOperational store 값에서 파생', async () => {
+    sectState = { sect: { resources: 1000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: [], activeCrafts: {}, labOperational: true };
+    const { getByText } = await renderScreen();
+    expect(getByText(/연단실 가동 ○/)).toBeTruthy();
+  });
+
+  it('labOperational=false → 미가동(✕) 문구', async () => {
+    sectState = { sect: { resources: 1000, facilities: [LAB] } };
+    alchemyState = { learnedRecipes: [], activeCrafts: {}, labOperational: false };
+    const { getByText } = await renderScreen();
+    expect(getByText(/연단실 가동 ✕/)).toBeTruthy();
   });
 });
