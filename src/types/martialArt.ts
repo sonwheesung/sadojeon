@@ -61,6 +61,18 @@ export type MartialArtSchool =
 
 export type TalentAxis = 'body' | 'qi' | 'agility' | 'insight' | 'mind';
 
+// 비급 진위 — 입수한 비급 *개체*(코덱스 entry) 속성. 같은 무공도 사본마다 다를 수 있다. docs/05 §감별.
+//  authentic : 진품(기본·대다수)  /  trap : 함정(연구·전수 시 주화입마·흑화)
+//  incomplete: 미완(가르침 한 단계 낮춤 + 강호 탐색 동력)  /  fake : 가품(연구해도 무가치)
+export type ArtAuthenticity = 'authentic' | 'trap' | 'incomplete' | 'fake';
+
+export const ART_AUTHENTICITY_LABEL: Record<ArtAuthenticity, string> = {
+  authentic: '진품',
+  trap: '함정 비급',
+  incomplete: '미완 비급',
+  fake: '가품',
+};
+
 // 무공서 스킬트리 선행조건 — 선행 무공서를 최소 성까지 익혀야 학습 가능. docs/28 §5-2.
 export interface ArtPrerequisite {
   artId: string;
