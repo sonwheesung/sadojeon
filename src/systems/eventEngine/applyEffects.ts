@@ -16,6 +16,7 @@ import type {
 import { applyAlignmentReputation } from '../reputationSystem';
 import { shiftPersona } from '../personaShift';
 import { raiseDarkness } from '../darknessSystem';
+import { fillName } from '@/utils/korean';
 
 const DARKNESS_RISK_ORDER: readonly Disciple['darknessRisk'][] = [
   'low',
@@ -34,10 +35,10 @@ function bumpDarknessRisk(
   return current;
 }
 
+// fillName 경유 — {name}/{sibling} 치환 + 뒤따르는 조사 받침 자동 교정(R52). noteAppend(notes)는
+// 현재 화면 미렌더라 잠재지만, 수동 .replace 의 josa 미교정 형제를 같이 닫는다(축 폐쇄).
 function interpolate(text: string, perp: string, sib?: string): string {
-  return text
-    .replace(/\{name\}/g, perp)
-    .replace(/\{sibling\}/g, sib ?? '동문');
+  return fillName(text, { name: perp, sibling: sib ?? '동문' });
 }
 
 function isActive(d: Disciple): boolean {

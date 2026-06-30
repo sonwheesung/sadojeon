@@ -72,6 +72,36 @@ describe('R40 서신함 선택지 라벨 placeholder 치환', () => {
     opts.forEach((o) => expect(o.label).not.toMatch(/\{(name|sibling)\}/));
   });
 
+  it('R52 — 받침 없는 이름 라벨 조사 교정({sibling}은→"윤소소는", {name}을→"이청하를")', () => {
+    // 옛 수동 .replace 는 조사를 안 고쳐 "윤소소은/윤소소이/이청하을"로 깨졌다(받침 없는 이름).
+    // 기존 R40 케이스는 placeholder 뒤가 공백·"에게"(조사 아님)라 깨짐을 못 잡던 사각.
+    const pending: PendingMoralEvent = {
+      templateId: 'test-josa', tier: 'archetype', category: 'neglect',
+      discipleId: 'i-cheongha', discipleName: '이청하',
+      siblingId: 'yun-soso', siblingName: '윤소소',
+      body: '본문', hint: undefined,
+      choices: [
+        { tone: 'admonish', label: '{sibling}은 끝내 말이 없다.', perpetrator: {} },
+        { tone: 'overlook', label: '{sibling}이 어깨를 감싸 쥔다.', perpetrator: {} },
+        { tone: 'punish', label: '동문들이 {name}을 멀리한다.', perpetrator: {} },
+        { tone: 'seclusion', label: '폐관.', perpetrator: {} },
+      ],
+      createdAtDay: 1,
+    };
+    moralToInbox(pending);
+    const item = useInboxStore.getState().items.find((i) => (i.payload as { domain?: string })?.domain === 'moral');
+    const opts = responseOptionsFor(item!);
+    const byKey = (k: string) => opts.find((o) => o.key === k)!;
+    expect(byKey('admonish').label).toBe('윤소소는 끝내 말이 없다.');
+    expect(byKey('overlook').label).toBe('윤소소가 어깨를 감싸 쥔다.');
+    expect(byKey('punish').label).toBe('동문들이 이청하를 멀리한다.');
+    opts.forEach((o) => {
+      expect(o.label).not.toContain('윤소소은');
+      expect(o.label).not.toContain('윤소소이');
+      expect(o.label).not.toContain('이청하을');
+    });
+  });
+
   it('도덕 이벤트 — 동문 없는(siblingName 미지정) 경우 {sibling}→"동문" 폴백', () => {
     const pending: PendingMoralEvent = {
       templateId: 'test-solo', tier: 'universal', category: 'lie',

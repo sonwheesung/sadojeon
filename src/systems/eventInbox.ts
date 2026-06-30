@@ -1,7 +1,7 @@
 // 진행 중 발생 이벤트 → 서신함 적재 변환기.
 // 모달로 띄우지 않고 inbox 에 쌓는다. payload 에 해소용 정보 보관(추후 서신함에서 응답).
 
-import { josa } from '@/utils/korean';
+import { fillName, josa } from '@/utils/korean';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { reactToSiblingMilestone } from './siblingReactionSystem';
@@ -11,8 +11,10 @@ import { REALM_LABEL } from '@/types/realm';
 
 // 선택지 라벨의 placeholder 치환 — 본문(body)과 동일하게 {name}/{sibling}을 실명으로(R40).
 // 라벨이 raw 로 새면 화면 버튼에 "{sibling} 앞에서…"가 그대로 보인다.
+// fillName 경유 — 뒤따르는 조사(은/는·이/가·을/를)까지 받침으로 자동 교정(R52). 수동 .replace 면
+// "{sibling}은"이 받침 없는 이름에서 "진소화은"으로 깨졌다(올바른 건 "진소화는").
 function fillMoralLabel(text: string, perp: string, sib?: string): string {
-  return text.replace(/\{name\}/g, perp).replace(/\{sibling\}/g, sib ?? '동문');
+  return fillName(text, { name: perp, sibling: sib ?? '동문' });
 }
 
 // 도덕 갈등 이벤트(4선택) → 서신함 'event'(결정 필요).
