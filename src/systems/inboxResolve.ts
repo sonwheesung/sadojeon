@@ -21,6 +21,7 @@ import type { MeetingOption } from '@/data/scenarios/meetings';
 import { resolveMoralChoice } from './moralEventSystem';
 import { counselChoices, mediationChoices, resolveCounsel, resolveMediation } from './mediationSystem';
 import { ambitionChoices, resolveAmbitionConflict } from './ambitionConflictSystem';
+import { factionThreatChoices, resolveFactionThreat } from './reputationSystem';
 import { issueOverride } from './overrideSystem';
 import { saveCurrentRunSilently } from './runSync';
 import { ONE_LINER_TONE_ORDER, respondToOneLiner, type OneLinerTone } from './oneLinerSystem';
@@ -60,7 +61,8 @@ export function isRespondable(item: InboxItem): boolean {
     d === 'meeting' ||
     d === 'mediation' ||
     d === 'counsel' ||
-    d === 'ambition_conflict'
+    d === 'ambition_conflict' ||
+    d === 'faction_threat'
   );
 }
 
@@ -107,6 +109,9 @@ export function responseOptionsFor(item: InboxItem): InboxResponseOption[] {
   }
   if (p.domain === 'ambition_conflict') {
     return ambitionChoices(String(p.aName ?? '한쪽'), String(p.bName ?? '다른 쪽'));
+  }
+  if (p.domain === 'faction_threat') {
+    return factionThreatChoices();
   }
   // quest_event·expedition_event(현장 급보)는 fieldEventStore/FieldEventOverlay 가 선택지를 그리므로
   // inbox 선택지 빌더에선 폐지(docs/37 R24).
@@ -194,6 +199,9 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   } else if (p.domain === 'ambition_conflict') {
     // 동문 야망 충돌 — 사부의 4선택(양보/동맹/격려/무관심). docs/19·33 §4.
     resolveAmbitionConflict(String(p.aId ?? ''), String(p.bId ?? ''), key);
+  } else if (p.domain === 'faction_threat') {
+    // 적대 문파 도전 — 사부의 3선택(대치/화친/방치). 사문 단위 효과. docs/30 §강호 사건.
+    resolveFactionThreat(String(p.factionId ?? ''), key);
   } else if (p.domain === 'counsel') {
     // 상담(1:1) — 그 제자의 인식만 약하게. docs/33 §3.
     resolveCounsel(String(p.subjectId ?? ''), String(p.otherId ?? ''), key);
