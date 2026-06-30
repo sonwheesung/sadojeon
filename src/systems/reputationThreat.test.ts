@@ -9,10 +9,13 @@ import {
   resolveFactionThreat,
 } from './reputationSystem';
 import { FACTIONS } from '@/data/factions';
+import { GANGHOS_TALLY } from '@/data/tallyKeys';
 import { useReputationStore } from '@/stores/reputationStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
+import { useTallyStore } from '@/stores/tallyStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { useRunMetaStore } from '@/stores/runMetaStore';
 
 const FID = FACTIONS[0].id;
 
@@ -27,6 +30,8 @@ beforeEach(() => {
   useInboxStore.setState({ items: [] } as never);
   useSectAtmosphereStore.getState().set({ righteousness: 0, unity: 0 }); // 분위기 범위 ±10 — 0 기준 ±2 가 clamp 안 닿음
   useTimeStore.setState({ totalDay: 10 } as never);
+  useTallyStore.getState().reset();
+  useRunMetaStore.setState({ isTutorialRun: false } as never); // 튜토리얼 회차면 tally bump 무시(업적 오염 방지)
 });
 
 describe('적대 문파 강호 사건 (faction_threat)', () => {
@@ -56,6 +61,9 @@ describe('적대 문파 강호 사건 (faction_threat)', () => {
     resolveFactionThreat(FID, 'appease');
     expect(useReputationStore.getState().sect[FID]).toBe(-45);
     expect(unity()).toBe(u0 - 1);
+    // 업적 적립(원한을 풀다)
+    expect(useTallyStore.getState().n(GANGHOS_TALLY.factionAppease)).toBe(1);
+    expect(useTallyStore.getState().n(GANGHOS_TALLY.factionThreat)).toBe(1);
   });
 
   it('대치(confront) — 평판 -4, 결속(unity) +2', () => {
@@ -64,6 +72,8 @@ describe('적대 문파 강호 사건 (faction_threat)', () => {
     resolveFactionThreat(FID, 'confront');
     expect(useReputationStore.getState().sect[FID]).toBe(-74);
     expect(unity()).toBe(u0 + 2);
+    // 업적 적립(강호의 적과 맞서다)
+    expect(useTallyStore.getState().n(GANGHOS_TALLY.factionConfront)).toBe(1);
   });
 
   it('방치(ignore) — 평판 -3, 결속 -2', () => {

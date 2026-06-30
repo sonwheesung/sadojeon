@@ -59,6 +59,10 @@ export const MIND_TALLY = {
 export const GANGHOS_TALLY = {
   masterAmbush: 'ganghos.masterAmbush', // 압도적 고수(死地) 조우
   deathGround: 'ganghos.deathGround', //  압도적 고수에 맞서(맞선다) 살아 돌아옴
+  // 적대 문파 강호 사건(docs/30 §강호 사건) — 사부 응답 적립.
+  factionThreat: 'ganghos.factionThreat', // 적대 문파 도전을 마주한 횟수(분기 무관)
+  factionConfront: 'ganghos.factionConfront', // 정면 대치
+  factionAppease: 'ganghos.factionAppease', //  화친(원한 풀기)
 } as const;
 
 // 연속 기록(현재값 + 최고값). 끊기면 현재값 0.

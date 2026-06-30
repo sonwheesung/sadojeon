@@ -80,6 +80,9 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'ach-master-ambush', name: '압도적 고수와 마주하다', desc: '행로에서 차원이 다른 고수와 맞닥뜨리다', category: 'ganghos', reward: '다이아 · 도감', check: (c) => c.n(GANGHOS_TALLY.masterAmbush) >= 1 },
   { id: 'ach-death-ground', name: '死地에서 돌아오다', desc: '압도적 고수에 맞서 살아 돌아오다', category: 'ganghos', reward: '칭호 · 다이아', check: (c) => c.n(GANGHOS_TALLY.deathGround) >= 1 },
   { id: 'ach-codex-complete', name: '강호를 두루 알다', desc: '강호 도감의 모든 인물을 만나다', category: 'ganghos', reward: '최고 칭호 · 다이아 다량', check: (c) => c.namedNpcTotal > 0 && c.metNpc >= c.namedNpcTotal },
+  // 적대 문파 강호 사건(docs/30 §강호 사건) — 사부의 응답. resolveFactionThreat 가 GANGHOS_TALLY 적립.
+  { id: 'ach-faction-stand', name: '강호의 적과 맞서다', desc: '적대 문파의 도전에 정면으로 맞서다', category: 'ganghos', reward: '칭호 · 다이아', check: (c) => c.n(GANGHOS_TALLY.factionConfront) >= 1 },
+  { id: 'ach-faction-reconcile', name: '원한을 풀다', desc: '척진 문파와 화친하여 칼끝을 거두게 하다', category: 'ganghos', reward: '다이아 · 도감', check: (c) => c.n(GANGHOS_TALLY.factionAppease) >= 1 },
 
   // ── 직업·졸업 ─────────────────────────────────────────────────────
   { id: 'ach-graduate', name: '강호로', desc: '제자를 처음 하산시키다', category: 'career', reward: '다이아 소량 · 도감', check: (c) => c.graduates.length > 0 },

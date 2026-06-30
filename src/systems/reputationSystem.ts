@@ -5,7 +5,9 @@
 import { josa } from '@/utils/korean';
 import { random } from '@/systems/rng';
 import { FACTIONS, repTier, type RepTier } from '@/data/factions';
+import { GANGHOS_TALLY } from '@/data/tallyKeys';
 import { useInboxStore } from '@/stores/inboxStore';
+import { useTallyStore } from '@/stores/tallyStore';
 import { useReputationStore } from '@/stores/reputationStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useSectAtmosphereStore } from '@/stores/sectAtmosphereStore';
@@ -128,8 +130,11 @@ export function resolveFactionThreat(factionId: string, choice: string): void {
   const name = f?.name ?? '적대 문파';
   const sect = useSectStore.getState();
   const atmo = useSectAtmosphereStore.getState();
+  const tally = useTallyStore.getState();
   const cur = sect.sect?.resources ?? 0;
+  tally.bump(GANGHOS_TALLY.factionThreat); // 도전을 마주한 사실(분기 무관)
   if (choice === 'confront') {
+    tally.bump(GANGHOS_TALLY.factionConfront); // 업적: 강호의 적과 맞서다
     sect.adjustResources(-Math.min(cur, 150));
     atmo.adjust({ unity: 2 });
     adjustSectRep(factionId, -4); // 응수 — 골이 더 깊어짐
@@ -138,6 +143,7 @@ export function resolveFactionThreat(factionId: string, choice: string): void {
       `사문이 ${josa(name, '과', '와')} 정면으로 맞섰다. 본산의 결속은 단단해졌으나, 두 문파의 골은 더 깊어졌다.`,
     );
   } else if (choice === 'appease') {
+    tally.bump(GANGHOS_TALLY.factionAppease); // 업적: 원한을 풀다
     sect.adjustResources(-Math.min(cur, 120));
     adjustSectRep(factionId, 25); // 화친 — 적대 완화
     atmo.adjust({ unity: -1 });
