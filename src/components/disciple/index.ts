@@ -5,3 +5,4 @@ export { DiscipleTodayLog } from './DiscipleTodayLog';
 export { StatGrowthPanel } from './StatGrowthPanel';
 export { MartialTrainingPanel } from './MartialTrainingPanel';
 export { ArcChroniclePanel } from './ArcChroniclePanel';
+export { DiscipleRelationsPanel } from './DiscipleRelationsPanel';

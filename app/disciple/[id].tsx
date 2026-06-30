@@ -7,6 +7,7 @@ import { SectionLabel } from '@/components/common/SectionLabel';
 import {
   ArcChroniclePanel,
   DiscipleHeader,
+  DiscipleRelationsPanel,
   DiscipleStatusPanel,
   DiscipleTodayLog,
   MartialTrainingPanel,
@@ -27,7 +28,7 @@ import { colors, spacing, typography } from '@/theme';
 
 const PLACEHOLDER_MOODS = [
   '마음이 따뜻하다',
-  '사형과 친하다',
+  '동문과 친하다', // 사형/사제 위계 폐기 — 전원 동기 동문(project_peer_cohort_sect)
   '약초를 잘 다룬다',
 ] as const;
 
@@ -84,6 +85,9 @@ export default function DiscipleDetailScreen() {
           {id && <DiscipleTodayLog discipleId={id} />}
           {fromStore && <StatGrowthPanel disciple={fromStore} />}
           <MoodPanel lines={moods} />
+
+          {/* 인연 — 그 제자가 동문을 어떻게 보는가(관계 단계 라벨). docs/33 §7 */}
+          {fromStore && <DiscipleRelationsPanel disciple={fromStore} />}
 
           {/* 걸어온 길 — 필수 이벤트 아크 회고(두루마리 연대기). 선택 기록 있을 때만. docs/47 */}
           {fromStore && <ArcChroniclePanel disciple={fromStore} />}
