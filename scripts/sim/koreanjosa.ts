@@ -6,8 +6,12 @@ import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const root = process.cwd();
-// 보간 `}` 직후의 괄호 조사 템플릿. 한국어 조사쌍만(코드 `}(` 우연 매칭 회피 위해 조사 화이트리스트).
+// 날것 조사 표기 2종(둘 다 동적 단어 뒤 조사를 받침 분기 없이 리터럴로 붙인 것 — josa()/fillName 으로 고칠 것):
+//  ① `(으)로` 식 — 보간 `}` 직후 괄호 조사 템플릿: `}(으)로`·`}(이)가`. (R42 최초 발견분)
+//  ② `을(를)` 식 — 보간 `}` 직후 바른 조사 한쪽 + 괄호 대안: `}을(를)`·`}이(가)`. (R47 사이클서 추가 발견 — ①만 보던 가드 사각)
+// 조사 화이트리스트로 코드의 우연 `}(`·`}식별자(` 매칭을 배제.
 const RAW_PARTICLE = /\}\((으로|로|으|이|가|은|는|을|를|과|와|아|야|이며|이다|이라|으로서|로서|으로써|로써)\)/;
+const RAW_PARTICLE_BARE = /\}(을|를|이|가|은|는|과|와|아|야|으로|로)\((을|를|이|가|은|는|과|와|아|야|으로|로)\)/;
 
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -28,9 +32,9 @@ const violations: string[] = [];
 for (const f of files) {
   const lines = readFileSync(f, 'utf8').split('\n');
   lines.forEach((ln, i) => {
-    if (RAW_PARTICLE.test(ln)) {
-      const m = ln.match(RAW_PARTICLE);
-      violations.push(`${f.replace(root, '.')}:${i + 1}  ${m?.[0]}  — ${ln.trim().slice(0, 80)}`);
+    const m = ln.match(RAW_PARTICLE) ?? ln.match(RAW_PARTICLE_BARE);
+    if (m) {
+      violations.push(`${f.replace(root, '.')}:${i + 1}  ${m[0]}  — ${ln.trim().slice(0, 80)}`);
     }
   });
 }

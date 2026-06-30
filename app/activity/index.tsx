@@ -71,7 +71,7 @@ export default function ActivityHubScreen() {
     if (!region || !gatherGate.ok) return;
     const ok = await confirm({
       title: '채집 파견',
-      message: `${josa(region.name, '으로', '로')} ${partyDisciples.map((d) => d.name).join('·')}을(를) ${region.days}일간 보냅니다.`,
+      message: `${josa(region.name, '으로', '로')} ${josa(partyDisciples.map((d) => d.name).join('·'), '을', '를')} ${region.days}일간 보냅니다.`,
       confirmLabel: '보낸다',
     });
     if (ok && dispatchGather(region.id, party)) {
@@ -84,7 +84,7 @@ export default function ActivityHubScreen() {
     if (!dest || !expGate.ok) return;
     const ok = await confirm({
       title: '강호 출행',
-      message: `${josa(dest.name, '으로', '로')} ${partyDisciples.map((d) => d.name).join('·')}을(를) ${dest.days}일간 내보냅니다. 무엇과 마주칠지는 강호의 뜻입니다.`,
+      message: `${josa(dest.name, '으로', '로')} ${josa(partyDisciples.map((d) => d.name).join('·'), '을', '를')} ${dest.days}일간 내보냅니다. 무엇과 마주칠지는 강호의 뜻입니다.`,
       confirmLabel: '내보낸다',
     });
     if (ok && dispatchExpedition(dest.id, party)) {

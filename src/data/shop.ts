@@ -81,7 +81,11 @@ export const SHOP_PRODUCTS: readonly ShopProduct[] = [
     desc: '심마·주화입마를 가라앉힌다. 마공·상극흡수·고스트레스 빌드의 안전판.',
     grant: { kind: 'item', recipeId: 'ansin', qty: 5 },
   },
-  // 재료 — 골드로 사서 직접 연단(신품 자작 경로). 가격은 materialPrice(단가표)×수량.
+  // 재료 — 골드로 사서 직접 연단(신품 자작 경로). 가격은 materialPrice(단가표)×수량. docs/50 §3-B(일반·속성·진귀·신급).
+  { id: 'mat-herb-common', shop: 'sect', currency: 'gold', price: 0, title: '흔한 약초 (×10)', desc: '기본 연단·치료 재료(벽곡단·금창약 등).', grant: { kind: 'material', materialId: 'herb-common', qty: 10 } },
+  { id: 'mat-herb-fire', shop: 'sect', currency: 'gold', price: 0, title: '화속 영초 (×5)', desc: '화상 치료단 재료.', grant: { kind: 'material', materialId: 'herb-fire', qty: 5 } },
+  { id: 'mat-herb-poison', shop: 'sect', currency: 'gold', price: 0, title: '해독초 (×5)', desc: '중독 치료단 재료.', grant: { kind: 'material', materialId: 'herb-poison', qty: 5 } },
+  { id: 'mat-herb-cold', shop: 'sect', currency: 'gold', price: 0, title: '한설초 (×5)', desc: '동상 치료단 재료.', grant: { kind: 'material', materialId: 'herb-cold', qty: 5 } },
   { id: 'mat-herb-rare', shop: 'sect', currency: 'gold', price: 0, title: '진귀 영초 (×5)', desc: '상급 영단 재료.', grant: { kind: 'material', materialId: 'herb-rare', qty: 5 } },
   { id: 'mat-herb-divine', shop: 'sect', currency: 'gold', price: 0, title: '신품 영초 (×2)', desc: '신급 식물 — 구전대환단(신품 영약) 자작 재료.', grant: { kind: 'material', materialId: 'herb-divine', qty: 2 } },
   { id: 'mat-beast-essence', shop: 'sect', currency: 'gold', price: 0, title: '영물 정수 (×1)', desc: '영물에서 얻는 신급 정수 — 구전대환단 자작의 핵심 게이트.', grant: { kind: 'material', materialId: 'beast-essence', qty: 1 } },

@@ -154,7 +154,7 @@ export function resolveAmbitionConflict(aId: string, bId: string, key: string): 
     playCutscene('ambition_defer', { id: a.id, name: `${a.name}·${b.name}` });
     pushReport(
       `${a.name}·${b.name} — 한 사람이 한 발 물러서다`,
-      `사부가 둘을 갈라 세웠다. ${deferrer.name}이(가) 다른 정점을 향해 길을 틀고, 다른 한 사람은 본래의 꼭대기를 노린다. 같은 자리를 두고 다툴 뻔한 정이 — 다치지 않고 남았다.`,
+      `사부가 둘을 갈라 세웠다. ${josa(deferrer.name, '이', '가')} 다른 정점을 향해 길을 틀고, 다른 한 사람은 본래의 꼭대기를 노린다. 같은 자리를 두고 다툴 뻔한 정이 — 다치지 않고 남았다.`,
     );
   } else if (key === 'ally') {
     // B 동맹 — 한 자리를 함께. 관계 한 단계 호전(→의형제), 신뢰 크게↑. 둘 다 야망 극단이면 균열 위험.

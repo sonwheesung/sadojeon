@@ -7,6 +7,7 @@ import { useOutreachStore } from '@/stores/outreachStore';
 import { useTimeStore } from '@/stores/timeStore';
 import { canOutreach, pendingFor, sendLetter, sendSummon } from '@/systems/masterOutreachSystem';
 import type { LetterTone } from '@/stores/outreachStore';
+import { josa } from '@/utils/korean';
 import { colors, radius, spacing, typography } from '@/theme';
 
 // 사부 개입 모달 — 하산 제자에게 서신(격려·충고·경고)·호출. docs/08.
@@ -41,7 +42,7 @@ export function MasterOutreachModal({
     const label = ACTIONS.find((a) => a.key === key)?.label ?? '전갈';
     const ok = await confirm({
       title: label,
-      message: `${g.name}에게 ${label}을(를) 보냅니다. 전갈이 닿는 데 한 계절이 걸리고, 들을지는 제자의 몫입니다.`,
+      message: `${g.name}에게 ${josa(label, '을', '를')} 보냅니다. 전갈이 닿는 데 한 계절이 걸리고, 들을지는 제자의 몫입니다.`,
       confirmLabel: '보낸다',
     });
     if (!ok) return;

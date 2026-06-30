@@ -4,6 +4,7 @@
 
 import { BLOC_LABEL } from '@/data/worldPowers';
 import { addPower, addTension, getTension, powerEdge } from '@/systems/worldState';
+import { josa } from '@/utils/korean';
 import type { WorldBloc, WorldEvent, WorldState } from '@/types/world';
 
 // rng: () => [0,1). 결정적 시뮬을 위해 주입.
@@ -261,7 +262,7 @@ const war: WorldEventKind = {
     if (phase === 2) return { headline: `${L(a)}·${L(b)} 대전 격화`, sub: '곳곳에서 혈전이 벌어진다' };
     const w = (ev.meta?.winner as WorldBloc) ?? a;
     const l = (ev.meta?.loser as WorldBloc) ?? b;
-    return { headline: `${L(a)}·${L(b)} 대전 결착`, sub: `${L(w)}이(가) ${L(l)}을(를) 꺾고 패권을 쥐었다` };
+    return { headline: `${L(a)}·${L(b)} 대전 결착`, sub: `${josa(L(w), '이', '가')} ${josa(L(l), '을', '를')} 꺾고 패권을 쥐었다` };
   },
   repSwing: (ev) => ({ up: ev.meta?.winner as WorldBloc, down: ev.meta?.loser as WorldBloc }),
 };

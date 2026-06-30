@@ -6,6 +6,7 @@
 //   **즉사 없음**(생존 체인과 일관) — 깊은 내상으로 몸져눕되 죽지는 않는다. 안신단(mind 영약)으로 진정.
 
 import { random } from '@/systems/rng';
+import { josa } from '@/utils/korean';
 import { findMartialArt } from '@/data/martialArts';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
@@ -138,8 +139,8 @@ export function triggerQiDeviation(discipleId: string, severityOverride?: number
     id: `simma-${discipleId}-${day}`, // 이름 아닌 id 로 — 동명 제자·동일 제자 동일 날 충돌·소실 방지(docs/37 형제 사냥)
     kind: 'report',
     title: `${d.name} — 주화입마`,
-    preview: `${d.name}이(가) 수련 중 진기가 역류해 쓰러졌다.`,
-    body: `${d.name}이(가) 운기 중 진기가 거꾸로 흘러 주화입마에 들었다. 내상을 입고 쌓은 내공의 일부가 흩어졌다. 안신단으로 심신을 다스리거나, 시일을 두고 자연히 가라앉기를 기다려야 한다.`,
+    preview: `${josa(d.name, '이', '가')} 수련 중 진기가 역류해 쓰러졌다.`,
+    body: `${josa(d.name, '이', '가')} 운기 중 진기가 거꾸로 흘러 주화입마에 들었다. 내상을 입고 쌓은 내공의 일부가 흩어졌다. 안신단으로 심신을 다스리거나, 시일을 두고 자연히 가라앉기를 기다려야 한다.`,
     priority: 'high',
     createdAtDay: day,
     read: false,

@@ -3,6 +3,7 @@
 // 강제 선택 아님(읽기 전용 보고). 사부가 산에서 지켜보는 풍경.
 
 import { random } from '@/systems/rng';
+import { josa } from '@/utils/korean';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
@@ -81,7 +82,7 @@ export function triggerDailySpar(): void {
     ds.update(striker.id, { stress: clamp((striker.stress ?? 0) + 6) });
     pushReport(
       `${victim.name} — 비무 중 부상`,
-      `${x.name}과(와) ${y.name}이(가) 손을 맞추다 과열됐다. ${striker.name}의 손속이 지나쳐 ${victim.name}이(가) 다쳤다.`,
+      `${josa(x.name, '과', '와')} ${josa(y.name, '이', '가')} 손을 맞추다 과열됐다. ${striker.name}의 손속이 지나쳐 ${josa(victim.name, '이', '가')} 다쳤다.`,
       victim.id,
     );
     return;
@@ -113,7 +114,7 @@ export function triggerDailySpar(): void {
   }
 
   const body = decisive
-    ? `${winner.name}과(와) ${loser.name}이(가) 손을 맞췄다. ${winner.name}의 무위가 한결 위였다. ${loser.name}은(는) 분을 삼키며 물러났다.`
-    : `${winner.name}과(와) ${loser.name}이(가) 막상막하로 겨뤘다. 끝내 ${winner.name}이(가) 반 수 앞섰으나, 둘 다 적잖이 얻은 듯하다.`;
+    ? `${josa(winner.name, '과', '와')} ${josa(loser.name, '이', '가')} 손을 맞췄다. ${winner.name}의 무위가 한결 위였다. ${josa(loser.name, '은', '는')} 분을 삼키며 물러났다.`
+    : `${josa(winner.name, '과', '와')} ${josa(loser.name, '이', '가')} 막상막하로 겨뤘다. 끝내 ${josa(winner.name, '이', '가')} 반 수 앞섰으나, 둘 다 적잖이 얻은 듯하다.`;
   pushReport(`${winner.name} · ${loser.name} — 동문 비무`, body, winner.id);
 }

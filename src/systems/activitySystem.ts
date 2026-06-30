@@ -3,6 +3,7 @@
 // 상처=woundSystem.inflictWound, 결산 서신=pendingStore milestone(=inbox). 강호 출행은 Phase 2.
 
 import { random } from '@/systems/rng';
+import { josa } from '@/utils/korean';
 import { findGatherRegion, GATHER_REGIONS } from '@/data/activities';
 import { MATERIAL_LABEL } from '@/data/elixirs';
 import { useActivityStore } from '@/stores/activityStore';
@@ -135,7 +136,7 @@ function settleGather(act: ActiveActivity): Milestone | null {
       .map(([id, n]) => `${MATERIAL_LABEL[id] ?? id} ×${n}`)
       .join(', ') || '이렇다 할 소득은 없었다';
   const beastNote = region.spiritBeast ? (beastWon ? ' 영물을 베고 영물 정수를 거뒀다.' : ' 영물에 밀려 빈손으로 물러났다.') : '';
-  const hurtNote = hurt.length ? `\n${hurt.join('·')}이(가) 부상을 입고 돌아왔다.` : '';
+  const hurtNote = hurt.length ? `\n${josa(hurt.join('·'), '이', '가')} 부상을 입고 돌아왔다.` : '';
   return {
     id: `act-${act.id}-${act.dueDay}`,
     kind: 'quest', // 파견 결산 — 의뢰와 같은 서신 경로 재사용.

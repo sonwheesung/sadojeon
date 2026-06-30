@@ -286,11 +286,20 @@ export function buildTickArtifacts(
   const entries: DailyLogEntry[] = [];
   const badges: Record<string, DiscipleBadge[]> = {};
 
+  // 짝 대련은 한 사건 — 양쪽 결산에 같은 sparNote 가 실려 일지에 동일 줄 2회가 된다(R49). 공용 1줄로 합친다:
+  // 같은 spar 텍스트(양쪽 이름이 다 든 문장)는 처음 한 번만 싣고, 나머지(스탯·경지 등)는 제자별로 그대로 둔다.
+  const seenSpar = new Set<string>();
   for (const r of reports) {
     const d = disciples[r.discipleId];
     if (!d) continue;
     const name = d.name;
-    entries.push(...buildEntry(r, name));
+    for (const e of buildEntry(r, name)) {
+      if (e.id.endsWith('-spar')) {
+        if (seenSpar.has(e.text)) continue;
+        seenSpar.add(e.text);
+      }
+      entries.push(e);
+    }
     const b = computeBadges(r);
     if (b.length > 0) badges[r.discipleId] = b;
   }

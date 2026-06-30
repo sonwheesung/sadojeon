@@ -45,7 +45,7 @@ function aftermath(r: CombatResult): string[] {
     if (c.state === 'dead') lines.push(`${josa(c.name, '은', '는')} 끝내 일어나지 못했다.`);
     else if (c.state === 'fled') lines.push(`${josa(c.name, '은', '는')} 어둠을 타고 달아났다.`);
     else if (c.wound)
-      lines.push(`${josa(c.name, '이', '가')} ${WOUND_TYPE_LABEL[c.wound.type]}을(를) 입었다.`);
+      lines.push(`${josa(c.name, '이', '가')} ${josa(WOUND_TYPE_LABEL[c.wound.type], '을', '를')} 입었다.`);
     else if (c.state === 'standing' && c.qiFrac <= 0.12)
       lines.push(`${josa(c.name, '은', '는')} 이겼으되 내공이 바닥나 한동안 운기조식이 필요해 보였다.`);
   }

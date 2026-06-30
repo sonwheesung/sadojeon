@@ -610,6 +610,9 @@ export interface OneLinerCtx {
   isWeakest: boolean; // 사문 최약
   saidIds: string[]; // 이미 건넨 특이 대사 id — 중복 배제(같은 특이 대사 2번 금지). docs/12
   recentIds: string[]; // 최근 건넨 한 마디 id(최대 12) — recency 회피("방금 한 말" 임시 배제). docs/12
+  // 사문 전체 최근 발화 id — 서로 다른 제자가 같은 공용 한 마디를 며칠 사이 똑같이 건네는 중복 차단(R50).
+  // recentIds 가 제자 *본인* 이력이라면 이건 사문 *전원* 이력(최근 N개). 없으면 빈 배열로 본다(옵셔널 — 면담 등 다른 ctx 호환).
+  sectRecentIds?: string[];
 }
 
 const RISK_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
@@ -659,9 +662,12 @@ function eligible(t: OneLinerTemplate, c: OneLinerCtx): boolean {
 // recency 회피 — "방금 한 말"(recentIds)은 후보에서 임시로 뺀다. 단 풀이 너무 작아지면(≤3) 무시(고갈 방지).
 // "같은 대사 또 나오네" 체감을 없애는 핵심 레버. 큰 일상 풀과 합쳐 회차당 같은 줄 노출을 크게 낮춘다. docs/12.
 function freshen(pool: OneLinerTemplate[], c: OneLinerCtx): OneLinerTemplate[] {
-  if (pool.length <= 3 || c.recentIds.length === 0) return pool;
-  const fresh = pool.filter((t) => !c.recentIds.includes(t.id));
-  return fresh.length >= 3 ? fresh : pool;
+  // 회피 집합 = 본인 최근(recentIds) ∪ 사문 전체 최근(sectRecentIds). 후자가 "다른 제자가 방금 한 같은 말" 차단.
+  const sect = c.sectRecentIds ?? [];
+  if (pool.length <= 3 || (c.recentIds.length === 0 && sect.length === 0)) return pool;
+  const exclude = new Set([...c.recentIds, ...sect]);
+  const fresh = pool.filter((t) => !exclude.has(t.id));
+  return fresh.length >= 3 ? fresh : pool; // 풀 고갈 방지 — 너무 줄면 회피 무시
 }
 
 // 상황 조건 매처 — 한마디·면담 공용.

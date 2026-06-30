@@ -4,6 +4,7 @@
 // 생존 체인 경로만). 이기면 명성·푼돈 전리품, 지면 부상·스트레스. 숫자 비노출 — 서신 풍경.
 
 import { random } from '@/systems/rng';
+import { josa } from '@/utils/korean';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useSectStore } from '@/stores/sectStore';
@@ -94,8 +95,8 @@ export function triggerDailyRaid(): void {
     id: `raid-${day}-${Math.floor(random() * 1e6)}`,
     kind: 'report',
     title: won ? `${names} — 산길의 습격을 물리치다` : `${names} — 산길에서 봉변`,
-    preview: `${names}이(가) 산길에서 ${raiders.length}인의 무리와 마주쳤다.`,
-    body: `${names}이(가) 바깥일을 보고 돌아오는 산길에서 ${raiders.length}인의 무리와 마주쳤다.\n\n${narrateCombat(r)}${lootNote}`,
+    preview: `${josa(names, '이', '가')} 산길에서 ${raiders.length}인의 무리와 마주쳤다.`,
+    body: `${josa(names, '이', '가')} 바깥일을 보고 돌아오는 산길에서 ${raiders.length}인의 무리와 마주쳤다.\n\n${narrateCombat(r)}${lootNote}`,
     priority: won ? 'normal' : 'high',
     createdAtDay: day,
     read: false,

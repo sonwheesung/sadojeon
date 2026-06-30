@@ -30,6 +30,7 @@ import { useDiscipleStore } from '@/stores/discipleStore';
 import { useItemStore } from '@/stores/itemStore';
 import { useSectStore } from '@/stores/sectStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { josa } from '@/utils/korean';
 import type { Disciple } from '@/types';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -105,7 +106,7 @@ export default function AlchemyScreen() {
     if (!crafter) return;
     const ok = await confirm({
       title: '연단 시작',
-      message: `${crafter.name}이(가) ${recipe.name}을(를) ${recipe.craftDays}일간 연단합니다. 그동안 다른 일은 못 합니다.`,
+      message: `${josa(crafter.name, '이', '가')} ${josa(recipe.name, '을', '를')} ${recipe.craftDays}일간 연단합니다. 그동안 다른 일은 못 합니다.`,
       confirmLabel: '연단',
     });
     if (ok) startCraft(crafter.id, recipe.id);
@@ -121,7 +122,7 @@ export default function AlchemyScreen() {
   const onTreat = (discipleId: string, name: string, recipeId: string, elixirName: string) => async () => {
     const ok = await confirm({
       title: '상처 치료',
-      message: `${name}의 상처에 ${elixirName}을(를) 씁니다.`,
+      message: `${name}의 상처에 ${josa(elixirName, '을', '를')} 씁니다.`,
       confirmLabel: '치료',
     });
     if (ok) healWound(discipleId, recipeId);
@@ -144,7 +145,7 @@ export default function AlchemyScreen() {
     if (!target) return;
     const ok = await confirm({
       title: '내공단 복용',
-      message: `${target.name}이(가) ${name}을(를) 복용해 흡수에 들어갑니다(흡수 중 다른 영단 복용 불가).`,
+      message: `${josa(target.name, '이', '가')} ${josa(name, '을', '를')} 복용해 흡수에 들어갑니다(흡수 중 다른 영단 복용 불가).`,
       confirmLabel: '복용',
     });
     if (ok) consumeInternalElixir(target.id, recipeId);

@@ -9,6 +9,7 @@
 // 7. 종목 lingering 을 내일 fatiguePenalty 로 적재
 
 import { random } from '@/systems/rng';
+import { josa } from '@/utils/korean';
 import {
   findMartialArt,
   EXP_BASE_BY_STAGE,
@@ -749,7 +750,7 @@ function resolveSparRequests(
       partnerReport.category === 'martial' &&
       partnerReport.overrideCommand == null;
     if (!partnerAvailable) {
-      myReport.sparNote = `${me.name}이(가) 대련 상대를 기다렸으나 ${partner?.name ?? '상대'}이(가) 응할 형편이 아니었다 — 홀로 형을 다듬었다.`;
+      myReport.sparNote = `${josa(me.name, '이', '가')} 대련 상대를 기다렸으나 ${josa(partner?.name ?? '상대', '이', '가')} 응할 형편이 아니었다 — 홀로 형을 다듬었다.`;
       continue;
     }
 

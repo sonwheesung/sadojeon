@@ -3,12 +3,27 @@
 
 import { useTimeStore } from '@/stores/timeStore';
 import { useJianghuStore } from '@/stores/jianghuStore';
+import { useInboxStore } from '@/stores/inboxStore';
 import { worldThreat } from './worldSystem';
 import type { Disciple } from '@/types';
 import type { OneLinerCtx } from '@/data/scenarios/oneLiners';
 
 // 강호가 흉흉한가(전쟁·봉기·준동 등 위기도 높음) — 양육 중 제자도 풍문으로 불안. docs/12.
 const JIANGHU_TENSE_THRESHOLD = 0.4;
+
+// 사문 전체에서 최근 건넨 한 마디 id N개(최신순). 서로 다른 제자의 같은 공용 한 마디 중복 차단용(R50).
+// 별도 영속 상태 없이 서신함(최신순 누적)에서 파생 — one_liner 서신의 payload.templateId.
+const SECT_RECENT_ONELINER = 10;
+function sectRecentOneLinerIds(): string[] {
+  const out: string[] = [];
+  for (const it of useInboxStore.getState().items) {
+    if (it.kind !== 'one_liner') continue;
+    const tid = (it.payload as { templateId?: string } | undefined)?.templateId;
+    if (tid) out.push(tid);
+    if (out.length >= SECT_RECENT_ONELINER) break;
+  }
+  return out;
+}
 
 // 현재 나이 = 입문 당시 나이 + (현재 연차 − 입문 연차).
 export function currentAge(d: Disciple): number {
@@ -52,6 +67,7 @@ export function buildDiscipleCtx(d: Disciple, activeOthers: Disciple[]): OneLine
     rivalName,
     isWeakest,
     saidIds: d.saidOneLiners ?? [], // 이미 건넨 특이 대사 — 후보에서 중복 배제용
-    recentIds: d.recentOneLiners ?? [], // 최근 발화 — recency 회피용
+    recentIds: d.recentOneLiners ?? [], // 최근 발화(본인) — recency 회피용
+    sectRecentIds: sectRecentOneLinerIds(), // 사문 전체 최근 발화 — 제자 간 같은 공용 한 마디 중복 차단(R50)
   };
 }
