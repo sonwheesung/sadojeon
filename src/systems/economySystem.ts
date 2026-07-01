@@ -32,8 +32,52 @@ export function monthlyFoodCost(mouths: number): number {
 }
 
 // 후원금 — 사문 명성(reputation 0~100)에 비례. 명망 높을수록 후원 세력이 늘어 더 받는다.
+// 계수 37 = 경계선 시뮬(docs/09, 2026-06~07 n=20)에서 확정한 "인플레↔빈곤" 균형값(구 25의 ×1.5).
+// 연단실(-100/월) 운영 사문의 명성50에서 곳간이 거의 평평(엣지 검증 2026-07-01). patronageMult는 시뮬 레버.
 export function monthlyPatronage(reputation: number): number {
-  return Math.floor(reputation / 10) * 25 * patronageMult; // rep10→25, rep50→125, rep90→225
+  return Math.floor(reputation / 10) * 37 * patronageMult; // rep10→37, rep50→185, rep90→333
+}
+
+// 파산 단계 — 곳간 절대값으로 판정. resources 는 0에서 멈추므로(Math.max(0,…)) 단계는 잔고로만. docs/09.
+export type BankruptcyTier = 'ok' | 'low' | 'poor' | 'broke';
+export function bankruptcyTier(resources: number): BankruptcyTier {
+  if (resources <= 0) return 'broke'; // 파산 — 식비 미납월
+  if (resources < 200) return 'poor'; // 빈곤
+  if (resources < 800) return 'low'; // 부족 — 경고만, 페널티 없음
+  return 'ok'; // 여유
+}
+
+// 파산 페널티 — "굶주림은 힘이 아니라 마음을 친다"(docs/09). 수련 효율은 안 깎는다
+// (의뢰 수입이 제자 실력에 연동 → 수련 malus 면 죽음의 나선). 스트레스·사부신뢰(trustToMaster)에만.
+// 제자를 사문에서 빼지 않는다(중도 자발 하산 미구현 — docs/03). 신뢰 하락은 흑화 압력·양육 등급·
+// (후속) 가출 시스템의 입력이 될 뿐. 회차 종결은 정상 하산·전원 사망으로만.
+function applyBankruptcyPenalties(resources: number): void {
+  const sect = useSectStore.getState();
+  const s = sect.sect;
+  if (!s) return;
+  const tier = bankruptcyTier(resources);
+  const prevStreak = s.bankruptStreak ?? 0;
+  const streak = tier === 'broke' ? prevStreak + 1 : 0;
+  if (streak !== prevStreak) sect.update({ bankruptStreak: streak });
+  if (tier === 'ok' || tier === 'low') return; // 여유·부족 = 페널티 없음(부족은 경고 서신 — 후속)
+
+  const ds = useDiscipleStore.getState();
+  const activeIds = ds.order.filter((id) => {
+    const d = ds.disciples[id];
+    return d != null && d.status !== 'graduated' && d.status !== 'departed';
+  });
+  if (tier === 'poor') {
+    for (const id of activeIds) ds.adjustStress(id, 2); // 빈곤 — 영양 부실 불안
+  } else if (tier === 'broke') {
+    for (const id of activeIds) {
+      ds.adjustStress(id, 4);
+      ds.adjustTrust(id, -2); // 제 한 몸 못 먹이는 사부 — 믿음 균열
+    }
+    if (streak >= 3) {
+      for (const id of activeIds) ds.adjustTrust(id, -2); // 장기파산 — 신뢰 추가 붕괴
+      sect.adjustReputation(-5); // 강호가 "그 사문은 끝났다" 수군
+    }
+  }
 }
 
 // 매월 수지 처리. 식비·후원 반영 후, 연단실 유지비 납부(자금 부족이면 비가동).
@@ -63,4 +107,7 @@ export function tickMonthlyEconomy(): void {
       setLabOperational(false);
     }
   }
+
+  // 4) 파산 단계 페널티 — 월말 잔고로 판정(스트레스·신뢰만, 제자 이탈 없음). docs/09.
+  applyBankruptcyPenalties(useSectStore.getState().sect?.resources ?? 0);
 }

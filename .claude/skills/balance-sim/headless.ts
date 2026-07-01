@@ -941,11 +941,11 @@ async function runEconomySweep(): Promise<void> {
   setAutoSaveEnabled(false);
   const years = Number(process.argv[3] ?? 15);
   const days = years * 336;
-  // 2026-06-10 재조정: 시작자금 50은(5000동) 확정 + 의뢰 보수 ×2.3 상향 반영.
-  // 유지비 70 vs 100 비교(유지비 부담 논의), 보수 배율은 실데이터 그대로(×1).
+  // 2026-07-01 재조정: 시작자금 25은(2500동) 하향 확정(중간 압박, docs/09·34) + 후원 계수 37(구25의 ×1.5) 코드 반영.
+  //   → setPatronageMult(1)이 곧 시프된 ×37. 유지비 70 vs 100 비교, 보수 배율 ×1.
   const FOODS = [20];
   const UPKEEPS = [70, 100];
-  const STARTS = [5000];
+  const STARTS = [2500];
   const REWARDS = [1];
   const RATES = [0.1, 0.25, 0.5]; // 의뢰 가동률 — 가끔/보통/부지런
   const reps = Number(process.argv[4] ?? 5); // 통계 룰(docs/36 §통계 3룰) — 조합당 반복 평균

@@ -80,8 +80,9 @@ function defaultSect(): SectState {
     name: '무명산문',
     hanjaName: '無名山門',
     reputation: 10,
-    resources: 5000, // 50은(=5천 동). 1금=10은=1000동. 금/은/동 환산은 AppHeader. 고정·영구증가 X(업적은 다이아/칭호/콘텐츠만, docs/32). 30금→50은으로 하향(빠듯한 초반). 유지비 재고민 대상.
+    resources: 2500, // 25은(=2.5천 동). 1금=10은=1000동. 금/은/동 환산은 AppHeader. 고정·영구증가 X(업적은 다이아/칭호/콘텐츠만, docs/32). 50은→25은 "중간 압박" 하향(방치 ~2.5년이면 빈곤). docs/09·34.
     facilities: [],
+    bankruptStreak: 0,
   };
 }
 

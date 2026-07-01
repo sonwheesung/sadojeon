@@ -15,6 +15,7 @@ export interface SectState {
   reputation: number;
   resources: number;
   facilities: SectFacility[];
+  bankruptStreak?: number; // 곳간 0 연속 개월(장기파산 판정용, economySystem). 미정의=0. docs/09.
 }
 
 export interface SectFacility {
