@@ -248,6 +248,8 @@ export function tickElixirAbsorb(): void {
   for (const id of ds.order) {
     const d = ds.disciples[id];
     if (!d?.elixirAbsorb) continue;
+    // 사문 떠난 제자(졸업·사망·몰래 하산)는 흡수 동결 — 떠난 뒤 내공이 계속 자라는 누수 차단. docs/51.
+    if (d.status === 'graduated' || d.status === 'departed' || d.status === 'runaway') continue;
     const base = d.realmProgress ?? { internal: 0, pity: 0, petitioned: false };
     const done = today >= d.elixirAbsorb.until;
     // 누적 정밀 — perDay 를 매일 round 하면 소수부(예 3.6)가 매번 올림돼 흡수총량이 설계치를

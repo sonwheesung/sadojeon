@@ -5,9 +5,12 @@
 jest.mock('@/lib/supabase', () => ({ supabase: {}, isSupabaseConfigured: false }));
 
 import { isDisillusioned, tickSecretDeparture, SECRET_DEPARTURE } from './secretDepartureSystem';
+import { checkGraduations } from './graduationSystem';
+import { tickElixirAbsorb } from './alchemySystem';
 import { useDiscipleStore } from '@/stores/discipleStore';
 import { useInboxStore } from '@/stores/inboxStore';
 import { useTimeStore } from '@/stores/timeStore';
+import { useGameStore } from '@/stores/gameStore';
 import type { Disciple } from '@/types';
 
 // 환멸 조건을 채운 제자(선하고 자유로운데 저신뢰·고스트레스로 방치). over 로 한 축씩 깬다.
@@ -118,5 +121,54 @@ describe('tickSecretDeparture — 카운터·발화', () => {
     seed(dis('a', { status: 'injured' }));
     for (let i = 0; i < SECRET_DEPARTURE.DEPART_MONTHS; i += 1) tickSecretDeparture();
     expect(d('a').status).toBe('runaway');
+  });
+
+  it('meditating(폐관 — 몰두 중)은 스킵(안 떠남)', () => {
+    seed(dis('a', { status: 'meditating' }));
+    for (let i = 0; i < SECRET_DEPARTURE.DEPART_MONTHS + 2; i += 1) tickSecretDeparture();
+    expect(d('a').status).toBe('meditating');
+  });
+});
+
+// ── 5렌즈 엣지 ─────────────────────────────────────────────────────────────
+describe('몰래 하산 — 엣지(5렌즈)', () => {
+  // 자원경합: 여러 명이 같은 달 이탈 → 각자 runaway + 서신 id 유일(충돌 없음)
+  it('여러 명 동시 이탈 — 각자 runaway·서신 id 유일', () => {
+    seed(dis('a'), dis('b'));
+    for (let i = 0; i < SECRET_DEPARTURE.DEPART_MONTHS; i += 1) tickSecretDeparture();
+    expect(d('a').status).toBe('runaway');
+    expect(d('b').status).toBe('runaway');
+    const ids = useInboxStore.getState().items.filter((it) => it.id.startsWith('runaway-') && !it.id.startsWith('runaway-warn-')).map((it) => it.id);
+    expect(ids).toEqual(expect.arrayContaining(['runaway-a-30', 'runaway-b-30']));
+    expect(new Set(ids).size).toBe(ids.length); // 중복 없음
+  });
+
+  // 의미정합: 몰래 하산은 death 가 아니다 — 남은 동문 애도(mournLostSibling/grief_far) 미발화
+  it('몰래 하산은 death 애도를 일으키지 않는다(동문 grief 미발화)', () => {
+    seed(dis('runner'), dis('friend', { trustToMaster: 50, stress: 0, relationships: { runner: 'friend' } }));
+    for (let i = 0; i < SECRET_DEPARTURE.DEPART_MONTHS; i += 1) tickSecretDeparture();
+    expect(d('runner').status).toBe('runaway');
+    expect(d('friend').siblingEventMood).toBeUndefined(); // 죽음 반응 없음
+    expect(d('friend').mourningUntilDay).toBeUndefined(); // 애도 없음
+  });
+
+  // 생애경계: 전원이 terminal(runaway 포함)이면 회차 종결(phase='ended')
+  it('전원 몰래 하산 → checkGraduations 가 회차 종결', () => {
+    useGameStore.getState().setPhase('playing');
+    useTimeStore.setState((s: object) => ({ ...s, current: { year: 5, season: 'spring', day: 1 }, totalDay: 30 } as never));
+    seed(dis('a', { status: 'runaway' }), dis('b', { status: 'runaway' }));
+    checkGraduations();
+    expect(useGameStore.getState().phase).toBe('ended');
+  });
+
+  // 자원경합/생애경계: 떠난 제자는 내공 흡수도 동결(elixirAbsorb 남아도 안 자람)
+  it('몰래 하산한 제자는 내공 흡수 동결(tickElixirAbsorb 무영향)', () => {
+    seed(
+      dis('gone', { status: 'runaway', elixirAbsorb: { until: 999, perDay: 10 }, realmProgress: { internal: 100, pity: 0, petitioned: false } }),
+      dis('here', { status: 'training', elixirAbsorb: { until: 999, perDay: 10 }, realmProgress: { internal: 100, pity: 0, petitioned: false } }),
+    );
+    tickElixirAbsorb();
+    expect(d('gone').realmProgress.internal).toBe(100); // 떠난 제자 — 안 자람
+    expect(d('here').realmProgress.internal).toBe(110); // 남은 제자 — 흡수 진행
   });
 });
