@@ -84,13 +84,14 @@ console.log('[1] 내공단 흡수 (양화내단: 화속 120, 20일)');
 
 // ── 2. 경제 — 후원금·식비·시작자금 골든값 ──
 console.log('\n[2] 경제 (후원·식비·시작자금)');
-// 후원: floor(rep/10)×25.  rep10→25, rep50→125, rep90→225, rep0→0, rep9→0(floor), rep100→250.
+// 후원: floor(rep/10)×37 (경계선 확정값, 구 ×25에서 상향 2026-07-01, docs/09).
+//   rep10→37, rep50→185, rep90→333, rep0→0, rep9→0(floor), rep100→370.
 ck('후원 rep0 = 0', monthlyPatronage(0) === 0);
 ck('후원 rep9 = 0 (floor)', monthlyPatronage(9) === 0);
-ck('후원 rep10 = 25', monthlyPatronage(10) === 25);
-ck('후원 rep50 = 125', monthlyPatronage(50) === 125);
-ck('후원 rep90 = 225', monthlyPatronage(90) === 225);
-ck('후원 rep100 = 250', monthlyPatronage(100) === 250);
+ck('후원 rep10 = 37', monthlyPatronage(10) === 37);
+ck('후원 rep50 = 185', monthlyPatronage(50) === 185);
+ck('후원 rep90 = 333', monthlyPatronage(90) === 333);
+ck('후원 rep100 = 370', monthlyPatronage(100) === 370);
 // 식비 기본값 = 제자 1명당 월 20동.
 ck('식비 기본값 = 20동/제자', FOOD_COST_PER_DISCIPLE === 20);
 // 식비 비선형(2026-06-19) — round(mouths×20×(1+0.08×(mouths−1))). 정원 4명 캘리브레이션.
