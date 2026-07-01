@@ -282,7 +282,7 @@ export const useDiscipleStore = create<DiscipleStore>()(
         set((s) => {
           const cur = s.disciples[id];
           if (!cur) return s;
-          if (cur.status === 'graduated' || cur.status === 'departed') return s; // 떠난 제자엔 무공 배정 X(동결, docs/37 C9)
+          if (cur.status === 'graduated' || cur.status === 'departed' || cur.status === 'runaway') return s; // 떠난 제자엔 무공 배정 X(동결, docs/37 C9)
           const has = cur.martialArts.some((a) => a.artId === artId);
           let martialArts = cur.martialArts;
           if (!has) {

@@ -40,6 +40,7 @@ function eligible(d: Disciple | undefined): d is Disciple {
     !!d &&
     d.status !== 'graduated' &&
     d.status !== 'departed' &&
+    d.status !== 'runaway' &&
     currentAge(d) >= 14 &&
     realmIndex(d.realm) >= realmIndex('iryu')
   );

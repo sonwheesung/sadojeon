@@ -36,6 +36,7 @@ import { tickCraft, tickElixirAbsorb } from './alchemySystem';
 import { syncResearch } from './researchSystem';
 import { tickWoundRecovery } from './woundSystem';
 import { tickMonthlyEconomy } from './economySystem';
+import { tickSecretDeparture } from './secretDepartureSystem';
 import { triggerDailyWish } from './wishSystem';
 import { saveCurrentRunSilently } from './runSync';
 import { checkAchievements } from './achievementSystem';
@@ -103,6 +104,8 @@ export function advanceTurn() {
   if (isMonthStart(time)) {
     // 월간 수지 — 식비·후원금·연단실 유지비(미납 시 가동중지). docs/11.
     tickMonthlyEconomy();
+    // 몰래 하산 — 환멸 누적 판정(경제 신뢰 하락 반영 후). docs/51.
+    tickSecretDeparture();
     // 게시판 월간 갱신 — 현재 평판 반영(우호 문파 후원 의뢰 포함). docs/29·30.
     generateBoard();
     const sched = useScheduleStore.getState();

@@ -95,7 +95,7 @@ export function tickDarkness(): void {
   const rollLevel = day % 7 === 0;
   for (const id of ds.order) {
     const d = ds.disciples[id];
-    if (!d || d.status === 'graduated' || d.status === 'departed') continue;
+    if (!d || d.status === 'graduated' || d.status === 'departed' || d.status === 'runaway') continue;
     const score = darknessScore(d, righteousness);
     const patch: Partial<Disciple> = {};
     const risk = riskOf(score);

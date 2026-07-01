@@ -17,7 +17,7 @@ export function DiscipleMoodPanel() {
 
   const rows = order
     .map((id) => disciples[id])
-    .filter((d) => d && d.status !== 'graduated' && d.status !== 'departed');
+    .filter((d) => d && d.status !== 'graduated' && d.status !== 'departed' && d.status !== 'runaway');
 
   if (rows.length === 0) return null;
 

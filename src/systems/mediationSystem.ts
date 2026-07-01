@@ -284,7 +284,7 @@ export function applyRivalryTone(
   if (!perp || !sibling) return;
   // 떠난(졸업·하산) 동문이 끼면 관계 변동 미적용 — 도덕 이벤트를 방치하는 사이 상대가 졸업해도
   // 떠난 제자 관계가 바뀌지 않게(R10 원칙·docs/37 R28). 가해자의 도덕 효과(트러스트·인격)는 별도 적용.
-  const gone = (s: string): boolean => s === 'graduated' || s === 'departed';
+  const gone = (s: string): boolean => s === 'graduated' || s === 'departed' || s === 'runaway';
   if (gone(perp.status) || gone(sibling.status)) return;
 
   if (tone === 'admonish' && random() < 0.25) {

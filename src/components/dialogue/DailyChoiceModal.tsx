@@ -91,6 +91,7 @@ export function DailyChoiceModal({ visible, onCancel, onConfirm }: Props) {
       if (
         d.status === 'graduated' ||
         d.status === 'departed' ||
+        d.status === 'runaway' ||
         d.status === 'questing' ||
         d.status === 'crafting' ||
         d.status === 'injured'

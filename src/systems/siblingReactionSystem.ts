@@ -47,7 +47,7 @@ export function reactToSiblingMilestone(subjectId: string, kind: Milestone): voi
   for (const id of ds.order) {
     if (id === subjectId) continue;
     const s: Disciple | undefined = ds.disciples[id];
-    if (!s || s.status === 'graduated' || s.status === 'departed') continue;
+    if (!s || s.status === 'graduated' || s.status === 'departed' || s.status === 'runaway') continue;
     const rel: RelationLevel = s.relationships[subjectId] ?? 'neutral';
     const behind = realmIndex(s.realm) < subjRealm;
     const mood = valence(kind, rel, behind, s.personality?.ambition ?? 50);

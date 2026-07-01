@@ -113,7 +113,7 @@ export function mainArtSummary(disciple: Disciple): string {
 //  회차 길이가 들쭉날쭉하고 끝이 안 나던 문제. docs/06)
 // questing·crafting·meditating(폐관) 은 진행 중이라, 끝난 뒤 다음 체크에서 하산.
 // (meditating 포함 — 폐관 override 중 졸업하면 override 가 졸업 제자에 고아로 남는다. 폐관 끝나고 하산.)
-const GRADUATION_BUSY: DiscipleStatus[] = ['questing', 'crafting', 'meditating', 'graduated', 'departed'];
+const GRADUATION_BUSY: DiscipleStatus[] = ['questing', 'crafting', 'meditating', 'graduated', 'departed', 'runaway'];
 export function isGraduationEligible(d: Disciple, currentYear: number): boolean {
   if (GRADUATION_BUSY.includes(d.status)) return false;
   if (currentYear - d.entryYear < GRADUATION.RAISING_YEARS) return false;
@@ -172,7 +172,7 @@ export function checkGraduations(): void {
   // 회차 종결 = 모든 제자가 **영구히** 사문을 떠났을 때(졸업/하산).
   // questing·injured·resting·meditating 은 회복 가능한 상태라 종결 사유가 아니다.
   // (하루 전원이 의뢰·요양 중이라고 회차가 끝나면 안 됨.)
-  const TERMINAL_STATUSES: DiscipleStatus[] = ['graduated', 'departed'];
+  const TERMINAL_STATUSES: DiscipleStatus[] = ['graduated', 'departed', 'runaway'];
   const allGone =
     ds.order.length > 0 &&
     ds.order

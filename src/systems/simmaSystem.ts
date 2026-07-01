@@ -66,7 +66,7 @@ export function tickSimma(): void {
   const ds = useDiscipleStore.getState();
   for (const id of ds.order) {
     const d = ds.disciples[id];
-    if (!d || d.status === 'graduated' || d.status === 'departed') continue;
+    if (!d || d.status === 'graduated' || d.status === 'departed' || d.status === 'runaway') continue;
 
     let drift = 0;
     // 지속 고스트레스 — 50 초과분이 마음을 갉는다.
@@ -183,6 +183,7 @@ export function listUnstable(): Disciple[] {
         !(d.wounds ?? []).some((w) => w.type === 'inner') &&
         d.status !== 'graduated' &&
         d.status !== 'departed' &&
+        d.status !== 'runaway' &&
         d.status !== 'questing',
     );
 }

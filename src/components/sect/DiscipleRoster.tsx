@@ -27,6 +27,7 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   crafting: '연단중',
   graduated: '졸업',
   departed: '하산',
+  runaway: '몰래 하산',
 };
 
 // 자리를 비운 상태 → 카드 오버레이/접근성용 짧은 라벨("…중"이 따로 붙으므로 "중" 없이).

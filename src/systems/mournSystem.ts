@@ -29,7 +29,7 @@ export function mournLostSibling(deceasedId: string): void {
   for (const id of ds.order) {
     if (id === deceasedId) continue;
     const d = ds.disciples[id];
-    if (!d || d.status === 'graduated' || d.status === 'departed') continue;
+    if (!d || d.status === 'graduated' || d.status === 'departed' || d.status === 'runaway') continue;
     const rel: RelationLevel = d.relationships[deceasedId] ?? 'neutral';
     const g = GRIEF[rel];
     ds.adjustStress(id, g.stress);

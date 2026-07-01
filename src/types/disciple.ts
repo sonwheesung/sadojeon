@@ -27,7 +27,11 @@ export type DiscipleStatus =
   | 'questing'
   | 'crafting' // 연단 중 — 제조 기간 동안 다른 작업(훈련·의뢰) 불가
   | 'graduated'
-  | 'departed';
+  | 'departed' // 사망·실종(의뢰 재난) — 애도(mournLostSibling) 발화
+  | 'runaway'; // 몰래 하산 — 환멸로 조용히 떠남(사망 아님, 애도 X). docs/51. 회차 종결엔 terminal.
+
+// 이별 형태 — 응답 성향(docs/03) 분기. normal=정상 졸업, expelled=파문(미구현), secret=몰래 하산(docs/51).
+export type PartingForm = 'normal' | 'expelled' | 'secret';
 
 export type ActivityType =
   | 'martial_training'
@@ -157,6 +161,11 @@ export interface Disciple {
 
   // 하산 시 사부가 권한 강호 행로(직업 id, jobSystem). 졸업 후 평생 직책 궤적의 출발점. docs/28 §3·§4.
   graduatedJob?: string;
+  // 이별 형태 — status='runaway'면 'secret'(몰래 하산). 응답 성향·엔딩 회수 분기. docs/51.
+  partingForm?: PartingForm;
+  // 환멸 누적 개월 — 저신뢰+고스트레스+기질 게이트가 연속으로 충족된 달 수. 임계 도달 시 몰래 하산 발화.
+  // 조건 깨지면(면담·스트레스 완화 등으로) 0 리셋. UI 비노출(숨은 변수). docs/51 §3.
+  disillusionMonths?: number;
 
   darknessLevel: DarknessLevel;
   darknessRisk: 'low' | 'medium' | 'high';

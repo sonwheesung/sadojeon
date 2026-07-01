@@ -30,6 +30,7 @@ const STATUS_LABEL: Record<DiscipleStatus, string> = {
   crafting: '연단 중',
   graduated: '졸업',
   departed: '하산',
+  runaway: '몰래 하산',
 };
 
 // 메인 무공 한 줄 풍경 — "{무공명} {단계} — 손맛 풍경".

@@ -64,7 +64,7 @@ function applyBankruptcyPenalties(resources: number): void {
   const ds = useDiscipleStore.getState();
   const activeIds = ds.order.filter((id) => {
     const d = ds.disciples[id];
-    return d != null && d.status !== 'graduated' && d.status !== 'departed';
+    return d != null && d.status !== 'graduated' && d.status !== 'departed' && d.status !== 'runaway';
   });
   if (tier === 'poor') {
     for (const id of activeIds) ds.adjustStress(id, 2); // 빈곤 — 영양 부실 불안
@@ -89,7 +89,7 @@ export function tickMonthlyEconomy(): void {
   const ds = useDiscipleStore.getState();
   const mouths = ds.order
     .map((id) => ds.disciples[id])
-    .filter((d) => d && d.status !== 'graduated' && d.status !== 'departed').length;
+    .filter((d) => d && d.status !== 'graduated' && d.status !== 'departed' && d.status !== 'runaway').length;
   if (mouths > 0) sect.adjustResources(-monthlyFoodCost(mouths));
 
   // 2) 후원금 — 명성 비례 수입.

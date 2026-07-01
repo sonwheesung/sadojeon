@@ -67,6 +67,7 @@ export function tickElixirCraft(): void {
         d &&
         d.status !== 'graduated' &&
         d.status !== 'departed' &&
+        d.status !== 'runaway' &&
         (d.stats?.alchemy?.level ?? 0) >= CRAFT_ALCHEMY_MIN,
     );
   if (!crafter) return;

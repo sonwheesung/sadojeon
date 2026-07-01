@@ -139,7 +139,7 @@ export async function resolveInboxItem(item: InboxItem, key: string): Promise<vo
   // (그쪽 대상이라 정상). questing·injured 등 일시 상태는 복귀하므로 적용. docs/37 C9·R10.
   const hasLeft = (id: string): boolean => {
     const s = id ? useDiscipleStore.getState().disciples[id] : undefined;
-    return !!s && (s.status === 'graduated' || s.status === 'departed');
+    return !!s && (s.status === 'graduated' || s.status === 'departed' || s.status === 'runaway');
   };
   const d0 = String(p.domain ?? '');
   let skipLeft = false;

@@ -171,6 +171,26 @@ function DiscipleList({ list }: { list: Disciple[] }) {
 }
 
 function DiscipleRow({ disciple, last }: { disciple: Disciple; last: boolean }) {
+  // 몰래 하산한 제자 — 졸업 등급 없이 회수 한 줄(docs/51 R3). 선한 아이는 부고를 듣고 조용히 다녀간다
+  // (docs/03 §응답 성향 ⑤ 카타르시스 — 라이브 귀환 불가라 엔딩 몽타주 비트로).
+  if (disciple.status === 'runaway') {
+    return (
+      <View style={[styles.discipleRow, last && styles.discipleRowLast, styles.discipleRowDim]}>
+        <View style={[styles.discipleAvatar, styles.discipleAvatarDim]} />
+        <View style={styles.discipleBody}>
+          <Text style={[styles.discipleName, styles.discipleNameDim]} numberOfLines={1}>
+            {disciple.name}
+          </Text>
+          <Text style={styles.discipleMeta} numberOfLines={2}>
+            몰래 산을 내려갔다. 훗날 사부의 부고를 듣고 조용히 다녀갔다더라.
+          </Text>
+        </View>
+        <View style={styles.gradeWrap}>
+          <Text style={[styles.gradeValue, styles.gradeValueDim]}>—</Text>
+        </View>
+      </View>
+    );
+  }
   const grade = evaluateGraduation(disciple);
   const stars = GRADE_STARS[grade];
   const dim = stars <= 1;
